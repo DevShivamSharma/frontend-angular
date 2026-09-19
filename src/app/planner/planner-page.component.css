@@ -3,39 +3,66 @@
 .planner {
   display: flex;
   height: 100vh;
-  background: #0f172a;
-  color: #f8fafc;
-  font-family: 'Segoe UI', Arial, sans-serif;
+  background: var(--surface-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 .sidebar {
   width: 380px;
-  padding: 18px;
-  background: #172033;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  background: var(--surface-sidebar);
   overflow-y: auto;
   box-sizing: border-box;
-  border-right: 1px solid #334155;
+  border-right: 1px solid var(--border-subtle);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+
+/* The default Chrome scrollbar is a bright light-grey slab against a near
+   black panel. This matches it to the surface. */
+.sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border: 3px solid var(--surface-sidebar);
+  border-radius: 999px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
 }
 
 .app-title {
-  margin: 2px 0;
-  color: #38bdf8;
-  font-size: 23px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .app-subtitle {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: var(--space-1) 0 var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .error-box {
-  background: #7f1d1d;
-  border: 1px solid #ef4444;
-  padding: 10px;
-  border-radius: 7px;
+  display: flex;
+  gap: var(--space-2);
+  background: var(--danger-surface);
+  border: 1px solid var(--danger-border);
+  border-left: 3px solid var(--danger-border);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
   font-size: 12px;
-  margin-bottom: 12px;
+  line-height: 1.45;
+  margin-bottom: var(--space-3);
 }
 
 .stage {
@@ -125,7 +152,10 @@
     max-height: 50vh;
   }
 
+  /* `min-height: 0` overrides the flex default of `auto`, which would let the
+     stage be sized by its contents instead of by the 50vh rule. */
   .stage {
     height: 50vh;
+    min-height: 0;
   }
 }

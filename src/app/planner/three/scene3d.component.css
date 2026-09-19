@@ -1,7 +1,18 @@
+/*
+ * The component fills its positioned parent rather than inheriting a
+ * percentage height.
+ *
+ * `height: 100%` needs an unbroken chain of definite heights above it. That
+ * chain holds on desktop, where `.planner` is `height: 100vh`, but breaks at
+ * mobile widths where `.planner` becomes `height: auto` and `.stage` is a
+ * flex item - the percentage then resolved to 0 and the canvas collapsed.
+ * `.stage` is `position: relative` (it positions the HUDs), so anchoring to it
+ * works at every width.
+ */
 :host {
   display: block;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
 }
 
 .scene-host {
@@ -11,12 +22,12 @@
   overflow: hidden;
 }
 
-.scene-host canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-}
+/*
+ * No `canvas` rule belongs here. Three.js creates the canvas imperatively, so
+ * Angular never adds this component's view-encapsulation attribute to it and a
+ * scoped selector would silently never match. Its styles are set in
+ * `Scene3dComponent.styleCanvas()`.
+ */
 
 .label-overlay {
   position: absolute;

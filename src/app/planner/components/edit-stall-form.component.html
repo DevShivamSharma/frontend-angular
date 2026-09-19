@@ -1,6 +1,9 @@
 @if (selectedStall(); as stall) {
   <section class="card is-selected-card" [formGroup]="form">
-    <h3 class="panel-title">✏️ Edit Selected Shop</h3>
+    <h3 class="panel-title">
+      <app-icon class="icon-slot" name="pencil" />
+      Edit Selected Shop
+    </h3>
     <div class="panel-hint">Click a shop to select it. Drag it on the grid to move it.</div>
 
     <input class="control" aria-label="Shop name" formControlName="name" />
@@ -30,7 +33,8 @@
           [attr.aria-pressed]="stall.gateSide === side[0]"
           (click)="setGateSide(side[0])"
         >
-          {{ side[2] }} {{ side[1] }}
+          <app-icon [name]="side[2]" [size]="14" />
+          {{ side[1] }}
         </button>
       }
     </div>
@@ -47,8 +51,12 @@
     </div>
 
     <button type="button" class="btn-primary" (click)="applyChanges()">
-      ✓ Apply Shop Changes
+      <app-icon name="check" [size]="14" />
+      Apply Shop Changes
     </button>
-    <button type="button" class="btn-danger" (click)="removeStall()">🗑 Remove Shop</button>
+    <button type="button" class="btn-danger" (click)="removeStall()">
+      <app-icon name="trash" [size]="14" />
+      Remove Shop
+    </button>
   </section>
 }

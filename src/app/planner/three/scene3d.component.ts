@@ -138,6 +138,7 @@ export class Scene3dComponent implements AfterViewInit {
     // react-three-fiber's defaults, kept so colours match the React build.
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.styleCanvas(this.renderer.domElement);
     host.appendChild(this.renderer.domElement);
 
     // Lighting. App.js:462-463.
@@ -356,6 +357,28 @@ export class Scene3dComponent implements AfterViewInit {
       object.projectLabels(this.camera, clientWidth, clientHeight);
     }
   };
+
+  /**
+   * Style the canvas from here rather than from `scene3d.component.css`.
+   *
+   * Three.js creates this element, so Angular never stamps its view-
+   * encapsulation attribute onto it and no scoped `canvas` selector can ever
+   * match it. Taking it out of flow is what matters: `renderer.setSize(w, h,
+   * false)` writes the drawing-buffer size to the width/height attributes
+   * without touching the inline style, so an in-flow canvas would resolve its
+   * own height from that buffer whenever an ancestor is content-sized. That is
+   * a feedback loop - buffer grows, element grows, ResizeObserver fires, buffer
+   * grows - which ran to millions of pixels at mobile widths, where `.planner`
+   * switches to `height: auto`.
+   */
+  private styleCanvas(canvas: HTMLCanvasElement): void {
+    canvas.style.position = 'absolute';
+    canvas.style.inset = '0';
+    canvas.style.display = 'block';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.touchAction = 'none';
+  }
 
   private resize(): void {
     const host = this.host().nativeElement;

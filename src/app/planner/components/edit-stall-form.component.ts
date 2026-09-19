@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { GATE_SIDES, num, validGate } from '../geometry/planner-geometry';
+import { num, validGate } from '../geometry/planner-geometry';
+import { GATE_SIDES } from './gate-sides';
+import { IconComponent } from './icon.component';
 import { GateSide, Stall } from '../models/stall.model';
 import { PlannerStore } from '../planner-store.service';
 
@@ -16,7 +18,7 @@ import { PlannerStore } from '../planner-store.service';
 @Component({
   selector: 'app-edit-stall-form',
   templateUrl: './edit-stall-form.component.html',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditStallFormComponent {

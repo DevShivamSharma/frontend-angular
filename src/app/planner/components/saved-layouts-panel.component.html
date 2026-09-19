@@ -10,7 +10,8 @@
 
   <div class="row">
     <button type="button" class="btn-primary" [disabled]="busy()" (click)="saveLayout()">
-      💾 Save New
+      <app-icon name="save" [size]="14" />
+      Save New
     </button>
     <button
       type="button"
@@ -18,13 +19,17 @@
       [disabled]="busy() || !selectedSavedId()"
       (click)="updateLayout()"
     >
-      ↻ Update
+      <app-icon name="refresh" [size]="14" />
+      Update
     </button>
   </div>
 
   <div class="panel-header saved-header">
     <span class="saved-header-title">Saved Layouts</span>
-    <button type="button" class="btn-mini" (click)="refresh()">↻ Refresh</button>
+    <button type="button" class="btn-mini" (click)="refresh()">
+      <app-icon name="refresh" [size]="12" />
+      Refresh
+    </button>
   </div>
 
   @for (layout of savedLayouts(); track layout.id) {
@@ -33,10 +38,12 @@
       <div class="saved-row-meta">ID {{ layout.id }} · {{ stallCount(layout) }} shops</div>
       <div class="grid-2 saved-row-actions">
         <button type="button" class="btn-mini is-blue" (click)="openLayout(layout.id)">
-          👁 Open
+          <app-icon name="eye" [size]="12" />
+          Open
         </button>
         <button type="button" class="btn-mini is-red" (click)="deleteLayout(layout.id)">
-          🗑 Delete
+          <app-icon name="trash" [size]="12" />
+          Delete
         </button>
       </div>
     </div>

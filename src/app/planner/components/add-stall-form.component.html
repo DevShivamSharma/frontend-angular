@@ -36,12 +36,14 @@
         [attr.aria-pressed]="gateSide() === side[0]"
         (click)="setGateSide(side[0])"
       >
-        {{ side[2] }} {{ side[1] }}
+        <app-icon [name]="side[2]" [size]="14" />
+        {{ side[1] }}
       </button>
     }
   </div>
 
   <button type="button" class="btn-success" (click)="addStall()">
-    ➕ Add Shop (then drag on grid)
+    <app-icon name="plus" [size]="16" />
+    Add Shop (then drag on grid)
   </button>
 </section>

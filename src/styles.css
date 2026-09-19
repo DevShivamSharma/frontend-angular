@@ -1,185 +1,354 @@
 /*
- * Global planner styles.
+ * Planner design tokens and sidebar styles.
  *
- * The React app had no stylesheet - every rule lived in the inline style
- * objects at `frontend/src/App.js:604-619`. Those constants are shared by all
- * sidebar sections, so they are ported here as global classes rather than
- * duplicated into six component stylesheets. Values are unchanged.
+ * The React build had no stylesheet - every rule lived in the inline style
+ * objects at `frontend/src/App.js:604-619`, and this file originally ported
+ * those values one for one. The sidebar has since been restyled on request:
+ * same layout, same behaviour, refreshed surface/colour/interaction system.
+ * The 3D stage is untouched.
+ *
+ * Three things the old values got wrong, all fixed below:
+ *   - Contrast. #64748b on #0f172a was 3.75:1, white on #0284c7 was 4.10:1 and
+ *     white on #059669 was 3.77:1. All three failed WCAG AA (4.5:1). The
+ *     replacements measure 6.11, 5.93 and 5.48.
+ *   - No hover, active or disabled styling anywhere, so the panel felt dead
+ *     and a disabled button looked identical to an enabled one.
+ *   - Cards were darker than the sidebar behind them, so every section read as
+ *     a hole. They now sit above it.
  */
+
+:root {
+  /* Surfaces, darkest to lightest. */
+  --surface-app: #0b1220;
+  --surface-sidebar: #0f172a;
+  --surface-card: #1a2337;
+  --surface-card-hover: #1f2942;
+  --surface-input: #0d1526;
+  --surface-selected: #0c4a6e;
+
+  /* Borders. */
+  --border-subtle: #1e293b;
+  --border-default: #334155;
+  --border-strong: #475569;
+
+  /* Text. #64748b is deliberately absent - it failed contrast everywhere. */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  /* Accent and status. Solid values are the AA-passing shades. */
+  --accent: #38bdf8;
+  --accent-solid: #0369a1;
+  --accent-solid-hover: #0284c7;
+  --success-solid: #047857;
+  --success-solid-hover: #059669;
+  --danger-solid: #991b1b;
+  --danger-solid-hover: #b91c1c;
+  --danger-surface: #7f1d1d;
+  --danger-border: #ef4444;
+
+  /* Dense dashboard spacing scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+
+  --transition: 150ms ease;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+}
 
 html,
 body {
   margin: 0;
   padding: 0;
   height: 100%;
+  background: var(--surface-app);
 }
 
-/* App.js:606 - `card` */
+/* React's buttons and inputs fell back to the browser's default font because
+   the family was only set on the root div. They inherit properly now. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---- SweetAlert2 popups (core/notify.service.ts) ------------------------ */
+
+/* The popups mount on <body>, outside the planner page where --font-sans is applied,
+   so without this they fall back to the browser's serif default. */
+.swal2-container {
+  font-family: var(--font-sans);
+}
+
+.swal2-popup {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.swal2-popup.swal2-toast {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+/* ---- Section card ------------------------------------------------------- */
+
 .card {
-  background: #0f172a;
-  padding: 13px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-3);
 }
 
-/* App.js:607 - `title` */
 .panel-title {
-  margin: 0 0 9px;
-  font-size: 14px;
-  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
-/* App.js:608 - `input` */
+.panel-title .icon-slot {
+  color: var(--accent);
+}
+
+/* ---- Inputs ------------------------------------------------------------- */
+
 .control {
   width: 100%;
   box-sizing: border-box;
-  padding: 9px;
-  background: #1e293b;
-  color: #fff;
-  border: 1px solid #475569;
-  border-radius: 5px;
-  margin-bottom: 7px;
+  min-height: 38px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+  transition: border-color var(--transition), background var(--transition);
 }
 
-/* App.js:609 - `row` */
+.control::placeholder {
+  color: var(--text-muted);
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.control:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface-app);
+}
+
+select.control {
+  cursor: pointer;
+}
+
 .row {
   display: flex;
-  gap: 7px;
-  margin-bottom: 7px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
-/* App.js:610 - `label` */
 .field-label {
   display: block;
-  font-size: 10px;
-  color: #cbd5e1;
-  margin: 6px 0 4px;
-}
-
-/* App.js:611 - `primary` */
-.btn-primary {
-  flex: 1;
-  padding: 9px;
-  background: #0284c7;
-  color: #fff;
-  border: 0;
-  border-radius: 5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* App.js:612 - `secondary` */
-.btn-secondary {
-  flex: 1;
-  padding: 9px;
-  background: #334155;
-  color: #fff;
-  border: 1px solid #475569;
-  border-radius: 5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* App.js:613 - `success` */
-.btn-success {
-  width: 100%;
-  padding: 10px;
-  margin-top: 8px;
-  background: #059669;
-  color: #fff;
-  border: 0;
-  border-radius: 5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* App.js:614 - `danger` */
-.btn-danger {
-  width: 100%;
-  padding: 8px;
-  margin-top: 7px;
-  background: #991b1b;
-  color: #fff;
-  border: 0;
-  border-radius: 5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* App.js:615 - `gate` */
-.btn-gate {
-  padding: 7px;
-  background: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #475569;
-  border-radius: 5px;
-  font-size: 10px;
-  cursor: pointer;
-}
-
-/* App.js:616 - `selectedGate` */
-.btn-gate.is-selected {
-  background: #0369a1;
-  border: 1px solid #38bdf8;
-  color: #fff;
-  font-weight: 700;
-}
-
-/* App.js:617 - `mini` */
-.btn-mini {
-  padding: 4px 7px;
-  background: #334155;
-  color: #fff;
-  border: 1px solid #475569;
-  border-radius: 4px;
-  font-size: 10px;
-  cursor: pointer;
-}
-
-/* App.js:618 - `miniBlue` / `miniRed` */
-.btn-mini.is-blue {
-  background: #0369a1;
-}
-
-.btn-mini.is-red {
-  background: #991b1b;
-}
-
-/* App.js:619 - `empty` */
-.empty-state {
-  padding: 9px;
-  border: 1px dashed #475569;
-  border-radius: 5px;
-  color: #64748b;
   font-size: 11px;
-  text-align: center;
+  color: var(--text-muted);
+  margin: var(--space-2) 0 var(--space-1);
 }
 
-/* App.js:604 - the `Field` helper: a flexible label wrapping a number input. */
+/* The `Field` helper: a flexible label wrapping a number input. */
 .number-field {
-  font-size: 10px;
-  color: #cbd5e1;
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
   flex: 1;
+  min-width: 0;
 }
 
 .number-field .control {
-  margin-top: 3px;
-  padding: 7px;
+  margin-top: var(--space-1);
+  margin-bottom: 0;
 }
 
-/* Two-column button grids used by the gate pickers and the import row. */
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+/* ---- Buttons ------------------------------------------------------------ */
+
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-gate,
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition),
+    color var(--transition), transform var(--transition);
 }
 
-.grid-2.gap-7 {
-  gap: 7px;
-  margin-top: 8px;
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled),
+.btn-success:active:not(:disabled),
+.btn-danger:active:not(:disabled),
+.btn-gate:active,
+.btn-mini:active {
+  transform: translateY(1px);
 }
 
-/* Visually hidden label, used where React relied on placeholder text alone. */
+.btn-primary {
+  flex: 1;
+  min-height: 38px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent-solid);
+  color: #fff;
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-solid-hover);
+}
+
+.btn-secondary {
+  flex: 1;
+  min-height: 38px;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  font-size: 13px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-card-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.btn-success {
+  width: 100%;
+  min-height: 42px;
+  padding: var(--space-3);
+  margin-top: var(--space-3);
+  background: var(--success-solid);
+  color: #fff;
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--success-solid-hover);
+}
+
+.btn-danger {
+  width: 100%;
+  min-height: 38px;
+  padding: var(--space-2);
+  margin-top: var(--space-2);
+  background: transparent;
+  color: #fca5a5;
+  border: 1px solid var(--danger-solid);
+  font-size: 13px;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-solid);
+  color: #fff;
+}
+
+/* Disabled state: the old build left these looking fully interactive. */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-success:disabled,
+.btn-danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- Gate picker -------------------------------------------------------- */
+
+.btn-gate {
+  min-height: 36px;
+  padding: var(--space-2);
+  background: var(--surface-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.btn-gate:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.btn-gate.is-selected {
+  background: var(--accent-solid);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---- Mini buttons ------------------------------------------------------- */
+
+.btn-mini {
+  min-height: 30px;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  font-size: 11px;
+}
+
+.btn-mini:hover {
+  background: var(--surface-card-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.btn-mini.is-blue:hover {
+  background: var(--accent-solid);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-mini.is-red:hover {
+  background: var(--danger-solid);
+  border-color: var(--danger-solid-hover);
+  color: #fff;
+}
+
+/* ---- Empty state -------------------------------------------------------- */
+
+.empty-state {
+  padding: var(--space-4) var(--space-3);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ---- Misc panel pieces -------------------------------------------------- */
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -192,103 +361,176 @@ body {
   border: 0;
 }
 
-/* App.js:588 - the colour picker. */
 .color-input {
   width: 100%;
-  height: 35px;
-  background: #1e293b;
-  border: 1px solid #475569;
+  height: 38px;
+  padding: var(--space-1);
+  background: var(--surface-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--transition);
 }
 
-/* App.js:591 - the edit panel is outlined while a shop is selected. */
+.color-input:hover {
+  border-color: var(--border-strong);
+}
+
+/* The edit panel is highlighted while a shop is selected. */
 .is-selected-card {
-  border: 1px solid #38bdf8;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgb(56 189 248 / 0.15);
 }
 
 .panel-hint {
   font-size: 11px;
-  color: #94a3b8;
-  margin-bottom: 7px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-2);
+}
+
+.panel-header .panel-title {
+  margin-bottom: var(--space-3);
 }
 
 .snap-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: 11px;
-  color: #cbd5e1;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-bottom: var(--space-3);
+  white-space: nowrap;
 }
 
-/* App.js:592 - one row per shop in the current hall. */
+.snap-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---- Shop list ---------------------------------------------------------- */
+
 .stall-row {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 9px;
-  margin-top: 6px;
-  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-default);
   color: inherit;
   font: inherit;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.stall-row:hover {
+  background: var(--surface-card-hover);
+  border-left-color: var(--border-strong);
 }
 
 .stall-row.is-selected {
-  background: #0c4a6e;
+  background: var(--surface-selected);
+  border-color: var(--accent-solid);
+  border-left-color: var(--accent);
 }
 
 .stall-row-name {
   display: block;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 12px;
+  color: var(--text-primary);
 }
 
 .stall-row-meta {
   display: block;
-  font-size: 10px;
-  color: #94a3b8;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
-/* App.js:593 - saved layout list. */
+.stall-row.is-selected .stall-row-meta {
+  color: var(--text-secondary);
+}
+
+/* ---- Saved layouts ------------------------------------------------------ */
+
 .saved-header {
-  margin-top: 10px;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-1);
 }
 
 .saved-header-title {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .saved-row {
-  margin-top: 7px;
-  padding: 9px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 6px;
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition);
+}
+
+.saved-row:hover {
+  border-color: var(--border-default);
 }
 
 .saved-row-name {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .saved-row-meta {
-  font-size: 10px;
-  color: #94a3b8;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .saved-row-actions {
-  gap: 5px;
-  margin-top: 6px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
-/* Keyboard focus was invisible in the React build; this is a Phase 11
-   accessibility improvement that does not change layout. */
+/* ---- Grids -------------------------------------------------------------- */
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.grid-2.gap-7 {
+  margin-top: var(--space-2);
+}
+
+/* Keyboard focus was invisible in the React build. */
 :where(button, input, select, a):focus-visible {
-  outline: 2px solid #38bdf8;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

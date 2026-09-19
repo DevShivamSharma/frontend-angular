@@ -1,15 +1,37 @@
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
+import { API_BASE_URL } from '../core/api-base.token';
+import { NotifyService } from '../core/notify.service';
 import { PlannerStore } from './planner-store.service';
+
+const API = 'http://test.local/api';
+
+/** Lets the store's awaited HTTP promise settle. */
+const settle = () => new Promise<void>(resolve => setTimeout(resolve));
 
 describe('PlannerStore', () => {
   let store: PlannerStore;
+  let notify: jasmine.SpyObj<NotifyService>;
 
   beforeEach(() => {
+    // The real service opens SweetAlert2 popups; specs only care that it was asked to.
+    notify = jasmine.createSpyObj<NotifyService>('NotifyService', [
+      'success',
+      'confirm',
+      'showLoading',
+      'hideLoading'
+    ]);
+
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), PlannerStore]
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: API },
+        { provide: NotifyService, useValue: notify },
+        PlannerStore
+      ]
     });
 
     store = TestBed.inject(PlannerStore);
@@ -247,5 +269,93 @@ describe('PlannerStore', () => {
       tick(3500);
       expect(store.error()).toBe('');
     }));
+  });
+
+  describe('saved layout workflow - messages and loader (FD-013)', () => {
+    let http: HttpTestingController;
+
+    beforeEach(() => {
+      http = TestBed.inject(HttpTestingController);
+    });
+
+    afterEach(() => http.verify());
+
+    it('save: loader, then a success toast, and the loader is always released', async () => {
+      const done = store.saveLayout();
+
+      expect(notify.showLoading).toHaveBeenCalledOnceWith('Saving layout…');
+      expect(store.busy()).toBeTrue();
+
+      http.expectOne(`${API}/layout/save`).flush({ layout: { id: 1000 } });
+      await settle();
+      http.expectOne(`${API}/layouts`).flush([]);
+      await done;
+
+      expect(notify.success).toHaveBeenCalledOnceWith('Layout saved successfully.');
+      expect(notify.hideLoading).toHaveBeenCalled();
+      expect(store.busy()).toBeFalse();
+      expect(store.selectedSavedId()).toBe(1000);
+    });
+
+    it('save failure: the server message reaches the error box, no toast, loader released', async () => {
+      const done = store.saveLayout();
+
+      http
+        .expectOne(`${API}/layout/save`)
+        .flush(
+          { success: false, status: 400, message: 'Stall 1 (B) overlaps stall 0 (A).' },
+          { status: 400, statusText: 'Bad Request' }
+        );
+      await done;
+
+      expect(store.error()).toBe('❌ Save Error: Stall 1 (B) overlaps stall 0 (A).');
+      expect(notify.success).not.toHaveBeenCalled();
+      expect(notify.hideLoading).toHaveBeenCalled();
+      expect(store.busy()).toBeFalse();
+    });
+
+    it('delete: nothing is sent when the dialog is cancelled', async () => {
+      notify.confirm.and.resolveTo(false);
+
+      await store.deleteLayout(1000);
+
+      expect(notify.confirm).toHaveBeenCalledTimes(1);
+      expect(notify.confirm.calls.mostRecent().args[0].danger).toBeTrue();
+      expect(notify.showLoading).not.toHaveBeenCalled();
+      // http.verify() in afterEach proves no DELETE went out.
+    });
+
+    it('delete: confirmed -> DELETE, row removed, success toast', async () => {
+      notify.confirm.and.resolveTo(true);
+      store.savedLayouts.set([{ id: 1000 } as never, { id: 1001 } as never]);
+      store.selectedSavedId.set(1000);
+
+      const done = store.deleteLayout(1000);
+      await settle();
+      http.expectOne({ method: 'DELETE', url: `${API}/layout/1000` }).flush({ id: 1000 });
+      await done;
+
+      expect(store.savedLayouts().map(l => l.id)).toEqual([1001]);
+      expect(store.selectedSavedId()).toBeNull();
+      expect(notify.success).toHaveBeenCalledOnceWith('Layout deleted.');
+      expect(notify.hideLoading).toHaveBeenCalled();
+    });
+
+    it('open: loader only - no success toast', async () => {
+      const done = store.openLayout(1000);
+
+      expect(notify.showLoading).toHaveBeenCalledOnceWith('Opening layout…');
+
+      http.expectOne(`${API}/layout/1000`).flush({
+        layout: { id: 1000, name: 'Expo' },
+        hall: { id: 1000, name: 'Hall', shape: 'SQUARE', width: 40, length: 40, radius: 0 },
+        stalls: []
+      });
+      await done;
+
+      expect(notify.success).not.toHaveBeenCalled();
+      expect(notify.hideLoading).toHaveBeenCalled();
+      expect(store.layoutName()).toBe('Expo');
+    });
   });
 });

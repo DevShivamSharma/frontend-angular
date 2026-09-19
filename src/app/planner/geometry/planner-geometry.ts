@@ -8,13 +8,6 @@ import { GateSide, Stall, StallInput } from '../models/stall.model';
  * migration can unit-test them against the React behaviour (decision FD-006).
  */
 
-/** Gate side options rendered as the four toggle buttons (`App.js:9-14`). */
-export const GATE_SIDES: ReadonlyArray<readonly [GateSide, string, string]> = [
-  ['FRONT', 'Front (+Z)', '⬆'],
-  ['BACK', 'Back (-Z)', '⬇'],
-  ['LEFT', 'Left (-X)', '⬅'],
-  ['RIGHT', 'Right (+X)', '➡']
-];
 
 /** Snap a number to a grid step. `App.js:16`. */
 export function snapValue(v: number, step = 1): number {

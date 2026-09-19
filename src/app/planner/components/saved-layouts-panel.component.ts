@@ -3,13 +3,14 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { LayoutSummary } from '../models/layout.model';
+import { IconComponent } from './icon.component';
 import { PlannerStore } from '../planner-store.service';
 
 /** "Saved Layout" section: name, save/update, refresh and the list. App.js:593. */
 @Component({
   selector: 'app-saved-layouts-panel',
   templateUrl: './saved-layouts-panel.component.html',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SavedLayoutsPanelComponent {

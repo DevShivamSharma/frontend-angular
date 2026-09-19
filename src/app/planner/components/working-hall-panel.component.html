@@ -1,5 +1,8 @@
 <section class="card">
-  <h3 class="panel-title">🏛️ Working Hall</h3>
+  <h3 class="panel-title">
+    <app-icon class="icon-slot" name="building" />
+    Working Hall
+  </h3>
 
   <label class="sr-only" for="working-hall">Working hall</label>
   <select
@@ -16,8 +19,14 @@
   </select>
 
   <div class="grid-2 gap-7">
-    <button type="button" class="btn-secondary" (click)="openFilePicker()">📥 Import Excel</button>
-    <button type="button" class="btn-secondary" (click)="downloadTemplate()">📄 Template</button>
+    <button type="button" class="btn-secondary" (click)="openFilePicker()">
+      <app-icon name="upload" [size]="14" />
+      Import Excel
+    </button>
+    <button type="button" class="btn-secondary" (click)="downloadTemplate()">
+      <app-icon name="file" [size]="14" />
+      Template
+    </button>
   </div>
 
   <input

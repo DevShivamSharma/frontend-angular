@@ -1,6 +1,7 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 
 import { extractErrorMessage } from '../core/http-error.util';
+import { NotifyService } from '../core/notify.service';
 import { ExcelImportResult } from './excel/excel-layout.service';
 import {
   hallSize,
@@ -56,6 +57,7 @@ function defaultHalls(): Hall[] {
 @Injectable()
 export class PlannerStore {
   private readonly api = inject(LayoutApiService);
+  private readonly notify = inject(NotifyService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly halls = signal<Hall[]>(defaultHalls());
@@ -306,23 +308,26 @@ export class PlannerStore {
 
     this.busy.set(true);
     this.error.set('');
+    this.notify.showLoading('Saving layout…');
 
     try {
       const payload = buildApiPayload(this.currentHall(), this.currentStalls(), this.layoutName());
       const saved = await this.api.save(payload);
       this.selectedSavedId.set(saved.layout?.id ?? saved.id ?? null);
       await this.loadList();
-      window.alert('✅ Layout saved successfully.');
+      this.notify.success('Layout saved successfully.');
     } catch (e) {
       this.showError(`❌ Save Error: ${extractErrorMessage(e)}`);
     } finally {
       this.busy.set(false);
+      this.notify.hideLoading();
     }
   }
 
   /** App.js:575. */
   async openLayout(id: string | number): Promise<void> {
     this.busy.set(true);
+    this.notify.showLoading('Opening layout…');
 
     try {
       const d = await this.api.open(id);
@@ -342,12 +347,21 @@ export class PlannerStore {
       this.showError(`❌ Open Error: ${extractErrorMessage(e)}`);
     } finally {
       this.busy.set(false);
+      this.notify.hideLoading();
     }
   }
 
-  /** App.js:576. Native confirm is kept deliberately (decision FD-008). */
+  /** App.js:576. The native confirm is replaced by a styled dialog (decision FD-013). */
   async deleteLayout(id: string | number): Promise<void> {
-    if (!window.confirm('Delete this saved layout?')) return;
+    const confirmed = await this.notify.confirm({
+      title: 'Delete this saved layout?',
+      text: 'The layout, its hall and all of its shops will be removed. This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true
+    });
+    if (!confirmed) return;
+
+    this.notify.showLoading('Deleting layout…');
 
     try {
       await this.api.delete(id);
@@ -355,9 +369,11 @@ export class PlannerStore {
       if (String(this.selectedSavedId()) === String(id)) {
         this.selectedSavedId.set(null);
       }
-      window.alert('✅ Layout deleted.');
+      this.notify.success('Layout deleted.');
     } catch (e) {
       this.showError(`❌ Delete Error: ${extractErrorMessage(e)}`);
+    } finally {
+      this.notify.hideLoading();
     }
   }
 
@@ -370,16 +386,18 @@ export class PlannerStore {
     }
 
     this.busy.set(true);
+    this.notify.showLoading('Updating layout…');
 
     try {
       const payload = buildApiPayload(this.currentHall(), this.currentStalls(), this.layoutName());
       await this.api.update(savedId, payload);
       await this.loadList();
-      window.alert('✅ Layout updated successfully.');
+      this.notify.success('Layout updated successfully.');
     } catch (e) {
       this.showError(`❌ Update Error: ${extractErrorMessage(e)}`);
     } finally {
       this.busy.set(false);
+      this.notify.hideLoading();
     }
   }
 }

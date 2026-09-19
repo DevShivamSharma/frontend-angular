@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
 
+import { NotifyService } from '../../core/notify.service';
 import { ExcelLayoutService } from '../excel/excel-layout.service';
+import { IconComponent } from './icon.component';
 import { PlannerStore } from '../planner-store.service';
 
 /**
@@ -10,11 +12,13 @@ import { PlannerStore } from '../planner-store.service';
 @Component({
   selector: 'app-working-hall-panel',
   templateUrl: './working-hall-panel.component.html',
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkingHallPanelComponent {
   private readonly store = inject(PlannerStore);
   private readonly excel = inject(ExcelLayoutService);
+  private readonly notify = inject(NotifyService);
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
@@ -58,9 +62,10 @@ export class WorkingHallPanelComponent {
       this.store.applyExcelImport(result);
 
       const rejected = result.imported.length - result.valid.length;
-      window.alert(
-        `✅ Excel imported\nHall: ${result.hall.name}\nStalls: ${result.valid.length}` +
-          (rejected ? `\nRejected outside boundary: ${rejected}` : '')
+      this.notify.success(
+        'Excel imported',
+        `Hall: ${result.hall.name} · Stalls: ${result.valid.length}` +
+          (rejected ? ` · Rejected outside boundary: ${rejected}` : '')
       );
     } catch (err) {
       this.store.showError(
