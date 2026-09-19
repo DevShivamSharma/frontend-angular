@@ -1,0 +1,273 @@
+import * as THREE from 'three';
+
+import { Stall } from '../models/stall.model';
+import { num, validGate } from '../geometry/planner-geometry';
+
+/**
+ * Renders one stall. Ported from the React `Stall3D` component
+ * (App.js:119-365).
+ *
+ * The two floating labels were drei `<Html>` elements. There is no Angular
+ * equivalent, so they are plain DOM nodes in an overlay that this class
+ * projects onto the screen every frame - `projectLabel()` reproduces drei's
+ * `distanceFactor` scaling formula so the labels shrink with distance exactly
+ * as they did in React.
+ */
+export class StallObject {
+  readonly group = new THREE.Group();
+
+  /** Meshes the raycaster may hit to start a drag. */
+  readonly pickTargets: THREE.Object3D[] = [];
+
+  private readonly body = new THREE.Group();
+  private readonly nameAnchor = new THREE.Object3D();
+  private readonly openAnchor = new THREE.Object3D();
+  private readonly nameEl: HTMLDivElement;
+  private readonly openEl: HTMLDivElement;
+
+  /** Rebuild key: geometry only changes when one of these values changes. */
+  private signature = '';
+  private selected = false;
+
+  constructor(
+    private stall: Stall,
+    private readonly overlay: HTMLElement
+  ) {
+    this.group.add(this.body, this.nameAnchor, this.openAnchor);
+    this.group.userData['stallId'] = stall.id;
+
+    this.nameEl = createLabel();
+    this.openEl = createLabel();
+    this.overlay.appendChild(this.nameEl);
+    this.overlay.appendChild(this.openEl);
+
+    this.update(stall, false);
+  }
+
+  get id(): string | number {
+    return this.stall.id;
+  }
+
+  update(stall: Stall, selected: boolean): void {
+    this.stall = stall;
+    this.group.userData['stallId'] = stall.id;
+    this.group.position.set(stall.posX, 0.08, stall.posZ);
+
+    const signature = [
+      num(stall.width, 5),
+      num(stall.length, 5),
+      num(stall.height, 4),
+      validGate(stall.gateSide),
+      stall.color || '#3498db',
+      selected
+    ].join('|');
+
+    if (signature !== this.signature) {
+      this.signature = signature;
+      this.selected = selected;
+      this.rebuild();
+    }
+
+    this.nameEl.textContent = stall.name || `Shop ${stall.id}`;
+    this.nameEl.style.background = selected ? '#0369a1' : 'rgba(15,23,42,.88)';
+    this.nameEl.style.color = '#fff';
+    this.nameEl.style.padding = '4px 7px';
+    this.nameEl.style.borderRadius = '5px';
+    this.nameEl.style.fontSize = '10px';
+    this.nameEl.style.fontWeight = '700';
+    this.nameEl.style.boxShadow = '0 2px 7px rgba(0,0,0,.25)';
+
+    const gate = validGate(stall.gateSide);
+    this.openEl.textContent = `OPEN: ${gate}`;
+    this.openEl.style.color = '#052e16';
+    this.openEl.style.fontSize = '10px';
+    this.openEl.style.fontWeight = '900';
+    this.openEl.style.background = '#86efac';
+    this.openEl.style.border = '1px solid #16a34a';
+    this.openEl.style.padding = '3px 6px';
+    this.openEl.style.borderRadius = '4px';
+  }
+
+  /** Position both labels for the current camera. */
+  projectLabels(camera: THREE.PerspectiveCamera, width: number, height: number): void {
+    projectLabel(this.nameEl, this.nameAnchor, camera, width, height, 10);
+    projectLabel(this.openEl, this.openAnchor, camera, width, height, 12);
+  }
+
+  dispose(): void {
+    disposeChildren(this.body);
+    this.nameEl.remove();
+    this.openEl.remove();
+    this.group.removeFromParent();
+  }
+
+  /**
+   * Rebuild the stall body.
+   *
+   * `gateSide` means the wall on that exact side is NOT rendered:
+   * FRONT = +Z open, BACK = -Z open, LEFT = -X open, RIGHT = +X open.
+   */
+  private rebuild(): void {
+    disposeChildren(this.body);
+    this.pickTargets.length = 0;
+
+    const stall = this.stall;
+    const gate = validGate(stall.gateSide);
+    const w = Math.max(0.2, num(stall.width, 5));
+    const l = Math.max(0.2, num(stall.length, 5));
+    const h = Math.max(0.2, num(stall.height, 4));
+
+    // Wall thickness.
+    const wall = Math.min(0.22, Math.max(0.1, Math.min(w, l) * 0.035));
+
+    // Stall floor.
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(w, 0.08, l),
+      new THREE.MeshStandardMaterial({ color: '#e2e8f0' })
+    );
+    floor.position.set(0, 0.04, 0);
+    floor.receiveShadow = true;
+    this.addPart(floor);
+
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: stall.color || '#3498db',
+      roughness: 0.42,
+      metalness: 0.05
+    });
+
+    if (gate !== 'FRONT') this.addWall(new THREE.BoxGeometry(w, h, wall), wallMaterial, 0, h / 2, l / 2);
+    if (gate !== 'BACK') this.addWall(new THREE.BoxGeometry(w, h, wall), wallMaterial, 0, h / 2, -l / 2);
+    if (gate !== 'LEFT') this.addWall(new THREE.BoxGeometry(wall, h, l), wallMaterial, -w / 2, h / 2, 0);
+    if (gate !== 'RIGHT') this.addWall(new THREE.BoxGeometry(wall, h, l), wallMaterial, w / 2, h / 2, 0);
+
+    // Clear visual OPEN marker on the selected gate side.
+    const markerMaterial = new THREE.MeshBasicMaterial({
+      color: '#22c55e',
+      side: THREE.DoubleSide
+    });
+
+    if (gate === 'FRONT') {
+      this.addMarker(Math.max(1, w * 0.55), markerMaterial, [0, 0.105, l / 2 + 0.16], [-Math.PI / 2, 0, 0]);
+    } else if (gate === 'BACK') {
+      this.addMarker(Math.max(1, w * 0.55), markerMaterial, [0, 0.105, -l / 2 - 0.16], [-Math.PI / 2, 0, 0]);
+    } else if (gate === 'LEFT') {
+      this.addMarker(Math.max(1, l * 0.55), markerMaterial, [-w / 2 - 0.16, 0.105, 0], [-Math.PI / 2, 0, Math.PI / 2]);
+    } else {
+      this.addMarker(Math.max(1, l * 0.55), markerMaterial, [w / 2 + 0.16, 0.105, 0], [-Math.PI / 2, 0, Math.PI / 2]);
+    }
+
+    // Selection outline.
+    if (this.selected) {
+      const outline = new THREE.Mesh(
+        new THREE.BoxGeometry(w + 0.16, 0.025, l + 0.16),
+        new THREE.MeshBasicMaterial({ color: '#38bdf8', wireframe: true })
+      );
+      outline.position.set(0, 0.095, 0);
+      this.addPart(outline);
+    }
+
+    this.nameAnchor.position.set(0, h + 0.35, 0);
+    this.openAnchor.position.set(
+      gate === 'LEFT' ? -w / 2 - 0.35 : gate === 'RIGHT' ? w / 2 + 0.35 : 0,
+      0.25,
+      gate === 'FRONT' ? l / 2 + 0.35 : gate === 'BACK' ? -l / 2 - 0.35 : 0
+    );
+  }
+
+  private addWall(
+    geometry: THREE.BoxGeometry,
+    material: THREE.Material,
+    x: number,
+    y: number,
+    z: number
+  ): void {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    this.addPart(mesh);
+  }
+
+  private addMarker(
+    size: number,
+    material: THREE.Material,
+    position: [number, number, number],
+    rotation: [number, number, number]
+  ): void {
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size, 0.22), material);
+    mesh.position.set(...position);
+    mesh.rotation.set(...rotation);
+    this.addPart(mesh);
+  }
+
+  private addPart(mesh: THREE.Mesh): void {
+    this.body.add(mesh);
+    this.pickTargets.push(mesh);
+  }
+}
+
+function createLabel(): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.position = 'absolute';
+  el.style.top = '0';
+  el.style.left = '0';
+  el.style.whiteSpace = 'nowrap';
+  el.style.pointerEvents = 'none';
+  el.style.willChange = 'transform';
+  return el;
+}
+
+/**
+ * drei scales an `<Html distanceFactor={d}>` by `d / (2 * tan(fov/2) * dist)`.
+ * Reproducing that formula keeps label sizes identical to the React build.
+ */
+const worldPosition = new THREE.Vector3();
+const cameraPosition = new THREE.Vector3();
+
+function projectLabel(
+  el: HTMLElement,
+  anchor: THREE.Object3D,
+  camera: THREE.PerspectiveCamera,
+  width: number,
+  height: number,
+  distanceFactor: number
+): void {
+  anchor.getWorldPosition(worldPosition);
+  cameraPosition.setFromMatrixPosition(camera.matrixWorld);
+
+  const distance = worldPosition.distanceTo(cameraPosition);
+  const ndc = worldPosition.clone().project(camera);
+
+  if (ndc.z > 1) {
+    el.style.display = 'none';
+    return;
+  }
+
+  const vFov = (camera.fov * Math.PI) / 180;
+  const scale = distanceFactor / (2 * Math.tan(vFov / 2) * distance);
+  const x = (ndc.x * 0.5 + 0.5) * width;
+  const y = (-ndc.y * 0.5 + 0.5) * height;
+
+  el.style.display = 'block';
+  el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${scale})`;
+}
+
+/** Dispose every geometry/material below `root` and detach the children. */
+export function disposeChildren(root: THREE.Object3D): void {
+  const seenMaterials = new Set<THREE.Material>();
+
+  root.traverse(child => {
+    const mesh = child as Partial<THREE.Mesh>;
+    mesh.geometry?.dispose();
+
+    const material = mesh.material;
+    if (Array.isArray(material)) {
+      material.forEach(m => seenMaterials.add(m));
+    } else if (material) {
+      seenMaterials.add(material);
+    }
+  });
+
+  seenMaterials.forEach(m => m.dispose());
+  root.clear();
+}

@@ -1,0 +1,54 @@
+@if (selectedStall(); as stall) {
+  <section class="card is-selected-card" [formGroup]="form">
+    <h3 class="panel-title">✏️ Edit Selected Shop</h3>
+    <div class="panel-hint">Click a shop to select it. Drag it on the grid to move it.</div>
+
+    <input class="control" aria-label="Shop name" formControlName="name" />
+
+    <div class="row">
+      <label class="number-field">
+        Width
+        <input class="control" type="number" formControlName="width" />
+      </label>
+      <label class="number-field">
+        Length
+        <input class="control" type="number" formControlName="length" />
+      </label>
+      <label class="number-field">
+        Height
+        <input class="control" type="number" formControlName="height" />
+      </label>
+    </div>
+
+    <span class="field-label" id="edit-stall-gate-label">Opening Side</span>
+    <div class="grid-2" role="group" aria-labelledby="edit-stall-gate-label">
+      @for (side of gateSides; track side[0]) {
+        <button
+          type="button"
+          class="btn-gate"
+          [class.is-selected]="stall.gateSide === side[0]"
+          [attr.aria-pressed]="stall.gateSide === side[0]"
+          (click)="setGateSide(side[0])"
+        >
+          {{ side[2] }} {{ side[1] }}
+        </button>
+      }
+    </div>
+
+    <div class="row">
+      <label class="number-field">
+        X (drag)
+        <input class="control" type="number" formControlName="posX" />
+      </label>
+      <label class="number-field">
+        Z (drag)
+        <input class="control" type="number" formControlName="posZ" />
+      </label>
+    </div>
+
+    <button type="button" class="btn-primary" (click)="applyChanges()">
+      ✓ Apply Shop Changes
+    </button>
+    <button type="button" class="btn-danger" (click)="removeStall()">🗑 Remove Shop</button>
+  </section>
+}

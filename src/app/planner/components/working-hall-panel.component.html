@@ -1,0 +1,32 @@
+<section class="card">
+  <h3 class="panel-title">🏛️ Working Hall</h3>
+
+  <label class="sr-only" for="working-hall">Working hall</label>
+  <select
+    id="working-hall"
+    class="control"
+    [value]="activeHallId()"
+    (change)="onHallChange($any($event.target).value)"
+  >
+    @for (hall of halls(); track hall.id) {
+      <option [value]="hall.id" [selected]="isActive(hall.id)">
+        {{ hall.name }} [{{ hall.shape }}]
+      </option>
+    }
+  </select>
+
+  <div class="grid-2 gap-7">
+    <button type="button" class="btn-secondary" (click)="openFilePicker()">📥 Import Excel</button>
+    <button type="button" class="btn-secondary" (click)="downloadTemplate()">📄 Template</button>
+  </div>
+
+  <input
+    #fileInput
+    type="file"
+    accept=".xlsx,.xls"
+    hidden
+    aria-hidden="true"
+    tabindex="-1"
+    (change)="onFileSelected($event)"
+  />
+</section>

@@ -1,0 +1,46 @@
+<section class="card">
+  <h3 class="panel-title">Saved Layout</h3>
+
+  <input
+    class="control"
+    placeholder="Layout name"
+    aria-label="Layout name"
+    [formControl]="layoutName"
+  />
+
+  <div class="row">
+    <button type="button" class="btn-primary" [disabled]="busy()" (click)="saveLayout()">
+      💾 Save New
+    </button>
+    <button
+      type="button"
+      class="btn-secondary"
+      [disabled]="busy() || !selectedSavedId()"
+      (click)="updateLayout()"
+    >
+      ↻ Update
+    </button>
+  </div>
+
+  <div class="panel-header saved-header">
+    <span class="saved-header-title">Saved Layouts</span>
+    <button type="button" class="btn-mini" (click)="refresh()">↻ Refresh</button>
+  </div>
+
+  @for (layout of savedLayouts(); track layout.id) {
+    <div class="saved-row">
+      <div class="saved-row-name">{{ layout.name }}</div>
+      <div class="saved-row-meta">ID {{ layout.id }} · {{ stallCount(layout) }} shops</div>
+      <div class="grid-2 saved-row-actions">
+        <button type="button" class="btn-mini is-blue" (click)="openLayout(layout.id)">
+          👁 Open
+        </button>
+        <button type="button" class="btn-mini is-red" (click)="deleteLayout(layout.id)">
+          🗑 Delete
+        </button>
+      </div>
+    </div>
+  } @empty {
+    <div class="empty-state">No saved layouts found.</div>
+  }
+</section>

@@ -1,0 +1,67 @@
+<div class="planner">
+  <aside class="sidebar">
+    <h1 class="app-title">3D Floor Planner</h1>
+    <div class="app-subtitle">Professional Stall / Shop Layout Designer</div>
+
+    <!-- Errors auto-clear after 4500 ms (App.js:498). `assertive` so a
+         rejected drag is announced without waiting for focus to move. -->
+    @if (error()) {
+      <div class="error-box" role="alert" aria-live="assertive">{{ error() }}</div>
+    }
+
+    <app-working-hall-panel />
+    <app-create-hall-form />
+    <app-add-stall-form />
+    <app-edit-stall-form />
+    <app-shops-list />
+    <app-saved-layouts-panel />
+  </aside>
+
+  <main class="stage">
+    <app-scene3d
+      [hall]="currentHall()"
+      [stalls]="stalls()"
+      [selectedStallId]="selectedStallId()"
+      [dragging]="dragging()"
+      (selectStall)="onSelectStall($event)"
+      (moveStall)="onMoveStall($event)"
+      (dragState)="onDragState($event)"
+    />
+
+    <div class="hud hud-left">
+      {{ currentHall()?.name }}
+      <br />
+      <span class="hud-left-meta">Drag shops • Snap: {{ snap() ? '1 unit' : 'OFF' }}</span>
+    </div>
+
+    @if (currentHall(); as hall) {
+      <div class="hud hud-right">
+        <b>Hall Details</b>
+        <div>{{ hall.shape }}</div>
+        @if (hall.shape === 'CIRCLE') {
+          <div>Radius: {{ hall.radius }}</div>
+        } @else {
+          <div>Width: {{ hall.width }} · Length: {{ hall.length }}</div>
+        }
+        <div>Shops: {{ currentStalls().length }}</div>
+        <div class="hud-right-legend">
+          Grid: 1 × 1 unit<br />
+          Section: 5 × 5 units<br />
+          Open side: per shop
+        </div>
+      </div>
+    }
+
+    @if (selectedStall(); as stall) {
+      <div class="hud hud-selection">
+        Selected: <b>{{ stall.name }}</b>
+        <br />
+        OPEN: <b>{{ stall.gateSide }}</b> · X {{ stall.posX }} · Z {{ stall.posZ }}
+      </div>
+    }
+
+    @if (dragging()) {
+      <div class="hud hud-drag">↔ Dragging shop — release to place</div>
+    }
+  </main>
+</div>

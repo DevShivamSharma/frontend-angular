@@ -1,0 +1,30 @@
+<section class="card" [formGroup]="form">
+  <h3 class="panel-title">Create Hall</h3>
+
+  <input class="control" placeholder="Hall name" aria-label="Hall name" formControlName="name" />
+
+  <select class="control" aria-label="Hall shape" formControlName="shape">
+    <option value="SQUARE">Rectangular</option>
+    <option value="CIRCLE">Circular</option>
+  </select>
+
+  @if (shape() === 'SQUARE') {
+    <div class="row">
+      <label class="number-field">
+        Width
+        <input class="control" type="number" formControlName="w" />
+      </label>
+      <label class="number-field">
+        Length
+        <input class="control" type="number" formControlName="l" />
+      </label>
+    </div>
+  } @else {
+    <label class="number-field">
+      Radius
+      <input class="control" type="number" formControlName="r" />
+    </label>
+  }
+
+  <button type="button" class="btn-primary" (click)="createHall()">Generate Hall</button>
+</section>

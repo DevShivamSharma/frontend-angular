@@ -1,0 +1,47 @@
+<section class="card" [formGroup]="form">
+  <h3 class="panel-title">Add Shop</h3>
+
+  <input
+    class="control"
+    placeholder="Shop / Stall Name"
+    aria-label="Shop or stall name"
+    formControlName="name"
+  />
+
+  <div class="row">
+    <label class="number-field">
+      Width
+      <input class="control" type="number" formControlName="width" />
+    </label>
+    <label class="number-field">
+      Length
+      <input class="control" type="number" formControlName="length" />
+    </label>
+    <label class="number-field">
+      Height
+      <input class="control" type="number" formControlName="height" />
+    </label>
+  </div>
+
+  <label class="field-label" for="new-stall-color">Color</label>
+  <input id="new-stall-color" class="color-input" type="color" formControlName="color" />
+
+  <span class="field-label" id="new-stall-gate-label">Customer Entry / Open Side</span>
+  <div class="grid-2" role="group" aria-labelledby="new-stall-gate-label">
+    @for (side of gateSides; track side[0]) {
+      <button
+        type="button"
+        class="btn-gate"
+        [class.is-selected]="gateSide() === side[0]"
+        [attr.aria-pressed]="gateSide() === side[0]"
+        (click)="setGateSide(side[0])"
+      >
+        {{ side[2] }} {{ side[1] }}
+      </button>
+    }
+  </div>
+
+  <button type="button" class="btn-success" (click)="addStall()">
+    ➕ Add Shop (then drag on grid)
+  </button>
+</section>

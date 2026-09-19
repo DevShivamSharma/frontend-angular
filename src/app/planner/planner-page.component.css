@@ -1,0 +1,131 @@
+/* Shell and HUD styles ported from App.js:579-601 and App.js:620-623. */
+
+.planner {
+  display: flex;
+  height: 100vh;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.sidebar {
+  width: 380px;
+  padding: 18px;
+  background: #172033;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border-right: 1px solid #334155;
+}
+
+.app-title {
+  margin: 2px 0;
+  color: #38bdf8;
+  font-size: 23px;
+}
+
+.app-subtitle {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 14px;
+}
+
+.error-box {
+  background: #7f1d1d;
+  border: 1px solid #ef4444;
+  padding: 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.stage {
+  flex: 1;
+  position: relative;
+  background: #dbe5ef;
+  min-width: 0;
+}
+
+.hud {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* App.js:620 - `hudLeft` */
+.hud-left {
+  top: 15px;
+  left: 15px;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 9px 13px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.hud-left-meta {
+  font-size: 10px;
+  color: #cbd5e1;
+}
+
+/* App.js:621 - `hudRight` */
+.hud-right {
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  min-width: 175px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.16);
+}
+
+.hud-right-legend {
+  border-top: 1px solid #cbd5e1;
+  margin-top: 5px;
+  padding-top: 5px;
+}
+
+/* App.js:622 - `selectionHud` */
+.hud-selection {
+  bottom: 15px;
+  left: 15px;
+  background: rgba(3, 105, 161, 0.94);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+/* App.js:623 - `dragHud` */
+.hud-drag {
+  bottom: 15px;
+  right: 15px;
+  background: #0f172a;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+/*
+ * Phase 11: the fixed 380px sidebar plus canvas does not fit a phone. Below
+ * 900px the two panes stack so the planner stays usable; nothing about the
+ * desktop layout changes.
+ */
+@media (max-width: 900px) {
+  .planner {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid #334155;
+    max-height: 50vh;
+  }
+
+  .stage {
+    height: 50vh;
+  }
+}

@@ -1,0 +1,74 @@
+# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# Secrets — none exist in this app today. This guards against a .env being added later.
+#
+# NOTE: src/environments/*.ts are NOT secrets and MUST stay committed. They hold only the public
+# API base URL (visible to every browser anyway), and app.config.ts imports them — ignoring them
+# breaks `ng build` on any fresh clone (Vercel / Netlify / CI).
+.env
+.env.*
+!.env.example
+
+# Personal, machine-local environment override (optional, never committed)
+/src/environments/environment.local.ts
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+*.tsbuildinfo
+
+# Node
+/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Angular
+/.angular
+.sass-cache/
+/connect.lock
+/libpeerconnection.log
+/typings
+
+# Tests
+/coverage
+testem.log
+__screenshots__/
+/karma-results
+/junit.xml
+
+# Logs
+logs/
+*.log
+
+# Hosting / deploy tooling (local state, may contain project + account ids)
+.vercel/
+.netlify/
+.firebase/
+firebase-debug.log
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.swp
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
