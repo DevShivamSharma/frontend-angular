@@ -37,10 +37,50 @@ describe('PlannerStore', () => {
     store = TestBed.inject(PlannerStore);
   });
 
-  it('starts on the 40x40 square hall with no stalls', () => {
-    expect(store.halls().length).toBe(2);
-    expect(store.currentHall()?.name).toBe('Main Exhibition Hall A');
+  it('starts on the offline fallback hall with no stalls', () => {
+    // Real halls arrive from GET /api/halls; this is only what shows before that answers.
+    expect(store.halls().length).toBe(1);
+    expect(store.currentHall()?.name).toBe('Sample Hall (offline)');
+    expect(store.currentHall()?.width).toBe(40);
     expect(store.currentStalls()).toEqual([]);
+  });
+
+  describe('loadHalls', () => {
+    let http: HttpTestingController;
+
+    beforeEach(() => {
+      http = TestBed.inject(HttpTestingController);
+    });
+
+    it('replaces the fallback with the real halls and selects the first', async () => {
+      const promise = store.loadHalls();
+      http.expectOne({ url: `${API}/halls?standalone=true`, method: 'GET' }).flush([
+        { id: 1014, name: 'Hall 1GF', shape: 'SQUARE', width: 84, length: 116, radius: 0 },
+        { id: 1016, name: 'Hall 12', shape: 'SQUARE', width: 58, length: 41, radius: 0 }
+      ]);
+      await promise;
+
+      expect(store.halls().length).toBe(2);
+      expect(store.activeHallId()).toBe(1014);
+      expect(store.currentHall()?.name).toBe('Hall 1GF');
+    });
+
+    it('keeps the fallback when the backend is unreachable', async () => {
+      const promise = store.loadHalls();
+      http.expectOne(`${API}/halls?standalone=true`).error(new ProgressEvent('network error'));
+      await promise;
+
+      expect(store.currentHall()?.name).toBe('Sample Hall (offline)');
+    });
+
+    it('keeps the fallback when the backend returns no halls', async () => {
+      const promise = store.loadHalls();
+      http.expectOne(`${API}/halls?standalone=true`).flush([]);
+      await promise;
+
+      expect(store.halls().length).toBe(1);
+      expect(store.currentHall()?.name).toBe('Sample Hall (offline)');
+    });
   });
 
   describe('addStall', () => {
@@ -92,6 +132,40 @@ describe('PlannerStore', () => {
 
       expect(created).toBeNull();
       expect(store.error()).toContain('No free grid position');
+    });
+
+    it('skips positions that overlap blocked areas', () => {
+      // Create a hall where the -16/-16 corner (where the scan starts) is blocked
+      store.halls.set([{
+        id: 'blocked-hall',
+        name: 'Hall With Block',
+        shape: 'SQUARE',
+        width: 40,
+        length: 40,
+        radius: 0,
+        blockedAreas: [
+          { posX: -16, posZ: -16, width: 4, length: 4, kind: 'wall', color: '#742371' }
+        ]
+      }]);
+      store.setActiveHall('blocked-hall');
+
+      const shop = store.addStall({
+        name: '',
+        width: 2,
+        length: 2,
+        height: 4,
+        color: '#3498db',
+        gateSide: 'FRONT'
+      });
+
+      expect(shop).toBeTruthy();
+      // The first-row, first-column position (-19,-19) is valid but the scan would have
+      // skipped positions overlapping the blocked area at -16,-16.
+      // The stall should NOT be placed at exactly the blocked area's centre.
+      const isOnBlockedArea =
+        Math.abs(shop!.posX - (-16)) < (shop!.width + 4) / 2 - 1e-8 &&
+        Math.abs(shop!.posZ - (-16)) < (shop!.length + 4) / 2 - 1e-8;
+      expect(isOnBlockedArea).toBe(false);
     });
   });
 
@@ -148,6 +222,71 @@ describe('PlannerStore', () => {
       expect(store.stalls().find(s => s.id === second.id)!.posX).toBe(-8);
       expect(store.error()).toContain('overlaps another shop');
     });
+
+    it('rejects a move into a blocked area and keeps the old position', () => {
+      // Replace the default hall with one that has a blocked area at posX=10, posZ=0
+      store.halls.set([{
+        id: 'blocked-hall',
+        name: 'Hall With Block',
+        shape: 'SQUARE',
+        width: 40,
+        length: 40,
+        radius: 0,
+        blockedAreas: [
+          { posX: 10, posZ: 0, width: 6, length: 6, kind: 'outside', color: '#ffffff' }
+        ]
+      }]);
+      store.setActiveHall('blocked-hall');
+
+      const shop = store.addStall({
+        name: 'A',
+        width: 4,
+        length: 4,
+        height: 4,
+        color: '#3498db',
+        gateSide: 'FRONT'
+      })!;
+
+      const origX = shop.posX;
+      const origZ = shop.posZ;
+
+      // Try moving into the blocked area
+      store.moveStall(shop.id, 10, 0);
+
+      expect(store.selectedStall()!.posX).toBe(origX);
+      expect(store.selectedStall()!.posZ).toBe(origZ);
+      expect(store.error()).toContain('outside the hall boundary');
+    });
+
+    it('allows a move onto a zone blocked area', () => {
+      store.halls.set([{
+        id: 'zone-hall',
+        name: 'Hall With Zone',
+        shape: 'SQUARE',
+        width: 40,
+        length: 40,
+        radius: 0,
+        blockedAreas: [
+          { posX: 5, posZ: 5, width: 6, length: 6, kind: 'zone', color: '#8A2BE2' }
+        ]
+      }]);
+      store.setActiveHall('zone-hall');
+
+      const shop = store.addStall({
+        name: 'A',
+        width: 4,
+        length: 4,
+        height: 4,
+        color: '#3498db',
+        gateSide: 'FRONT'
+      })!;
+
+      // Move onto the zone — should succeed because zones don't block
+      store.moveStall(shop.id, 5, 5);
+
+      expect(store.selectedStall()!.posX).toBe(5);
+      expect(store.selectedStall()!.posZ).toBe(5);
+    });
   });
 
   describe('createHall', () => {
@@ -165,7 +304,7 @@ describe('PlannerStore', () => {
     it('zeroes width/length for a circular hall and names it by default', () => {
       const hall = store.createHall({ name: '', shape: 'CIRCLE', w: 30, l: 20, r: 9 });
 
-      expect(hall.name).toBe('Custom Hall 3');
+      expect(hall.name).toBe('Custom Hall 2');
       expect(hall.width).toBe(0);
       expect(hall.length).toBe(0);
       expect(hall.radius).toBe(9);
@@ -184,7 +323,7 @@ describe('PlannerStore', () => {
       })!;
 
       expect(store.selectedStallId()).toBe(shop.id);
-      store.setActiveHall(2);
+      store.setActiveHall('some-other-hall');
       expect(store.selectedStallId()).toBeNull();
     });
 
@@ -243,6 +382,82 @@ describe('PlannerStore', () => {
       store.saveEdit();
 
       expect(store.error()).toContain('invalid or overlap');
+    });
+  });
+
+  describe('open sides', () => {
+    function addShop() {
+      return store.addStall({
+        name: 'A',
+        width: 8,
+        length: 8,
+        height: 4,
+        color: '#3498db',
+        gateSide: 'FRONT'
+      })!;
+    }
+
+    it('a new stall starts with exactly its gate side open', () => {
+      const shop = addShop();
+      expect(shop.openSides).toEqual(['FRONT']);
+      expect(shop.gateSide).toBe('FRONT');
+    });
+
+    it('toggleOpenSide adds a closed side and keeps gateSide synced', () => {
+      const shop = addShop();
+
+      store.toggleOpenSide(shop.id, 'RIGHT');
+
+      const updated = store.currentStalls()[0];
+      expect(updated.openSides).toEqual(['FRONT', 'RIGHT']);
+      expect(updated.gateSide).toBe('FRONT');
+    });
+
+    it('toggleOpenSide removes an open side when more than one is open', () => {
+      const shop = addShop();
+      store.toggleOpenSide(shop.id, 'RIGHT');
+      store.toggleOpenSide(shop.id, 'FRONT');
+
+      const updated = store.currentStalls()[0];
+      expect(updated.openSides).toEqual(['RIGHT']);
+      expect(updated.gateSide).toBe('RIGHT');
+    });
+
+    it('the last remaining open side cannot be toggled off', () => {
+      const shop = addShop();
+
+      store.toggleOpenSide(shop.id, 'FRONT');
+
+      expect(store.currentStalls()[0].openSides).toEqual(['FRONT']);
+    });
+
+    it('openSide is add-only and idempotent (3D wall click)', () => {
+      const shop = addShop();
+
+      store.openSide(shop.id, 'LEFT');
+      store.openSide(shop.id, 'LEFT');
+      store.openSide(shop.id, 'FRONT');
+
+      expect(store.currentStalls()[0].openSides).toEqual(['FRONT', 'LEFT']);
+    });
+
+    it('updateStall syncs gateSide to the first open side', () => {
+      const shop = addShop();
+
+      store.updateStall(shop.id, { openSides: ['BACK', 'LEFT'] });
+
+      const updated = store.currentStalls()[0];
+      expect(updated.gateSide).toBe('BACK');
+      expect(updated.openSides).toEqual(['BACK', 'LEFT']);
+    });
+
+    it('saveEdit normalizes a broken openSides list', () => {
+      const shop = addShop();
+
+      store.updateStall(shop.id, { openSides: [] });
+      store.saveEdit();
+
+      expect(store.selectedStall()!.openSides).toEqual(['FRONT']);
     });
   });
 

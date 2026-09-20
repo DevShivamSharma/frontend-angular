@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { num, validGate } from '../geometry/planner-geometry';
+import { num } from '../geometry/planner-geometry';
 import { GATE_SIDES } from './gate-sides';
 import { IconComponent } from './icon.component';
 import { GateSide, Stall } from '../models/stall.model';
@@ -76,8 +76,9 @@ export class EditStallFormComponent {
     });
   }
 
-  setGateSide(value: GateSide): void {
-    this.patchSelected({ gateSide: validGate(value) });
+  toggleGateSide(value: GateSide): void {
+    const stall = this.selectedStall();
+    if (stall) this.store.toggleOpenSide(stall.id, value);
   }
 
   applyChanges(): void {

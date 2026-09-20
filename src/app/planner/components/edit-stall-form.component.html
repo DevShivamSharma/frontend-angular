@@ -23,15 +23,16 @@
       </label>
     </div>
 
-    <span class="field-label" id="edit-stall-gate-label">Opening Side</span>
+    <span class="field-label" id="edit-stall-gate-label">Open Sides</span>
+    <div class="panel-hint">Click to toggle. At least one side stays open.</div>
     <div class="grid-2" role="group" aria-labelledby="edit-stall-gate-label">
       @for (side of gateSides; track side[0]) {
         <button
           type="button"
           class="btn-gate"
-          [class.is-selected]="stall.gateSide === side[0]"
-          [attr.aria-pressed]="stall.gateSide === side[0]"
-          (click)="setGateSide(side[0])"
+          [class.is-selected]="stall.openSides.includes(side[0])"
+          [attr.aria-pressed]="stall.openSides.includes(side[0])"
+          (click)="toggleGateSide(side[0])"
         >
           <app-icon [name]="side[2]" [size]="14" />
           {{ side[1] }}

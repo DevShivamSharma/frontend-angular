@@ -1,10 +1,12 @@
-import { Hall } from '../models/hall.model';
+import { BlockedArea, Hall } from '../models/hall.model';
 import { Stall } from '../models/stall.model';
 import {
   hallSize,
+  normalizeOpenSides,
   normalizeStall,
   num,
   overlaps,
+  overlapsBlockedArea,
   shapeOf,
   snapValue,
   validGate,
@@ -41,6 +43,7 @@ function stall(overrides: Partial<Stall> = {}): Stall {
     posZ: 0,
     color: '#3498db',
     gateSide: 'FRONT',
+    openSides: ['FRONT'],
     ...overrides
   };
 }
@@ -190,5 +193,111 @@ describe('normalizeStall', () => {
     expect(result.id).toBe(12);
     expect(result.posX).toBe(-4);
     expect(result.gateSide).toBe('LEFT');
+    expect(result.openSides).toEqual(['LEFT']);
+  });
+
+  it('prefers openSides over gateSide and keeps gateSide synced to the first', () => {
+    const result = normalizeStall({ openSides: ['right', 'FRONT', 'right'], gateSide: 'BACK' }, 1);
+
+    expect(result.openSides).toEqual(['RIGHT', 'FRONT']);
+    expect(result.gateSide).toBe('RIGHT');
+  });
+
+  it('falls back to gateSide when openSides is missing or empty', () => {
+    expect(normalizeStall({ gateSide: 'back' }, 1).openSides).toEqual(['BACK']);
+    expect(normalizeStall({ openSides: [], gateSide: 'left' }, 1).openSides).toEqual(['LEFT']);
+    expect(normalizeStall({}, 1).openSides).toEqual(['FRONT']);
+  });
+});
+
+describe('normalizeOpenSides', () => {
+  it('accepts an array and keeps order', () => {
+    expect(normalizeOpenSides(['FRONT', 'RIGHT'], 'BACK')).toEqual(['FRONT', 'RIGHT']);
+  });
+
+  it('accepts a single value and wraps it', () => {
+    expect(normalizeOpenSides('left', 'FRONT')).toEqual(['LEFT']);
+  });
+
+  it('is case-insensitive and dedupes', () => {
+    expect(normalizeOpenSides(['front', 'FRONT', 'Back'], 'RIGHT')).toEqual(['FRONT', 'BACK']);
+  });
+
+  it('drops invalid entries', () => {
+    expect(normalizeOpenSides(['UP', 'right', '', null], 'FRONT')).toEqual(['RIGHT']);
+  });
+
+  it('falls back when nothing valid remains', () => {
+    expect(normalizeOpenSides(['UP'], 'back')).toEqual(['BACK']);
+    expect(normalizeOpenSides(null, 'left')).toEqual(['LEFT']);
+    expect(normalizeOpenSides(undefined, undefined)).toEqual(['FRONT']);
+  });
+
+  it('allows all four sides', () => {
+    expect(normalizeOpenSides(['FRONT', 'BACK', 'LEFT', 'RIGHT'], 'FRONT')).toEqual([
+      'FRONT', 'BACK', 'LEFT', 'RIGHT'
+    ]);
+  });
+});
+
+describe('overlapsBlockedArea', () => {
+  const candidate = stall({ posX: 0, posZ: 0, width: 8, length: 8 });
+
+  function area(overrides: Partial<BlockedArea> = {}): BlockedArea {
+    return {
+      posX: 0,
+      posZ: 0,
+      width: 8,
+      length: 8,
+      kind: 'outside',
+      color: '#ffffff',
+      ...overrides
+    };
+  }
+
+  it('blocks on an "outside" area', () => {
+    expect(overlapsBlockedArea(candidate, [area({ kind: 'outside' })])).toBe(true);
+  });
+
+  it('blocks on a "wall" area', () => {
+    expect(overlapsBlockedArea(candidate, [area({ kind: 'wall' })])).toBe(true);
+  });
+
+  it('ignores a "zone" area (does not block)', () => {
+    expect(overlapsBlockedArea(candidate, [area({ kind: 'zone' })])).toBe(false);
+  });
+
+  it('edge-touching is allowed (1e-8 epsilon)', () => {
+    // Candidate is 8 wide centred at 0, so its right edge is at x=4.
+    // Area is 8 wide centred at 8, so its left edge is at x=4. Edge-touching only.
+    expect(overlapsBlockedArea(candidate, [area({ posX: 8 })])).toBe(false);
+  });
+
+  it('detects a real overlap (not just edge-touching)', () => {
+    expect(overlapsBlockedArea(candidate, [area({ posX: 7 })])).toBe(true);
+  });
+
+  it('needs overlap on both axes', () => {
+    expect(overlapsBlockedArea(candidate, [area({ posX: 7, posZ: 20 })])).toBe(false);
+  });
+
+  it('returns false when areas is null', () => {
+    expect(overlapsBlockedArea(candidate, null)).toBe(false);
+  });
+
+  it('returns false when areas is undefined', () => {
+    expect(overlapsBlockedArea(candidate, undefined)).toBe(false);
+  });
+
+  it('returns false when areas is empty', () => {
+    expect(overlapsBlockedArea(candidate, [])).toBe(false);
+  });
+
+  it('blocks when at least one outside/wall area overlaps among many', () => {
+    expect(overlapsBlockedArea(candidate, [
+      area({ kind: 'zone', posX: 0 }),       // zone, ignored
+      area({ kind: 'outside', posX: 50 }),    // outside but far away
+      area({ kind: 'wall', posX: 3 })         // wall, overlaps
+    ])).toBe(true);
   });
 });

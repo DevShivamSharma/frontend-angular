@@ -7,7 +7,7 @@ import { SavedLayoutsPanelComponent } from './components/saved-layouts-panel.com
 import { ShopsListComponent } from './components/shops-list.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
 import { PlannerStore } from './planner-store.service';
-import { Scene3dComponent, StallMove } from './three/scene3d.component';
+import { Scene3dComponent, StallMove, StallOpenSide } from './three/scene3d.component';
 
 /**
  * The single planner screen. Replaces the React `App` shell
@@ -46,6 +46,10 @@ export class PlannerPageComponent implements OnInit {
   readonly snap = this.store.snap;
 
   ngOnInit(): void {
+    // Real halls first, so the planner opens on an actual ITPO hall rather than the
+    // offline fallback. Independent of the layout list, so they run concurrently.
+    void this.store.loadHalls();
+
     // App.js:500 - the saved layout list is fetched once on mount.
     void this.store.loadList();
   }
@@ -60,5 +64,10 @@ export class PlannerPageComponent implements OnInit {
 
   onDragState(dragging: boolean): void {
     this.store.setDragging(dragging);
+  }
+
+  /** Wall click in the 3D view: opens that side (closing happens via the sidebar toggles). */
+  onOpenSideChange(event: StallOpenSide): void {
+    this.store.openSide(event.id, event.side);
   }
 }

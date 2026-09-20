@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { Stall } from '../models/stall.model';
+import { GateSide, Stall } from '../models/stall.model';
 import { num, validGate } from '../geometry/planner-geometry';
 
 /**
@@ -57,7 +57,7 @@ export class StallObject {
       num(stall.width, 5),
       num(stall.length, 5),
       num(stall.height, 4),
-      validGate(stall.gateSide),
+      this.openSidesOf(stall).join(','),
       stall.color || '#3498db',
       selected
     ].join('|');
@@ -77,8 +77,8 @@ export class StallObject {
     this.nameEl.style.fontWeight = '700';
     this.nameEl.style.boxShadow = '0 2px 7px rgba(0,0,0,.25)';
 
-    const gate = validGate(stall.gateSide);
-    this.openEl.textContent = `OPEN: ${gate}`;
+    const open = this.openSidesOf(stall);
+    this.openEl.textContent = `OPEN: ${open.join(', ')}`;
     this.openEl.style.color = '#052e16';
     this.openEl.style.fontSize = '10px';
     this.openEl.style.fontWeight = '900';
@@ -104,15 +104,16 @@ export class StallObject {
   /**
    * Rebuild the stall body.
    *
-   * `gateSide` means the wall on that exact side is NOT rendered:
-   * FRONT = +Z open, BACK = -Z open, LEFT = -X open, RIGHT = +X open.
+   * Every side in `openSides` has its wall NOT rendered and gets a green OPEN
+   * marker: FRONT = +Z open, BACK = -Z open, LEFT = -X open, RIGHT = +X open.
    */
   private rebuild(): void {
     disposeChildren(this.body);
     this.pickTargets.length = 0;
 
     const stall = this.stall;
-    const gate = validGate(stall.gateSide);
+    const open = this.openSidesOf(stall);
+    const first = open[0];
     const w = Math.max(0.2, num(stall.width, 5));
     const l = Math.max(0.2, num(stall.length, 5));
     const h = Math.max(0.2, num(stall.height, 4));
@@ -135,25 +136,27 @@ export class StallObject {
       metalness: 0.05
     });
 
-    if (gate !== 'FRONT') this.addWall(new THREE.BoxGeometry(w, h, wall), wallMaterial, 0, h / 2, l / 2);
-    if (gate !== 'BACK') this.addWall(new THREE.BoxGeometry(w, h, wall), wallMaterial, 0, h / 2, -l / 2);
-    if (gate !== 'LEFT') this.addWall(new THREE.BoxGeometry(wall, h, l), wallMaterial, -w / 2, h / 2, 0);
-    if (gate !== 'RIGHT') this.addWall(new THREE.BoxGeometry(wall, h, l), wallMaterial, w / 2, h / 2, 0);
+    if (!open.includes('FRONT')) this.addWall(new THREE.BoxGeometry(w, h, wall), wallMaterial, 0, h / 2, l / 2, 'FRONT');
+    if (!open.includes('BACK')) this.addWall(new THREE.BoxGeometry(w, h, wall), wallMaterial, 0, h / 2, -l / 2, 'BACK');
+    if (!open.includes('LEFT')) this.addWall(new THREE.BoxGeometry(wall, h, l), wallMaterial, -w / 2, h / 2, 0, 'LEFT');
+    if (!open.includes('RIGHT')) this.addWall(new THREE.BoxGeometry(wall, h, l), wallMaterial, w / 2, h / 2, 0, 'RIGHT');
 
-    // Clear visual OPEN marker on the selected gate side.
+    // Clear visual OPEN marker on every open side.
     const markerMaterial = new THREE.MeshBasicMaterial({
       color: '#22c55e',
       side: THREE.DoubleSide
     });
 
-    if (gate === 'FRONT') {
-      this.addMarker(Math.max(1, w * 0.55), markerMaterial, [0, 0.105, l / 2 + 0.16], [-Math.PI / 2, 0, 0]);
-    } else if (gate === 'BACK') {
-      this.addMarker(Math.max(1, w * 0.55), markerMaterial, [0, 0.105, -l / 2 - 0.16], [-Math.PI / 2, 0, 0]);
-    } else if (gate === 'LEFT') {
-      this.addMarker(Math.max(1, l * 0.55), markerMaterial, [-w / 2 - 0.16, 0.105, 0], [-Math.PI / 2, 0, Math.PI / 2]);
-    } else {
-      this.addMarker(Math.max(1, l * 0.55), markerMaterial, [w / 2 + 0.16, 0.105, 0], [-Math.PI / 2, 0, Math.PI / 2]);
+    for (const side of open) {
+      if (side === 'FRONT') {
+        this.addMarker(Math.max(1, w * 0.55), markerMaterial, [0, 0.105, l / 2 + 0.16], [-Math.PI / 2, 0, 0]);
+      } else if (side === 'BACK') {
+        this.addMarker(Math.max(1, w * 0.55), markerMaterial, [0, 0.105, -l / 2 - 0.16], [-Math.PI / 2, 0, 0]);
+      } else if (side === 'LEFT') {
+        this.addMarker(Math.max(1, l * 0.55), markerMaterial, [-w / 2 - 0.16, 0.105, 0], [-Math.PI / 2, 0, Math.PI / 2]);
+      } else {
+        this.addMarker(Math.max(1, l * 0.55), markerMaterial, [w / 2 + 0.16, 0.105, 0], [-Math.PI / 2, 0, Math.PI / 2]);
+      }
     }
 
     // Selection outline.
@@ -168,10 +171,15 @@ export class StallObject {
 
     this.nameAnchor.position.set(0, h + 0.35, 0);
     this.openAnchor.position.set(
-      gate === 'LEFT' ? -w / 2 - 0.35 : gate === 'RIGHT' ? w / 2 + 0.35 : 0,
+      first === 'LEFT' ? -w / 2 - 0.35 : first === 'RIGHT' ? w / 2 + 0.35 : 0,
       0.25,
-      gate === 'FRONT' ? l / 2 + 0.35 : gate === 'BACK' ? -l / 2 - 0.35 : 0
+      first === 'FRONT' ? l / 2 + 0.35 : first === 'BACK' ? -l / 2 - 0.35 : 0
     );
+  }
+
+  /** Open sides of a stall, deriving from gateSide for legacy single-side data. */
+  private openSidesOf(stall: Stall): GateSide[] {
+    return stall.openSides?.length ? stall.openSides : [validGate(stall.gateSide)];
   }
 
   private addWall(
@@ -179,12 +187,16 @@ export class StallObject {
     material: THREE.Material,
     x: number,
     y: number,
-    z: number
+    z: number,
+    side: GateSide
   ): void {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(x, y, z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    // Lets a wall click in the 3D view set the stall's open side. Floor,
+    // markers and the selection outline carry no tag.
+    mesh.userData['side'] = side;
     this.addPart(mesh);
   }
 

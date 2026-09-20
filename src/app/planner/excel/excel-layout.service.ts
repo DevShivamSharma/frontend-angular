@@ -16,6 +16,12 @@ export interface ExcelImportResult {
 
 type SheetRow = Record<string, unknown>;
 
+/** Split an "Open Sides" cell ("FRONT, RIGHT") into entries; blank stays undefined. */
+function splitSides(value: unknown): string[] | undefined {
+  const text = String(value ?? '').trim();
+  return text ? text.split(/[,\/|;]+/).map(s => s.trim()).filter(Boolean) : undefined;
+}
+
 /**
  * Excel import/template export ported from `App.js:531-546`.
  *
@@ -81,7 +87,9 @@ export class ExcelLayoutService {
           posX: get(r, ['X-Pos', 'X Pos', 'X', 'PosX']),
           posZ: get(r, ['Z-Pos', 'Z Pos', 'Z', 'PosZ']),
           color: get(r, ['Color', 'Stall Color']),
-          gateSide: get(r, ['Gate Side', 'GateSide', 'Opening Side'])
+          gateSide: get(r, ['Gate Side', 'GateSide', 'Opening Side']),
+          // Optional multi-open column, e.g. "FRONT, RIGHT". Absent = gate side only.
+          openSides: splitSides(get(r, ['Open Sides', 'OpenSides']))
         },
         hall.id,
         `Shop ${i + 1}`

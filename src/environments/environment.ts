@@ -1,11 +1,11 @@
 /**
  * Production environment (the default; `ng build` uses this file).
  *
- * `apiBaseUrl` must be the deployed backend's HTTPS URL including `/api`. It is deliberately an
- * unusable placeholder until the demo backend exists, so a build made without setting it fails
- * loudly in the browser instead of silently calling someone's localhost.
+ * The published deployment serves this SPA and the NestJS API from the same origin (the
+ * backend serves the Angular build and forwards everything outside /api and /health to
+ * index.html), so a relative base URL is correct and needs no per-deploy edit.
  */
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://REPLACE-AT-DEPLOY.invalid/api'
+  apiBaseUrl: '/api'
 };

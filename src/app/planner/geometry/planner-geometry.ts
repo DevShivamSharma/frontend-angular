@@ -1,4 +1,4 @@
-import { Hall, HallShape, HallSize } from '../models/hall.model';
+import { BlockedArea, Hall, HallShape, HallSize } from '../models/hall.model';
 import { GateSide, Stall, StallInput } from '../models/stall.model';
 
 /**
@@ -31,6 +31,28 @@ export function validGate(v: unknown): GateSide {
   return upper === 'FRONT' || upper === 'BACK' || upper === 'LEFT' || upper === 'RIGHT'
     ? upper
     : 'FRONT';
+}
+
+/**
+ * Normalize an open-sides list (array or single value) into a deduped,
+ * validated `GateSide[]`. Invalid entries are dropped; when nothing valid
+ * remains the single fallback side is used, so the result is never empty.
+ */
+export function normalizeOpenSides(value: unknown, fallback: unknown): GateSide[] {
+  const raw = Array.isArray(value) ? value : value == null ? [] : [value];
+  const sides: GateSide[] = [];
+
+  for (const entry of raw) {
+    const upper = String(entry ?? '').toUpperCase();
+    if (
+      (upper === 'FRONT' || upper === 'BACK' || upper === 'LEFT' || upper === 'RIGHT') &&
+      !sides.includes(upper)
+    ) {
+      sides.push(upper);
+    }
+  }
+
+  return sides.length ? sides : [validGate(fallback)];
 }
 
 /** Renderable width/length for a hall of either shape. `App.js:35-47`. */
@@ -103,12 +125,40 @@ export function overlaps(
   });
 }
 
+/**
+ * Check whether a candidate stall rectangle overlaps any blocked area that
+ * prohibits placement (`kind === 'outside'` or `kind === 'wall'`).
+ *
+ * Uses the same axis-aligned overlap math and `1e-8` epsilon as `overlaps()`
+ * so edge-touching is allowed. `'zone'` areas never block.
+ *
+ * Returns `false` (no block) when the areas array is null, undefined or empty,
+ * so a hall without blockedAreas behaves exactly as today.
+ */
+export function overlapsBlockedArea(
+  candidate: Pick<Stall, 'width' | 'length' | 'posX' | 'posZ'>,
+  areas: BlockedArea[] | null | undefined
+): boolean {
+  if (!areas || areas.length === 0) return false;
+
+  return areas.some(area => {
+    if (area.kind === 'zone') return false;
+
+    return (
+      Math.abs(candidate.posX - area.posX) < (candidate.width + area.width) / 2 - 1e-8 &&
+      Math.abs(candidate.posZ - area.posZ) < (candidate.length + area.length) / 2 - 1e-8
+    );
+  });
+}
+
 /** Normalize a backend/Excel stall into UI state. `App.js:101-114`. */
 export function normalizeStall(
   s: StallInput,
   hallId: string | number,
   fallbackName = 'Shop'
 ): Stall {
+  const openSides = normalizeOpenSides(s.openSides, s.gateSide);
+
   return {
     id: (s.id as string | number | undefined) ?? `stall-${Date.now()}-${Math.random()}`,
     hallId,
@@ -119,6 +169,7 @@ export function normalizeStall(
     posX: num(s.posX, 0),
     posZ: num(s.posZ, 0),
     color: (s.color as string) || '#3498db',
-    gateSide: validGate(s.gateSide)
+    gateSide: openSides[0],
+    openSides
   };
 }

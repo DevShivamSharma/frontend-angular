@@ -31,6 +31,7 @@ export interface HallPayload {
   width: number;
   length: number;
   radius: number;
+  blockedAreas?: unknown[];
 }
 
 /** Stall part of the save/update payload built by `buildApiPayload()`. */
@@ -44,6 +45,7 @@ export interface StallPayload {
   posZ: number;
   color: string;
   gateSide: GateSide;
+  openSides?: GateSide[];
 }
 
 /** Body sent to `POST /api/layout/save` and `PUT /api/layout/{id}`. */

@@ -30,6 +30,7 @@ function stall(overrides: Partial<Stall> = {}): Stall {
     posZ: -16,
     color: '#3498db',
     gateSide: 'FRONT',
+    openSides: ['FRONT'],
     ...overrides
   };
 }
@@ -78,6 +79,41 @@ describe('buildApiPayload', () => {
     expect(payload.stalls[0].width).toBe(5);
     expect(payload.stalls[0].color).toBe('#3498db');
     expect(payload.stalls[0].gateSide).toBe('FRONT');
+  });
+
+  it('sends openSides and syncs gateSide to the first open side', () => {
+    const payload = buildApiPayload(
+      savedHall,
+      [stall({ gateSide: 'BACK', openSides: ['LEFT', 'BACK'] })],
+      'x'
+    );
+
+    expect(payload.stalls[0].openSides).toEqual(['LEFT', 'BACK']);
+    expect(payload.stalls[0].gateSide).toBe('LEFT');
+  });
+
+  it('derives openSides from gateSide for legacy single-side stalls', () => {
+    const payload = buildApiPayload(
+      savedHall,
+      [stall({ gateSide: 'RIGHT', openSides: [] })],
+      'x'
+    );
+
+    expect(payload.stalls[0].openSides).toEqual(['RIGHT']);
+    expect(payload.stalls[0].gateSide).toBe('RIGHT');
+  });
+
+  it('includes hall.blockedAreas when the hall has them', () => {
+    const areas = [{ posX: 0, posZ: 0, width: 10, length: 4, kind: 'wall' as const, color: '#742371' }];
+    const payload = buildApiPayload({ ...savedHall, blockedAreas: areas }, [], 'x');
+
+    expect(payload.hall.blockedAreas).toEqual(areas);
+  });
+
+  it('omits blockedAreas when the hall has none or an empty list', () => {
+    expect('blockedAreas' in buildApiPayload(savedHall, [], 'x').hall).toBe(false);
+    expect('blockedAreas' in buildApiPayload({ ...savedHall, blockedAreas: [] }, [], 'x').hall).toBe(false);
+    expect('blockedAreas' in buildApiPayload({ ...savedHall, blockedAreas: null }, [], 'x').hall).toBe(false);
   });
 });
 

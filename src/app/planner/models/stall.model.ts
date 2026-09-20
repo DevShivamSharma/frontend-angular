@@ -17,7 +17,10 @@ export interface Stall {
   posX: number;
   posZ: number;
   color: string;
+  /** First open side — kept in sync with `openSides[0]` for legacy consumers. */
   gateSide: GateSide;
+  /** Every side left open for customer entry (1-4, any combination). Source of truth. */
+  openSides: GateSide[];
 }
 
 /** Raw stall-shaped input from the backend or from an Excel row. */
@@ -32,4 +35,5 @@ export interface StallInput {
   posZ?: unknown;
   color?: unknown;
   gateSide?: unknown;
+  openSides?: unknown;
 }

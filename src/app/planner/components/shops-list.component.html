@@ -24,7 +24,7 @@
     >
       <span class="stall-row-name">{{ stall.name || 'Shop ' + (i + 1) }}</span>
       <span class="stall-row-meta">
-        Open: {{ stall.gateSide }} · {{ stall.width }}×{{ stall.length }} · X {{ stall.posX }}, Z
+        Open: {{ (stall.openSides.length ? stall.openSides : [stall.gateSide]).join(', ') }} · {{ stall.width }}×{{ stall.length }} · X {{ stall.posX }}, Z
         {{ stall.posZ }}
       </span>
     </button>

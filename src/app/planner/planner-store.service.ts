@@ -5,9 +5,11 @@ import { NotifyService } from '../core/notify.service';
 import { ExcelImportResult } from './excel/excel-layout.service';
 import {
   hallSize,
+  normalizeOpenSides,
   normalizeStall,
   num,
   overlaps,
+  overlapsBlockedArea,
   snapValue,
   validGate,
   withinHall
@@ -34,16 +36,23 @@ export interface NewStallValue {
   height: number;
   color: string;
   gateSide: GateSide;
+  openSides?: GateSide[];
 }
 
 /** How long a visible error stays on screen. App.js:498. */
 const ERROR_TIMEOUT_MS = 4500;
 
-/** The two halls the React app starts with. App.js:480. */
-function defaultHalls(): Hall[] {
+/**
+ * The halls shown before `GET /api/halls` answers, and the fallback if it never does.
+ *
+ * The React app started from two invented halls (App.js:480). The planner now loads real halls
+ * from the backend instead; this single local hall exists only so the 3D view is never blank
+ * while that request is in flight, or if the API is unreachable during a demo. It is named so
+ * that nobody mistakes it for real master data.
+ */
+function fallbackHalls(): Hall[] {
   return [
-    { id: 1, name: 'Main Exhibition Hall A', shape: 'SQUARE', width: 40, length: 40, radius: 0 },
-    { id: 2, name: 'Premium Circular Lounge', shape: 'CIRCLE', width: 0, length: 0, radius: 20 }
+    { id: 'local-fallback-hall', name: 'Sample Hall (offline)', shape: 'SQUARE', width: 40, length: 40, radius: 0 }
   ];
 }
 
@@ -60,8 +69,8 @@ export class PlannerStore {
   private readonly notify = inject(NotifyService);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly halls = signal<Hall[]>(defaultHalls());
-  readonly activeHallId = signal<string | number>(1);
+  readonly halls = signal<Hall[]>(fallbackHalls());
+  readonly activeHallId = signal<string | number>(fallbackHalls()[0].id);
   readonly stalls = signal<Stall[]>([]);
   readonly savedLayouts = signal<LayoutSummary[]>([]);
   readonly selectedSavedId = signal<string | number | null>(null);
@@ -137,11 +146,45 @@ export class PlannerStore {
 
   // --- stall transitions ---------------------------------------------------
 
-  /** Patch one stall in place. App.js:502. */
+  /** Patch one stall in place. App.js:502. Keeps gateSide synced to openSides[0]. */
   updateStall(id: string | number, patch: Partial<Stall>): void {
+    const synced =
+      patch.openSides?.length && patch.gateSide === undefined
+        ? { ...patch, gateSide: patch.openSides[0] }
+        : patch;
+
     this.stalls.update(prev =>
-      prev.map(s => (String(s.id) === String(id) ? { ...s, ...patch } : s))
+      prev.map(s => (String(s.id) === String(id) ? { ...s, ...synced } : s))
     );
+  }
+
+  /**
+   * Toggle one open side on a stall. The last remaining open side cannot be
+   * removed — a stall always keeps at least one opening.
+   */
+  toggleOpenSide(id: string | number, side: GateSide): void {
+    const stall = this.stalls().find(s => String(s.id) === String(id));
+    if (!stall) return;
+
+    const current = stall.openSides?.length ? stall.openSides : [validGate(stall.gateSide)];
+
+    if (current.includes(side)) {
+      if (current.length <= 1) return;
+      this.updateStall(id, { openSides: current.filter(s => s !== side) });
+    } else {
+      this.updateStall(id, { openSides: [...current, side] });
+    }
+  }
+
+  /** Open one side (idempotent). Used by the 3D wall click. */
+  openSide(id: string | number, side: GateSide): void {
+    const stall = this.stalls().find(s => String(s.id) === String(id));
+    if (!stall) return;
+
+    const current = stall.openSides?.length ? stall.openSides : [validGate(stall.gateSide)];
+    if (!current.includes(side)) {
+      this.updateStall(id, { openSides: [...current, side] });
+    }
   }
 
   /**
@@ -159,6 +202,11 @@ export class PlannerStore {
     const candidate: Stall = { ...s, posX: nx, posZ: nz };
 
     if (!withinHall(currentHall, candidate, nx, nz)) {
+      this.showError('⚠️ Shop cannot move outside the hall boundary.');
+      return;
+    }
+
+    if (overlapsBlockedArea(candidate, currentHall.blockedAreas)) {
       this.showError('⚠️ Shop cannot move outside the hall boundary.');
       return;
     }
@@ -181,7 +229,8 @@ export class PlannerStore {
 
     if (
       !withinHall(currentHall, candidate) ||
-      overlaps(candidate, this.currentStalls(), selected.id)
+      overlaps(candidate, this.currentStalls(), selected.id) ||
+      overlapsBlockedArea(candidate, currentHall?.blockedAreas)
     ) {
       this.showError('⚠️ Updated shop position/dimensions are invalid or overlap another shop.');
       return;
@@ -192,7 +241,7 @@ export class PlannerStore {
       width: num(selected.width, 5),
       length: num(selected.length, 5),
       height: num(selected.height, 4),
-      gateSide: validGate(selected.gateSide)
+      openSides: normalizeOpenSides(selected.openSides, selected.gateSide)
     });
   }
 
@@ -215,6 +264,7 @@ export class PlannerStore {
       posX: 0,
       posZ: 0,
       gateSide: validGate(form.gateSide),
+      openSides: normalizeOpenSides(form.openSides, form.gateSide),
       hallId: this.activeHallId(),
       name: form.name.trim() || `Shop ${currentStalls.length + 1}`
     };
@@ -226,9 +276,11 @@ export class PlannerStore {
 
     for (let z = -maxZ; z <= maxZ && !pos; z += 1) {
       for (let x = -maxX; x <= maxX && !pos; x += 1) {
+        const trial = { ...base, posX: x, posZ: z };
         if (
           withinHall(currentHall, base, x, z) &&
-          !overlaps({ ...base, posX: x, posZ: z }, currentStalls)
+          !overlaps(trial, currentStalls) &&
+          !overlapsBlockedArea(trial, currentHall.blockedAreas)
         ) {
           pos = { x, z };
         }
@@ -299,6 +351,25 @@ export class PlannerStore {
       this.savedLayouts.set(await this.api.list());
     } catch (e) {
       console.warn('Layout list unavailable:', extractErrorMessage(e));
+    }
+  }
+
+  /**
+   * Load the real halls from the backend and select the first one.
+   *
+   * On failure or an empty list the local fallback hall stays, so the planner is still usable
+   * without a backend - the same "stay silent, keep working" behaviour `loadList` has.
+   */
+  async loadHalls(): Promise<void> {
+    try {
+      const halls = await this.api.listHalls();
+      if (halls.length === 0) return;
+
+      this.halls.set(halls);
+      this.activeHallId.set(halls[0].id);
+      this.selectedStallId.set(null);
+    } catch (e) {
+      console.warn('Hall list unavailable, using the local fallback hall:', extractErrorMessage(e));
     }
   }
 

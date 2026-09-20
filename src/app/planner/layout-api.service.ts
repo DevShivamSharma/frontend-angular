@@ -13,7 +13,7 @@ import {
   StallPayload
 } from './models/layout.model';
 import { Stall } from './models/stall.model';
-import { num, validGate } from './geometry/planner-geometry';
+import { num, normalizeOpenSides } from './geometry/planner-geometry';
 
 /**
  * Build the save/update request body. Ported from `buildApiPayload()`
@@ -38,20 +38,26 @@ export function buildApiPayload(
     shape: currentHall.shape,
     width: num(currentHall.width, 0),
     length: num(currentHall.length, 0),
-    radius: num(currentHall.radius, 0)
+    radius: num(currentHall.radius, 0),
+    ...(currentHall.blockedAreas?.length ? { blockedAreas: currentHall.blockedAreas } : {})
   };
 
-  const stalls: StallPayload[] = currentStalls.map(s => ({
-    ...(isBackendId(s.id) ? { id: Number(s.id) } : {}),
-    name: String(s.name || 'Shop').trim() || 'Shop',
-    width: num(s.width, 5),
-    length: num(s.length, 5),
-    height: num(s.height, 4),
-    posX: num(s.posX, 0),
-    posZ: num(s.posZ, 0),
-    color: s.color || '#3498db',
-    gateSide: validGate(s.gateSide)
-  }));
+  const stalls: StallPayload[] = currentStalls.map(s => {
+    const openSides = normalizeOpenSides(s.openSides, s.gateSide);
+
+    return {
+      ...(isBackendId(s.id) ? { id: Number(s.id) } : {}),
+      name: String(s.name || 'Shop').trim() || 'Shop',
+      width: num(s.width, 5),
+      length: num(s.length, 5),
+      height: num(s.height, 4),
+      posX: num(s.posX, 0),
+      posZ: num(s.posZ, 0),
+      color: s.color || '#3498db',
+      gateSide: openSides[0],
+      openSides
+    };
+  });
 
   return { layoutName: layoutName.trim() || currentHall.name, hall, stalls };
 }
@@ -70,6 +76,20 @@ function isBackendId(id: string | number): boolean {
 export class LayoutApiService {
   private readonly http = inject(HttpClient);
   private readonly api = inject(API_BASE_URL);
+
+  /**
+   * `GET /api/halls` — the halls the planner starts from.
+   *
+   * These are real ITPO halls seeded from the production database
+   * (`backend-nest/scripts/seed-demo-halls.ts`), replacing the two invented halls the React
+   * app hardcoded. The endpoint is marked deprecated server-side because it had no consumer
+   * (ADR-002); this is now its consumer.
+   */
+  listHalls(): Promise<Hall[]> {
+    // `standalone=true` excludes the private hall copy every saved layout creates (BR-18),
+    // so the picker keeps showing the master halls and does not grow with each save.
+    return firstValueFrom(this.http.get<Hall[]>(`${this.api}/halls?standalone=true`));
+  }
 
   /** `GET /api/layouts` — tolerates both a bare array and `{ layouts: [] }`. */
   async list(): Promise<LayoutSummary[]> {

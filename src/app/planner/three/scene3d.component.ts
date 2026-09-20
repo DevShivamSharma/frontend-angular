@@ -16,8 +16,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { hallSize } from '../geometry/planner-geometry';
 import { Hall } from '../models/hall.model';
-import { Stall } from '../models/stall.model';
+import { GateSide, Stall } from '../models/stall.model';
 import { buildHallGrid } from './hall-grid-renderer';
+import { buildBlockedAreas } from './blocked-areas-renderer';
 import { disposeChildren, StallObject } from './stall3d-renderer';
 
 /** Payload of the `moveStall` output. */
@@ -25,6 +26,12 @@ export interface StallMove {
   id: string | number;
   x: number;
   z: number;
+}
+
+/** Payload of the `openSideChange` output: a wall of an already-selected stall was clicked. */
+export interface StallOpenSide {
+  id: string | number;
+  side: GateSide;
 }
 
 /** Drag must exceed this before it counts as a move. App.js:167. */
@@ -54,6 +61,7 @@ export class Scene3dComponent implements AfterViewInit {
   readonly selectStall = output<string | number | null>();
   readonly moveStall = output<StallMove>();
   readonly dragState = output<boolean>();
+  readonly openSideChange = output<StallOpenSide>();
 
   private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
   private readonly overlay = viewChild.required<ElementRef<HTMLDivElement>>('overlay');
@@ -71,6 +79,8 @@ export class Scene3dComponent implements AfterViewInit {
 
   /** Group holding the floor, border and grid of the current hall. */
   private readonly hallGroup = new THREE.Group();
+  /** Group holding the irregular-geometry masks, walls and zones of the current hall. */
+  private readonly blockedAreasGroup = new THREE.Group();
   private readonly stallGroup = new THREE.Group();
   private readonly stallObjects = new Map<string, StallObject>();
 
@@ -83,6 +93,10 @@ export class Scene3dComponent implements AfterViewInit {
     startPointer: { x: number; z: number };
     startPos: { x: number; z: number };
     moved: boolean;
+    /** The wall side under the pointer at pointerdown, if a wall was hit. */
+    side?: GateSide;
+    /** Whether the stall was already selected before this click. */
+    wasSelected: boolean;
   } | null = null;
 
   /**
@@ -127,7 +141,7 @@ export class Scene3dComponent implements AfterViewInit {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#dbe5ef');
-    this.scene.add(this.hallGroup, this.stallGroup);
+    this.scene.add(this.hallGroup, this.blockedAreasGroup, this.stallGroup);
 
     this.camera = new THREE.PerspectiveCamera(48, 1, 0.1, 500);
     this.camera.position.set(0, 35, 38);
@@ -177,6 +191,7 @@ export class Scene3dComponent implements AfterViewInit {
 
   private syncHall(hall: Hall | undefined): void {
     disposeChildren(this.hallGroup);
+    disposeChildren(this.blockedAreasGroup);
     if (!hall) return;
 
     const { width, length } = hallSize(hall);
@@ -209,6 +224,7 @@ export class Scene3dComponent implements AfterViewInit {
     }
 
     this.hallGroup.add(buildHallGrid(width, length, hall.shape));
+    this.blockedAreasGroup.add(buildBlockedAreas(hall));
   }
 
   private syncStalls(
@@ -258,14 +274,16 @@ export class Scene3dComponent implements AfterViewInit {
     this.controls.enabled = false;
 
     this.drag = {
-      id: hit.id,
+      id: hit.stall.id,
       pointerId: event.pointerId,
       startPointer: { x: point.x, z: point.z },
-      startPos: { x: hit.posX, z: hit.posZ },
-      moved: false
+      startPos: { x: hit.stall.posX, z: hit.stall.posZ },
+      moved: false,
+      side: hit.side,
+      wasSelected: String(this.selectedStallId()) === String(hit.stall.id)
     };
 
-    this.selectStall.emit(hit.id);
+    this.selectStall.emit(hit.stall.id);
     this.dragState.emit(true);
     this.renderer.domElement.setPointerCapture?.(event.pointerId);
   };
@@ -295,12 +313,19 @@ export class Scene3dComponent implements AfterViewInit {
   private readonly onPointerUp = (event: PointerEvent): void => {
     if (!this.drag) return;
 
-    const { id, moved, pointerId } = this.drag;
+    const { id, moved, pointerId, side, wasSelected } = this.drag;
     this.drag = null;
     this.dragState.emit(false);
 
     if (!moved) {
-      this.selectStall.emit(id);
+      // A click on a wall of an already-selected stall changes its open side
+      // instead of re-selecting. First clicks and clicks on the floor,
+      // markers or outline still only select.
+      if (side && wasSelected) {
+        this.openSideChange.emit({ id, side });
+      } else {
+        this.selectStall.emit(id);
+      }
     }
 
     this.renderer.domElement.releasePointerCapture?.(pointerId);
@@ -313,13 +338,15 @@ export class Scene3dComponent implements AfterViewInit {
     this.selectStall.emit(null);
   };
 
-  /** Find the stall under the pointer, if any. */
-  private pickStall(event: PointerEvent | MouseEvent): Stall | null {
+  /** Find the stall under the pointer, plus the wall side if a wall was hit. */
+  private pickStall(event: PointerEvent | MouseEvent): { stall: Stall; side?: GateSide } | null {
     this.updatePointer(event);
     this.raycaster.setFromCamera(this.pointer, this.camera);
 
     const hits = this.raycaster.intersectObjects(this.stallGroup.children, true);
     if (!hits.length) return null;
+
+    const side = hits[0].object.userData['side'] as GateSide | undefined;
 
     let node: THREE.Object3D | null = hits[0].object;
     while (node && node.userData['stallId'] === undefined) {
@@ -328,7 +355,8 @@ export class Scene3dComponent implements AfterViewInit {
     if (!node) return null;
 
     const id = String(node.userData['stallId']);
-    return this.stalls().find(s => String(s.id) === id) ?? null;
+    const stall = this.stalls().find(s => String(s.id) === id);
+    return stall ? { stall, side } : null;
   }
 
   private intersectDragPlane(event: PointerEvent | MouseEvent): THREE.Vector3 | null {
@@ -406,6 +434,7 @@ export class Scene3dComponent implements AfterViewInit {
     this.stallObjects.forEach(object => object.dispose());
     this.stallObjects.clear();
     disposeChildren(this.hallGroup);
+    disposeChildren(this.blockedAreasGroup);
     this.controls.dispose();
     this.renderer.dispose();
     canvas.remove();

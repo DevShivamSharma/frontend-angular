@@ -130,4 +130,33 @@ describe('ExcelLayoutService.parse', () => {
 
     expect(() => service.parse(buffer)).toThrowError('Hall data not found in Excel.');
   });
+
+  it('reads the optional Open Sides column as a comma-separated list', () => {
+    const buffer = workbook({
+      Halls: [{ Name: 'H', Shape: 'SQUARE', 'Hall Width': 40, 'Hall Length': 40 }],
+      Stalls: [
+        { Name: 'Corner', Width: 6, Length: 6, X: 0, Z: 0, 'Gate Side': 'BACK', 'Open Sides': 'FRONT, RIGHT' },
+        { Name: 'Plain', Width: 6, Length: 6, X: 10, Z: 0, 'Gate Side': 'left' }
+      ]
+    });
+
+    const result = service.parse(buffer);
+
+    expect(result.valid[0].openSides).toEqual(['FRONT', 'RIGHT']);
+    expect(result.valid[0].gateSide).toBe('FRONT');
+    // No Open Sides column: the gate side alone stays open, as before.
+    expect(result.valid[1].openSides).toEqual(['LEFT']);
+    expect(result.valid[1].gateSide).toBe('LEFT');
+  });
+
+  it('ignores invalid Open Sides entries and falls back to the gate side', () => {
+    const buffer = workbook({
+      Halls: [{ Name: 'H', Shape: 'SQUARE', 'Hall Width': 40, 'Hall Length': 40 }],
+      Stalls: [{ Name: 'A', Width: 6, Length: 6, X: 0, Z: 0, 'Gate Side': 'BACK', 'Open Sides': 'up, back' }]
+    });
+
+    const result = service.parse(buffer);
+
+    expect(result.valid[0].openSides).toEqual(['BACK']);
+  });
 });
