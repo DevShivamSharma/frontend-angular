@@ -31,6 +31,9 @@ function stall(overrides: Partial<Stall> = {}): Stall {
     color: '#3498db',
     gateSide: 'FRONT',
     openSides: ['FRONT'],
+    stallNumber: null,
+    status: 'AVAILABLE',
+    stallTypeId: null,
     ...overrides
   };
 }
@@ -181,9 +184,10 @@ describe('LayoutApiService', () => {
 
     const req = http.expectOne({ url: `${API}/layout/5`, method: 'PUT' });
     expect(req.request.body).toEqual(payload);
-    req.flush({ ok: true });
+    req.flush({ stalls: [] });
 
-    await expectAsync(promise).toBeResolvedTo({ ok: true });
+    // The response is used now: it carries the persisted stall numbers.
+    await expectAsync(promise).toBeResolvedTo({ stalls: [] });
   });
 
   it('DELETE /layout/{id}', async () => {

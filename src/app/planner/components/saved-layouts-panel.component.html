@@ -1,10 +1,14 @@
 <section class="card">
-  <h3 class="panel-title">Saved Layout</h3>
+  <h3 class="panel-title">
+    <app-icon class="icon-slot" name="save" />
+    Current Layout
+  </h3>
 
   <input
     class="control"
     placeholder="Layout name"
     aria-label="Layout name"
+    maxlength="255"
     [formControl]="layoutName"
   />
 
@@ -17,6 +21,7 @@
       type="button"
       class="btn-secondary"
       [disabled]="busy() || !selectedSavedId()"
+      [title]="selectedSavedId() ? 'Overwrite the open saved layout' : 'Open a saved layout first'"
       (click)="updateLayout()"
     >
       <app-icon name="refresh" [size]="14" />
@@ -25,29 +30,71 @@
   </div>
 
   <div class="panel-header saved-header">
-    <span class="saved-header-title">Saved Layouts</span>
-    <button type="button" class="btn-mini" (click)="refresh()">
-      <app-icon name="refresh" [size]="12" />
-      Refresh
+    <span class="saved-header-title">Saved Layouts <span class="title-count">{{ savedLayouts().length }}</span></span>
+    <button type="button" class="btn-mini" [disabled]="loading()" (click)="refresh()">
+      <app-icon name="refresh" [size]="12" [class.is-spinning]="loading()" />
+      {{ loading() ? 'Refreshing…' : 'Refresh' }}
     </button>
   </div>
 
-  @for (layout of savedLayouts(); track layout.id) {
-    <div class="saved-row">
-      <div class="saved-row-name">{{ layout.name }}</div>
-      <div class="saved-row-meta">ID {{ layout.id }} · {{ stallCount(layout) }} shops</div>
-      <div class="grid-2 saved-row-actions">
-        <button type="button" class="btn-mini is-blue" (click)="openLayout(layout.id)">
-          <app-icon name="eye" [size]="12" />
-          Open
-        </button>
-        <button type="button" class="btn-mini is-red" (click)="deleteLayout(layout.id)">
-          <app-icon name="trash" [size]="12" />
-          Delete
+  <div [attr.aria-busy]="loading()">
+    <!-- A request only replaces the list when there is nothing to show yet; a refresh of a
+         loaded list keeps it on screen and just spins the Refresh icon. -->
+    @if (loading() && !savedLayouts().length) {
+      <div class="skeleton-row" aria-hidden="true"></div>
+      <div class="skeleton-row" aria-hidden="true"></div>
+      <div class="skeleton-row" aria-hidden="true"></div>
+      <span class="sr-only" role="status">Loading saved layouts…</span>
+    } @else if (failed() && !savedLayouts().length) {
+      <div class="empty-state is-error" role="alert">
+        Couldn’t load saved layouts. Check that the server is running.
+        <br />
+        <button type="button" class="btn-mini" (click)="refresh()">
+          <app-icon name="refresh" [size]="12" />
+          Try again
         </button>
       </div>
-    </div>
-  } @empty {
-    <div class="empty-state">No saved layouts found.</div>
-  }
+    } @else {
+      @if (failed()) {
+        <div class="panel-hint is-error" role="alert">Refresh failed — showing the last loaded list.</div>
+      }
+      @for (layout of savedLayouts(); track layout.id) {
+        <div class="saved-row" [class.is-open]="isOpen(layout.id)">
+          <div class="saved-row-name">
+            {{ layout.name }}
+            @if (isOpen(layout.id)) {
+              <span class="open-badge">Open</span>
+            }
+          </div>
+          <div class="saved-row-meta">
+            ID {{ layout.id }} · {{ stallCount(layout) }} {{ stallCount(layout) === 1 ? 'shop' : 'shops' }}
+          </div>
+          <div class="grid-2 saved-row-actions">
+            <button
+              type="button"
+              class="btn-mini is-blue"
+              [disabled]="busy()"
+              [attr.aria-label]="'Open ' + layout.name"
+              (click)="openLayout(layout.id)"
+            >
+              <app-icon name="eye" [size]="12" />
+              {{ isOpen(layout.id) ? 'Reload' : 'Open' }}
+            </button>
+            <button
+              type="button"
+              class="btn-mini is-red"
+              [disabled]="busy()"
+              [attr.aria-label]="'Delete ' + layout.name"
+              (click)="deleteLayout(layout.id)"
+            >
+              <app-icon name="trash" [size]="12" />
+              Delete
+            </button>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-state">No saved layouts yet. Name this layout above and choose <b>Save New</b>.</div>
+      }
+    }
+  </div>
 </section>

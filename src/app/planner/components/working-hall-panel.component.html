@@ -1,31 +1,46 @@
-<section class="card">
-  <h3 class="panel-title">
-    <app-icon class="icon-slot" name="building" />
-    Working Hall
-  </h3>
-
-  <label class="sr-only" for="working-hall">Working hall</label>
-  <select
-    id="working-hall"
-    class="control"
-    [value]="activeHallId()"
-    (change)="onHallChange($any($event.target).value)"
-  >
-    @for (hall of halls(); track hall.id) {
-      <option [value]="hall.id" [selected]="isActive(hall.id)">
-        {{ hall.name }} [{{ hall.shape }}]
-      </option>
+<div class="hall-context">
+  <!-- The status sits beside the label, not in it, so it never becomes part of the select's name. -->
+  <div class="hall-context-label">
+    <label for="working-hall">Working hall</label>
+    @if (hallsStatus() === 'loading') {
+      <span class="hall-context-status">
+        <span class="spinner" aria-hidden="true"></span>
+        Loading…
+      </span>
+    } @else if (hallsStatus() === 'unavailable' || hallsStatus() === 'empty') {
+      <span class="hall-context-status is-offline">Offline sample</span>
     }
-  </select>
-
-  <div class="grid-2 gap-7">
-    <button type="button" class="btn-secondary" (click)="openFilePicker()">
-      <app-icon name="upload" [size]="14" />
-      Import Excel
+  </div>
+  <div class="hall-context-row">
+    <select
+      id="working-hall"
+      class="control hall-select"
+      [value]="activeHallId()"
+      (change)="onHallChange($any($event.target).value)"
+    >
+      @for (hall of halls(); track hall.id) {
+        <option [value]="hall.id" [selected]="isActive(hall.id)">
+          {{ hall.name }}{{ hall.shape === 'CIRCLE' ? ' · circular' : '' }}
+        </option>
+      }
+    </select>
+    <button
+      type="button"
+      class="icon-btn"
+      title="Import Excel"
+      aria-label="Import Excel"
+      (click)="openFilePicker()"
+    >
+      <app-icon name="upload" [size]="16" />
     </button>
-    <button type="button" class="btn-secondary" (click)="downloadTemplate()">
-      <app-icon name="file" [size]="14" />
-      Template
+    <button
+      type="button"
+      class="icon-btn"
+      title="Download Excel template"
+      aria-label="Download Excel template"
+      (click)="downloadTemplate()"
+    >
+      <app-icon name="file" [size]="16" />
     </button>
   </div>
 
@@ -38,4 +53,4 @@
     tabindex="-1"
     (change)="onFileSelected($event)"
   />
-</section>
+</div>

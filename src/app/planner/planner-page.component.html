@@ -1,68 +1,264 @@
-<div class="planner">
-  <aside class="sidebar">
-    <h1 class="app-title">3D Floor Planner</h1>
-    <div class="app-subtitle">Professional Stall / Shop Layout Designer</div>
+<div class="planner" [class.is-sidebar-collapsed]="!sidebarOpen()">
+  <!-- `inert` while hidden: its controls leave the tab order and the accessibility tree. -->
+  <aside class="sidebar" id="planner-sidebar" aria-label="Planner controls" [inert]="!sidebarOpen()">
+    <header class="sidebar-header">
+      <div class="brand">
+        <a class="brand-mark" routerLink="/" title="Back to venue overview" aria-label="Back to venue overview">
+          <app-icon name="layers" [size]="18" />
+        </a>
+        <div class="brand-text">
+          <h1 class="app-title">3D Floor Planner</h1>
+          <div class="app-subtitle" [title]="layoutName() || 'Unsaved layout'">
+            {{ layoutName() || 'Unsaved layout' }}
+            @if (selectedSavedId() !== null) {
+              <span class="saved-dot" title="Saved layout">· #{{ selectedSavedId() }}</span>
+            }
+          </div>
+        </div>
+        <button
+          #collapseButton
+          type="button"
+          class="icon-btn sidebar-collapse"
+          title="Hide panel"
+          aria-label="Hide panel"
+          aria-controls="planner-sidebar"
+          aria-expanded="true"
+          (click)="toggleSidebar()"
+        >
+          <app-icon name="panel-left-close" [size]="18" />
+        </button>
+      </div>
 
-    <!-- Errors auto-clear after 4500 ms (App.js:498). `assertive` so a
-         rejected drag is announced without waiting for focus to move. -->
-    @if (error()) {
-      <div class="error-box" role="alert" aria-live="assertive">{{ error() }}</div>
-    }
+      <app-working-hall-panel />
 
-    <app-working-hall-panel />
-    <app-create-hall-form />
-    <app-add-stall-form />
-    <app-edit-stall-form />
-    <app-shops-list />
-    <app-saved-layouts-panel />
+      <div class="sidebar-tabs" role="tablist" aria-label="Planner sections" (keydown)="onTabKey($event)">
+        @for (tab of tabs(); track tab.id) {
+          <button
+            type="button"
+            role="tab"
+            class="sidebar-tab"
+            [id]="'sidebar-tab-' + tab.id"
+            [class.is-active]="activeTab() === tab.id"
+            [attr.aria-selected]="activeTab() === tab.id"
+            [attr.aria-controls]="'sidebar-panel-' + tab.id"
+            [tabIndex]="activeTab() === tab.id ? 0 : -1"
+            (click)="setTab(tab.id)"
+          >
+            <app-icon [name]="tab.icon" [size]="14" />
+            <span>{{ tab.label }}</span>
+            @if (tab.count !== null) {
+              <span class="tab-count" [class.is-warning]="tab.warn">{{ tab.count }}</span>
+            }
+          </button>
+        }
+      </div>
+    </header>
+
+    <div class="sidebar-body" #sidebarBody>
+      <!-- Stays until the server answers: the sample hall must never pass for real data. -->
+      @if (offline()) {
+        <div class="notice-box" role="status">
+          <app-icon class="notice-box-icon" name="cloud-off" [size]="16" />
+          <div class="notice-box-body">
+            @if (hallsStatus() === 'unavailable') {
+              <strong>Server unreachable</strong>
+              <span>You are on a local sample hall. Saving and opening layouts needs the server.</span>
+            } @else {
+              <strong>No halls on the server</strong>
+              <span>You are on a local sample hall. Create your own in the Hall tab, or retry.</span>
+            }
+          </div>
+          <button type="button" class="btn-mini" (click)="loadFromServer()">
+            <app-icon name="refresh" [size]="12" />
+            Retry
+          </button>
+        </div>
+      }
+
+      <!-- Errors auto-clear after 4500 ms (App.js:498). `assertive` so a
+           rejected drag is announced without waiting for focus to move.
+           Alerts sit above the tabs so they are never hidden behind one. -->
+      @if (error()) {
+        <div class="error-box" role="alert" aria-live="assertive">
+          <app-icon class="error-box-icon" name="alert" [size]="16" />
+          <span class="error-box-text">{{ errorText() }}</span>
+          <button type="button" class="icon-btn is-small" aria-label="Dismiss error" (click)="dismissError()">
+            <app-icon name="x" [size]="14" />
+          </button>
+        </div>
+      }
+      <app-violations-panel section="alerts" />
+
+      <!-- Panels stay mounted and are only hidden, so a half-filled form survives a tab switch. -->
+      <div
+        role="tabpanel"
+        id="sidebar-panel-stalls"
+        aria-labelledby="sidebar-tab-stalls"
+        [hidden]="activeTab() !== 'stalls'"
+      >
+        <app-edit-stall-form />
+        <app-add-stall-form />
+        <app-shops-list />
+      </div>
+      <div
+        role="tabpanel"
+        id="sidebar-panel-layouts"
+        aria-labelledby="sidebar-tab-layouts"
+        [hidden]="activeTab() !== 'layouts'"
+      >
+        <app-saved-layouts-panel />
+      </div>
+      <div
+        role="tabpanel"
+        id="sidebar-panel-hall"
+        aria-labelledby="sidebar-tab-hall"
+        [hidden]="activeTab() !== 'hall'"
+      >
+        <app-create-hall-form />
+      </div>
+      <div
+        role="tabpanel"
+        id="sidebar-panel-rules"
+        aria-labelledby="sidebar-tab-rules"
+        [hidden]="activeTab() !== 'rules'"
+      >
+        <app-violations-panel section="rules" />
+      </div>
+    </div>
   </aside>
 
-  <main class="stage">
+  <main class="stage" aria-label="3D hall view">
     <app-scene3d
       [hall]="currentHall()"
       [stalls]="stalls()"
       [selectedStallId]="selectedStallId()"
       [dragging]="dragging()"
+      [mode]="mode()"
+      [editorOverlay]="overlay()"
+      [showClearances]="showClearances()"
+      [eventType]="eventType()"
+      [focusTarget]="focusTarget()"
       (selectStall)="onSelectStall($event)"
       (moveStall)="onMoveStall($event)"
       (dragState)="onDragState($event)"
       (openSideChange)="onOpenSideChange($event)"
+      (draftHover)="store.draftHover($event)"
+      (draftStart)="store.draftStart($event)"
+      (draftMove)="store.draftMove($event)"
+      (draftEnd)="store.draftEnd()"
+      (draftLeave)="store.draftLeave()"
+      (acceptSuggestion)="store.acceptSuggestion()"
     />
 
-    <div class="hud hud-left">
-      {{ currentHall()?.name }}
-      <br />
-      <span class="hud-left-meta">Drag shops • Snap: {{ snap() ? '1 unit' : 'OFF' }}</span>
-    </div>
+    <!-- One flex row for everything along the top edge, so the toolbar and the two panels
+         share the width instead of overlapping at narrow sizes. -->
+    <div class="stage-top">
+      @if (!sidebarOpen()) {
+        <button
+          #expandButton
+          type="button"
+          class="hud hud-sidebar-toggle"
+          title="Show panel"
+          aria-label="Show panel"
+          aria-controls="planner-sidebar"
+          aria-expanded="false"
+          (click)="toggleSidebar()"
+        >
+          <app-icon name="panel-left-open" [size]="18" />
+        </button>
+      }
 
-    @if (currentHall(); as hall) {
-      <div class="hud hud-right">
-        <b>Hall Details</b>
-        <div>{{ hall.shape }}</div>
-        @if (hall.shape === 'CIRCLE') {
-          <div>Radius: {{ hall.radius }}</div>
-        } @else {
-          <div>Width: {{ hall.width }} · Length: {{ hall.length }}</div>
-        }
-        <div>Shops: {{ currentStalls().length }}</div>
-        <div class="hud-right-legend">
-          Grid: 1 × 1 unit<br />
-          Section: 5 × 5 units<br />
-          Open side: per shop
+      <div class="hud hud-left">
+        <div class="hud-title">{{ currentHall()?.name }}</div>
+        <div class="hud-meta">
+          @if (mode() === 'draw') {
+            Drag on the grid to draw a stall · right-drag to orbit
+          } @else {
+            Drag shops to move · Snap {{ snap() ? (grid()?.snapStep ?? 1) + ' m' : 'off' }}
+          }
         </div>
       </div>
-    }
 
-    @if (selectedStall(); as stall) {
-      <div class="hud hud-selection">
-        Selected: <b>{{ stall.name }}</b>
-        <br />
-        OPEN: <b>{{ stall.gateSide }}</b> · X {{ stall.posX }} · Z {{ stall.posZ }}
+      <app-editor-toolbar />
+
+      @if (currentHall(); as hall) {
+        <details class="hud hud-info" [open]="hallInfoOpen()" (toggle)="onHallInfoToggle($event)">
+          <summary class="hud-info-summary">
+            <app-icon name="building" [size]="14" />
+            <span>Hall details</span>
+            <app-icon class="hud-info-chevron" name="chevron-down" [size]="14" />
+          </summary>
+          <dl class="hud-facts">
+            <div>
+              <dt>Shape</dt>
+              <dd>{{ shapeLabel() }}</dd>
+            </div>
+            @if (hall.shape === 'CIRCLE') {
+              <div>
+                <dt>Radius</dt>
+                <dd>{{ hall.radius }} m</dd>
+              </div>
+            } @else {
+              <div>
+                <dt>Size</dt>
+                <dd>{{ hall.width }} × {{ hall.length }} m</dd>
+              </div>
+            }
+            <div>
+              <dt>Shops</dt>
+              <dd>{{ currentStalls().length }}</dd>
+            </div>
+            <div>
+              <dt>Grid</dt>
+              <dd>{{ grid()?.cellSize ?? 1 }} × {{ grid()?.cellSize ?? 1 }} m</dd>
+            </div>
+            <div>
+              <dt>Section</dt>
+              <dd>{{ (grid()?.cellSize ?? 1) * 5 }} × {{ (grid()?.cellSize ?? 1) * 5 }} m</dd>
+            </div>
+            <div>
+              <dt>Open side</dt>
+              <dd>Per shop</dd>
+            </div>
+          </dl>
+          @if (ruleDriven()) {
+            <ul class="hud-legend" aria-label="Legend">
+              <li><span class="legend-swatch is-passage"></span>Compulsory passage</li>
+              <li><span class="legend-swatch is-nc"></span>No construction</li>
+              <li><span class="legend-swatch is-clearance"></span>Wall clearance</li>
+            </ul>
+          }
+        </details>
+      }
+    </div>
+
+    @if (hallsStatus() === 'loading') {
+      <div class="stage-status" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        Loading halls…
       </div>
     }
 
-    @if (dragging()) {
-      <div class="hud hud-drag">↔ Dragging shop — release to place</div>
-    }
+    <div class="stage-bottom">
+      @if (selectedStall(); as stall) {
+        <div class="hud hud-selection">
+          <div class="hud-title">
+            <span class="hud-selection-number">{{ stall.stallNumber ?? 'New' }}</span>
+            {{ stall.name || 'Shop' }}
+          </div>
+          <div class="hud-meta">
+            {{ stall.width }} × {{ stall.length }} m · Open {{ openSidesLabel(stall) }} · X {{ stall.posX }} · Z
+            {{ stall.posZ }}
+          </div>
+        </div>
+      }
+
+      @if (dragging()) {
+        <div class="hud hud-drag" role="status">
+          <app-icon name="move" [size]="14" />
+          Dragging shop — release to place
+        </div>
+      }
+    </div>
   </main>
 </div>

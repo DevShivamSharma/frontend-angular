@@ -14,12 +14,19 @@ import {
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
+import { GridSystem } from '../geometry/grid-system';
+import { effectiveRules, Point } from '../geometry/placement-rules';
 import { hallSize } from '../geometry/planner-geometry';
-import { Hall } from '../models/hall.model';
+import { EventType, Hall } from '../models/hall.model';
 import { GateSide, Stall } from '../models/stall.model';
+import type { EditorMode, EditorOverlay, FocusTarget } from '../planner-store.service';
+import { buildFreeSpace, buildPreview, buildViolations } from './editor-overlay-renderer';
+import { buildHallBoundary } from './hall-boundary-renderer';
 import { buildHallGrid } from './hall-grid-renderer';
 import { buildBlockedAreas } from './blocked-areas-renderer';
 import { disposeChildren, StallObject } from './stall3d-renderer';
+import { disposeSpriteTextures } from './text-sprite';
+import { buildClearances, buildMarkers, buildRestrictedZones } from './zones-renderer';
 
 /** Payload of the `moveStall` output. */
 export interface StallMove {
@@ -57,11 +64,25 @@ export class Scene3dComponent implements AfterViewInit {
   readonly stalls = input<ReadonlyArray<Stall>>([]);
   readonly selectedStallId = input<string | number | null>(null);
   readonly dragging = input(false);
+  /** Draw mode: dragging on the grid creates a stall instead of orbiting / selecting. */
+  readonly mode = input<EditorMode>('select');
+  readonly editorOverlay = input<EditorOverlay | null>(null);
+  readonly showClearances = input(true);
+  readonly eventType = input<EventType>('B2B');
+  readonly focusTarget = input<FocusTarget | null>(null);
 
   readonly selectStall = output<string | number | null>();
   readonly moveStall = output<StallMove>();
   readonly dragState = output<boolean>();
   readonly openSideChange = output<StallOpenSide>();
+  /** Draw mode pointer on the grid (world metres on the floor plane). */
+  readonly draftHover = output<Point>();
+  readonly draftStart = output<Point>();
+  readonly draftMove = output<Point>();
+  readonly draftEnd = output<void>();
+  readonly draftLeave = output<void>();
+  /** The suggested-spot ghost of a rejected placement was clicked. */
+  readonly acceptSuggestion = output<void>();
 
   private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
   private readonly overlay = viewChild.required<ElementRef<HTMLDivElement>>('overlay');
@@ -77,11 +98,31 @@ export class Scene3dComponent implements AfterViewInit {
   private frameId = 0;
   private ready = false;
 
-  /** Group holding the floor, border and grid of the current hall. */
+  // Scene layers, one group each, so every kind of geometry stays separately addressable:
+  /** 1. Hall boundary: polygon floor + walls, or the legacy rectangle/circle floor and border. */
   private readonly hallGroup = new THREE.Group();
-  /** Group holding the irregular-geometry masks, walls and zones of the current hall. */
+  /** 2. Grid, clipped to the boundary polygon when there is one. */
+  private readonly gridGroup = new THREE.Group();
+  /** Legacy irregular-hall masks (halls without a boundary polygon). */
   private readonly blockedAreasGroup = new THREE.Group();
+  /** 3. Restricted areas (zones). */
+  private readonly restrictedGroup = new THREE.Group();
+  /** 4. Pathway / clearance visualisation. */
+  private readonly clearanceGroup = new THREE.Group();
+  /** 5. Existing stalls. */
   private readonly stallGroup = new THREE.Group();
+  /** 6. Drag preview + suggested spot. */
+  private readonly previewGroup = new THREE.Group();
+  /** 7. Validation / violation overlays. */
+  private readonly violationGroup = new THREE.Group();
+  /** 8. Entry/exit markers and plan labels. */
+  private readonly markerGroup = new THREE.Group();
+  /** "Show free space" cells. */
+  private readonly freeSpaceGroup = new THREE.Group();
+  /** Draw-mode drag in progress (pointer id), null otherwise. */
+  private drawPointerId: number | null = null;
+  /** Hall the camera was last framed on, so a re-sync of the same hall keeps the view. */
+  private framedHallId: string | null = null;
   private readonly stallObjects = new Map<string, StallObject>();
 
   private readonly raycaster = new THREE.Raycaster();
@@ -133,6 +174,43 @@ export class Scene3dComponent implements AfterViewInit {
       this.controls.enabled = !dragging;
     });
 
+    // Clearance bands and opening access areas depend on the rules view, not only the hall.
+    effect(() => {
+      const hall = this.hall();
+      const show = this.showClearances();
+      const eventType = this.eventType();
+      if (!this.ready) return;
+      this.syncClearances(hall, show, eventType);
+    });
+
+    // Draft preview, violation overlays, suggestion and free space.
+    effect(() => {
+      const overlay = this.editorOverlay();
+      const hall = this.hall();
+      if (!this.ready) return;
+      this.syncOverlay(overlay, hall);
+    });
+
+    // "Locate": move the camera to a problem.
+    effect(() => {
+      const target = this.focusTarget();
+      if (!this.ready || !target) return;
+      this.focusOn(target);
+    });
+
+    // Leaving draw mode ends any drag in progress. Esc can do that mid-drag, while pointerdown
+    // still has the orbit controls switched off and the pointer captured - undo both, as
+    // onPointerUp would, or the camera stays frozen.
+    effect(() => {
+      if (this.mode() === 'draw' || this.drawPointerId === null) return;
+      if (this.ready) {
+        this.controls.enabled = !this.dragging();
+        const canvas = this.renderer.domElement;
+        if (canvas.hasPointerCapture?.(this.drawPointerId)) canvas.releasePointerCapture(this.drawPointerId);
+      }
+      this.drawPointerId = null;
+    });
+
     this.destroyRef.onDestroy(() => this.teardown());
   }
 
@@ -140,10 +218,21 @@ export class Scene3dComponent implements AfterViewInit {
     const host = this.host().nativeElement;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#dbe5ef');
-    this.scene.add(this.hallGroup, this.blockedAreasGroup, this.stallGroup);
+    this.scene.background = new THREE.Color('#e6eaf0');
+    this.scene.add(
+      this.hallGroup,
+      this.gridGroup,
+      this.blockedAreasGroup,
+      this.restrictedGroup,
+      this.clearanceGroup,
+      this.freeSpaceGroup,
+      this.stallGroup,
+      this.previewGroup,
+      this.violationGroup,
+      this.markerGroup
+    );
 
-    this.camera = new THREE.PerspectiveCamera(48, 1, 0.1, 500);
+    this.camera = new THREE.PerspectiveCamera(48, 1, 0.1, 1000);
     this.camera.position.set(0, 35, 38);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -164,7 +253,8 @@ export class Scene3dComponent implements AfterViewInit {
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.minDistance = 5;
-    this.controls.maxDistance = 150;
+    // 250 lets a 133 m hall (Hall 8-9-10) be seen whole.
+    this.controls.maxDistance = 250;
     this.controls.maxPolarAngle = Math.PI / 2.05;
 
     const canvas = this.renderer.domElement;
@@ -173,11 +263,14 @@ export class Scene3dComponent implements AfterViewInit {
     canvas.addEventListener('pointerup', this.onPointerUp);
     canvas.addEventListener('pointercancel', this.onPointerUp);
     canvas.addEventListener('click', this.onClick);
+    canvas.addEventListener('pointerleave', this.onPointerLeave);
 
     this.ready = true;
     this.resize();
     this.syncHall(this.hall());
     this.syncStalls(this.hall(), this.stalls(), this.selectedStallId());
+    this.syncClearances(this.hall(), this.showClearances(), this.eventType());
+    this.syncOverlay(this.editorOverlay(), this.hall());
     this.controls.enabled = !this.dragging();
 
     this.zone.runOutsideAngular(() => {
@@ -190,11 +283,25 @@ export class Scene3dComponent implements AfterViewInit {
   // --- scene synchronisation ----------------------------------------------
 
   private syncHall(hall: Hall | undefined): void {
-    disposeChildren(this.hallGroup);
-    disposeChildren(this.blockedAreasGroup);
+    disposeLayer(this.hallGroup);
+    disposeLayer(this.gridGroup);
+    disposeLayer(this.blockedAreasGroup);
+    disposeLayer(this.restrictedGroup);
+    disposeLayer(this.markerGroup);
     if (!hall) return;
 
     const { width, length } = hallSize(hall);
+    const grid = GridSystem.forHall(hall);
+
+    if (hall.boundary && hall.boundary.length >= 3) {
+      // Real outline: the floor IS the polygon, the grid is clipped to it. No masks needed.
+      this.hallGroup.add(buildHallBoundary(hall.boundary));
+      this.gridGroup.add(buildHallGrid(width, length, hall.shape, grid, hall.boundary));
+      this.restrictedGroup.add(buildRestrictedZones(hall.zones ?? [], effectiveRules(hall.rules)));
+      this.markerGroup.add(buildMarkers(hall.markers ?? [], hall.openings ?? []));
+      this.frameHall(hall, grid);
+      return;
+    }
 
     // Hall floor.
     const floor = new THREE.Mesh(
@@ -223,8 +330,61 @@ export class Scene3dComponent implements AfterViewInit {
       this.hallGroup.add(border);
     }
 
-    this.hallGroup.add(buildHallGrid(width, length, hall.shape));
+    this.gridGroup.add(buildHallGrid(width, length, hall.shape, grid));
     this.blockedAreasGroup.add(buildBlockedAreas(hall));
+    if (hall.zones?.length) {
+      this.restrictedGroup.add(buildRestrictedZones(hall.zones, effectiveRules(hall.rules)));
+    }
+    if (hall.markers?.length || hall.openings?.length) {
+      this.markerGroup.add(buildMarkers(hall.markers ?? [], hall.openings ?? []));
+    }
+  }
+
+  private syncClearances(hall: Hall | undefined, show: boolean, eventType: EventType): void {
+    disposeLayer(this.clearanceGroup);
+    if (!hall?.rules || !show) return;
+    this.clearanceGroup.add(
+      buildClearances(hall.boundary ?? null, hall.openings ?? [], effectiveRules(hall.rules), eventType)
+    );
+  }
+
+  private syncOverlay(overlay: EditorOverlay | null, hall: Hall | undefined): void {
+    disposeLayer(this.previewGroup);
+    disposeLayer(this.violationGroup);
+    disposeLayer(this.freeSpaceGroup);
+    if (!overlay || !hall) return;
+
+    this.previewGroup.add(buildPreview(overlay));
+    this.violationGroup.add(buildViolations(overlay));
+    this.freeSpaceGroup.add(buildFreeSpace(overlay.freeSpace, GridSystem.forHall(hall).cellSize));
+  }
+
+  /** Fit a large irregular hall into view once, when it is first shown. */
+  private frameHall(hall: Hall, grid: GridSystem): void {
+    const key = String(hall.id);
+    if (this.framedHallId === key) return;
+    this.framedHallId = key;
+    this.focusOn({ rect: grid.bounds, seq: 0 }, 0.9);
+  }
+
+  private focusOn(target: FocusTarget, fill = 0.35): void {
+    const { rect } = target;
+    const cx = (rect.minX + rect.maxX) / 2;
+    const cz = (rect.minZ + rect.maxZ) / 2;
+    // Distance at which the area spans roughly `fill` of the view, in whichever direction is
+    // tighter: a long hall like Hall 8-9-10 (129 x 41 m) is limited by the width, not the height.
+    const vHalf = THREE.MathUtils.degToRad(this.camera.fov) / 2;
+    const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
+    const width = Math.max(rect.maxX - rect.minX, 6);
+    const depth = Math.max(rect.maxZ - rect.minZ, 6);
+    const distance = Math.min(
+      this.controls.maxDistance,
+      Math.max(width / (2 * Math.tan(hHalf)), depth / (2 * Math.tan(vHalf))) / fill
+    );
+
+    this.controls.target.set(cx, 0, cz);
+    this.camera.position.set(cx, distance * 0.82, cz + distance * 0.58);
+    this.controls.update();
   }
 
   private syncStalls(
@@ -262,6 +422,26 @@ export class Scene3dComponent implements AfterViewInit {
   // --- pointer interaction -------------------------------------------------
 
   private readonly onPointerDown = (event: PointerEvent): void => {
+    // The suggested spot of a rejected placement can be clicked in either mode.
+    if (event.button === 0 && this.pickSuggestion(event)) {
+      this.pointerDownHit = true;
+      this.acceptSuggestion.emit();
+      return;
+    }
+
+    if (this.mode() === 'draw') {
+      this.pointerDownHit = true;
+      if (event.button !== 0) return; // right/middle drag still orbits and pans
+      const point = this.intersectDragPlane(event);
+      if (!point) return;
+
+      this.controls.enabled = false;
+      this.drawPointerId = event.pointerId;
+      this.draftStart.emit({ x: point.x, z: point.z });
+      this.renderer.domElement.setPointerCapture?.(event.pointerId);
+      return;
+    }
+
     const hit = this.pickStall(event);
     this.pointerDownHit = hit !== null;
     if (!hit) return;
@@ -289,6 +469,17 @@ export class Scene3dComponent implements AfterViewInit {
   };
 
   private readonly onPointerMove = (event: PointerEvent): void => {
+    if (this.mode() === 'draw') {
+      const point = this.intersectDragPlane(event);
+      if (!point) return;
+      if (this.drawPointerId === event.pointerId) {
+        this.draftMove.emit({ x: point.x, z: point.z });
+      } else if (this.drawPointerId === null && event.buttons === 0) {
+        this.draftHover.emit({ x: point.x, z: point.z });
+      }
+      return;
+    }
+
     if (!this.drag) return;
 
     const point = this.intersectDragPlane(event);
@@ -311,6 +502,14 @@ export class Scene3dComponent implements AfterViewInit {
   };
 
   private readonly onPointerUp = (event: PointerEvent): void => {
+    if (this.drawPointerId !== null && this.drawPointerId === event.pointerId) {
+      this.drawPointerId = null;
+      this.controls.enabled = !this.dragging();
+      this.draftEnd.emit();
+      this.renderer.domElement.releasePointerCapture?.(event.pointerId);
+      return;
+    }
+
     if (!this.drag) return;
 
     const { id, moved, pointerId, side, wasSelected } = this.drag;
@@ -337,6 +536,20 @@ export class Scene3dComponent implements AfterViewInit {
     if (this.pointerDownHit) return;
     this.selectStall.emit(null);
   };
+
+  private readonly onPointerLeave = (): void => {
+    if (this.mode() === 'draw' && this.drawPointerId === null) this.draftLeave.emit();
+  };
+
+  /** Did the pointer hit the suggested-spot ghost? */
+  private pickSuggestion(event: PointerEvent): boolean {
+    if (!this.previewGroup.children.length) return false;
+    this.updatePointer(event);
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    return this.raycaster
+      .intersectObjects(this.previewGroup.children, true)
+      .some(hit => hit.object.userData['suggestion'] === true && hit.object instanceof THREE.Mesh);
+  }
 
   /** Find the stall under the pointer, plus the wall side if a wall was hit. */
   private pickStall(event: PointerEvent | MouseEvent): { stall: Stall; side?: GateSide } | null {
@@ -430,13 +643,31 @@ export class Scene3dComponent implements AfterViewInit {
     canvas.removeEventListener('pointerup', this.onPointerUp);
     canvas.removeEventListener('pointercancel', this.onPointerUp);
     canvas.removeEventListener('click', this.onClick);
+    canvas.removeEventListener('pointerleave', this.onPointerLeave);
 
     this.stallObjects.forEach(object => object.dispose());
     this.stallObjects.clear();
-    disposeChildren(this.hallGroup);
-    disposeChildren(this.blockedAreasGroup);
+    for (const layer of [
+      this.hallGroup,
+      this.gridGroup,
+      this.blockedAreasGroup,
+      this.restrictedGroup,
+      this.clearanceGroup,
+      this.freeSpaceGroup,
+      this.previewGroup,
+      this.violationGroup,
+      this.markerGroup
+    ]) {
+      disposeLayer(layer);
+    }
     this.controls.dispose();
     this.renderer.dispose();
     canvas.remove();
   }
+}
+
+/** Free one layer: sprite canvas textures first, then every geometry and material. */
+function disposeLayer(group: THREE.Group): void {
+  disposeSpriteTextures(group);
+  disposeChildren(group);
 }

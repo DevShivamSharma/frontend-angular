@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -19,6 +19,8 @@ export class SavedLayoutsPanelComponent {
   readonly savedLayouts = this.store.savedLayouts;
   readonly selectedSavedId = this.store.selectedSavedId;
   readonly busy = this.store.busy;
+  readonly loading = computed(() => this.store.listStatus() === 'loading');
+  readonly failed = computed(() => this.store.listStatus() === 'error');
 
   /**
    * The layout name is store-owned because creating a hall, importing a
@@ -62,5 +64,10 @@ export class SavedLayoutsPanelComponent {
 
   deleteLayout(id: string | number): void {
     void this.store.deleteLayout(id);
+  }
+
+  /** The layout currently open in the editor, highlighted in the list. */
+  isOpen(id: string | number): boolean {
+    return String(this.selectedSavedId()) === String(id);
   }
 }

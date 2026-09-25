@@ -1,13 +1,15 @@
 import { Routes } from '@angular/router';
 
+import { HomePageComponent } from './home/home-page.component';
 import { PlannerPageComponent } from './planner/planner-page.component';
 
 /**
- * One route, matching the React app's single screen (decision FD-002).
- * The wildcard only provides SPA fallback parity; no guards are added until
- * authentication requirements exist.
+ * The root shows the 3D venue model; the planner (previously the only screen,
+ * decision FD-002) moved to `/planner`. The wildcard only provides SPA
+ * fallback parity; no guards are added until authentication requirements exist.
  */
 export const routes: Routes = [
-  { path: '', component: PlannerPageComponent },
+  { path: '', component: HomePageComponent },
+  { path: 'planner', component: PlannerPageComponent },
   { path: '**', redirectTo: '' }
 ];

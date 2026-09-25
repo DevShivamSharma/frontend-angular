@@ -1,5 +1,9 @@
+import type { StallStatus } from '../geometry/placement-rules';
+
 /** Side of the stall that is left open for customer entry. */
 export type GateSide = 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT';
+
+export type { StallStatus };
 
 /**
  * A stall/shop as held in frontend state.
@@ -21,6 +25,14 @@ export interface Stall {
   gateSide: GateSide;
   /** Every side left open for customer entry (1-4, any combination). Source of truth. */
   openSides: GateSide[];
+  /**
+   * Persisted identity ("STALL-001"), assigned by the backend on save. null = not saved yet.
+   * Never renumbered: cancelling STALL-002 leaves STALL-003 as it is.
+   */
+  stallNumber: string | null;
+  status: StallStatus;
+  /** Stall type it was drawn from ("stall-3x2"), or null for a custom size. */
+  stallTypeId: string | null;
 }
 
 /** Raw stall-shaped input from the backend or from an Excel row. */
@@ -36,4 +48,7 @@ export interface StallInput {
   color?: unknown;
   gateSide?: unknown;
   openSides?: unknown;
+  stallNumber?: unknown;
+  status?: unknown;
+  stallTypeId?: unknown;
 }

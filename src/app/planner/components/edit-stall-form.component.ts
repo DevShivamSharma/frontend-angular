@@ -59,14 +59,14 @@ export class EditStallFormComponent {
     controls.posX.valueChanges.pipe(takeUntilDestroyed()).subscribe(value => {
       const stall = this.selectedStall();
       if (!stall) return;
-      this.store.moveStall(stall.id, num(value), stall.posZ);
+      this.store.placeStall(stall.id, num(value), stall.posZ);
       this.syncFromStore();
     });
 
     controls.posZ.valueChanges.pipe(takeUntilDestroyed()).subscribe(value => {
       const stall = this.selectedStall();
       if (!stall) return;
-      this.store.moveStall(stall.id, stall.posX, num(value));
+      this.store.placeStall(stall.id, stall.posX, num(value));
       this.syncFromStore();
     });
 
@@ -81,13 +81,19 @@ export class EditStallFormComponent {
     if (stall) this.store.toggleOpenSide(stall.id, value);
   }
 
+  /** Close the editor by clearing the selection. */
+  close(): void {
+    this.store.selectStall(null);
+  }
+
   applyChanges(): void {
     this.store.saveEdit();
   }
 
+  /** A numbered (saved) stall is cancelled, keeping its number; an unsaved one is removed. */
   removeStall(): void {
     const stall = this.selectedStall();
-    if (stall) this.store.deleteStall(stall.id);
+    if (stall) this.store.cancelStall(stall.id);
   }
 
   private patchSelected(patch: Partial<Stall>): void {

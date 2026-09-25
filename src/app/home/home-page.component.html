@@ -1,0 +1,58 @@
+<div class="venue">
+  <canvas #canvas class="venue-canvas" aria-label="3D model of the IITF 2026 venue"></canvas>
+
+  <!-- Placed every frame over the globe's Delhi pin (see updateGlobeLabel()); hidden in the venue view. -->
+  <div #globeLabel class="globe-label">
+    <strong>Bharat Mandapam</strong>
+    <span>ITPO · Pragati Maidan, New Delhi</span>
+  </div>
+
+  <header class="title-card">
+    <h1>IITF 2026 · Venue Layout</h1>
+    <p>Drag to explore · Scroll to zoom</p>
+    <a routerLink="/planner" class="planner-link">Open stall planner →</a>
+  </header>
+
+  @if (state() === 'ready') {
+    <div class="view-controls" role="group" aria-label="View controls">
+      <button type="button" (click)="zoomIn()" aria-label="Zoom in">+</button>
+      <button type="button" (click)="zoomOut()" aria-label="Zoom out">−</button>
+      <button type="button" (click)="resetView()">Reset</button>
+    </div>
+  }
+
+  @if (imageryCredit(); as credit) {
+    <button
+      type="button"
+      class="imagery-credit"
+      [attr.aria-expanded]="creditExpanded()"
+      [attr.aria-label]="credit.full"
+      [title]="credit.full"
+      (click)="toggleCredit()"
+    >
+      {{ creditExpanded() ? credit.full : credit.short }}
+    </button>
+  }
+
+  @if (state() === 'loading') {
+    <div class="status" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      @if (progress() !== null) {
+        <p>Loading venue model… {{ progress() }}%</p>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" [style.width.%]="progress()"></div>
+        </div>
+      } @else {
+        <p>Loading venue model… {{ loadedMb().toFixed(1) }} MB</p>
+      }
+    </div>
+  }
+
+  @if (state() === 'error') {
+    <div class="status" role="alert">
+      <p class="status-title">Model load nahi ho paya, retry karein</p>
+      <p class="status-detail">Check your connection and try again.</p>
+      <button type="button" class="retry" (click)="retry()">Retry</button>
+    </div>
+  }
+</div>

@@ -2,7 +2,8 @@
   <div class="panel-header">
     <h3 class="panel-title">
       <app-icon class="icon-slot" name="store" />
-      Shops in Hall ({{ currentStalls().length }})
+      Shops in Hall
+      <span class="title-count">{{ currentStalls().length }}</span>
     </h3>
     <label class="snap-toggle">
       <input
@@ -10,25 +11,53 @@
         [checked]="snap()"
         (change)="onSnapChange($any($event.target).checked)"
       />
-      Snap 1 unit
+      Snap to grid
     </label>
   </div>
 
-  @for (stall of currentStalls(); track stall.id; let i = $index) {
-    <button
-      type="button"
-      class="stall-row"
-      [class.is-selected]="isSelected(stall.id)"
-      [attr.aria-pressed]="isSelected(stall.id)"
-      (click)="select(stall.id)"
-    >
-      <span class="stall-row-name">{{ stall.name || 'Shop ' + (i + 1) }}</span>
-      <span class="stall-row-meta">
-        Open: {{ (stall.openSides.length ? stall.openSides : [stall.gateSide]).join(', ') }} · {{ stall.width }}×{{ stall.length }} · X {{ stall.posX }}, Z
-        {{ stall.posZ }}
-      </span>
-    </button>
-  } @empty {
-    <div class="empty-state">No shops placed. Add one above.</div>
+  <!-- Kept while a query is set, so a filter can never be left applied with no box to clear it. -->
+  @if (currentStalls().length > 6 || query()) {
+    <label class="search-field">
+      <app-icon name="search" [size]="14" />
+      <span class="sr-only">Search shops</span>
+      <input
+        type="search"
+        placeholder="Search by number or name"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+      />
+    </label>
   }
+
+  <div class="stall-list">
+    @for (stall of visibleStalls(); track stall.id) {
+      <button
+        type="button"
+        class="stall-row"
+        [class.is-selected]="isSelected(stall.id)"
+        [class.is-cancelled]="stall.status === 'CANCELLED'"
+        [attr.aria-pressed]="isSelected(stall.id)"
+        (click)="select(stall.id)"
+      >
+        <span class="stall-chip">{{ stall.stallNumber ?? 'NEW' }}</span>
+        <span class="stall-row-body">
+          <span class="stall-row-name">{{ stall.name || 'Shop' }}</span>
+          <span class="stall-row-meta">{{ stall.width }} × {{ stall.length }} m · Open {{ openSidesLabel(stall) }}</span>
+        </span>
+        <span class="status-dot" [attr.data-status]="stall.status" [title]="stall.status">
+          <span class="sr-only">{{ stall.status }}</span>
+        </span>
+      </button>
+    } @empty {
+      @if (query()) {
+        <div class="empty-state">
+          No shop matches “{{ query() }}”.
+          <br />
+          <button type="button" class="btn-mini" (click)="query.set('')">Clear search</button>
+        </div>
+      } @else {
+        <div class="empty-state">No shops placed yet. Use <b>Draw stall</b> on the grid or add one above.</div>
+      }
+    }
+  </div>
 </section>

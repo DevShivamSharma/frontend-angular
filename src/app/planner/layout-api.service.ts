@@ -3,9 +3,10 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL } from '../core/api-base.token';
-import { Hall } from './models/hall.model';
+import { EventType, Hall, StallType } from './models/hall.model';
 import {
   HallPayload,
+  LayoutAuditResponse,
   LayoutDetail,
   LayoutSaveRequest,
   LayoutSaveResponse,
@@ -28,7 +29,8 @@ import { num, normalizeOpenSides } from './geometry/planner-geometry';
 export function buildApiPayload(
   currentHall: Hall | null | undefined,
   currentStalls: ReadonlyArray<Stall>,
-  layoutName: string
+  layoutName: string,
+  eventType?: EventType
 ): LayoutSaveRequest {
   if (!currentHall) throw new Error('No hall selected.');
 
@@ -39,7 +41,13 @@ export function buildApiPayload(
     width: num(currentHall.width, 0),
     length: num(currentHall.length, 0),
     radius: num(currentHall.radius, 0),
-    ...(currentHall.blockedAreas?.length ? { blockedAreas: currentHall.blockedAreas } : {})
+    ...(currentHall.blockedAreas?.length ? { blockedAreas: currentHall.blockedAreas } : {}),
+    // Rule-driven geometry travels with the hall so a saved layout keeps its shape and rules.
+    ...(currentHall.boundary?.length ? { boundary: currentHall.boundary } : {}),
+    ...(currentHall.zones?.length ? { zones: currentHall.zones } : {}),
+    ...(currentHall.openings?.length ? { openings: currentHall.openings } : {}),
+    ...(currentHall.markers?.length ? { markers: currentHall.markers } : {}),
+    ...(currentHall.rules ? { rules: currentHall.rules as Record<string, unknown> } : {})
   };
 
   const stalls: StallPayload[] = currentStalls.map(s => {
@@ -55,11 +63,20 @@ export function buildApiPayload(
       posZ: num(s.posZ, 0),
       color: s.color || '#3498db',
       gateSide: openSides[0],
-      openSides
+      openSides,
+      // The backend keeps a number only if this layout issued it (BR-25).
+      ...(s.stallNumber ? { stallNumber: s.stallNumber } : {}),
+      ...(s.status && s.status !== 'AVAILABLE' ? { status: s.status } : {}),
+      ...(s.stallTypeId ? { stallTypeId: s.stallTypeId } : {})
     };
   });
 
-  return { layoutName: layoutName.trim() || currentHall.name, hall, stalls };
+  return {
+    layoutName: layoutName.trim() || currentHall.name,
+    ...(eventType ? { eventType } : {}),
+    hall,
+    stalls
+  };
 }
 
 /** `Number.isFinite(Number(id)) && String(id).trim() !== ''` from `App.js:553`. */
@@ -112,9 +129,19 @@ export class LayoutApiService {
     return firstValueFrom(this.http.get<LayoutDetail>(`${this.api}/layout/${id}`));
   }
 
-  /** `PUT /api/layout/{id}` — response body is ignored, as in React. */
-  update(id: string | number, payload: LayoutSaveRequest): Promise<unknown> {
-    return firstValueFrom(this.http.put(`${this.api}/layout/${id}`, payload));
+  /** `PUT /api/layout/{id}` — returns the persisted stalls, with their stall numbers. */
+  update(id: string | number, payload: LayoutSaveRequest): Promise<LayoutSaveResponse> {
+    return firstValueFrom(this.http.put<LayoutSaveResponse>(`${this.api}/layout/${id}`, payload));
+  }
+
+  /** `GET /api/stall-types` — the stall sizes offered in draw mode (backend configuration). */
+  listStallTypes(): Promise<StallType[]> {
+    return firstValueFrom(this.http.get<StallType[]>(`${this.api}/stall-types`));
+  }
+
+  /** `POST /api/layout/{id}/validate` — the server's rule audit of the saved layout. */
+  audit(id: string | number): Promise<LayoutAuditResponse> {
+    return firstValueFrom(this.http.post<LayoutAuditResponse>(`${this.api}/layout/${id}/validate`, {}));
   }
 
   /** `DELETE /api/layout/{id}` — response body is ignored, as in React. */

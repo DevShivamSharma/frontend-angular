@@ -16,7 +16,19 @@ export type IconName =
   | 'arrow-up'
   | 'arrow-down'
   | 'arrow-left'
-  | 'arrow-right';
+  | 'arrow-right'
+  | 'search'
+  | 'shield'
+  | 'layers'
+  | 'x'
+  | 'alert'
+  | 'chevron-down'
+  | 'cloud-off'
+  | 'pointer'
+  | 'draw'
+  | 'move'
+  | 'panel-left-close'
+  | 'panel-left-open';
 
 /**
  * Inline stroke icons, Lucide-style (24x24 grid, 2px stroke, currentColor).

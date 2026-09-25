@@ -24,3 +24,17 @@ export function extractErrorMessage(e: unknown): string {
 
   return String(e);
 }
+
+/**
+ * The structured placement violations of a rejected save (`violations` in the 400 body, see
+ * the backend PlacementRejectedError). Empty for every other error.
+ */
+export function extractViolations<T = unknown>(e: unknown): T[] {
+  if (e instanceof HttpErrorResponse) {
+    const body = e.error as { violations?: unknown } | null;
+    if (body && typeof body === 'object' && Array.isArray(body.violations)) {
+      return body.violations as T[];
+    }
+  }
+  return [];
+}

@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+import { GridSystem } from '../geometry/grid-system';
+import { Point } from '../geometry/placement-rules';
 import { HallShape } from '../models/hall.model';
 
 /**
@@ -9,24 +11,50 @@ import { HallShape } from '../models/hall.model';
  * Explicit line geometry is used instead of a helper grid so the lines stay
  * visible above the hall floor - that is why every material has
  * `depthTest: false`, exactly as in React.
+ *
+ * Lines come from the hall's GridSystem, so they start at the hall corner and every drawn line
+ * is a real snap line. With a boundary polygon each line is clipped to the polygon, so the grid
+ * exists only inside the hall.
  */
-export function buildHallGrid(width: number, length: number, shape: HallShape): THREE.Group {
+export function buildHallGrid(
+  width: number,
+  length: number,
+  shape: HallShape,
+  grid?: GridSystem,
+  boundary?: Point[] | null
+): THREE.Group {
   const group = new THREE.Group();
+  group.name = 'hall-grid';
   group.position.set(0, 0.13, 0);
 
   const w = Math.max(1, Number(width) || 40);
   const l = Math.max(1, Number(length) || 40);
-  const halfW = w / 2;
-  const halfL = l / 2;
+  const system = grid ?? new GridSystem(-w / 2, -l / 2, w, l);
+  const polygon = boundary && boundary.length >= 3 ? boundary : null;
+  const { minX, minZ, maxX, maxZ } = system.bounds;
+  const cell = system.cellSize;
+  const cols = Math.round(system.width / cell);
+  const rows = Math.round(system.length / cell);
 
-  // 1 x 1 unit grid.
   const unitVertices: number[] = [];
-  for (let x = Math.ceil(-halfW); x <= Math.floor(halfW); x += 1) {
-    pushLine(unitVertices, x, -halfL, x, halfL);
+  const sectionVertices: number[] = [];
+
+  for (let c = 0; c <= cols; c++) {
+    const x = minX + c * cell;
+    const target = c % 5 === 0 ? sectionVertices : unitVertices;
+    for (const [z1, z2] of polygon ? clipVertical(polygon, x) : [[minZ, maxZ]]) {
+      pushLine(target, x, z1, x, z2);
+    }
   }
-  for (let z = Math.ceil(-halfL); z <= Math.floor(halfL); z += 1) {
-    pushLine(unitVertices, -halfW, z, halfW, z);
+  for (let r = 0; r <= rows; r++) {
+    const z = minZ + r * cell;
+    const target = r % 5 === 0 ? sectionVertices : unitVertices;
+    for (const [x1, x2] of polygon ? clipHorizontal(polygon, z) : [[minX, maxX]]) {
+      pushLine(target, x1, z, x2, z);
+    }
   }
+
+  // 1 x 1 cell grid.
   group.add(
     lineSegments(
       unitVertices,
@@ -39,14 +67,7 @@ export function buildHallGrid(width: number, length: number, shape: HallShape): 
     )
   );
 
-  // Stronger 5 x 5 unit section lines.
-  const sectionVertices: number[] = [];
-  for (let x = Math.ceil(-halfW / 5) * 5; x <= halfW; x += 5) {
-    pushLine(sectionVertices, x, -halfL, x, halfL);
-  }
-  for (let z = Math.ceil(-halfL / 5) * 5; z <= halfL; z += 5) {
-    pushLine(sectionVertices, -halfW, z, halfW, z);
-  }
+  // Stronger section lines every 5 cells.
   group.add(
     lineSegments(
       sectionVertices,
@@ -59,20 +80,21 @@ export function buildHallGrid(width: number, length: number, shape: HallShape): 
     )
   );
 
-  // Hall border.
-  group.add(
-    lineSegments(
-      [
-        -halfW, 0, -halfL, halfW, 0, -halfL,
-        halfW, 0, -halfL, halfW, 0, halfL,
-        halfW, 0, halfL, -halfW, 0, halfL,
-        -halfW, 0, halfL, -halfW, 0, -halfL
-      ],
-      new THREE.LineBasicMaterial({ color: '#0f172a', depthTest: false })
-    )
-  );
+  // Hall border: the polygon outline, or the rectangle.
+  const outline = polygon ?? [
+    { x: minX, z: minZ },
+    { x: maxX, z: minZ },
+    { x: maxX, z: maxZ },
+    { x: minX, z: maxZ }
+  ];
+  const borderVertices: number[] = [];
+  outline.forEach((p, i) => {
+    const q = outline[(i + 1) % outline.length];
+    pushLine(borderVertices, p.x, p.z, q.x, q.z);
+  });
+  group.add(lineSegments(borderVertices, new THREE.LineBasicMaterial({ color: '#0f172a', depthTest: false })));
 
-  if (shape === 'SQUARE') {
+  if (shape === 'SQUARE' && !polygon) {
     // Centre axis markers. These are NOT rotated flat in the React source, so
     // they render as two thin upright blades through the hall centre. Ported
     // as-is for visual parity; see the migration notes.
@@ -89,6 +111,43 @@ export function buildHallGrid(width: number, length: number, shape: HallShape): 
   }
 
   return group;
+}
+
+/**
+ * The parts of the vertical line x = const that lie inside the polygon, as [z1, z2] pairs.
+ * Even-odd crossings with the half-open rule (an edge counts when x is in [min, max) of its
+ * endpoints), so lines through vertices and along vertical walls are handled consistently.
+ */
+export function clipVertical(polygon: Point[], x: number): Array<[number, number]> {
+  const hits: number[] = [];
+  polygon.forEach((a, i) => {
+    const b = polygon[(i + 1) % polygon.length];
+    if ((a.x <= x) !== (b.x <= x)) {
+      hits.push(a.z + ((x - a.x) * (b.z - a.z)) / (b.x - a.x));
+    }
+  });
+  return pairs(hits);
+}
+
+/** The parts of the horizontal line z = const inside the polygon, as [x1, x2] pairs. */
+export function clipHorizontal(polygon: Point[], z: number): Array<[number, number]> {
+  const hits: number[] = [];
+  polygon.forEach((a, i) => {
+    const b = polygon[(i + 1) % polygon.length];
+    if ((a.z <= z) !== (b.z <= z)) {
+      hits.push(a.x + ((z - a.z) * (b.x - a.x)) / (b.z - a.z));
+    }
+  });
+  return pairs(hits);
+}
+
+function pairs(hits: number[]): Array<[number, number]> {
+  hits.sort((a, b) => a - b);
+  const out: Array<[number, number]> = [];
+  for (let i = 0; i + 1 < hits.length; i += 2) {
+    if (hits[i + 1] - hits[i] > 1e-9) out.push([hits[i], hits[i + 1]]);
+  }
+  return out;
 }
 
 function pushLine(target: number[], x1: number, z1: number, x2: number, z2: number): void {

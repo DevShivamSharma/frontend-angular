@@ -1,136 +1,138 @@
-/* Shell and HUD styles ported from App.js:579-601 and App.js:620-623. */
+/*
+ * Shell layout, ported from App.js:579-601. The panels themselves (HUDs, sidebar alerts)
+ * are styled in styles.css next to the editor toolbar; this file only places them.
+ */
 
 .planner {
   display: flex;
   height: 100vh;
+  /* dvh tracks the visible viewport on mobile browsers whose URL bar slides in and out. */
+  height: 100dvh;
   background: var(--surface-app);
   color: var(--text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* The hidden sidebar slides out past the left edge; it must not add a horizontal scrollbar. */
+  overflow: hidden;
 }
 
 .sidebar {
   width: 380px;
-  padding: var(--space-5) var(--space-4) var(--space-6);
+  flex: none;
+  display: flex;
+  flex-direction: column;
   background: var(--surface-sidebar);
-  overflow-y: auto;
   box-sizing: border-box;
   border-right: 1px solid var(--border-subtle);
+  min-height: 0;
+  transition: margin-left 200ms ease;
+}
+
+/* Hidden sidebar: slid out by its own width, so the stage (flex: 1) takes the space. The 3D view
+   follows by itself - Scene3dComponent resizes on its ResizeObserver. No `visibility: hidden`:
+   `inert` in the template already takes it out of the tab order and the accessibility tree, and
+   a visibility transition would keep it unfocusable for the first frame after showing it again. */
+.planner.is-sidebar-collapsed .sidebar {
+  margin-left: -380px;
+}
+
+/* Only the body scrolls; the header (hall + tabs) stays put. */
+.sidebar-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4) var(--space-6);
   scrollbar-width: thin;
   scrollbar-color: var(--border-default) transparent;
 }
 
 /* The default Chrome scrollbar is a bright light-grey slab against a near
    black panel. This matches it to the surface. */
-.sidebar::-webkit-scrollbar {
+.sidebar-body::-webkit-scrollbar {
   width: 10px;
 }
 
-.sidebar::-webkit-scrollbar-thumb {
+.sidebar-body::-webkit-scrollbar-thumb {
   background: var(--border-default);
   border: 3px solid var(--surface-sidebar);
   border-radius: 999px;
 }
 
-.sidebar::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
-}
-
 .app-title {
   margin: 0;
   color: var(--text-primary);
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .app-subtitle {
   font-size: 12px;
   color: var(--text-muted);
-  margin: var(--space-1) 0 var(--space-5);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.error-box {
-  display: flex;
-  gap: var(--space-2);
-  background: var(--danger-surface);
-  border: 1px solid var(--danger-border);
-  border-left: 3px solid var(--danger-border);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  line-height: 1.45;
-  margin-bottom: var(--space-3);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stage {
   flex: 1;
   position: relative;
-  background: #dbe5ef;
+  /* Same as `scene.background` in scene3d.component.ts, so there is no flash before the first frame. */
+  background: #e6eaf0;
   min-width: 0;
 }
 
-.hud {
+/* Everything along the top edge: hall + hint, toolbar, hall details. One flex row, so they
+   share the width instead of overlapping at narrow sizes. */
+.stage-top {
   position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  /* The row itself must not swallow orbit drags on the canvas between the panels. */
+  pointer-events: none;
+  z-index: 2;
+}
+
+.stage-top > * {
+  pointer-events: auto;
+}
+
+.stage-top > .hud-sidebar-toggle {
+  flex: none;
+}
+
+/* Informational only; clicks fall through to the canvas. */
+.stage-top > .hud-left {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 240px;
   pointer-events: none;
 }
 
-/* App.js:620 - `hudLeft` */
-.hud-left {
-  top: 15px;
-  left: 15px;
-  background: rgba(15, 23, 42, 0.9);
-  padding: 9px 13px;
-  border-radius: 6px;
-  font-size: 13px;
+/* Centred in the space the two side panels leave. */
+.stage-top > app-editor-toolbar {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline: auto;
 }
 
-.hud-left-meta {
-  font-size: 10px;
-  color: #cbd5e1;
-}
-
-/* App.js:621 - `hudRight` */
-.hud-right {
-  top: 15px;
-  right: 15px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #0f172a;
-  padding: 11px 14px;
-  border-radius: 8px;
-  font-size: 11px;
-  min-width: 175px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.16);
-}
-
-.hud-right-legend {
-  border-top: 1px solid #cbd5e1;
-  margin-top: 5px;
-  padding-top: 5px;
-}
-
-/* App.js:622 - `selectionHud` */
-.hud-selection {
-  bottom: 15px;
-  left: 15px;
-  background: rgba(3, 105, 161, 0.94);
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-}
-
-/* App.js:623 - `dragHud` */
-.hud-drag {
-  bottom: 15px;
-  right: 15px;
-  background: #0f172a;
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 11px;
+/* Everything along the bottom edge: selection summary and drag hint. */
+.stage-bottom {
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  pointer-events: none;
+  z-index: 2;
 }
 
 /*
@@ -143,19 +145,61 @@
     flex-direction: column;
     height: auto;
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .sidebar {
     width: 100%;
     border-right: 0;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--border-default);
     max-height: 50vh;
+    max-height: 50dvh;
   }
 
   /* `min-height: 0` overrides the flex default of `auto`, which would let the
      stage be sized by its contents instead of by the 50vh rule. */
   .stage {
     height: 50vh;
+    height: 50dvh;
     min-height: 0;
+  }
+
+  /* Stacked, the sidebar is the top half: hiding it gives the whole screen to the view. */
+  .planner.is-sidebar-collapsed .sidebar {
+    display: none;
+  }
+
+  .planner.is-sidebar-collapsed .stage {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* Toolbar on its own full-width row, hall details tucked under it on the right. The hall
+     name and hint repeat what the sidebar already shows, so they give their space to the view. */
+  .stage-top {
+    top: var(--space-2);
+    left: var(--space-2);
+    right: var(--space-2);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .stage-top > .hud-left {
+    display: none;
+  }
+
+  .stage-top > app-editor-toolbar {
+    margin-inline: 0;
+  }
+
+  .stage-top > .hud-sidebar-toggle {
+    align-self: flex-start;
+  }
+
+  .stage-bottom {
+    left: var(--space-2);
+    right: var(--space-2);
+    bottom: var(--space-2);
   }
 }

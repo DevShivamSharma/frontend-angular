@@ -63,14 +63,17 @@ describe('PlannerStore', () => {
       expect(store.halls().length).toBe(2);
       expect(store.activeHallId()).toBe(1014);
       expect(store.currentHall()?.name).toBe('Hall 1GF');
+      expect(store.hallsStatus()).toBe('ready');
     });
 
     it('keeps the fallback when the backend is unreachable', async () => {
       const promise = store.loadHalls();
+      expect(store.hallsStatus()).toBe('loading');
       http.expectOne(`${API}/halls?standalone=true`).error(new ProgressEvent('network error'));
       await promise;
 
       expect(store.currentHall()?.name).toBe('Sample Hall (offline)');
+      expect(store.hallsStatus()).toBe('unavailable');
     });
 
     it('keeps the fallback when the backend returns no halls', async () => {
@@ -80,6 +83,49 @@ describe('PlannerStore', () => {
 
       expect(store.halls().length).toBe(1);
       expect(store.currentHall()?.name).toBe('Sample Hall (offline)');
+      expect(store.hallsStatus()).toBe('empty');
+    });
+
+    it('keeps a hall the user switched to before the list arrived', async () => {
+      const custom = store.createHall({ name: 'My Hall', shape: 'SQUARE', w: 30, l: 20, r: 0 });
+
+      const promise = store.loadHalls();
+      http.expectOne(`${API}/halls?standalone=true`).flush([
+        { id: 1014, name: 'Hall 1GF', shape: 'SQUARE', width: 84, length: 116, radius: 0 }
+      ]);
+      await promise;
+
+      expect(store.halls().map(h => h.id)).toEqual([1014, custom.id]);
+      expect(store.activeHallId()).toBe(custom.id);
+    });
+  });
+
+  describe('loadList', () => {
+    let http: HttpTestingController;
+
+    beforeEach(() => {
+      http = TestBed.inject(HttpTestingController);
+    });
+
+    it('reports a failed request through listStatus and keeps the old list', async () => {
+      store.savedLayouts.set([{ id: 1000 } as never]);
+
+      const promise = store.loadList();
+      expect(store.listStatus()).toBe('loading');
+      http.expectOne(`${API}/layouts`).error(new ProgressEvent('network error'));
+      await promise;
+
+      expect(store.listStatus()).toBe('error');
+      expect(store.savedLayouts().length).toBe(1);
+    });
+  });
+
+  describe('dismissError', () => {
+    it('clears the error before its timeout', () => {
+      store.showError('boom');
+      store.dismissError();
+
+      expect(store.error()).toBe('');
     });
   });
 
@@ -571,6 +617,145 @@ describe('PlannerStore', () => {
       expect(notify.success).not.toHaveBeenCalled();
       expect(notify.hideLoading).toHaveBeenCalled();
       expect(store.layoutName()).toBe('Expo');
+    });
+  });
+
+  describe('rule-driven editor', () => {
+    // A 40 x 20 m hall with a 10 x 8 notch top-right (centre origin: x -20..20, z -10..10),
+    // carrying rules so every placement goes through placement-rules.ts.
+    const ruledHall = {
+      id: 'ruled',
+      name: 'Ruled Hall',
+      shape: 'SQUARE' as const,
+      width: 40,
+      length: 20,
+      radius: 0,
+      boundary: [
+        { x: -20, z: -10 },
+        { x: 10, z: -10 },
+        { x: 10, z: -2 },
+        { x: 20, z: -2 },
+        { x: 20, z: 10 },
+        { x: -20, z: 10 }
+      ],
+      rules: {}
+    };
+    const type3x2 = { id: 'stall-3x2', label: '3 × 2', width: 3, height: 2, unit: 'meter' as const };
+
+    beforeEach(() => {
+      store.halls.set([ruledHall]);
+      store.setActiveHall('ruled');
+      store.stallTypes.set([type3x2]);
+      store.setMode('draw');
+      store.selectStallType('stall-3x2');
+    });
+
+    /** Draw with the mouse: press at `from`, drag to `to`, release. */
+    function draw(from: { x: number; z: number }, to: { x: number; z: number }): void {
+      store.draftStart(from);
+      store.draftMove(to);
+      store.draftEnd();
+    }
+
+    it('creates a snapped stall from a valid drag, unnumbered until saved', () => {
+      draw({ x: -10.3, z: 0.4 }, { x: -5, z: 1 });
+
+      const [created] = store.currentStalls();
+      expect(created).toEqual(
+        jasmine.objectContaining({ posX: -9.5, posZ: 1, width: 3, length: 2, stallTypeId: 'stall-3x2', stallNumber: null })
+      );
+      expect(store.rejection()).toBeNull();
+    });
+
+    it('previews live while dragging, with valid/invalid state', () => {
+      store.draftStart({ x: -10.3, z: 0.4 });
+      store.draftMove({ x: -5, z: 1 });
+      expect(store.draft()?.valid).toBeTrue();
+
+      store.draftMove({ x: -10, z: 8 }); // mostly vertical: the 3 x 2 turns into 2 x 3
+      expect([store.draft()?.footprint.width, store.draft()?.footprint.length]).toEqual([2, 3]);
+      store.draftEnd();
+
+      store.draftStart({ x: -19.6, z: 0 }); // against the left wall
+      store.draftMove({ x: -15, z: 0.2 });
+      expect(store.draft()?.valid).toBeFalse();
+      expect(store.draft()?.violations[0].code).toBe('PERIPHERAL_CLEARANCE');
+    });
+
+    it('rejects a stall in the notch, creates nothing and suggests the nearest valid spot', () => {
+      draw({ x: 14, z: -8 }, { x: 16, z: -8 });
+
+      expect(store.currentStalls()).toEqual([]);
+      const rejection = store.rejection();
+      expect(rejection?.violations[0].code).toBe('OUTSIDE_HALL');
+      expect(rejection?.suggestion).not.toBeNull();
+      expect(store.error()).toContain('Placement rejected: Stall is outside the hall boundary.');
+
+      store.acceptSuggestion();
+      expect(store.currentStalls().length).toBe(1);
+      expect(store.rejection()).toBeNull();
+    });
+
+    it('a large stall cannot overwrite smaller ones', () => {
+      draw({ x: -10, z: 0 }, { x: -5, z: 0.2 });
+      draw({ x: -7, z: 0 }, { x: -2, z: 0.2 });
+      expect(store.currentStalls().length).toBe(2);
+
+      store.selectStallType(null); // Custom: the dragged rectangle
+      draw({ x: -10.5, z: -1.5 }, { x: -1.5, z: 5.5 });
+
+      expect(store.currentStalls().length).toBe(2);
+      expect(store.rejection()?.violations[0].message).toMatch(/^Overlaps 2 existing stalls/);
+    });
+
+    it('rejects a 2 m gap for B2B and accepts it once touching', () => {
+      draw({ x: -10, z: 0 }, { x: -5, z: 0.2 }); // x -10..-7
+      draw({ x: -5, z: 0 }, { x: 0, z: 0.2 }); // x -5..-2: 2 m gap
+      expect(store.currentStalls().length).toBe(1);
+      expect(store.rejection()?.violations[0].code).toBe('PATHWAY_WIDTH');
+
+      draw({ x: -7, z: 0 }, { x: 0, z: 0.2 }); // touching: one island
+      expect(store.currentStalls().length).toBe(2);
+    });
+
+    it('snaps a dropped move back when it breaks a rule', () => {
+      draw({ x: -10, z: 0 }, { x: -5, z: 0.2 });
+      const stall = store.currentStalls()[0];
+      store.setMode('select');
+
+      store.selectStall(stall.id);
+      store.setDragging(true);
+      store.moveStall(stall.id, -18.4, 1); // edges snap to x -20..-17: 0 m from the wall
+      store.setDragging(false);
+
+      expect(store.currentStalls()[0].posX).toBe(stall.posX);
+      expect(store.rejection()?.violations[0].code).toBe('PERIPHERAL_CLEARANCE');
+    });
+
+    it('cancelling a numbered stall keeps its number and frees its space', () => {
+      draw({ x: -10, z: 0 }, { x: -5, z: 0.2 });
+      const stall = store.currentStalls()[0];
+      store.updateStall(stall.id, { stallNumber: 'STALL-002' });
+
+      store.cancelStall(stall.id);
+      expect(store.currentStalls()[0]).toEqual(jasmine.objectContaining({ stallNumber: 'STALL-002', status: 'CANCELLED' }));
+
+      draw({ x: -10, z: 0 }, { x: -5, z: 0.2 }); // same place: allowed now
+      expect(store.currentStalls().length).toBe(2);
+    });
+
+    it('removes an unsaved stall outright', () => {
+      draw({ x: -10, z: 0 }, { x: -5, z: 0.2 });
+      store.cancelStall(store.currentStalls()[0].id);
+      expect(store.currentStalls()).toEqual([]);
+    });
+
+    it('audits existing problems without blocking them', () => {
+      store.stalls.set([
+        { id: 's1', hallId: 'ruled', name: 'A', width: 3, length: 2, height: 4, posX: -18.5, posZ: 0, color: '#3498db', gateSide: 'FRONT', openSides: ['FRONT'], stallNumber: 'STALL-001', status: 'AVAILABLE', stallTypeId: null }
+      ]);
+      expect(store.audit().length).toBe(1);
+      expect(store.audit()[0].violations[0].code).toBe('PERIPHERAL_CLEARANCE');
     });
   });
 });

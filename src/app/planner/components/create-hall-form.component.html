@@ -1,7 +1,11 @@
 <section class="card" [formGroup]="form">
-  <h3 class="panel-title">Create Hall</h3>
+  <h3 class="panel-title">
+    <app-icon class="icon-slot" name="building" />
+    Create Hall
+  </h3>
+  <div class="panel-hint">A custom hall is local until you save a layout on it.</div>
 
-  <input class="control" placeholder="Hall name" aria-label="Hall name" formControlName="name" />
+  <input class="control" placeholder="Hall name" aria-label="Hall name" maxlength="255" formControlName="name" />
 
   <select class="control" aria-label="Hall shape" formControlName="shape">
     <option value="SQUARE">Rectangular</option>
@@ -11,20 +15,25 @@
   @if (shape() === 'SQUARE') {
     <div class="row">
       <label class="number-field">
-        Width
-        <input class="control" type="number" formControlName="w" />
+        Width (m)
+        <input class="control" type="number" min="1" inputmode="decimal" formControlName="w" />
       </label>
       <label class="number-field">
-        Length
-        <input class="control" type="number" formControlName="l" />
+        Length (m)
+        <input class="control" type="number" min="1" inputmode="decimal" formControlName="l" />
       </label>
     </div>
   } @else {
-    <label class="number-field">
-      Radius
-      <input class="control" type="number" formControlName="r" />
-    </label>
+    <div class="row">
+      <label class="number-field">
+        Radius (m)
+        <input class="control" type="number" min="1" inputmode="decimal" formControlName="r" />
+      </label>
+    </div>
   }
 
-  <button type="button" class="btn-primary" (click)="createHall()">Generate Hall</button>
+  <button type="button" class="btn-primary is-block" (click)="createHall()">
+    <app-icon name="plus" [size]="14" />
+    Generate Hall
+  </button>
 </section>

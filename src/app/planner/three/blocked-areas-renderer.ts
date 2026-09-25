@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { BlockedArea, Hall } from '../models/hall.model';
 
 /** Matches `scene.background` in scene3d.component.ts so masks erase the floor visually. */
-const OUTSIDE_MASK_COLOR = '#dbe5ef';
+const OUTSIDE_MASK_COLOR = '#e6eaf0';
 const WALL_FALLBACK_COLOR = '#742371';
 const WALL_HEIGHT = 1.5;
 

@@ -24,6 +24,7 @@ export class WorkingHallPanelComponent {
 
   readonly halls = this.store.halls;
   readonly activeHallId = this.store.activeHallId;
+  readonly hallsStatus = this.store.hallsStatus;
 
   /**
    * Drives `[selected]` on each option. The select's own `[value]` binding is not

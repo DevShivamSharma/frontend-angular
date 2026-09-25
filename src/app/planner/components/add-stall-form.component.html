@@ -1,25 +1,29 @@
 <section class="card" [formGroup]="form">
-  <h3 class="panel-title">Add Shop</h3>
+  <h3 class="panel-title">
+    <app-icon class="icon-slot" name="plus" />
+    Add Shop
+  </h3>
 
   <input
     class="control"
     placeholder="Shop / Stall Name"
     aria-label="Shop or stall name"
+    maxlength="255"
     formControlName="name"
   />
 
   <div class="row">
     <label class="number-field">
-      Width
-      <input class="control" type="number" formControlName="width" />
+      Width (m)
+      <input class="control" type="number" min="0.5" inputmode="decimal" formControlName="width" />
     </label>
     <label class="number-field">
-      Length
-      <input class="control" type="number" formControlName="length" />
+      Length (m)
+      <input class="control" type="number" min="0.5" inputmode="decimal" formControlName="length" />
     </label>
     <label class="number-field">
-      Height
-      <input class="control" type="number" formControlName="height" />
+      Height (m)
+      <input class="control" type="number" min="0.5" inputmode="decimal" formControlName="height" />
     </label>
   </div>
 

@@ -5,6 +5,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { HallShape } from '../models/hall.model';
 import { HallFormValue, PlannerStore } from '../planner-store.service';
 import { num } from '../geometry/planner-geometry';
+import { IconComponent } from './icon.component';
 
 /**
  * "Create Hall" section. App.js:529, App.js:586.
@@ -15,7 +16,7 @@ import { num } from '../geometry/planner-geometry';
 @Component({
   selector: 'app-create-hall-form',
   templateUrl: './create-hall-form.component.html',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateHallFormComponent {

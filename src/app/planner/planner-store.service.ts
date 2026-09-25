@@ -1,8 +1,22 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 
-import { extractErrorMessage } from '../core/http-error.util';
+import { extractErrorMessage, extractViolations } from '../core/http-error.util';
 import { NotifyService } from '../core/notify.service';
 import { ExcelImportResult } from './excel/excel-layout.service';
+import { FreeSpaceMap } from './geometry/free-space';
+import { GridSystem } from './geometry/grid-system';
+import { isRuleDriven, placementContextFor } from './geometry/hall-rules';
+import {
+  AuditEntry,
+  auditLayout,
+  Footprint,
+  footprintRect,
+  Point,
+  Rect,
+  validatePlacement,
+  Violation,
+  ViolationGeometry
+} from './geometry/placement-rules';
 import {
   hallSize,
   normalizeOpenSides,
@@ -15,9 +29,9 @@ import {
   withinHall
 } from './geometry/planner-geometry';
 import { buildApiPayload, LayoutApiService } from './layout-api.service';
-import { Hall, HallShape } from './models/hall.model';
-import { LayoutSummary } from './models/layout.model';
-import { GateSide, Stall } from './models/stall.model';
+import { EventType, Hall, HallShape, StallType } from './models/hall.model';
+import { LayoutSummary, ServerViolation } from './models/layout.model';
+import { GateSide, Stall, StallInput } from './models/stall.model';
 
 /** Values collected by the Create Hall form. */
 export interface HallFormValue {
@@ -39,8 +53,61 @@ export interface NewStallValue {
   openSides?: GateSide[];
 }
 
+/** Select = click/drag existing stalls. Draw = drag on the grid to create a stall. */
+export type EditorMode = 'select' | 'draw';
+
+/** The live stall preview while hovering or dragging in draw mode. */
+export interface StallDraft {
+  footprint: Footprint;
+  valid: boolean;
+  violations: Violation[];
+  /** false while only hovering; true between pointer down and up. */
+  dragging: boolean;
+  start: Point;
+}
+
+/** A placement that was just rejected: what, where, and the nearest spot that would work. */
+export interface PlacementFeedback {
+  title: string;
+  footprint: Footprint;
+  violations: Violation[];
+  /** Nearest valid position for the same size, or null when no contiguous space is left. */
+  suggestion: Footprint | null;
+}
+
+/** A camera focus request; `seq` makes repeated requests for the same area distinct. */
+export interface FocusTarget {
+  rect: Rect;
+  seq: number;
+}
+
+/** Everything the 3D scene draws on top of the hall and the stalls. */
+export interface EditorOverlay {
+  draft: StallDraft | null;
+  /** Red geometry: where the current draft, rejection or live move is wrong. */
+  violations: ViolationGeometry[];
+  suggestion: Footprint | null;
+  /** Placements where the selected stall size fits ("Show free space"). */
+  freeSpace: Footprint[] | null;
+  /** Amber highlight of one problem the user asked to locate. */
+  highlight: ViolationGeometry[];
+  /** Passage width drawn as a halo around the draft or the stall being moved. */
+  passageWidth: number | null;
+}
+
+/**
+ * Where the hall list request stands. `empty` = the server answered with no halls and
+ * `unavailable` = it did not answer; both leave the offline fallback hall in place.
+ */
+export type HallsStatus = 'loading' | 'ready' | 'empty' | 'unavailable';
+
+/** Where the saved layout list request stands. */
+export type ListStatus = 'loading' | 'ready' | 'error';
+
 /** How long a visible error stays on screen. App.js:498. */
 const ERROR_TIMEOUT_MS = 4500;
+
+const FALLBACK_HALL_ID = 'local-fallback-hall';
 
 /**
  * The halls shown before `GET /api/halls` answers, and the fallback if it never does.
@@ -52,7 +119,7 @@ const ERROR_TIMEOUT_MS = 4500;
  */
 function fallbackHalls(): Hall[] {
   return [
-    { id: 'local-fallback-hall', name: 'Sample Hall (offline)', shape: 'SQUARE', width: 40, length: 40, radius: 0 }
+    { id: FALLBACK_HALL_ID, name: 'Sample Hall (offline)', shape: 'SQUARE', width: 40, length: 40, radius: 0 }
   ];
 }
 
@@ -80,6 +147,33 @@ export class PlannerStore {
   readonly error = signal('');
   readonly busy = signal(false);
   readonly layoutName = signal('');
+  /** Shown in the sidebar so the offline fallback hall is never mistaken for real data. */
+  readonly hallsStatus = signal<HallsStatus>('loading');
+  /** Drives the loading and error states of the saved layout list. */
+  readonly listStatus = signal<ListStatus>('loading');
+
+  // --- rule-driven editor state -------------------------------------------
+
+  readonly mode = signal<EditorMode>('select');
+  /** Offered stall sizes, from GET /api/stall-types. */
+  readonly stallTypes = signal<StallType[]>([]);
+  /** null = Custom (the dragged rectangle is the stall). */
+  readonly selectedStallTypeId = signal<string | null>(null);
+  readonly eventType = signal<EventType>('B2B');
+  readonly showFreeSpace = signal(false);
+  readonly showClearances = signal(true);
+  readonly draft = signal<StallDraft | null>(null);
+  readonly rejection = signal<PlacementFeedback | null>(null);
+  /** Violations the server returned for the last failed save/update. */
+  readonly serverViolations = signal<ServerViolation[]>([]);
+  /** Result of the last server-side audit (POST /api/layout/{id}/validate). */
+  readonly serverAudit = signal<AuditEntry[] | null>(null);
+  readonly focusTarget = signal<FocusTarget | null>(null);
+  readonly highlight = signal<ViolationGeometry[]>([]);
+  /** Live problems of the stall being dragged in a rule-driven hall. */
+  private readonly moveCheck = signal<Violation[]>([]);
+  private dragOrigin: { id: string | number; posX: number; posZ: number } | null = null;
+  private focusSeq = 0;
 
   readonly currentHall = computed(() =>
     this.halls().find(h => String(h.id) === String(this.activeHallId()))
@@ -92,6 +186,65 @@ export class PlannerStore {
   readonly selectedStall = computed(() =>
     this.stalls().find(s => String(s.id) === String(this.selectedStallId()))
   );
+
+  /** Stalls that occupy space. A cancelled stall keeps its number but frees its area. */
+  readonly activeStalls = computed(() => this.currentStalls().filter(s => s.status !== 'CANCELLED'));
+
+  /** The current hall is edited through the placement rules. */
+  readonly ruleDriven = computed(() => isRuleDriven(this.currentHall()));
+
+  /** The one coordinate system of the current hall (rendering, pointer, snapping, validation). */
+  readonly grid = computed(() => {
+    const hall = this.currentHall();
+    return hall ? GridSystem.forHall(hall) : null;
+  });
+
+  readonly placementContext = computed(() => {
+    const hall = this.currentHall();
+    return isRuleDriven(hall) ? placementContextFor(hall, this.currentStalls(), this.eventType()) : null;
+  });
+
+  readonly selectedStallType = computed(
+    () => this.stallTypes().find(t => t.id === this.selectedStallTypeId()) ?? null
+  );
+
+  /** Every rule problem in the current layout. Reported, never blocking (existing layouts). */
+  readonly audit = computed<AuditEntry[]>(() => {
+    const ctx = this.placementContext();
+    return ctx ? auditLayout(ctx) : [];
+  });
+
+  /** "Show free space": every valid position of the selected size (3 x 2 when Custom). */
+  readonly freeSpace = computed<Footprint[] | null>(() => {
+    const ctx = this.placementContext();
+    const grid = this.grid();
+    if (!this.showFreeSpace() || !ctx || !grid) return null;
+
+    const type = this.selectedStallType() ?? this.stallTypes()[0];
+    const [w, l] = type ? [type.width, type.height] : [3, 2];
+    return new FreeSpaceMap(grid, ctx).validPlacements(w, l);
+  });
+
+  readonly overlay = computed<EditorOverlay>(() => {
+    const draft = this.draft();
+    const rejection = this.rejection();
+    const ctx = this.placementContext();
+    const geometry = (list: Violation[]): ViolationGeometry[] => list.flatMap(v => v.geometry);
+
+    return {
+      draft,
+      violations: [
+        ...geometry(draft?.violations ?? []),
+        ...geometry(rejection?.violations ?? []),
+        ...geometry(this.moveCheck())
+      ],
+      suggestion: rejection?.suggestion ?? null,
+      freeSpace: this.freeSpace(),
+      highlight: this.highlight(),
+      passageWidth:
+        ctx && (draft || this.dragging()) ? ctx.rules.minPassageWidth[ctx.eventType] : null
+    };
+  });
 
   private errorTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -113,6 +266,12 @@ export class PlannerStore {
     }, ERROR_TIMEOUT_MS);
   }
 
+  /** Close the visible error before its timeout runs out. */
+  dismissError(): void {
+    this.clearErrorTimer();
+    this.error.set('');
+  }
+
   private clearErrorTimer(): void {
     if (this.errorTimer !== null) {
       clearTimeout(this.errorTimer);
@@ -126,14 +285,42 @@ export class PlannerStore {
   setActiveHall(id: string | number): void {
     this.activeHallId.set(id);
     this.selectedStallId.set(null);
+    this.clearFeedback();
   }
 
   selectStall(id: string | number | null): void {
     this.selectedStallId.set(id);
   }
 
+  /**
+   * Drag start/end of an existing stall. In a rule-driven hall the stall follows the pointer
+   * freely and is checked on release: an invalid drop snaps back, with the reason drawn in the
+   * scene (checking every intermediate position would make a stall stick whenever it passes
+   * within a passage width of another one).
+   */
   setDragging(value: boolean): void {
     this.dragging.set(value);
+
+    const selected = this.selectedStall();
+    if (value) {
+      this.dragOrigin = selected ? { id: selected.id, posX: selected.posX, posZ: selected.posZ } : null;
+      this.rejection.set(null);
+      return;
+    }
+
+    const origin = this.dragOrigin;
+    this.dragOrigin = null;
+    this.moveCheck.set([]);
+    if (!origin || !this.ruleDriven()) return;
+
+    const stall = this.stalls().find(s => String(s.id) === String(origin.id));
+    if (!stall || (stall.posX === origin.posX && stall.posZ === origin.posZ)) return;
+
+    const violations = this.checkPlacement(stall, stall.id);
+    if (violations.length === 0) return;
+
+    this.updateStall(stall.id, { posX: origin.posX, posZ: origin.posZ });
+    this.reject('Move rejected', stall, violations, stall.id);
   }
 
   setSnap(value: boolean): void {
@@ -196,6 +383,11 @@ export class PlannerStore {
     const currentHall = this.currentHall();
     if (!s || !currentHall) return;
 
+    if (this.ruleDriven()) {
+      this.moveRuleDriven(s, x, z);
+      return;
+    }
+
     const useSnap = this.snap();
     const nx = useSnap ? snapValue(x) : x;
     const nz = useSnap ? snapValue(z) : z;
@@ -211,12 +403,37 @@ export class PlannerStore {
       return;
     }
 
-    if (overlaps(candidate, this.currentStalls(), id)) {
+    if (overlaps(candidate, this.activeStalls(), id)) {
       this.showError('⚠️ Shop overlaps another shop. Move it to a free grid position.');
       return;
     }
 
     this.updateStall(id, { posX: nx, posZ: nz });
+  }
+
+  /**
+   * Move a stall to typed coordinates (edit form X / Z). In a rule-driven hall this behaves like
+   * a drop: checked once, reverted with the reason if invalid.
+   */
+  placeStall(id: string | number, x: number, z: number): void {
+    if (!this.ruleDriven()) {
+      this.moveStall(id, x, z);
+      return;
+    }
+    this.selectedStallId.set(id);
+    this.setDragging(true);
+    this.moveStall(id, x, z);
+    this.setDragging(false);
+  }
+
+  /** Rule-driven move: snap edges to the grid, follow the pointer, show live problems. */
+  private moveRuleDriven(s: Stall, x: number, z: number): void {
+    const grid = this.grid();
+    const raw = { posX: x, posZ: z, width: s.width, length: s.length };
+    const next = this.snap() && grid ? grid.snapFootprint(raw) : raw;
+
+    this.updateStall(s.id, { posX: next.posX, posZ: next.posZ });
+    this.moveCheck.set(this.checkPlacement(next, s.id));
   }
 
   /** Validate and normalize the selected stall. App.js:511-516. */
@@ -227,9 +444,15 @@ export class PlannerStore {
     const candidate: Stall = { ...selected };
     const currentHall = this.currentHall();
 
-    if (
+    if (this.ruleDriven()) {
+      const violations = this.checkPlacement(candidate, selected.id);
+      if (violations.length) {
+        this.reject('Change rejected', candidate, violations, selected.id);
+        return;
+      }
+    } else if (
       !withinHall(currentHall, candidate) ||
-      overlaps(candidate, this.currentStalls(), selected.id) ||
+      overlaps(candidate, this.activeStalls(), selected.id) ||
       overlapsBlockedArea(candidate, currentHall?.blockedAreas)
     ) {
       this.showError('⚠️ Updated shop position/dimensions are invalid or overlap another shop.');
@@ -256,6 +479,8 @@ export class PlannerStore {
 
     const currentStalls = this.currentStalls();
 
+    if (this.ruleDriven()) return this.addStallByRules(form);
+
     const base = {
       ...form,
       width: num(form.width, 5),
@@ -279,7 +504,7 @@ export class PlannerStore {
         const trial = { ...base, posX: x, posZ: z };
         if (
           withinHall(currentHall, base, x, z) &&
-          !overlaps(trial, currentStalls) &&
+          !overlaps(trial, this.activeStalls()) &&
           !overlapsBlockedArea(trial, currentHall.blockedAreas)
         ) {
           pos = { x, z };
@@ -292,16 +517,65 @@ export class PlannerStore {
       return null;
     }
 
-    const stall: Stall = {
+    const stall: any = {
       ...base,
       posX: pos.x,
       posZ: pos.z,
-      id: `local-${Date.now()}-${Math.random()}`
+      id: `local-${Date.now()}-${Math.random()}`,
+      stallNumber: null,
+      status: 'AVAILABLE',
+      stallTypeId: null
     };
 
     this.stalls.update(p => [...p, stall]);
     this.selectedStallId.set(stall.id);
     return stall;
+  }
+
+  /**
+   * Add Shop in a rule-driven hall: the first position (nearest the hall's top-left corner, as
+   * the legacy scan) where the size fits in contiguous free space and passes every rule.
+   */
+  private addStallByRules(form: NewStallValue): Stall | null {
+    const grid = this.grid();
+    const ctx = this.placementContext();
+    if (!grid || !ctx) return null;
+
+    const width = grid.snapSize(num(form.width, 5));
+    const length = grid.snapSize(num(form.length, 5));
+    const spot = new FreeSpaceMap(grid, ctx).nearestPlacement(width, length, {
+      x: grid.originX,
+      z: grid.originZ
+    });
+
+    if (!spot) {
+      this.showError(`⚠️ No contiguous free area of ${width} × ${length} m is left in this hall.`);
+      return null;
+    }
+
+    return this.createStall(spot, null, {
+      name: form.name,
+      height: form.height,
+      color: form.color,
+      gateSide: form.gateSide,
+      openSides: form.openSides
+    });
+  }
+
+  /**
+   * Remove a stall. A stall that already has a persisted number is CANCELLED instead: it keeps
+   * STALL-002 forever, frees its area, and later stalls are never renumbered.
+   */
+  cancelStall(id: string | number): void {
+    const stall = this.stalls().find(s => String(s.id) === String(id));
+    if (!stall) return;
+
+    if (stall.stallNumber) {
+      this.updateStall(id, { status: 'CANCELLED' });
+      this.notify.success(`${stall.stallNumber} cancelled. Save or update the layout to persist it.`);
+    } else {
+      this.deleteStall(id);
+    }
   }
 
   /** App.js:528. */
@@ -345,12 +619,18 @@ export class PlannerStore {
 
   // --- saved layout workflow ----------------------------------------------
 
-  /** App.js:499. A failed list stays silent, exactly as in React. */
+  /**
+   * App.js:499. A failed list raises no error popup, as in React; `listStatus` lets the
+   * Layouts tab show it in place with a retry instead.
+   */
   async loadList(): Promise<void> {
+    this.listStatus.set('loading');
     try {
       this.savedLayouts.set(await this.api.list());
+      this.listStatus.set('ready');
     } catch (e) {
       console.warn('Layout list unavailable:', extractErrorMessage(e));
+      this.listStatus.set('error');
     }
   }
 
@@ -358,18 +638,31 @@ export class PlannerStore {
    * Load the real halls from the backend and select the first one.
    *
    * On failure or an empty list the local fallback hall stays, so the planner is still usable
-   * without a backend - the same "stay silent, keep working" behaviour `loadList` has.
+   * without a backend; `hallsStatus` tells the sidebar to say so.
+   *
+   * Halls the user brought in meanwhile (a created hall, an Excel import, an opened layout)
+   * are kept, and the view only switches halls while it is still on the fallback - so a retry,
+   * or a slow first answer, never pulls the user away from their work.
    */
   async loadHalls(): Promise<void> {
+    this.hallsStatus.set('loading');
     try {
       const halls = await this.api.listHalls();
-      if (halls.length === 0) return;
+      if (halls.length === 0) {
+        this.hallsStatus.set('empty');
+        return;
+      }
 
-      this.halls.set(halls);
-      this.activeHallId.set(halls[0].id);
-      this.selectedStallId.set(null);
+      const isNew = (h: Hall) => !halls.some(x => String(x.id) === String(h.id));
+      this.halls.update(prev => [...halls, ...prev.filter(h => h.id !== FALLBACK_HALL_ID && isNew(h))]);
+      if (String(this.activeHallId()) === FALLBACK_HALL_ID) {
+        this.activeHallId.set(halls[0].id);
+        this.selectedStallId.set(null);
+      }
+      this.hallsStatus.set('ready');
     } catch (e) {
       console.warn('Hall list unavailable, using the local fallback hall:', extractErrorMessage(e));
+      this.hallsStatus.set('unavailable');
     }
   }
 
@@ -382,12 +675,19 @@ export class PlannerStore {
     this.notify.showLoading('Saving layout…');
 
     try {
-      const payload = buildApiPayload(this.currentHall(), this.currentStalls(), this.layoutName());
+      const payload = buildApiPayload(
+        this.currentHall(),
+        this.currentStalls(),
+        this.layoutName(),
+        this.eventType()
+      );
       const saved = await this.api.save(payload);
       this.selectedSavedId.set(saved.layout?.id ?? saved.id ?? null);
+      this.applyPersistedStalls(saved.stalls);
       await this.loadList();
       this.notify.success('Layout saved successfully.');
     } catch (e) {
+      this.serverViolations.set(extractViolations<ServerViolation>(e));
       this.showError(`❌ Save Error: ${extractErrorMessage(e)}`);
     } finally {
       this.busy.set(false);
@@ -397,6 +697,7 @@ export class PlannerStore {
 
   /** App.js:575. */
   async openLayout(id: string | number): Promise<void> {
+    this.clearFeedback();
     this.busy.set(true);
     this.notify.showLoading('Opening layout…');
 
@@ -414,6 +715,7 @@ export class PlannerStore {
       this.selectedStallId.set(null);
       this.selectedSavedId.set(id);
       this.layoutName.set(d.layout?.name || d.name || h.name || '');
+      this.eventType.set(d.layout?.eventType === 'B2C' ? 'B2C' : 'B2B');
     } catch (e) {
       this.showError(`❌ Open Error: ${extractErrorMessage(e)}`);
     } finally {
@@ -460,15 +762,296 @@ export class PlannerStore {
     this.notify.showLoading('Updating layout…');
 
     try {
-      const payload = buildApiPayload(this.currentHall(), this.currentStalls(), this.layoutName());
-      await this.api.update(savedId, payload);
+      const payload = buildApiPayload(
+        this.currentHall(),
+        this.currentStalls(),
+        this.layoutName(),
+        this.eventType()
+      );
+      const updated = await this.api.update(savedId, payload);
+      this.applyPersistedStalls(updated?.stalls);
       await this.loadList();
       this.notify.success('Layout updated successfully.');
     } catch (e) {
+      this.serverViolations.set(extractViolations<ServerViolation>(e));
       this.showError(`❌ Update Error: ${extractErrorMessage(e)}`);
     } finally {
       this.busy.set(false);
       this.notify.hideLoading();
     }
   }
+  // --- rule-driven editor ----------------------------------------------------
+
+  /** Stall types come from the backend configuration; offline, draw mode offers Custom only. */
+  async loadStallTypes(): Promise<void> {
+    try {
+      this.stallTypes.set(await this.api.listStallTypes());
+    } catch (e) {
+      console.warn('Stall types unavailable, draw mode offers Custom only:', extractErrorMessage(e));
+    }
+  }
+
+  setMode(mode: EditorMode): void {
+    this.mode.set(mode);
+    this.draft.set(null);
+    if (mode === 'draw') this.selectedStallId.set(null);
+  }
+
+  selectStallType(id: string | null): void {
+    this.selectedStallTypeId.set(id);
+    this.draft.set(null);
+  }
+
+  setEventType(type: EventType): void {
+    this.eventType.set(type);
+    this.clearFeedback();
+  }
+
+  setShowFreeSpace(value: boolean): void {
+    this.showFreeSpace.set(value);
+  }
+
+  setShowClearances(value: boolean): void {
+    this.showClearances.set(value);
+  }
+
+  /** Pointer over the grid in draw mode, button up: preview the stall under the cursor. */
+  draftHover(point: Point): void {
+    const grid = this.grid();
+    if (this.mode() !== 'draw' || !grid || this.draft()?.dragging) return;
+    this.setDraft(grid.draftFootprint(point, point, this.selectedStallType(), false), point, false);
+  }
+
+  /** Pointer down on the grid in draw mode. */
+  draftStart(point: Point): void {
+    const grid = this.grid();
+    if (this.mode() !== 'draw' || !grid) return;
+    this.rejection.set(null);
+    this.serverViolations.set([]);
+    this.setDraft(grid.draftFootprint(point, point, this.selectedStallType(), true), point, true);
+  }
+
+  draftMove(point: Point): void {
+    const grid = this.grid();
+    const draft = this.draft();
+    if (!grid || !draft?.dragging) return;
+    this.setDraft(grid.draftFootprint(draft.start, point, this.selectedStallType(), true), draft.start, true);
+  }
+
+  /** Pointer up: create the stall if every rule passes, otherwise explain and suggest. */
+  draftEnd(): void {
+    const draft = this.draft();
+    if (!draft?.dragging) return;
+    this.draft.set(null);
+
+    if (draft.valid) {
+      this.createStall(draft.footprint, this.selectedStallTypeId());
+      return;
+    }
+
+    this.reject('Placement rejected', draft.footprint, draft.violations, null);
+  }
+
+  /** Pointer left the canvas: drop the hover preview. */
+  draftLeave(): void {
+    if (!this.draft()?.dragging) this.draft.set(null);
+  }
+
+  /** Create the stall at the suggested position of the last rejection. */
+  acceptSuggestion(): void {
+    const rejection = this.rejection();
+    if (!rejection?.suggestion) return;
+
+    const moving = this.selectedStall();
+    const footprint = rejection.suggestion;
+    this.rejection.set(null);
+
+    if (rejection.title === 'Move rejected' && moving) {
+      this.updateStall(moving.id, { posX: footprint.posX, posZ: footprint.posZ });
+      return;
+    }
+    this.createStall(footprint, this.selectedStallTypeId());
+  }
+
+  dismissFeedback(): void {
+    this.rejection.set(null);
+    this.serverViolations.set([]);
+    this.highlight.set([]);
+  }
+
+  /** Move the camera to a problem and outline it. */
+  locate(geometry: ViolationGeometry[], fallback?: Footprint): void {
+    const rects = geometry.map(g => (g.type === 'rect' ? g.rect : boundsOf(g.points)));
+    if (fallback) rects.push(footprintRect(fallback));
+    if (!rects.length) return;
+
+    this.highlight.set(geometry.length ? geometry : fallback ? [{ type: 'rect', rect: footprintRect(fallback) }] : []);
+    this.focusTarget.set({ rect: unionRect(rects), seq: ++this.focusSeq });
+  }
+
+  /** The local stall a server violation refers to (its index in the saved payload). */
+  stallForServerViolation(v: ServerViolation): Stall | undefined {
+    return this.currentStalls()[v.stallIndex];
+  }
+
+  /** Ask the backend to audit the saved layout (the authoritative copy of the rules). */
+  async runServerAudit(): Promise<void> {
+    const savedId = this.selectedSavedId();
+    if (!savedId) {
+      this.showError('Select/open a saved layout first.');
+      return;
+    }
+
+    try {
+      const result = await this.api.audit(savedId);
+      this.serverAudit.set(result.entries as AuditEntry[]);
+      this.notify.success(
+        result.ruleDriven
+          ? `Server audit: ${result.entries.length} stall(s) with rule problems.`
+          : 'This hall has no placement rules.'
+      );
+    } catch (e) {
+      this.showError(`❌ Audit Error: ${extractErrorMessage(e)}`);
+    }
+  }
+
+  private setDraft(footprint: Footprint, start: Point, dragging: boolean): void {
+    const violations = this.checkPlacement(footprint, null);
+    this.draft.set({ footprint, valid: violations.length === 0, violations, dragging, start });
+  }
+
+  /**
+   * Every rule a footprint breaks. Rule-driven halls use the placement rules; other halls get
+   * the legacy boundary + overlap checks expressed as the same Violation shape, so draw mode
+   * works everywhere.
+   */
+  private checkPlacement(footprint: Footprint, ignoreId: string | number | null): Violation[] {
+    const ctx = this.placementContext();
+    if (ctx) return validatePlacement(footprint, ctx, ignoreId === null ? null : String(ignoreId)).violations;
+
+    const hall = this.currentHall();
+    const rect = footprintRect(footprint);
+    const violations: Violation[] = [];
+    if (!withinHall(hall, footprint, footprint.posX, footprint.posZ)) {
+      violations.push(legacyViolation('OUTSIDE_HALL', 'Stall is outside the hall boundary.', rect));
+    } else if (overlapsBlockedArea(footprint, hall?.blockedAreas)) {
+      violations.push(legacyViolation('OUTSIDE_HALL', 'Stall is outside the hall boundary.', rect));
+    }
+    const others = this.activeStalls().filter(s => ignoreId === null || String(s.id) !== String(ignoreId));
+    if (overlaps(footprint, others)) {
+      violations.push(legacyViolation('STALL_OVERLAP', 'Overlaps an existing stall.', rect));
+    }
+    return violations;
+  }
+
+  /** Record a rejected placement, find the nearest valid spot and tell the user why. */
+  private reject(
+    title: string,
+    footprint: Footprint,
+    violations: Violation[],
+    ignoreId: string | number | null
+  ): void {
+    const grid = this.grid();
+    const ctx = this.placementContext();
+    const suggestion =
+      grid && ctx
+        ? new FreeSpaceMap(grid, {
+            ...ctx,
+            stalls: ctx.stalls.filter(s => ignoreId === null || s.id !== String(ignoreId))
+          }).nearestPlacement(footprint.width, footprint.length, { x: footprint.posX, z: footprint.posZ })
+        : null;
+
+    const all: Violation[] =
+      grid && ctx && !suggestion
+        ? [
+            ...violations,
+            {
+              code: 'NO_CONTIGUOUS_SPACE',
+              ruleRef: 'Free space',
+              message: `No contiguous free area of ${footprint.width} × ${footprint.length} m is left in this hall.`,
+              geometry: [],
+              relatedStallIds: []
+            }
+          ]
+        : violations;
+
+    this.rejection.set({ title, footprint, violations: all, suggestion });
+    this.showError(`⚠️ ${title}: ${violations[0]?.message ?? 'invalid placement.'}`);
+  }
+
+  private createStall(
+    footprint: Footprint,
+    stallTypeId: string | null,
+    extra: Partial<Pick<Stall, 'name' | 'height' | 'color' | 'gateSide' | 'openSides'>> = {}
+  ): Stall | null {
+    const hall = this.currentHall();
+    if (!hall) return null;
+
+    const gateSide = validGate(extra.gateSide);
+    const stall: Stall = {
+      id: `local-${Date.now()}-${Math.random()}`,
+      hallId: this.activeHallId(),
+      name: extra.name?.trim() || `Shop ${this.currentStalls().length + 1}`,
+      width: footprint.width,
+      length: footprint.length,
+      height: num(extra.height, 4),
+      posX: footprint.posX,
+      posZ: footprint.posZ,
+      color: extra.color || '#3498db',
+      gateSide,
+      openSides: normalizeOpenSides(extra.openSides, gateSide),
+      stallNumber: null,
+      status: 'AVAILABLE',
+      stallTypeId
+    };
+
+    this.stalls.update(p => [...p, stall]);
+    this.selectedStallId.set(stall.id);
+    this.rejection.set(null);
+    return stall;
+  }
+
+  /** After save/update: take the server's stalls, which now carry their stall numbers. */
+  private applyPersistedStalls(persisted: StallInput[] | undefined): void {
+    this.serverViolations.set([]);
+    if (!persisted) return;
+
+    const hallId = this.activeHallId();
+    this.stalls.update(p => [
+      ...p.filter(s => String(s.hallId) !== String(hallId)),
+      ...persisted.map(s => normalizeStall(s, hallId))
+    ]);
+    this.selectedStallId.set(null);
+  }
+
+  private clearFeedback(): void {
+    this.draft.set(null);
+    this.rejection.set(null);
+    this.serverViolations.set([]);
+    this.serverAudit.set(null);
+    this.highlight.set([]);
+    this.moveCheck.set([]);
+  }
+}
+
+function legacyViolation(code: Violation['code'], message: string, rect: Rect): Violation {
+  return { code, ruleRef: 'Hall boundary', message, geometry: [{ type: 'rect', rect }], relatedStallIds: [] };
+}
+
+function boundsOf(points: Point[]): Rect {
+  return {
+    minX: Math.min(...points.map(p => p.x)),
+    maxX: Math.max(...points.map(p => p.x)),
+    minZ: Math.min(...points.map(p => p.z)),
+    maxZ: Math.max(...points.map(p => p.z))
+  };
+}
+
+function unionRect(rects: Rect[]): Rect {
+  return {
+    minX: Math.min(...rects.map(r => r.minX)),
+    maxX: Math.max(...rects.map(r => r.maxX)),
+    minZ: Math.min(...rects.map(r => r.minZ)),
+    maxZ: Math.max(...rects.map(r => r.maxZ))
+  };
 }

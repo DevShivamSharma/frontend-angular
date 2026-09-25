@@ -27,7 +27,7 @@ export interface ConfirmOptions {
 export class NotifyService {
   /** Colours come from the design tokens in `styles.css`, so the popups match the app. */
   private readonly base: SweetAlertOptions = {
-    theme: 'dark',
+    theme: 'light',
     background: 'var(--surface-card)',
     color: 'var(--text-primary)'
   };
@@ -59,7 +59,7 @@ export class NotifyService {
       reverseButtons: true,
       confirmButtonText: options.confirmText ?? 'Confirm',
       confirmButtonColor: options.danger ? 'var(--danger-solid)' : 'var(--accent-solid)',
-      cancelButtonColor: 'var(--border-strong)'
+      cancelButtonColor: 'var(--text-secondary)'
     });
 
     return result.isConfirmed;

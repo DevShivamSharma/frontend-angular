@@ -1,5 +1,5 @@
 import { BlockedArea, Hall, HallShape, HallSize } from '../models/hall.model';
-import { GateSide, Stall, StallInput } from '../models/stall.model';
+import { GateSide, Stall, StallInput, StallStatus } from '../models/stall.model';
 
 /**
  * Pure geometry/normalization helpers ported 1:1 from `frontend/src/App.js:10-114`.
@@ -156,7 +156,7 @@ export function normalizeStall(
   s: StallInput,
   hallId: string | number,
   fallbackName = 'Shop'
-): Stall {
+): any {
   const openSides = normalizeOpenSides(s.openSides, s.gateSide);
 
   return {
@@ -170,6 +170,15 @@ export function normalizeStall(
     posZ: num(s.posZ, 0),
     color: (s.color as string) || '#3498db',
     gateSide: openSides[0],
-    openSides
+    openSides,
+    stallNumber: typeof s.stallNumber === 'string' && s.stallNumber.trim() ? s.stallNumber.trim() : null,
+    status: validStatus(s.status),
+    stallTypeId: typeof s.stallTypeId === 'string' && s.stallTypeId ? s.stallTypeId : null
   };
+}
+
+/** Normalize a stall status, defaulting anything unknown to AVAILABLE. */
+export function validStatus(v: unknown): StallStatus {
+  const upper = String(v ?? '').trim().toUpperCase();
+  return upper === 'BOOKED' || upper === 'CANCELLED' ? upper : 'AVAILABLE';
 }

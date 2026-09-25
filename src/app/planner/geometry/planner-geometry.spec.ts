@@ -44,6 +44,9 @@ function stall(overrides: Partial<Stall> = {}): Stall {
     color: '#3498db',
     gateSide: 'FRONT',
     openSides: ['FRONT'],
+    stallNumber: null,
+    status: 'AVAILABLE',
+    stallTypeId: null,
     ...overrides
   };
 }

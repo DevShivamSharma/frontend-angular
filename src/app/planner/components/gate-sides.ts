@@ -1,4 +1,4 @@
-import { GateSide } from '../models/stall.model';
+import { GateSide, Stall } from '../models/stall.model';
 import { IconName } from './icon.component';
 
 /**
@@ -17,3 +17,9 @@ export const GATE_SIDES: ReadonlyArray<readonly [GateSide, string, IconName]> = 
   ['LEFT', 'Left (-X)', 'arrow-left'],
   ['RIGHT', 'Right (+X)', 'arrow-right']
 ];
+
+/** A stall's open sides for display, e.g. "Front, Left". Falls back to the gate side. */
+export function openSidesLabel(stall: Pick<Stall, 'openSides' | 'gateSide'>): string {
+  const sides = stall.openSides?.length ? stall.openSides : [stall.gateSide];
+  return sides.map(side => side.charAt(0) + side.slice(1).toLowerCase()).join(', ');
+}

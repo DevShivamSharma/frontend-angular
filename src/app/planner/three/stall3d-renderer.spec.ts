@@ -19,7 +19,10 @@ function stall(gateSide: GateSide, openSides?: GateSide[]): Stall {
     posZ: 0,
     color: '#3498db',
     gateSide,
-    openSides: openSides ?? [gateSide]
+    openSides: openSides ?? [gateSide],
+    stallNumber: null,
+    status: 'AVAILABLE',
+    stallTypeId: null
   };
 }
 

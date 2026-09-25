@@ -51,6 +51,13 @@ export class StallObject {
   update(stall: Stall, selected: boolean): void {
     this.stall = stall;
     this.group.userData['stallId'] = stall.id;
+    // Identifiable object: what this mesh group is, for picking, debugging and tooling.
+    this.group.userData['type'] = 'stall';
+    this.group.userData['stallNumber'] = stall.stallNumber;
+    this.group.userData['stallType'] = stall.stallTypeId;
+    this.group.userData['width'] = stall.width;
+    this.group.userData['height'] = stall.length;
+    this.group.userData['status'] = stall.status;
     this.group.position.set(stall.posX, 0.08, stall.posZ);
 
     const signature = [
@@ -59,6 +66,7 @@ export class StallObject {
       num(stall.height, 4),
       this.openSidesOf(stall).join(','),
       stall.color || '#3498db',
+      stall.status,
       selected
     ].join('|');
 
@@ -68,8 +76,21 @@ export class StallObject {
       this.rebuild();
     }
 
-    this.nameEl.textContent = stall.name || `Shop ${stall.id}`;
-    this.nameEl.style.background = selected ? '#0369a1' : 'rgba(15,23,42,.88)';
+    // Stall number (persisted identity, "NEW" until the first save) and size on two lines.
+    const cancelled = stall.status === 'CANCELLED';
+    const number = stall.stallNumber ?? 'NEW';
+    this.nameEl.textContent = cancelled
+      ? `${number}
+CANCELLED`
+      : `${number} · ${stall.name || `Shop ${stall.id}`}
+${num(stall.width, 5)} × ${num(stall.length, 5)} m${stall.status === 'BOOKED' ? ' · BOOKED' : ''}`;
+    this.nameEl.style.whiteSpace = 'pre';
+    this.nameEl.style.textAlign = 'center';
+    this.nameEl.style.background = cancelled
+      ? 'rgba(100,116,139,.85)'
+      : selected
+        ? '#2563eb'
+        : 'rgba(15,23,42,.88)';
     this.nameEl.style.color = '#fff';
     this.nameEl.style.padding = '4px 7px';
     this.nameEl.style.borderRadius = '5px';
@@ -91,7 +112,12 @@ export class StallObject {
   /** Position both labels for the current camera. */
   projectLabels(camera: THREE.PerspectiveCamera, width: number, height: number): void {
     projectLabel(this.nameEl, this.nameAnchor, camera, width, height, 10);
-    projectLabel(this.openEl, this.openAnchor, camera, width, height, 12);
+    if (this.stall.status === 'CANCELLED') {
+      // A cancelled stall has no walls, so no open side to label.
+      this.openEl.style.display = 'none';
+    } else {
+      projectLabel(this.openEl, this.openAnchor, camera, width, height, 12);
+    }
   }
 
   dispose(): void {
@@ -110,6 +136,11 @@ export class StallObject {
   private rebuild(): void {
     disposeChildren(this.body);
     this.pickTargets.length = 0;
+
+    if (this.stall.status === 'CANCELLED') {
+      this.rebuildCancelled();
+      return;
+    }
 
     const stall = this.stall;
     const open = this.openSidesOf(stall);
@@ -163,7 +194,7 @@ export class StallObject {
     if (this.selected) {
       const outline = new THREE.Mesh(
         new THREE.BoxGeometry(w + 0.16, 0.025, l + 0.16),
-        new THREE.MeshBasicMaterial({ color: '#38bdf8', wireframe: true })
+        new THREE.MeshBasicMaterial({ color: '#2563eb', wireframe: true })
       );
       outline.position.set(0, 0.095, 0);
       this.addPart(outline);
@@ -175,6 +206,39 @@ export class StallObject {
       0.25,
       first === 'FRONT' ? l / 2 + 0.35 : first === 'BACK' ? -l / 2 - 0.35 : 0
     );
+  }
+
+  /**
+   * A cancelled stall keeps its number but no longer occupies space: a flat grey footprint with
+   * a dashed outline, no walls, so it reads as "was here" and can be built over.
+   */
+  private rebuildCancelled(): void {
+    const w = Math.max(0.2, num(this.stall.width, 5));
+    const l = Math.max(0.2, num(this.stall.length, 5));
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, l),
+      new THREE.MeshBasicMaterial({ color: '#94a3b8', transparent: true, opacity: 0.35, depthWrite: false })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, 0.03, 0);
+    this.addPart(floor);
+
+    const points = [
+      new THREE.Vector3(-w / 2, 0.05, -l / 2),
+      new THREE.Vector3(w / 2, 0.05, -l / 2),
+      new THREE.Vector3(w / 2, 0.05, l / 2),
+      new THREE.Vector3(-w / 2, 0.05, l / 2)
+    ];
+    const dashed = new THREE.LineLoop(
+      new THREE.BufferGeometry().setFromPoints(points),
+      new THREE.LineDashedMaterial({ color: this.selected ? '#2563eb' : '#475569', dashSize: 0.4, gapSize: 0.25 })
+    );
+    dashed.computeLineDistances();
+    this.body.add(dashed);
+
+    this.nameAnchor.position.set(0, 0.6, 0);
+    this.openAnchor.position.set(0, 0.25, 0);
   }
 
   /** Open sides of a stall, deriving from gateSide for legacy single-side data. */
