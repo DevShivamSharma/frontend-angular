@@ -1,9 +1,55 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, viewChild } from '@angular/core';
 
 import { NotifyService } from '../../core/notify.service';
 import { ExcelLayoutService } from '../excel/excel-layout.service';
 import { IconComponent } from './icon.component';
 import { PlannerStore } from '../planner-store.service';
+
+/**
+ * Venue areas that are not exhibition halls (food courts, vending points, open areas, branding sites).
+ * They stay on the server; the picker only lists the real halls. Names are compared trimmed and
+ * case-insensitively.
+ */
+const NON_HALL_NAMES = [
+  'PNG Nozzle',
+  'F&B Vending Point',
+  'F&B Outlet',
+  'Hall 1A & Hall 1B',
+  'Hall 2 & 3',
+  'HN1 to HN4',
+  'Branding Sites',
+  'Horse Shoe F&B Outlet',
+  'Open Area for Aahar',
+  'Hangar 7A'
+].map(name => name.toLowerCase());
+
+/** The venue's main hall comes first in the picker. */
+const FIRST_HALL_NAME = 'convention center';
+
+/** Floors of one hall in walking order: no suffix, then ground, then first floor, then anything else (12A). */
+const FLOOR_RANK: Record<string, number> = { '': 0, GF: 1, FF: 2 };
+
+/**
+ * Picker order: Convention Center, then halls by number and floor (Hall 2GF, 2FF, 3GF ... 11, 12, 12A, 14GF),
+ * not alphabetically, which would put Hall 11 before Hall 2. "Hall 8-9-10" sorts by its first number.
+ * Names that are not "Hall <number>..." (created or imported halls) follow, A to Z.
+ */
+function compareHalls(a: string, b: string): number {
+  const nameA = a.trim().toLowerCase();
+  const nameB = b.trim().toLowerCase();
+  if (nameA === FIRST_HALL_NAME || nameB === FIRST_HALL_NAME) return Number(nameB === FIRST_HALL_NAME) - Number(nameA === FIRST_HALL_NAME);
+
+  const partsA = /^hall\s+(\d+)(.*)$/i.exec(a.trim());
+  const partsB = /^hall\s+(\d+)(.*)$/i.exec(b.trim());
+  if (!partsA || !partsB) return partsA ? -1 : partsB ? 1 : a.localeCompare(b, undefined, { numeric: true });
+
+  const byNumber = Number(partsA[1]) - Number(partsB[1]);
+  if (byNumber) return byNumber;
+  const suffixA = partsA[2].trim().toUpperCase();
+  const suffixB = partsB[2].trim().toUpperCase();
+  const byFloor = (FLOOR_RANK[suffixA] ?? 3) - (FLOOR_RANK[suffixB] ?? 3);
+  return byFloor || suffixA.localeCompare(suffixB);
+}
 
 /**
  * "Working Hall" section: active hall picker, Excel import and template
@@ -22,7 +68,16 @@ export class WorkingHallPanelComponent {
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
-  readonly halls = this.store.halls;
+  /**
+   * The halls the picker offers, in compareHalls() order. The active hall always stays in the list, even if
+   * it is one of the excluded areas (e.g. a saved layout of one was opened), so the select never shows a blank value.
+   */
+  readonly halls = computed(() =>
+    this.store
+      .halls()
+      .filter(h => !NON_HALL_NAMES.includes(h.name.trim().toLowerCase()) || this.isActive(h.id))
+      .sort((a, b) => compareHalls(a.name, b.name))
+  );
   readonly activeHallId = this.store.activeHallId;
   readonly hallsStatus = this.store.hallsStatus;
 
