@@ -880,7 +880,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     this.extendGround(this.model);
     this.state.set('ready');
     // Streams in after the model is already visible; the plain terrain shows until it arrives.
-    void this.addSatelliteGround(this.model);
+    // void this.addSatelliteGround(this.model); // DISABLED: map image removed
     // Tiles after the buildings: which ground is empty depends on what they cover and hide.
     const model = this.model;
     void this.addDetailedBuildings(model).then(() => this.addGroundTiles(model));
