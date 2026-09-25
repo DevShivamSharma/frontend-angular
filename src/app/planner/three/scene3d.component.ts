@@ -23,6 +23,7 @@ import type { EditorMode, EditorOverlay, FocusTarget } from '../planner-store.se
 import { buildFreeSpace, buildPreview, buildViolations } from './editor-overlay-renderer';
 import { buildHallBoundary } from './hall-boundary-renderer';
 import { buildHallGrid } from './hall-grid-renderer';
+import { buildAmenities } from './amenities-renderer';
 import { buildBlockedAreas } from './blocked-areas-renderer';
 import { disposeChildren, StallObject } from './stall3d-renderer';
 import { disposeSpriteTextures } from './text-sprite';
@@ -117,6 +118,8 @@ export class Scene3dComponent implements AfterViewInit {
   private readonly violationGroup = new THREE.Group();
   /** 8. Entry/exit markers and plan labels. */
   private readonly markerGroup = new THREE.Group();
+  /** 9. SelfCare amenity icons (toilets, stairs/elevators, entries). Visual only. */
+  private readonly amenityGroup = new THREE.Group();
   /** "Show free space" cells. */
   private readonly freeSpaceGroup = new THREE.Group();
   /** Draw-mode drag in progress (pointer id), null otherwise. */
@@ -229,7 +232,8 @@ export class Scene3dComponent implements AfterViewInit {
       this.stallGroup,
       this.previewGroup,
       this.violationGroup,
-      this.markerGroup
+      this.markerGroup,
+      this.amenityGroup
     );
 
     this.camera = new THREE.PerspectiveCamera(48, 1, 0.1, 1000);
@@ -288,6 +292,7 @@ export class Scene3dComponent implements AfterViewInit {
     disposeLayer(this.blockedAreasGroup);
     disposeLayer(this.restrictedGroup);
     disposeLayer(this.markerGroup);
+    disposeLayer(this.amenityGroup);
     if (!hall) return;
 
     const { width, length } = hallSize(hall);
@@ -299,6 +304,7 @@ export class Scene3dComponent implements AfterViewInit {
       this.gridGroup.add(buildHallGrid(width, length, hall.shape, grid, hall.boundary));
       this.restrictedGroup.add(buildRestrictedZones(hall.zones ?? [], effectiveRules(hall.rules)));
       this.markerGroup.add(buildMarkers(hall.markers ?? [], hall.openings ?? []));
+      this.amenityGroup.add(buildAmenities(hall.amenities ?? []));
       this.frameHall(hall, grid);
       return;
     }
@@ -337,6 +343,9 @@ export class Scene3dComponent implements AfterViewInit {
     }
     if (hall.markers?.length || hall.openings?.length) {
       this.markerGroup.add(buildMarkers(hall.markers ?? [], hall.openings ?? []));
+    }
+    if (hall.amenities?.length) {
+      this.amenityGroup.add(buildAmenities(hall.amenities));
     }
   }
 
@@ -656,7 +665,8 @@ export class Scene3dComponent implements AfterViewInit {
       this.freeSpaceGroup,
       this.previewGroup,
       this.violationGroup,
-      this.markerGroup
+      this.markerGroup,
+      this.amenityGroup
     ]) {
       disposeLayer(layer);
     }

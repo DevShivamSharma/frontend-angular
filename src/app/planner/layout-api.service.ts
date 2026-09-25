@@ -47,6 +47,7 @@ export function buildApiPayload(
     ...(currentHall.zones?.length ? { zones: currentHall.zones } : {}),
     ...(currentHall.openings?.length ? { openings: currentHall.openings } : {}),
     ...(currentHall.markers?.length ? { markers: currentHall.markers } : {}),
+    ...(currentHall.amenities?.length ? { amenities: currentHall.amenities } : {}),
     ...(currentHall.rules ? { rules: currentHall.rules as Record<string, unknown> } : {})
   };
 

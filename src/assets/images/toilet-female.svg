@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Toilet (Female)">
+  <rect width="64" height="64" rx="12" fill="#f0abfc"/>
+  <g fill="#ffffff">
+    <circle cx="32" cy="17" r="6"/>
+    <path d="M32 26c-5 0-8 3-9 8l-3 12h5l1 6h12l1-6h5l-3-12c-1-5-4-8-9-8z"/>
+    <path d="M28 52h3v9h-3zM33 52h3v9h-3z"/>
+  </g>
+</svg>

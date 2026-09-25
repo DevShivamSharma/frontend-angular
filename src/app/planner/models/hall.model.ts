@@ -58,7 +58,39 @@ export interface Hall {
   zones?: HallZone[] | null;
   openings?: HallOpening[] | null;
   markers?: HallMarker[] | null;
+  /** Utility icons (toilets, stairs, entries) carried over from the SelfCare reference plan. */
+  amenities?: HallAmenity[] | null;
   rules?: Partial<LayoutRules> | null;
+}
+
+/**
+ * The amenity kinds the SelfCare plan marks with an icon. The string is also the base name of
+ * the SVG under `src/assets/images/`, so `iconUrlFor()` needs no lookup table.
+ */
+export type AmenityKind = 'toilet-male' | 'toilet-female' | 'stairs' | 'entry-up';
+
+export const AMENITY_KINDS: readonly AmenityKind[] = [
+  'toilet-male',
+  'toilet-female',
+  'stairs',
+  'entry-up'
+];
+
+/**
+ * One utility icon on the plan: a toilet, a staircase/lift, an entry arrow.
+ *
+ * `position` is in the planner's centre-origin metres, like every other hall coordinate — the
+ * SelfCare pixel position is converted once, on import (`selfcare-layout.ts`).
+ *
+ * Visual only: amenities never take part in placement validation. They sit outside the hall
+ * outline as often as inside it (SelfCare puts the Hall 10 toilet block above FOYER C), which is
+ * exactly why they must not be modelled as zones.
+ */
+export interface HallAmenity {
+  kind: AmenityKind;
+  /** The SelfCare caption, e.g. `Toilet (Male)`. Rendered under the icon. */
+  label: string;
+  position: Point;
 }
 
 /** A text label on the plan, e.g. a gate or foyer name. Visual only. */

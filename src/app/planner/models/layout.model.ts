@@ -39,6 +39,7 @@ export interface HallPayload {
   zones?: unknown[];
   openings?: unknown[];
   markers?: unknown[];
+  amenities?: unknown[];
   rules?: Record<string, unknown>;
 }
 
