@@ -4,18 +4,18 @@
  * Source of the rules: ITPO "Public Safety Measures and Design Guidelines — Third Party Events
  * in Pragati Maidan", September 2022, section D (referenced below as "ITPO D<n>").
  *
- * THIS FILE EXISTS TWICE, IDENTICALLY:
- *   backend-nest/src/layouts/placement/placement-rules.ts          authoritative, runs on save
- *   frontend-angular/src/app/planner/geometry/placement-rules.ts   live preview while dragging
- * Same arrangement as layout.geometry.ts: the editor can reject a drag without a round trip,
- * the server has the final word. Both copies carry the same unit tests; keep them identical.
+ * Frontend preview rules. The backend remains authoritative on save. The passage/open-side
+ * extension and split contract are documented in docs/stall-placement-contract.md.
  *
  * Units are metres. Coordinates are the planner's centre-origin system shared with stalls:
  * X to the right, Z down the plan, posX / posZ = the stall CENTRE, width along X, length along Z.
- * Stalls are axis-aligned rectangles; the hall boundary and zones are arbitrary polygons.
+ * Stalls are oriented rectangles; the hall boundary and zones are arbitrary polygons.
  */
 
 /** Tolerance for "touching is allowed" comparisons. Distances come out of sqrt, hence not 1e-8. */
+import { validateOrientedPlacement, usableFloor } from './oriented-placement';
+import { closestPoints, segmentInsideFloor, stallPolygon } from './polygon-geometry';
+
 export const PLACEMENT_EPSILON = 1e-6;
 
 const EPS = PLACEMENT_EPSILON;
@@ -98,7 +98,7 @@ export interface HallOpening {
 
 /** Every physical rule the validator applies, in metres. Stored per hall. */
 export interface LayoutRules {
-  /** ITPO D1: 3.0 m for B2B, 4.0 m for B2C. */
+  /** Configurable 3–5 m per event; a missing setting defaults to 3 m. */
   minPassageWidth: Record<EventType, number>;
   /** ITPO D5: free passage along all external walls. */
   peripheralClearance: number;
@@ -115,7 +115,7 @@ export interface LayoutRules {
 }
 
 export const DEFAULT_LAYOUT_RULES: LayoutRules = {
-  minPassageWidth: { B2B: 3, B2C: 4 },
+  minPassageWidth: { B2B: 3, B2C: 3 },
   peripheralClearance: 1,
   zoneClearance: { FACILITY_ACCESS: 1, PARTITION: 1, SMOKE_CURTAIN: 1 },
   openingAccessDepth: null,
@@ -139,10 +139,14 @@ export type StallStatus = 'AVAILABLE' | 'BOOKED' | 'CANCELLED';
 export const STALL_STATUSES: readonly StallStatus[] = ['AVAILABLE', 'BOOKED', 'CANCELLED'];
 
 export interface Footprint {
+  /** Clockwise local rotation in the X-right / Z-down plan, as stored by the backend. */
+  rotation?: number;
   posX: number;
   posZ: number;
   width: number;
   length: number;
+  openSides?: Array<'FRONT' | 'BACK' | 'LEFT' | 'RIGHT'>;
+  gateSide?: 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT';
 }
 
 export interface PlacementStall extends Footprint {
@@ -152,6 +156,11 @@ export interface PlacementStall extends Footprint {
 }
 
 export interface PlacementContext {
+  enforceGrid?: boolean;
+  /** Exact circular boundary for halls without an irregular floor outline. */
+  circleRadius?: number;
+  /** Physical walls/outside masks and floor holes, including those inside an outer ring. */
+  obstacles?: Point[][];
   /** Hall outline. null = the rectangle/circle check done elsewhere is the only boundary. */
   boundary: Point[] | null;
   /**
@@ -169,6 +178,13 @@ export interface PlacementContext {
 }
 
 export type ViolationCode =
+  | 'INVALID_PASSAGE_WIDTH'
+  | 'INVALID_OPEN_SIDES'
+  | 'OPEN_SIDE_BLOCKED'
+  | 'CORNER_PASSAGE'
+  | 'INVALID_TOUCHING'
+  | 'INVALID_BACK_TO_BACK'
+  | 'OPEN_SIDE_PASSAGE'
   | 'INVALID_DIMENSIONS'
   | 'OUTSIDE_HALL'
   | 'STALL_OVERLAP'
@@ -213,6 +229,15 @@ export function validatePlacement(
   ignoreId: string | null = null,
 ): ValidationResult {
   const violations: Violation[] = [];
+  const passage = ctx.rules.minPassageWidth[ctx.eventType];
+  if (!Number.isFinite(passage) || passage < 3 || passage > 5) {
+    return { valid: false, violations: [{ code: 'INVALID_PASSAGE_WIDTH', ruleRef: 'Passage',
+      message: 'Choose a passage width between 3 and 5 m.', geometry: [], relatedStallIds: [] }] };
+  }
+  if (!openSidesOf(candidate).length) {
+    return { valid: false, violations: [{ code: 'INVALID_OPEN_SIDES', ruleRef: 'Open sides',
+      message: 'A stall must have at least one valid open side.', geometry: [], relatedStallIds: [] }] };
+  }
 
   if (!validDimensions(candidate, ctx.rules.snapStep)) {
     violations.push({
@@ -224,8 +249,21 @@ export function validatePlacement(
     });
     return { valid: false, violations };
   }
+  if ((candidate.rotation ?? 0) % 360 !== 0 || ctx.stalls.some(s => (s.rotation ?? 0) % 360 !== 0)) {
+    return validateOrientedPlacement(candidate, { ...ctx, enforceGrid: true }, ignoreId);
+  }
 
   const rect = footprintRect(candidate);
+  if (ctx.circleRadius !== undefined && !rectInsideCircle(rect, ctx.circleRadius - ctx.rules.peripheralClearance)) {
+    violations.push({ code: 'OUTSIDE_HALL', ruleRef: 'Hall boundary',
+      message: 'Stall must stay inside the circular hall and its wall clearance.',
+      geometry: [{ type: 'rect', rect }], relatedStallIds: [] });
+  }
+  for (const obstacle of ctx.obstacles ?? []) {
+    if (rectOverlapsPolygon(rect, obstacle)) violations.push({ code: 'RESTRICTED_ZONE', ruleRef: 'Hall floor',
+      message: 'Stall overlaps a wall, outside area or floor opening.',
+      geometry: [{ type: 'polygon', points: obstacle }], relatedStallIds: [] });
+  }
 
   // Hall boundary and peripheral passage (ITPO D5). The stall must sit wholly inside ONE floor
   // region; the peripheral clearance is measured against the walls of that region.
@@ -270,9 +308,11 @@ export function validatePlacement(
   }
 
   // Other stalls: overlap, and the minimum passage between separate stalls (ITPO D1).
-  const passage = ctx.rules.minPassageWidth[ctx.eventType];
   const overlapped: PlacementStall[] = [];
   const overlapAreas: ViolationGeometry[] = [];
+  const candidateCorner = isCornerStall(candidate, ctx);
+  const neighbours = ctx.stalls.filter(s => s.status !== 'CANCELLED' && String(s.id) !== ignoreId);
+  const nearest = Math.min(...neighbours.map(s => rectDistance(rect, footprintRect(s))));
 
   for (const other of ctx.stalls) {
     if (ignoreId !== null && String(other.id) === String(ignoreId)) continue;
@@ -286,19 +326,60 @@ export function validatePlacement(
       continue;
     }
 
-    // Touching (0 m) forms one island of stalls, as back-to-back stalls do. Any gap between
-    // separate stalls must be a full passage.
     const gap = rectDistance(rect, otherRect);
-    if (gap > EPS && gap < passage - EPS) {
+    const otherCorner = isCornerStall(other, ctx);
+    const corner = candidateCorner || otherCorner;
+    const nearestToOtherCorner = otherCorner && gap <= Math.min(...neighbours
+      .filter(s => s.id !== other.id).map(s => rectDistance(otherRect, footprintRect(s)))) + EPS;
+    if (gap > EPS && ((candidateCorner && gap <= nearest + EPS) || nearestToOtherCorner) && ctx.circleRadius === undefined) {
+      const [from, to] = closestPoints(stallPolygon(candidate), stallPolygon(other));
+      if (!segmentInsideFloor(from, to, usableFloor(ctx))) violations.push({
+        code: 'CORNER_PASSAGE', ruleRef: 'Usable passage',
+        message: 'The gap to the nearest stall crosses outside the usable hall; exterior space is not passage.',
+        geometry: [{ type: 'rect', rect: gapRect(rect, otherRect) }], relatedStallIds: [String(other.id)]
+      });
+    }
+    const touching = gap <= EPS;
+    const allowedTouch = touching && !corner && backToBack(candidate, other);
+    if (gap < passage - EPS && !allowedTouch) {
       violations.push({
-        code: 'PATHWAY_WIDTH',
-        ruleRef: 'ITPO D1',
-        message:
+        code: corner ? 'CORNER_PASSAGE' : touching ? 'INVALID_TOUCHING' : 'PATHWAY_WIDTH',
+        ruleRef: 'Stall passage',
+        message: touching && !corner
+          ? `Touching stalls must be back-to-back with opposite outward open sides next to ${stallLabel(other)}.`
+          : (corner ? 'Corner stalls need a clear passage. ' : '') +
           `Required ${fmt(passage)} m passage (${ctx.eventType}) is blocked: ` +
           `only ${fmt(gap)} m left next to ${stallLabel(other)}.`,
         geometry: [{ type: 'rect', rect: gapRect(rect, otherRect) }],
         relatedStallIds: [String(other.id)],
       });
+    }
+  }
+
+  // Check the candidate's full open frontage, then protect existing stalls' frontage too.
+  for (const side of openSidesOf(candidate)) {
+    const access = openSideAccessRect(candidate, side, passage);
+    const home = outlines.find(o => rectInsidePolygon(rect, o));
+    const outside = (outlines.length > 0 && (!home || !rectInsidePolygon(access, home))) ||
+      (ctx.circleRadius !== undefined && !rectInsideCircle(access, ctx.circleRadius));
+    const blocked = (ctx.obstacles ?? []).some(o => rectOverlapsPolygon(access, o)) ||
+      ctx.zones.some(z => ['NO_CONSTRUCTION', 'PARTITION', 'SMOKE_CURTAIN', 'FACILITY_ACCESS'].includes(z.kind) &&
+        rectOverlapsPolygon(access, z.polygon));
+    const others = ctx.stalls.filter(s => s.status !== 'CANCELLED' && String(s.id) !== ignoreId &&
+      rectsOverlap(access, footprintRect(s)));
+    if (outside || blocked || others.length) violations.push({
+      code: 'OPEN_SIDE_BLOCKED', ruleRef: 'Open-side access',
+      message: `${side} open side needs ${fmt(passage)} m of clear passage inside the hall.`,
+      geometry: [{ type: 'rect', rect: access }], relatedStallIds: others.map(s => String(s.id))
+    });
+  }
+  for (const other of ctx.stalls) {
+    if (other.status === 'CANCELLED' || String(other.id) === ignoreId) continue;
+    for (const side of openSidesOf(other)) {
+      const access = openSideAccessRect(other, side, passage);
+      if (rectsOverlap(rect, access)) violations.push({ code: 'OPEN_SIDE_BLOCKED', ruleRef: 'Open-side access',
+        message: `Blocks the ${side} open side of ${stallLabel(other)}; keep ${fmt(passage)} m clear.`,
+        geometry: [{ type: 'rect', rect: access }], relatedStallIds: [String(other.id)] });
     }
   }
 
@@ -433,6 +514,52 @@ export function formatStallNumber(prefix: string, sequence: number): string {
   return `${prefix}${String(sequence).padStart(3, '0')}`;
 }
 
+export function openSidesOf(stall: Footprint): NonNullable<Footprint['openSides']> {
+  return [...new Set(stall.openSides ?? [stall.gateSide ?? 'FRONT'])]
+    .filter(s => ['FRONT', 'BACK', 'LEFT', 'RIGHT'].includes(s));
+}
+
+export function openSideAccessRect(stall: Footprint, side: NonNullable<Footprint['gateSide']>, depth: number): Rect {
+  const r = footprintRect(stall);
+  switch (side) {
+    case 'FRONT': return { ...r, minZ: r.maxZ, maxZ: r.maxZ + depth };
+    case 'BACK': return { ...r, minZ: r.minZ - depth, maxZ: r.minZ };
+    case 'LEFT': return { ...r, minX: r.minX - depth, maxX: r.minX };
+    case 'RIGHT': return { ...r, minX: r.maxX, maxX: r.maxX + depth };
+  }
+}
+
+/** A corner is a pair of adjacent non-collinear walls each within one passage width. */
+export function isCornerStall(stall: Footprint, ctx: PlacementContext): boolean {
+  const r = footprintRect(stall);
+  const distance = ctx.rules.minPassageWidth[ctx.eventType];
+  return [ctx.boundary, ...(ctx.regions ?? []), ...(ctx.obstacles ?? [])].some(outline => outline?.some((b, i) => {
+    const a = outline[(i + outline.length - 1) % outline.length];
+    const c = outline[(i + 1) % outline.length];
+    const cross = (b.x - a.x) * (c.z - b.z) - (b.z - a.z) * (c.x - b.x);
+    return Math.abs(cross) > EPS && segmentRectDistance(a, b, r) <= distance + EPS &&
+      segmentRectDistance(b, c, r) <= distance + EPS;
+  }) ?? false);
+}
+
+function backToBack(a: Footprint, b: Footprint): boolean {
+  const ar = footprintRect(a), br = footprintRect(b);
+  const as = openSidesOf(a), bs = openSidesOf(b);
+  // A single outward frontage leaves the shared boundary closed. Point-only contact is invalid.
+  if (as.length !== 1 || bs.length !== 1) return false;
+  const xOverlap = Math.min(ar.maxX, br.maxX) - Math.max(ar.minX, br.minX) > EPS;
+  const zOverlap = Math.min(ar.maxZ, br.maxZ) - Math.max(ar.minZ, br.minZ) > EPS;
+  return (xOverlap && Math.abs(ar.maxZ - br.minZ) <= EPS && as[0] === 'BACK' && bs[0] === 'FRONT') ||
+    (xOverlap && Math.abs(br.maxZ - ar.minZ) <= EPS && as[0] === 'FRONT' && bs[0] === 'BACK') ||
+    (zOverlap && Math.abs(ar.maxX - br.minX) <= EPS && as[0] === 'LEFT' && bs[0] === 'RIGHT') ||
+    (zOverlap && Math.abs(br.maxX - ar.minX) <= EPS && as[0] === 'RIGHT' && bs[0] === 'LEFT');
+}
+
+function rectInsideCircle(r: Rect, radius: number): boolean {
+  return radius > 0 && Math.hypot(Math.max(Math.abs(r.minX), Math.abs(r.maxX)),
+    Math.max(Math.abs(r.minZ), Math.abs(r.maxZ))) <= radius + EPS;
+}
+
 const ZONE_TEXT: Record<ZoneKind, string> = {
   PASSAGE: 'compulsory passage for entry/exit/services',
   NO_CONSTRUCTION: 'no construction zone',
@@ -457,7 +584,7 @@ const ZONE_RULE_REF: Record<ZoneKind, string> = {
 
 function validDimensions(f: Footprint, snapStep: number): boolean {
   const { width, length } = f;
-  if (![width, length, f.posX, f.posZ].every(Number.isFinite)) return false;
+  if (![width, length, f.posX, f.posZ, f.rotation ?? 0].every(Number.isFinite)) return false;
   if (width <= EPS || length <= EPS) return false;
   if (!(snapStep > 0)) return true;
   return isMultiple(width, snapStep) && isMultiple(length, snapStep);
@@ -479,6 +606,7 @@ function fmt(value: number): string {
 // --- geometry ----------------------------------------------------------------------------------
 
 export function footprintRect(f: Footprint): Rect {
+  if ((f.rotation ?? 0) % 360 !== 0) return polygonBounds(stallPolygon(f));
   return {
     minX: f.posX - f.width / 2,
     maxX: f.posX + f.width / 2,

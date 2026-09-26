@@ -40,7 +40,7 @@ function ctx(overrides: Partial<PlacementContext> = {}): PlacementContext {
     boundary: HALL,
     zones: [],
     openings: [],
-    rules: DEFAULT_LAYOUT_RULES,
+    rules: { ...DEFAULT_LAYOUT_RULES, minPassageWidth: { B2B: 3, B2C: 4 } },
     eventType: 'B2B',
     stalls: [],
     ...overrides,
@@ -71,7 +71,7 @@ describe('placement-rules', () => {
     });
 
     it('rejects a stall entirely inside the notch', () => {
-      expect(codes(at(33, 2, 3, 2), ctx())).toEqual(['OUTSIDE_HALL']);
+      expect(codes(at(33, 2, 3, 2), ctx())).toContain('OUTSIDE_HALL');
     });
 
     it('treats touching the boundary as inside (the clearance rule is separate)', () => {
@@ -119,12 +119,14 @@ describe('placement-rules', () => {
       expect(result.violations[0].geometry.length).toBe(3);
     });
 
-    it('lets stalls touch edge to edge (back-to-back island)', () => {
-      expect(codes(at(14, 5, 3, 2), ctx({ stalls: three }))).toEqual([]);
+    it('lets only outward back-to-back stalls touch edge to edge', () => {
+      expect(codes({ ...at(8, 5, 3, 2), openSides: ['RIGHT'] },
+        ctx({ stalls: [stall('A', 5, 5, 3, 2, { openSides: ['LEFT'] })] }))).toEqual([]);
+      expect(codes(at(14, 5, 3, 2), ctx({ stalls: three }))).toContain('INVALID_TOUCHING');
     });
 
     it('ignores the stall being moved', () => {
-      expect(codes(at(5, 5, 3, 2), ctx({ stalls: three }), 'STALL-001')).toEqual([]);
+      expect(codes(at(5, 5, 3, 2), ctx({ stalls: [three[0]] }), 'STALL-001')).toEqual([]);
     });
 
     it('ignores cancelled stalls: they no longer occupy space', () => {
@@ -207,13 +209,13 @@ describe('placement-rules', () => {
     };
 
     it('rejects a stall in front of an emergency exit', () => {
-      expect(codes(at(19, 16, 3, 2), ctx({ openings: [exit] }))).toEqual(['EMERGENCY_ACCESS']);
+      expect(codes(at(19, 16, 3, 2), ctx({ openings: [exit] }))).toContain('EMERGENCY_ACCESS');
     });
 
     it('sizes the access zone from the event passage width', () => {
       // Access zone is 3 m deep for B2B: z 17..20. A stall ending at z = 17 is clear.
       expect(codes(at(19, 14, 3, 3), ctx({ openings: [exit] }))).toEqual([]);
-      expect(codes(at(19, 14, 3, 3), ctx({ openings: [exit], eventType: 'B2C' }))).toEqual(['EMERGENCY_ACCESS']);
+      expect(codes(at(19, 14, 3, 3), ctx({ openings: [exit], eventType: 'B2C' }))).toContain('EMERGENCY_ACCESS');
     });
   });
 
@@ -237,7 +239,8 @@ describe('placement-rules', () => {
     });
 
     it('is empty for a valid layout', () => {
-      const stalls = [stall('STALL-001', 5, 5, 3, 2), stall('STALL-002', 8, 5, 3, 2)];
+      const stalls = [stall('STALL-001', 5, 5, 3, 2, { openSides: ['LEFT'] }),
+        stall('STALL-002', 8, 5, 3, 2, { openSides: ['RIGHT'] })];
       expect(auditLayout(ctx({ stalls }))).toEqual([]);
     });
   });

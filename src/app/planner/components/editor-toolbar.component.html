@@ -50,6 +50,12 @@
       </button>
     }
     @if (mode() === 'draw') {
+      <label class="tool-select">Open side
+        <select class="control" [value]="draftOpenSide()" (change)="setDraftOpenSide($any($event.target).value)">
+          <option value="FRONT">Front (+Z)</option><option value="BACK">Back (−Z)</option>
+          <option value="LEFT">Left (−X)</option><option value="RIGHT">Right (+X)</option>
+        </select>
+      </label>
       <button
         type="button"
         class="tool-btn is-cancel"
@@ -72,6 +78,10 @@
             <option [value]="type">{{ passageLabel()(type) }}</option>
           }
         </select>
+      </label>
+      <label class="tool-select passage-control">Passage (m)
+        <input class="control" aria-label="Passage width (m)" type="number" min="3" max="5" step="0.5"
+          [value]="passageWidth()" (change)="setPassageWidth($any($event.target))" />
       </label>
       <label class="tool-check">
         <input type="checkbox" [checked]="showClearances()" (change)="toggleClearances($any($event.target).checked)" />

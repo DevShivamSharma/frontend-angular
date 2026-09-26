@@ -4,12 +4,15 @@ import { extractErrorMessage, extractViolations } from '../core/http-error.util'
 import { NotifyService } from '../core/notify.service';
 import { ExcelImportResult } from './excel/excel-layout.service';
 import { FreeSpaceMap } from './geometry/free-space';
+import { previewSplit, SplitOptions } from './geometry/stall-split';
 import { GridSystem } from './geometry/grid-system';
 import { isRuleDriven, placementContextFor } from './geometry/hall-rules';
 import {
   AuditEntry,
   auditLayout,
+  effectiveRules,
   Footprint,
+  PlacementStall,
   footprintRect,
   Point,
   Rect,
@@ -48,6 +51,7 @@ export interface HallFormValue {
 
 /** Values collected by the Add Shop form. */
 export interface NewStallValue {
+  rotation?: number;
   name: string;
   width: number;
   length: number;
@@ -98,7 +102,7 @@ export interface EditorOverlay {
   /** Passage width drawn as a halo around the draft or the stall being moved. */
   passageWidth: number | null;
   /** A plan from the Assist tab, shown as outlines until it is applied. */
-  proposals: ReadonlyArray<{ footprint: Footprint; valid: boolean }> | null;
+  proposals: ReadonlyArray<{ footprint: Footprint; valid: boolean; label?: string }> | null;
 }
 
 /** One stall of a proposed plan, with the result of checking it against this hall. */
@@ -114,6 +118,7 @@ export interface ProposedStall {
 
 /** A stall as the assistant returns it, before it has been checked against anything. */
 export interface PlannedStall {
+  rotation?: number;
   name?: string;
   width: number;
   length: number;
@@ -197,6 +202,8 @@ export class PlannerStore {
   /** null = Custom (the dragged rectangle is the stall). */
   readonly selectedStallTypeId = signal<string | null>(null);
   readonly eventType = signal<EventType>('B2B');
+  readonly draftOpenSide = signal<GateSide>('FRONT');
+  readonly passageWidth = computed(() => this.placementContext()?.rules.minPassageWidth[this.eventType()] ?? 3);
   readonly showFreeSpace = signal(false);
   readonly showClearances = signal(true);
   readonly draft = signal<StallDraft | null>(null);
@@ -208,6 +215,17 @@ export class PlannerStore {
   readonly focusTarget = signal<FocusTarget | null>(null);
   /** The Assist tab's plan, checked but not applied. Drawn as outlines on the 3D view. */
   readonly proposals = signal<ProposedStall[] | null>(null);
+  readonly splitOptions = signal<SplitOptions | null>(null);
+  readonly splitPreview = computed(() => {
+    const parent = this.selectedStall(), options = this.splitOptions(), ctx = this.placementContext();
+    return parent && options && ctx ? previewSplit(parent, options, ctx) : null;
+  });
+  readonly canConfirmSplit = computed(() => {
+    const preview = this.splitPreview(), parent = this.selectedStall();
+    return !!preview && !preview.error && !preview.violations.length && !!parent?.stallNumber &&
+      Number.isFinite(Number(parent.id)) && this.selectedSavedId() !== null && !this.busy();
+  });
+  private splitRequest: { key: string; id: string } | null = null;
   readonly highlight = signal<ViolationGeometry[]>([]);
   /** Live problems of the stall being dragged in a rule-driven hall. */
   private readonly moveCheck = signal<Violation[]>([]);
@@ -261,7 +279,7 @@ export class PlannerStore {
 
     const type = this.selectedStallType() ?? this.stallTypes()[0];
     const [w, l] = type ? [type.width, type.height] : [3, 2];
-    return new FreeSpaceMap(grid, ctx).validPlacements(w, l);
+    return new FreeSpaceMap(grid, ctx).validPlacements(w, l, null, [this.draftOpenSide()]);
   });
 
   readonly overlay = computed<EditorOverlay>(() => {
@@ -275,14 +293,17 @@ export class PlannerStore {
       violations: [
         ...geometry(draft?.violations ?? []),
         ...geometry(rejection?.violations ?? []),
-        ...geometry(this.moveCheck())
+        ...geometry(this.moveCheck()),
+        ...this.audit().flatMap(entry => geometry(entry.violations)),
+        ...geometry(this.splitPreview()?.violations ?? [])
       ],
       suggestion: rejection?.suggestion ?? null,
       freeSpace: this.freeSpace(),
       highlight: this.highlight(),
       passageWidth:
         ctx && (draft || this.dragging()) ? ctx.rules.minPassageWidth[ctx.eventType] : null,
-      proposals: this.proposals()
+      proposals: this.splitPreview()?.children.map(s => ({ footprint: s, label: `${s.stallNumber} (preview)`,
+        valid: !this.splitPreview()?.violations.length })) ?? this.proposals()
     };
   });
 
@@ -329,6 +350,7 @@ export class PlannerStore {
   }
 
   selectStall(id: string | number | null): void {
+    this.splitOptions.set(null);
     this.selectedStallId.set(id);
   }
 
@@ -359,7 +381,7 @@ export class PlannerStore {
     const violations = this.checkPlacement(stall, stall.id);
     if (violations.length === 0) return;
 
-    this.updateStall(stall.id, { posX: origin.posX, posZ: origin.posZ });
+    this.updateStall(stall.id, { posX: origin.posX, posZ: origin.posZ }, true);
     this.reject('Move rejected', stall, violations, stall.id);
   }
 
@@ -374,15 +396,28 @@ export class PlannerStore {
   // --- stall transitions ---------------------------------------------------
 
   /** Patch one stall in place. App.js:502. Keeps gateSide synced to openSides[0]. */
-  updateStall(id: string | number, patch: Partial<Stall>): void {
+  updateStall(id: string | number, patch: Partial<Stall>, preview = false): boolean {
     const synced =
       patch.openSides?.length && patch.gateSide === undefined
         ? { ...patch, gateSide: patch.openSides[0] }
         : patch;
 
+    const current = this.stalls().find(s => String(s.id) === String(id));
+    const affectsPlacement = ['width', 'length', 'posX', 'posZ', 'rotation', 'openSides', 'gateSide', 'status']
+      .some(key => key in patch);
+    if (current && affectsPlacement && !preview && patch.status !== 'CANCELLED') {
+      const candidate = { ...current, ...synced };
+      const violations = this.checkPlacement(candidate, id);
+      if (violations.length) {
+        this.reject('Change rejected', candidate, violations, id);
+        return false;
+      }
+    }
+
     this.stalls.update(prev =>
       prev.map(s => (String(s.id) === String(id) ? { ...s, ...synced } : s))
     );
+    return true;
   }
 
   /**
@@ -472,8 +507,8 @@ export class PlannerStore {
     const raw = { posX: x, posZ: z, width: s.width, length: s.length };
     const next = this.snap() && grid ? grid.snapFootprint(raw) : raw;
 
-    this.updateStall(s.id, { posX: next.posX, posZ: next.posZ });
-    this.moveCheck.set(this.checkPlacement(next, s.id));
+    this.updateStall(s.id, { posX: next.posX, posZ: next.posZ }, this.dragging());
+    this.moveCheck.set(this.checkPlacement({ ...s, ...next }, s.id));
   }
 
   /** Validate and normalize the selected stall. App.js:511-516. */
@@ -590,7 +625,7 @@ export class PlannerStore {
     const spot = new FreeSpaceMap(grid, ctx).nearestPlacement(width, length, {
       x: grid.originX,
       z: grid.originZ
-    });
+    }, null, normalizeOpenSides(form.openSides, form.gateSide), false, form.rotation ?? 0);
 
     if (!spot) {
       this.showError(`⚠️ No contiguous free area of ${width} × ${length} m is left in this hall.`);
@@ -602,7 +637,8 @@ export class PlannerStore {
       height: form.height,
       color: form.color,
       gateSide: form.gateSide,
-      openSides: form.openSides
+      openSides: form.openSides,
+      rotation: form.rotation
     });
   }
 
@@ -679,7 +715,8 @@ export class PlannerStore {
       height: stall.height,
       color: stall.color,
       gateSide: stall.gateSide,
-      openSides: [...(stall.openSides ?? [])]
+      openSides: [...(stall.openSides ?? [])],
+      rotation: stall.rotation
     });
   }
 
@@ -695,23 +732,26 @@ export class PlannerStore {
    */
   reviewPlan(planned: ReadonlyArray<PlannedStall>): ProposedStall[] {
     const grid = this.grid();
-    const accepted: Footprint[] = [];
+    const ctx = this.placementContext();
+    const accepted: PlacementStall[] = [];
 
     const reviewed = planned.map(stall => {
       const raw: Footprint = {
+        rotation: num(stall.rotation, 0),
         posX: num(stall.posX, 0),
         posZ: num(stall.posZ, 0),
         width: Math.max(num(stall.width, 3), 0.5),
-        length: Math.max(num(stall.length, 3), 0.5)
+        length: Math.max(num(stall.length, 3), 0.5),
+        openSides: normalizeOpenSides(stall.openSides, 'FRONT')
       };
-      const footprint = this.snap() && grid ? grid.snapFootprint(raw) : raw;
+      const footprint = { ...(this.snap() && grid ? grid.snapFootprint(raw) : raw), openSides: raw.openSides, rotation: raw.rotation };
 
       // Against the hall and the stalls that already exist...
-      const violations = this.checkPlacement(footprint, null);
-      // ...and against the earlier stalls of this same plan, which do not exist yet.
-      const clash = accepted.some(other => footprintsOverlap(footprint, other));
-      const valid = violations.length === 0 && !clash;
-      if (valid) accepted.push(footprint);
+      const violations = ctx ? validatePlacement(footprint, {
+        ...ctx, stalls: [...ctx.stalls, ...accepted.map(s => ({ ...s, id: String(s.id) }))]
+      }).violations : this.checkPlacement(footprint, null);
+      const valid = violations.length === 0;
+      if (valid) accepted.push({ ...footprint, id: `proposal-${accepted.length}` });
 
       return {
         footprint,
@@ -720,9 +760,7 @@ export class PlannerStore {
         color: stall.color || '#3498db',
         openSides: normalizeOpenSides(stall.openSides, validGate(stall.openSides?.[0])),
         valid,
-        violations: clash
-          ? [...violations, legacyViolation('STALL_OVERLAP', 'Overlaps another stall in this plan.', footprintRect(footprint))]
-          : violations
+        violations
       };
     });
 
@@ -904,7 +942,7 @@ export class PlannerStore {
 
   /** App.js:570-574. */
   async saveLayout(): Promise<void> {
-    if (!this.currentHall()) return;
+    if (!this.currentHall() || this.busy() || !this.canPersist()) return;
 
     this.busy.set(true);
     this.error.set('');
@@ -923,7 +961,7 @@ export class PlannerStore {
       await this.loadList();
       this.notify.success('Layout saved successfully.');
     } catch (e) {
-      this.serverViolations.set(extractViolations<ServerViolation>(e));
+      this.serverViolations.set(placementViolations(e));
       this.showError(`❌ Save Error: ${extractErrorMessage(e)}`);
     } finally {
       this.busy.set(false);
@@ -993,6 +1031,7 @@ export class PlannerStore {
       this.showError('Select/open a saved layout first.');
       return;
     }
+    if (this.busy() || !this.canPersist()) return;
 
     this.busy.set(true);
     this.notify.showLoading('Updating layout…');
@@ -1009,7 +1048,7 @@ export class PlannerStore {
       await this.loadList();
       this.notify.success('Layout updated successfully.');
     } catch (e) {
-      this.serverViolations.set(extractViolations<ServerViolation>(e));
+      this.serverViolations.set(placementViolations(e));
       this.showError(`❌ Update Error: ${extractErrorMessage(e)}`);
     } finally {
       this.busy.set(false);
@@ -1041,6 +1080,88 @@ export class PlannerStore {
   setEventType(type: EventType): void {
     this.eventType.set(type);
     this.clearFeedback();
+  }
+
+  previewStallSplit(options: SplitOptions): void {
+    this.proposals.set(null);
+    this.splitOptions.set({ ...options });
+  }
+
+  dismissSplit(): void {
+    this.splitOptions.set(null);
+  }
+
+  async confirmSplit(): Promise<void> {
+    if (!this.canConfirmSplit()) return;
+    const parent = this.selectedStall()!;
+    const preview = this.splitPreview()!;
+    const hall = this.currentHall()!;
+    const layoutId = this.selectedSavedId()!;
+    const layoutName = this.layoutName();
+    const eventType = this.eventType();
+    const before = this.stalls();
+    const unchanged = () => this.currentHall() === hall && this.selectedSavedId() === layoutId &&
+      this.stalls() === before && this.layoutName() === layoutName && this.eventType() === eventType;
+    const snapshot = buildApiPayload(hall, this.currentStalls(), layoutName, eventType);
+    const key = JSON.stringify([layoutId, parent.id, preview.options, snapshot]);
+    if (this.splitRequest?.key !== key) this.splitRequest = { key, id: crypto.randomUUID() };
+    this.busy.set(true);
+    this.serverViolations.set([]);
+    try {
+      // The split endpoint operates on the persisted layout. Never silently replace unsaved work.
+      const persisted = await this.api.open(layoutId);
+      if (!unchanged()) throw new Error('The editor changed while checking the saved layout. Preview the split again.');
+      const persistedPayload = buildApiPayload(persisted.hall,
+        (persisted.stalls ?? []).map(s => normalizeStall(s, persisted.hall!.id)),
+        persisted.layout?.name ?? persisted.name ?? '', persisted.layout?.eventType ?? 'B2B');
+      if (layoutSignature(snapshot) !== layoutSignature(persistedPayload)) {
+        throw new Error('Update the saved layout before splitting so the server has your current geometry and passage settings.');
+      }
+      const children = buildApiPayload(hall, preview.children, layoutName, eventType).stalls
+        .map(({ id, stallNumber, parentStallNumber, ...child }) => child);
+      const saved = await this.api.split(layoutId, parent.stallNumber!, children, this.splitRequest!.id);
+      if (!saved.stalls || saved.stalls.filter(s => s.parentStallNumber === parent.stallNumber &&
+        typeof s.stallNumber === 'string').length !== preview.options.count) {
+        throw new Error('The split response is incomplete. Reopen the saved layout to check the server result.');
+      }
+      if (!unchanged()) {
+        throw new Error('The server saved the split while the editor changed. Reopen the saved layout to load it.');
+      }
+      this.applyPersistedStalls(saved.stalls);
+      this.splitOptions.set(null);
+      this.splitRequest = null;
+      await this.loadList();
+      this.notify.success('Stall split saved. Child numbers were assigned by the server.');
+    } catch (e) {
+      this.serverViolations.set(placementViolations(e));
+      const status = (e as { status?: number })?.status;
+      this.showError(status === 404 || status === 405 || status === 501
+        ? 'Splitting is not available on this backend yet. The parent has been kept.'
+        : `Split failed: ${extractErrorMessage(e)}`);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  setPassageWidth(width: number): void {
+    if (!Number.isFinite(width) || width < 3 || width > 5) {
+      this.showError('Passage width must be between 3 and 5 m.');
+      return;
+    }
+    const hall = this.currentHall();
+    if (!hall) return;
+    const rules = effectiveRules(hall.rules);
+    this.halls.update(list => list.map(h => h === hall ? { ...h, rules: {
+      ...rules, minPassageWidth: { ...rules.minPassageWidth, [this.eventType()]: width }
+    } } : h));
+    this.clearFeedback();
+    this.proposals.set(null);
+  }
+
+  setDraftOpenSide(side: GateSide): void {
+    this.draftOpenSide.set(validGate(side));
+    const draft = this.draft();
+    if (draft) this.setDraft(draft.footprint, draft.start, draft.dragging);
   }
 
   setShowFreeSpace(value: boolean): void {
@@ -1103,10 +1224,10 @@ export class PlannerStore {
     this.rejection.set(null);
 
     if (rejection.title === 'Move rejected' && moving) {
-      this.updateStall(moving.id, { posX: footprint.posX, posZ: footprint.posZ });
+      this.placeStall(moving.id, footprint.posX, footprint.posZ);
       return;
     }
-    this.createStall(footprint, this.selectedStallTypeId());
+    this.createStall(footprint, this.selectedStallTypeId(), { openSides: footprint.openSides });
   }
 
   dismissFeedback(): void {
@@ -1127,7 +1248,7 @@ export class PlannerStore {
 
   /** The local stall a server violation refers to (its index in the saved payload). */
   stallForServerViolation(v: ServerViolation): Stall | undefined {
-    return this.currentStalls()[v.stallIndex];
+    return this.currentStalls().find(s => v.stallNumber && s.stallNumber === v.stallNumber) ?? this.currentStalls()[v.stallIndex];
   }
 
   /** Ask the backend to audit the saved layout (the authoritative copy of the rules). */
@@ -1152,6 +1273,7 @@ export class PlannerStore {
   }
 
   private setDraft(footprint: Footprint, start: Point, dragging: boolean): void {
+    footprint = { ...footprint, openSides: [this.draftOpenSide()] };
     const violations = this.checkPlacement(footprint, null);
     this.draft.set({ footprint, valid: violations.length === 0, violations, dragging, start });
   }
@@ -1192,15 +1314,16 @@ export class PlannerStore {
     const grid = this.grid();
     const ctx = this.placementContext();
     const suggestion =
-      grid && ctx
+      grid && ctx && (title === 'Move rejected' || title === 'Placement rejected')
         ? new FreeSpaceMap(grid, {
             ...ctx,
             stalls: ctx.stalls.filter(s => ignoreId === null || s.id !== String(ignoreId))
-          }).nearestPlacement(footprint.width, footprint.length, { x: footprint.posX, z: footprint.posZ })
+          }).nearestPlacement(footprint.width, footprint.length, { x: footprint.posX, z: footprint.posZ },
+            null, footprint.openSides, false, footprint.rotation ?? 0)
         : null;
 
     const all: Violation[] =
-      grid && ctx && !suggestion
+      grid && ctx && !suggestion && (title === 'Move rejected' || title === 'Placement rejected')
         ? [
             ...violations,
             {
@@ -1220,12 +1343,12 @@ export class PlannerStore {
   private createStall(
     footprint: Footprint,
     stallTypeId: string | null,
-    extra: Partial<Pick<Stall, 'name' | 'height' | 'color' | 'gateSide' | 'openSides'>> = {}
+    extra: Partial<Pick<Stall, 'name' | 'height' | 'color' | 'gateSide' | 'openSides' | 'rotation'>> = {}
   ): Stall | null {
     const hall = this.currentHall();
     if (!hall) return null;
 
-    const gateSide = validGate(extra.gateSide);
+    const gateSide = validGate(extra.gateSide ?? footprint.openSides?.[0] ?? this.draftOpenSide());
     const stall: Stall = {
       id: `local-${Date.now()}-${Math.random()}`,
       hallId: this.activeHallId(),
@@ -1237,12 +1360,18 @@ export class PlannerStore {
       posZ: footprint.posZ,
       color: extra.color || '#3498db',
       gateSide,
-      openSides: normalizeOpenSides(extra.openSides, gateSide),
+      openSides: normalizeOpenSides(extra.openSides ?? footprint.openSides, gateSide),
       stallNumber: null,
       status: 'AVAILABLE',
-      stallTypeId
+      stallTypeId,
+      rotation: extra.rotation ?? footprint.rotation ?? 0
     };
 
+    const violations = this.checkPlacement(stall, null);
+    if (violations.length) {
+      this.reject('Placement rejected', stall, violations, null);
+      return null;
+    }
     this.stalls.update(p => [...p, stall]);
     this.selectedStallId.set(stall.id);
     this.rejection.set(null);
@@ -1263,6 +1392,7 @@ export class PlannerStore {
   }
 
   private clearFeedback(): void {
+    this.splitOptions.set(null);
     this.draft.set(null);
     this.rejection.set(null);
     this.serverViolations.set([]);
@@ -1270,13 +1400,43 @@ export class PlannerStore {
     this.highlight.set([]);
     this.moveCheck.set([]);
   }
+
+  private canPersist(): boolean {
+    const ctx = this.placementContext();
+    if (ctx && (!Number.isFinite(this.passageWidth()) || this.passageWidth() < 3 || this.passageWidth() > 5)) {
+      this.showError('Choose a passage width between 3 and 5 m before saving.');
+      return false;
+    }
+    const first = this.audit()[0];
+    if (!first) return true;
+    const stall = this.currentStalls().find(s => String(s.id) === first.stallId);
+    if (stall) this.reject('Save rejected', stall, first.violations, stall.id);
+    return false;
+  }
 }
 
-/** Two footprints of the same plan sharing floor. Touching edges are fine. */
-function footprintsOverlap(a: Footprint, b: Footprint): boolean {
-  const ra = footprintRect(a);
-  const rb = footprintRect(b);
-  return ra.minX < rb.maxX - 1e-9 && rb.minX < ra.maxX - 1e-9 && ra.minZ < rb.maxZ - 1e-9 && rb.minZ < ra.maxZ - 1e-9;
+/** Ignore regenerated row ids and object key ordering when comparing persisted layout content. */
+function layoutSignature(value: unknown): string {
+  return JSON.stringify(value, (key, v) => {
+    if (key === 'id') return undefined;
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      return Object.fromEntries(Object.keys(v).sort().map(k => [k, v[k]]));
+    }
+    return v;
+  });
+}
+
+/** Some domain errors carry just a code and stall number; keep all server feedback renderable. */
+function placementViolations(error: unknown): ServerViolation[] {
+  return extractViolations<Partial<ServerViolation>>(error).filter(v => !!v && typeof v === 'object').map(v => ({
+    code: v.code ?? 'INVALID_DIMENSIONS',
+    message: v.message ?? String(v.code ?? 'Placement was rejected by the server.'),
+    ruleRef: v.ruleRef ?? 'Server validation',
+    geometry: Array.isArray(v.geometry) ? v.geometry : [],
+    relatedStallIds: Array.isArray(v.relatedStallIds) ? v.relatedStallIds : [],
+    stallIndex: v.stallIndex ?? -1,
+    stallNumber: v.stallNumber ?? null
+  }));
 }
 
 function legacyViolation(code: Violation['code'], message: string, rect: Rect): Violation {

@@ -60,6 +60,8 @@ export interface StallPayload {
   stallNumber?: string;
   status?: StallStatus;
   stallTypeId?: string;
+  rotation?: number;
+  parentStallNumber?: string;
 }
 
 /** Body sent to `POST /api/layout/save` and `PUT /api/layout/{id}`. */

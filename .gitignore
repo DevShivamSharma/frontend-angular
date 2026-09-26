@@ -39,6 +39,8 @@ testem.log
 __screenshots__/
 /karma-results
 /junit.xml
+/playwright-report/
+/test-results/
 
 # Logs
 logs/

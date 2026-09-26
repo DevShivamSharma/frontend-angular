@@ -15,6 +15,7 @@ import {
 } from './models/layout.model';
 import { Stall } from './models/stall.model';
 import { num, normalizeOpenSides } from './geometry/planner-geometry';
+import { effectiveRules } from './geometry/placement-rules';
 
 /**
  * Build the save/update request body. Ported from `buildApiPayload()`
@@ -53,7 +54,9 @@ export function buildApiPayload(
       // The backend keeps a number only if this layout issued it (BR-25).
       ...(s.stallNumber ? { stallNumber: s.stallNumber } : {}),
       ...(s.status && s.status !== 'AVAILABLE' ? { status: s.status } : {}),
-      ...(s.stallTypeId ? { stallTypeId: s.stallTypeId } : {})
+      ...(s.stallTypeId ? { stallTypeId: s.stallTypeId } : {}),
+      rotation: s.rotation ?? 0,
+      ...(s.parentStallNumber ? { parentStallNumber: s.parentStallNumber } : {})
     };
   });
 
@@ -87,7 +90,7 @@ export function buildHallPayload(currentHall: Hall): HallPayload {
     ...(currentHall.amenities?.length ? { amenities: currentHall.amenities } : {}),
     ...(currentHall.compass ? { compass: currentHall.compass as unknown as Record<string, unknown> } : {}),
     ...(currentHall.legends?.length ? { legends: currentHall.legends } : {}),
-    ...(currentHall.rules ? { rules: currentHall.rules as Record<string, unknown> } : {})
+    rules: effectiveRules(currentHall.rules) as unknown as Record<string, unknown>
   };
 }
 
@@ -152,6 +155,15 @@ export class LayoutApiService {
   /** `PUT /api/layout/{id}` — returns the persisted stalls, with their stall numbers. */
   update(id: string | number, payload: LayoutSaveRequest): Promise<LayoutSaveResponse> {
     return firstValueFrom(this.http.put<LayoutSaveResponse>(`${this.api}/layout/${id}`, payload));
+  }
+
+  /** Atomic server split, addressed by the persisted parent number (not database row id). */
+  split(layoutId: string | number, parentNumber: string, children: StallPayload[],
+    idempotencyKey: string): Promise<LayoutSaveResponse> {
+    return firstValueFrom(this.http.post<LayoutSaveResponse>(
+      `${this.api}/layout/${encodeURIComponent(layoutId)}/stalls/${encodeURIComponent(parentNumber)}/split`,
+      { children, idempotencyKey }
+    ));
   }
 
   /** `GET /api/stall-types` — the stall sizes offered in draw mode (backend configuration). */

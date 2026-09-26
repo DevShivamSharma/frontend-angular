@@ -59,6 +59,7 @@ export class StallObject {
     this.group.userData['height'] = stall.length;
     this.group.userData['status'] = stall.status;
     this.group.position.set(stall.posX, 0.08, stall.posZ);
+    this.group.rotation.y = -(stall.rotation ?? 0) * Math.PI / 180;
 
     const signature = [
       num(stall.width, 5),
@@ -79,10 +80,11 @@ export class StallObject {
     // Stall number (persisted identity, "NEW" until the first save) and size on two lines.
     const cancelled = stall.status === 'CANCELLED';
     const number = stall.stallNumber ?? 'NEW';
+    const identity = stall.name && stall.name !== number ? `${number} · ${stall.name}` : number;
     this.nameEl.textContent = cancelled
       ? `${number}
 CANCELLED`
-      : `${number} · ${stall.name || `Shop ${stall.id}`}
+      : `${identity}
 ${num(stall.width, 5)} × ${num(stall.length, 5)} m${stall.status === 'BOOKED' ? ' · BOOKED' : ''}`;
     this.nameEl.style.whiteSpace = 'pre';
     this.nameEl.style.textAlign = 'center';
@@ -320,7 +322,8 @@ function projectLabel(
   }
 
   const vFov = (camera.fov * Math.PI) / 180;
-  const scale = distanceFactor / (2 * Math.tan(vFov / 2) * distance);
+  // Keep identifiers readable when the whole hall is in view.
+  const scale = Math.max(0.85, Math.min(1.25, distanceFactor / (2 * Math.tan(vFov / 2) * distance)));
   const x = (ndc.x * 0.5 + 0.5) * width;
   const y = (-ndc.y * 0.5 + 0.5) * height;
 

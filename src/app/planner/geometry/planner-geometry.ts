@@ -159,7 +159,7 @@ export function normalizeStall(
   s: StallInput,
   hallId: string | number,
   fallbackName = 'Shop'
-): any {
+): Stall {
   const openSides = normalizeOpenSides(s.openSides, s.gateSide);
 
   return {
@@ -176,7 +176,10 @@ export function normalizeStall(
     openSides,
     stallNumber: typeof s.stallNumber === 'string' && s.stallNumber.trim() ? s.stallNumber.trim() : null,
     status: validStatus(s.status),
-    stallTypeId: typeof s.stallTypeId === 'string' && s.stallTypeId ? s.stallTypeId : null
+    stallTypeId: typeof s.stallTypeId === 'string' && s.stallTypeId ? s.stallTypeId : null,
+    rotation: num(s.rotation, 0),
+    isSplitParent: s.isSplitParent === true,
+    ...(typeof s.parentStallNumber === 'string' ? { parentStallNumber: s.parentStallNumber } : {})
   };
 }
 

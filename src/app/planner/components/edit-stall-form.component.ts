@@ -28,17 +28,28 @@ export class EditStallFormComponent {
   readonly gateSides = GATE_SIDES;
   readonly gateCompass = GATE_COMPASS;
   readonly selectedStall = this.store.selectedStall;
+  readonly splitPreview = this.store.splitPreview;
+  readonly canConfirmSplit = this.store.canConfirmSplit;
+  readonly busy = this.store.busy;
+  readonly passageWidth = this.store.passageWidth;
+  readonly splitForm = this.fb.nonNullable.group({
+    count: 2,
+    axis: 'X' as 'X' | 'Z',
+    arrangement: 'PASSAGE' as 'PASSAGE' | 'BACK_TO_BACK'
+  });
 
   readonly form = this.fb.nonNullable.group({
     name: '',
     width: 5,
     length: 5,
     height: 4,
+    rotation: 0,
     posX: 0,
     posZ: 0
-  });
+  }, { updateOn: 'blur' });
 
   constructor() {
+    this.splitForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.store.dismissSplit());
     const controls = this.form.controls;
 
     controls.name.valueChanges
@@ -56,6 +67,8 @@ export class EditStallFormComponent {
     controls.height.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(value => this.patchSelected({ height: num(value, 4) }));
+    controls.rotation.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe(value => this.patchSelected({ rotation: num(value, 0) }));
 
     controls.posX.valueChanges.pipe(takeUntilDestroyed()).subscribe(value => {
       const stall = this.selectedStall();
@@ -82,6 +95,19 @@ export class EditStallFormComponent {
     if (stall) this.store.toggleOpenSide(stall.id, value);
   }
 
+  setFacing(input: HTMLSelectElement): void {
+    const stall = this.selectedStall();
+    if (stall) this.store.updateStall(stall.id, { openSides: [input.value as GateSide] });
+    input.value = this.selectedStall()?.openSides.length === 1 ? this.selectedStall()!.openSides[0] : '';
+  }
+
+  previewSplit(): void {
+    this.store.previewStallSplit(this.splitForm.getRawValue());
+  }
+
+  confirmSplit(): void { void this.store.confirmSplit(); }
+  cancelSplit(): void { this.store.dismissSplit(); }
+
   /** Close the editor by clearing the selection. */
   close(): void {
     this.store.selectStall(null);
@@ -100,6 +126,7 @@ export class EditStallFormComponent {
   private patchSelected(patch: Partial<Stall>): void {
     const stall = this.selectedStall();
     if (stall) this.store.updateStall(stall.id, patch);
+    this.syncFromStore();
   }
 
   /**
@@ -117,6 +144,7 @@ export class EditStallFormComponent {
       width: stall.width,
       length: stall.length,
       height: stall.height,
+      rotation: stall.rotation ?? 0,
       posX: stall.posX,
       posZ: stall.posZ
     };

@@ -1,6 +1,6 @@
 import { FreeSpaceMap } from './free-space';
 import { GridSystem } from './grid-system';
-import { DEFAULT_LAYOUT_RULES, PlacementContext, PlacementStall } from './placement-rules';
+import { DEFAULT_LAYOUT_RULES, PlacementContext, PlacementStall, validatePlacement } from './placement-rules';
 
 describe('FreeSpaceMap', () => {
   // 20 x 12 m hall, boundary = its rectangle, 0 m peripheral clearance to keep the numbers simple.
@@ -44,9 +44,11 @@ describe('FreeSpaceMap', () => {
 
   it('finds the nearest contiguous spot that passes every rule', () => {
     const map = new FreeSpaceMap(grid, ctx([stall('A', 0, 0, 3, 2)]));
-    // Requested right on top of stall A. The nearest valid 3 x 2 sits directly below it,
-    // touching (a back-to-back island is allowed; a 1-2 m gap would not be).
-    expect(map.nearestPlacement(3, 2, { x: 1.5, z: 1 })).toEqual({ posX: 1.5, posZ: 3, width: 3, length: 2 });
+    // A corner stall cannot share an edge, and its FRONT access must stay free.
+    const spot = map.nearestPlacement(3, 2, { x: 1.5, z: 1 });
+    expect(spot).not.toBeNull();
+    expect(validatePlacement(spot!, ctx([stall('A', 0, 0, 3, 2)])).valid).toBeTrue();
+    expect(spot!.posZ === 3 && spot!.posX === 1.5).toBeFalse();
   });
 
   it('ignores the stall being moved', () => {

@@ -14,6 +14,9 @@ export function extractErrorMessage(e: unknown): string {
     if (body && typeof body === 'object' && typeof body.message === 'string' && body.message) {
       return body.message;
     }
+    if (body && typeof body === 'object' && Array.isArray(body.message)) {
+      return body.message.filter(m => typeof m === 'string').join(' ');
+    }
 
     return e.message;
   }

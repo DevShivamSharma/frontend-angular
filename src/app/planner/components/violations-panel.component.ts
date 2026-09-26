@@ -42,6 +42,7 @@ export class ViolationsPanelComponent {
     return ctx
       ? `${ctx.eventType}: ${ctx.rules.minPassageWidth[ctx.eventType]} m passages · ` +
           `${ctx.rules.peripheralClearance} m wall clearance · snap ${ctx.rules.snapStep} m`
+          + '. Corner stalls need separation. Elsewhere, only back-to-back stalls may touch. Keep every open side clear.'
       : '';
   });
 

@@ -2,18 +2,14 @@ import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createGlobeContext } from './venue-globe';
+import { createVenueRenderLoop } from './venue-render-loop';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; }
 export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; readonly isGlobe:boolean; dispose:()=>void; }
-/** Direct port of outputs/venue-explorer.js; values and event behavior follow that source. */
+/** Demand-rendered venue with identical shading during movement and at rest. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents): VenueViewer {
     const lifetime = new AbortController();
     const { signal } = lifetime;
@@ -37,6 +33,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         renderer.localClippingEnabled = true;
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = T.PCFSoftShadowMap;
+        // Buildings and the sun do not move. Camera movement never needs a new shadow map.
+        renderer.shadowMap.autoUpdate = false;
+        renderer.shadowMap.needsUpdate = true;
         cleanups.push(() => { renderer.setAnimationLoop(null); renderer.dispose(); renderer.forceContextLoss(); });
         const camera = new T.PerspectiveCamera(40, innerWidth / innerHeight, 1, 5e7);
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -72,26 +71,28 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const fill = new T.DirectionalLight(0xbacfff, .25);
         fill.position.set(600, 260, -400);
         scene.add(fill);
-        const renderTarget = new T.WebGLRenderTarget(innerWidth, innerHeight, { type: T.HalfFloatType });
-        renderTarget.samples = 4;
-        const composer = new EffectComposer(renderer, renderTarget);
-        composer.addPass(new RenderPass(scene, camera));
-        const ao = new SSAOPass(scene, camera, innerWidth, innerHeight, 32);
-        ao.kernelRadius = 6;
-        ao.minDistance = .00001;
-        ao.maxDistance = .001;
-        composer.addPass(ao);
-        const bloom = new UnrealBloomPass(new T.Vector2(innerWidth, innerHeight), .19, .65, 1.15);
-        composer.addPass(bloom);
-        composer.addPass(new OutputPass());
-        cleanups.push(() => { for (const pass of composer.passes)
-            pass.dispose(); composer.dispose(); });
         const W = (s: number, t: number, z: number) => new T.Vector3(.5 * s + .8660254038 * t, z, -.8660254038 * s + .5 * t);
         const views: Record<string, {
             p: Triple;
             t: Triple;
         }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
+        let prepared = false;
+        const frames = createVenueRenderLoop(updateFrame, renderFrame);
+        const invalidate = () => { if (prepared) frames.invalidate(); };
+        cleanups.push(() => frames.dispose());
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) frames.pause(); else invalidate();
+        }, { signal });
+        canvas.addEventListener('webglcontextrestored', () => {
+            renderer.shadowMap.needsUpdate = true;
+            invalidate();
+        }, { signal });
+        const pickMeshes: VenueMesh[] = [], levelObjects: T.Object3D[] = [];
+        const meshDestinations = new Map<T.Object3D, string | null>();
+        const destinationMeshes = new Map<string, VenueMesh[]>();
+        const highlightColor = new T.Color('#ac7855');
+        let highlighted: string | undefined;
         const ccMaterials: T.MeshStandardMaterial[] = [], originals = new Map<T.Object3D, {
             color: T.Color;
             emissive: T.Color;
@@ -118,22 +119,45 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             if (/^PHOTO_CC|^ROOF_LABEL_CC|^ARCH_CC/.test(n.name))
                 return 'cc';
         } return null; }
-        function highlight(id: string) { if (!root)
-            return; root.traverse(o => { if (!(o instanceof T.Mesh) || !originals.has(o))
-            return; const mats = Array.isArray(o.material) ? o.material : [o.material], base = originals.get(o)!; mats.forEach((m: T.MeshStandardMaterial, i: number) => { m.color.copy(base[i].color); m.emissive?.copy(base[i].emissive); m.emissiveIntensity = base[i].emissiveIntensity; }); if (classify(o) === id && !/label|sign|glass|glazing|light|spray/i.test(o.name) && id !== 'fountain') {
-            mats.forEach((m: T.MeshStandardMaterial) => { if (!['glazing', 'water', 'water_spray', 'roof_label', 'conceptual_edge_light', 'supplied_floor_plan'].includes(m.userData['architecturalCategory']))
-                m.color.lerp(new T.Color('#ac7855'), .25); });
-        } }); }
+        function highlight(id: string) {
+            if (id === highlighted) return;
+            for (const mesh of destinationMeshes.get(highlighted ?? '') ?? []) {
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                const base = originals.get(mesh)!;
+                mats.forEach((m, i) => {
+                    m.color.copy(base[i].color);
+                    m.emissive?.copy(base[i].emissive);
+                    m.emissiveIntensity = base[i].emissiveIntensity;
+                });
+            }
+            for (const mesh of destinationMeshes.get(id) ?? []) {
+                if (/label|sign|glass|glazing|light|spray/i.test(mesh.name) || id === 'fountain') continue;
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                for (const m of mats) {
+                    if (!['glazing', 'water', 'water_spray', 'roof_label', 'conceptual_edge_light', 'supplied_floor_plan'].includes(m.userData['architecturalCategory']))
+                        m.color.lerp(highlightColor, .25);
+                }
+            }
+            highlighted = id;
+        }
         function resetLevel() {
             level = 0;
-            root?.traverse(o => { if(o.userData['cc_level'])o.visible=false; });
-            ccMaterials.forEach(m=>{m.clippingPlanes=[];m.needsUpdate=true;});
+            for (const object of levelObjects) {
+                if (object.visible) { object.visible = false; renderer.shadowMap.needsUpdate = true; }
+            }
+            for (const material of ccMaterials) {
+                if (material.clippingPlanes?.length) {
+                    material.clippingPlanes = [];
+                    material.needsUpdate = true;
+                    renderer.shadowMap.needsUpdate = true;
+                }
+            }
         }
         function fly(position: T.Vector3, target: T.Vector3, duration = 1350) { if (globe?.isGlobe || globe?.transitioning) {
             tween = null;
             globe.goVenue({ position, target });
             return;
-        } tween = { start: performance.now(), duration, a: camera.position.clone(), b: controls.target.clone(), p: position, t: target }; }
+        } tween = { start: performance.now(), duration, a: camera.position.clone(), b: controls.target.clone(), p: position, t: target }; invalidate(); }
         function view(id:string) {
             resetLevel();highlight(id);const v=views[id];if(!v)return;
             const target=W(...v.t),eye=W(...v.p);
@@ -150,16 +174,17 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         levelCommand=n=>{view('cc');level=n;};
         globeCommand=()=>{resetLevel();tween=null;globe?.goGlobe();};
         isGlobe=()=>!!globe?.isGlobe;
-        zoomCommand=f=>{if(globe?.transitioning)return;tween=null;camera.position.sub(controls.target).multiplyScalar(f).add(controls.target);controls.update();};
-        lightCommand=daylight=>{sun.intensity=daylight?3.8:4.5;hemi.intensity=daylight?1.3:.38;renderer.toneMappingExposure=daylight?1.05:.86;scene.environmentIntensity=daylight?.6:.32;bloom.strength=daylight?.075:.19;};
+        zoomCommand=f=>{if(globe?.transitioning)return;tween=null;camera.position.sub(controls.target).multiplyScalar(f).add(controls.target);controls.update();invalidate();};
+        lightCommand=daylight=>{sun.intensity=daylight?3.8:4.5;hemi.intensity=daylight?1.3:.38;renderer.toneMappingExposure=daylight?1.05:.86;scene.environmentIntensity=daylight?.6:.32;invalidate();};
         controls.addEventListener('start', () => { tween = null; });
+        controls.addEventListener('change', invalidate);
         camera.position.copy(W(...views['overview'].p));
         controls.target.copy(W(...views['overview'].t));
         const initialFit = 510 / Math.tan(T.MathUtils.degToRad(camera.fov / 2)) * Math.max(.78, 1 / camera.aspect);
         camera.position.sub(controls.target).setLength(initialFit).add(controls.target);
         controls.update();
         try {
-            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange:events.modeChanged});
+            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange:events.modeChanged,onInvalidate:invalidate});
             events.geographyReady(true);
         } catch(error) { if(!signal.aborted)console.warn('Geographic context unavailable',error);events.geographyReady(false); }
         signal.throwIfAborted();
@@ -171,11 +196,25 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }
         root = g.scene;
         scene.add(root);
-        root.traverse(o => { if (!(o instanceof T.Mesh))
-            return; const sourceMaterials = Array.isArray(o.material) ? o.material : [o.material]; o.material = Array.isArray(o.material) ? o.material.map((m: T.Material) => m.clone()) : o.material.clone(); sourceMaterials.forEach((m: T.Material) => m.dispose()); const mats = Array.isArray(o.material) ? o.material : [o.material]; if (ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/))
+        const replacedMaterials = new Set<T.Material>();
+        root.traverse(o => {
+            if (o.userData['cc_level']) { levelObjects.push(o); o.visible = false; }
+            if (!(o instanceof T.Mesh)) return;
+            pickMeshes.push(o as VenueMesh);
+            // Mesh.raycast can reject a tight box before walking this mesh's triangles.
+            if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+            const destination = classify(o);
+            meshDestinations.set(o, destination);
+            if (destination) {
+                const meshes = destinationMeshes.get(destination) ?? [];
+                meshes.push(o as VenueMesh);
+                destinationMeshes.set(destination, meshes);
+            }
+            const sourceMaterials = Array.isArray(o.material) ? o.material : [o.material]; o.material = Array.isArray(o.material) ? o.material.map((m: T.Material) => m.clone()) : o.material.clone(); sourceMaterials.forEach((m: T.Material) => replacedMaterials.add(m)); const mats = Array.isArray(o.material) ? o.material : [o.material]; if (ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/))
             ccMaterials.push(...mats); o.castShadow = !ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i) && !mats.every((m: T.MeshStandardMaterial) => ['paved_ground', 'context_ground', 'water', 'road', 'road_marking', 'supplied_floor_plan'].includes(m.userData['architecturalCategory'])); o.receiveShadow = true; mats.forEach((m: T.MeshStandardMaterial) => { if (m.map)
             m.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); }); originals.set(o, mats.map((m: T.MeshStandardMaterial) => ({ color: m.color.clone(), emissive: m.emissive?.clone() || new T.Color(0), emissiveIntensity: m.emissiveIntensity }))); if (o.userData['cc_level'])
             o.visible = false; });
+        replacedMaterials.forEach(material => material.dispose());
         events.status('Bharat Mandapam');
         if (new URLSearchParams(location.search).get('view') === 'cc-forecourt') {
             camera.position.copy(W(10.685, 141.551, 220));
@@ -189,51 +228,54 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             number
         ] | undefined;
         renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; }, { signal });
-        renderer.domElement.addEventListener('pointerup', e => { if (!root || !down || globe?.isGlobe || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5)
-            return; pointer.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(pointer, camera); for (const hit of ray.intersectObject(root, true)) {
-            let visible = true;
-            for (let n: T.Object3D | null = hit.object; n; n = n.parent)
-                if (!n.visible)
-                    visible = false;
-            if (!visible)
-                continue;
+        renderer.domElement.addEventListener('pointercancel', () => { down = undefined; }, { signal });
+        renderer.domElement.addEventListener('pointerup', e => {
+            const start = down; down = undefined;
+            if (!root || !start || globe?.isGlobe || Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 5) return;
+            const rect = canvas.getBoundingClientRect();
+            pointer.set((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
+            ray.setFromCamera(pointer, camera);
+            const visibleMeshes = pickMeshes.filter(mesh => {
+                for (let node: T.Object3D | null = mesh; node; node = node.parent) if (!node.visible) return false;
+                return true;
+            });
+            for (const hit of ray.intersectObjects(visibleMeshes, false)) {
             const material = (hit.object as VenueMesh).material;
             const mat = Array.isArray(material) ? material[hit.face!.materialIndex] : material;
             if (mat.clippingPlanes?.some((p: T.Plane) => p.distanceToPoint(hit.point) < 0))
                 continue;
-            const id = classify(hit.object);
+            const id = meshDestinations.get(hit.object);
             if (id) { events.selected(id, level); break; }
             if (!mat.transparent || mat.opacity > .9)
                 break;
         } }, { signal });
-        function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); composer.setSize(innerWidth, innerHeight); }
+        function resize() { renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); invalidate(); }
         listen('resize', resize);
         listen('pageshow', resize);
-        renderer.setAnimationLoop(() => { if (tween) {
+        function updateFrame() { if (tween) {
             let k = Math.min(1, (performance.now() - tween.start) / tween.duration);
             k = k * k * (3 - 2 * k);
             camera.position.lerpVectors(tween.a, tween.p, k);
             controls.target.lerpVectors(tween.b, tween.t, k);
             if (k >= 1)
                 tween = null;
-        } controls.update(); globe?.update(); const distant = camera.position.distanceTo(controls.target) > 5500; ao.enabled = !distant; bloom.enabled = !distant; if (distant)
+        }
+            const changed = !globe?.transitioning && controls.update();
+            globe?.update();
+            return Boolean(changed || tween || globe?.transitioning);
+        }
+        function renderFrame() {
+            // Use the same antialiased materials, lighting and cached shadows for every frame.
+            // Switching post-processing after input caused a visible softness/shading jump.
+            renderer.setRenderTarget(null);
             renderer.render(scene, camera);
-        else {
-            const u = ao.ssaoMaterial.uniforms;
-            u['cameraNear'].value = camera.near;
-            u['cameraFar'].value = camera.far;
-            u['cameraProjectionMatrix'].value.copy(camera.projectionMatrix);
-            u['cameraInverseProjectionMatrix'].value.copy(camera.projectionMatrixInverse);
-            ao.depthRenderMaterial.uniforms['cameraNear'].value = camera.near;
-            ao.depthRenderMaterial.uniforms['cameraFar'].value = camera.far;
-            ao.minDistance = .12 / (camera.far - camera.near);
-            ao.maxDistance = 10 / (camera.far - camera.near);
-            composer.render();
-        } });
+        }
         // Draw a prepared scene before releasing the welcome screen.
         signal.throwIfAborted();
         controls.update();
-        composer.render();
+        globe?.update();
+        prepared = true;
+        if (!document.hidden) renderFrame();
         return information;
     }
 }

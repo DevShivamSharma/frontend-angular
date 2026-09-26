@@ -88,7 +88,7 @@ export function buildViolations(overlay: EditorOverlay): THREE.Group {
  * red where it does not, so the whole plan can be looked at before any of it is applied.
  */
 export function buildProposals(
-  proposals: ReadonlyArray<{ footprint: Footprint; valid: boolean }> | null
+  proposals: ReadonlyArray<{ footprint: Footprint; valid: boolean; label?: string }> | null
 ): THREE.Group {
   const group = new THREE.Group();
   group.name = 'proposals';
@@ -96,6 +96,12 @@ export function buildProposals(
 
   for (const proposal of proposals) {
     group.add(draftBox(proposal.footprint, proposal.valid ? SUGGESTION : INVALID, 0.24));
+    if (proposal.label) {
+      const label = makeTextSprite([proposal.label], { color: '#ffffff',
+        background: proposal.valid ? SUGGESTION : INVALID, lineHeight: 0.7, bold: true });
+      label.position.set(proposal.footprint.posX, 1.5, proposal.footprint.posZ);
+      group.add(label);
+    }
   }
 
   return group;
@@ -146,6 +152,7 @@ function draftBox(f: Footprint, color: string, opacity: number): THREE.Group {
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false })
   );
   box.position.set(f.posX, DRAFT_HEIGHT / 2 + 0.1, f.posZ);
+  box.rotation.y = -(f.rotation ?? 0) * Math.PI / 180;
   box.renderOrder = 8;
   group.add(box);
 
@@ -154,6 +161,7 @@ function draftBox(f: Footprint, color: string, opacity: number): THREE.Group {
     new THREE.LineBasicMaterial({ color, depthTest: false })
   );
   edges.position.copy(box.position);
+  edges.rotation.copy(box.rotation);
   edges.renderOrder = 9;
   group.add(edges);
   return group;

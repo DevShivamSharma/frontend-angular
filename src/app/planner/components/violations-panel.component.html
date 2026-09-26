@@ -77,7 +77,7 @@
       <details class="audit" open>
         <summary>
           Existing layout: {{ plural(audit().length, 'stall') }}, {{ plural(auditCount(), 'issue') }}
-          <span class="audit-note">reported, not blocked</span>
+          <span class="audit-note">resolve before saving</span>
         </summary>
         @for (entry of audit(); track entry.stallId) {
           @for (v of entry.violations; track $index) {

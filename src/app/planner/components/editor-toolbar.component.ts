@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 
 import { EVENT_TYPES } from '../geometry/placement-rules';
 import { EventType } from '../models/hall.model';
+import { GateSide } from '../models/stall.model';
 import { EditorMode, PlannerStore } from '../planner-store.service';
 import { IconComponent } from './icon.component';
 
@@ -30,6 +31,8 @@ export class EditorToolbarComponent {
   readonly stallTypes = this.store.stallTypes;
   readonly selectedStallTypeId = this.store.selectedStallTypeId;
   readonly eventType = this.store.eventType;
+  readonly passageWidth = this.store.passageWidth;
+  readonly draftOpenSide = this.store.draftOpenSide;
   readonly ruleDriven = this.store.ruleDriven;
   readonly showClearances = this.store.showClearances;
   readonly showFreeSpace = this.store.showFreeSpace;
@@ -73,6 +76,15 @@ export class EditorToolbarComponent {
 
   setEventType(value: string): void {
     this.store.setEventType(value === 'B2C' ? 'B2C' : 'B2B');
+  }
+
+  setPassageWidth(input: HTMLInputElement): void {
+    this.store.setPassageWidth(input.valueAsNumber);
+    input.value = String(this.passageWidth());
+  }
+
+  setDraftOpenSide(value: string): void {
+    this.store.setDraftOpenSide(value as GateSide);
   }
 
   toggleClearances(checked: boolean): void {

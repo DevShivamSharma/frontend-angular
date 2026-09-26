@@ -2008,6 +2008,27 @@ select.control {
   gap: var(--space-2);
 }
 
+.passage-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.passage-control .control { width: 5rem; }
+
+.split-controls {
+  margin-block: var(--space-3);
+  padding-block: var(--space-3);
+  border-block: 1px solid var(--border-subtle);
+}
+
+.split-controls summary { cursor: pointer; font-weight: 600; }
+.split-controls summary:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 4px; }
+.split-preview { margin-top: var(--space-3); overflow-wrap: anywhere; }
+.split-preview ul { padding-left: 1.25rem; max-height: 12rem; overflow: auto; }
+.split-preview li { padding-block: var(--space-1); font-variant-numeric: tabular-nums; }
+
 /* ---- Stage: view dock and scale bar ------------------------------------- */
 
 /*

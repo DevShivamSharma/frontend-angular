@@ -11,10 +11,13 @@ interface Pose { position: T.Vector3; target: T.Vector3; }
 interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
 type Kind = 'road' | 'building' | 'water' | 'park';
 interface Geography { features: { k: Kind; p: [number, number][]; w: number; h: number }[]; }
-interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; }
+interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; }
 
-export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange}: GlobeOptions) {
+export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate}: GlobeOptions) {
   const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background instanceof T.Color ? scene.background.clone() : new T.Color('#e5e7e5');
+  const skyBackground = new T.Color('#17232c'), background = localBackground.clone();
+  const flightRotation = new T.Quaternion(), flightDirection = new T.Vector3();
+  scene.background = background;
   const group=new T.Group();group.name='Geographic context — Delhi to Earth';scene.add(group);
   const earthGroup=new T.Group();earthGroup.position.copy(center);earthGroup.visible=false;group.add(earthGroup);
   const groundGroup=new T.Group();groundGroup.name='OpenStreetMap Delhi context';group.add(groundGroup);
@@ -31,7 +34,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   };
   const earthGeometry=new T.SphereGeometry(R,144,96);earthGeometry.applyMatrix4(geographicRotation);
   const earth=new T.Mesh(earthGeometry,globeMaterial);earth.name='Earth — geographically oriented';earthGroup.add(earth);
-  new T.TextureLoader().load(asset('geography/earth-day.jpg'),texture=>{if(signal.aborted){texture.dispose();return;}texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());globeMaterial.map=texture;globeMaterial.needsUpdate=true;},undefined,error=>console.warn('Earth texture unavailable',error));
+  new T.TextureLoader().load(asset('geography/earth-day.jpg'),texture=>{if(signal.aborted){texture.dispose();return;}texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());globeMaterial.map=texture;globeMaterial.needsUpdate=true;onInvalidate();},undefined,error=>console.warn('Earth texture unavailable',error));
   const atmosphereMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.BackSide,blending:T.AdditiveBlending,uniforms:{tint:{value:new T.Color('#7fa5c2')}},vertexShader:`varying vec3 vN;varying vec3 vV;void main(){vec4 p=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-p.xyz);gl_Position=projectionMatrix*p;}`,fragmentShader:`uniform vec3 tint;varying vec3 vN;varying vec3 vV;void main(){float rim=pow(1.-abs(dot(normalize(vN),normalize(vV))),3.);gl_FragColor=vec4(tint,rim*.24);}`});
   const atmosphere=new T.Mesh(new T.SphereGeometry(R*1.017,96,64),atmosphereMaterial);earthGroup.add(atmosphere);
   const globeLight=new T.DirectionalLight(0xf5f7ff,2.5);globeLight.position.set(-R*2,R*4,R*2);globeLight.target.position.copy(center);earthGroup.add(globeLight);scene.add(globeLight.target);
@@ -64,12 +67,22 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       const combined=mergeGeometries(geometries,false);geometries.forEach(g=>g.dispose());if(!combined)continue;
       const mesh=new T.Mesh(combined,contextMaterials[kind as Kind]);mesh.name='OSM Delhi '+kind;mesh.receiveShadow=true;mesh.castShadow=false;groundGroup.add(mesh);
     }
+    onInvalidate();
   }).catch(error=>{if(!signal.aborted)console.warn('Delhi context unavailable',error);});
   // A geographic destination marker, never a replacement for roof labels.
   const marker=new T.Group();marker.position.set(0,38000,0);marker.visible=false;group.add(marker);
   const pin=new T.Mesh(new T.SphereGeometry(20000,24,16),new T.MeshBasicMaterial({color:0xe0af62}));marker.add(pin);
   const ring=new T.Mesh(new T.TorusGeometry(46000,3400,8,64),new T.MeshBasicMaterial({color:0xf3dab3,transparent:true,opacity:.7}));ring.rotation.x=-Math.PI/2;marker.add(ring);
   let mode:Mode='venue',transition:Flight|null=null,armedAt=performance.now()+1800,lastLocal:Pose|null=null;
+  // Automatic departure/return must still run when controls settle before the cooldown ends.
+  let armTimer: number | undefined;
+  function armNavigation(delay: number) {
+    armedAt = performance.now() + delay;
+    window.clearTimeout(armTimer);
+    armTimer = window.setTimeout(() => { if (!signal.aborted) onInvalidate(); }, delay + 1);
+  }
+  signal.addEventListener('abort', () => window.clearTimeout(armTimer), { once: true });
+  armNavigation(1800);
   const initial={minDistance:controls.minDistance,maxPolarAngle:controls.maxPolarAngle,minPolarAngle:controls.minPolarAngle,zoomSpeed:controls.zoomSpeed,enablePan:controls.enablePan};
   controls.maxDistance=R*7;
   const copyVector=(v:T.Vector3|[number,number,number]|undefined,fallback:T.Vector3)=>v instanceof T.Vector3?v.clone():Array.isArray(v)?new T.Vector3(...v):fallback.clone();
@@ -78,7 +91,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     const from=camera.position.clone(),to=position.clone(),a=from.clone().sub(center),b=to.clone().sub(center);
     const fromAltitude=Math.max(25,a.length()-R),toAltitude=Math.max(25,b.length()-R),rotation=new T.Quaternion().setFromUnitVectors(a.clone().normalize(),b.clone().normalize());
     transition={time:performance.now(),duration:2600,from,targetFrom:controls.target.clone(),to,target,fromAltitude,toAltitude,direction:a.normalize(),rotation,destination};
-    controls.enabled=false;mode=destination;onModeChange(mode);
+    controls.enabled=false;mode=destination;onModeChange(mode);onInvalidate();
   }
   function rememberVenuePose(position:T.Vector3,target:T.Vector3){
     const pose={position:position.clone(),target:target.clone()};
@@ -103,7 +116,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     const position=copyVector(options.position,fallback.position),target=copyVector(options.target,fallback.target);
     // A broad view is saved at automatic departure; cap the return so it cannot immediately retrigger.
     if(position.distanceTo(target)>2800)position.sub(target).setLength(1800).add(target);
-    if(mode==='venue'&&!transition){localLimits();camera.position.copy(position);controls.target.copy(target);controls.update();armedAt=performance.now()+1500;return;}
+    if(mode==='venue'&&!transition){localLimits();camera.position.copy(position);controls.target.copy(target);controls.update();armNavigation(1500);onInvalidate();return;}
     localLimits();startFlight('venue',position,target);
   }
   let pointerDown:[number,number]|null=null;
@@ -120,11 +133,11 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     if(transition){
       const f=transition,k=Math.min(1,(now-f.time)/f.duration),e=k*k*(3-2*k);
       const altitude=Math.exp(T.MathUtils.lerp(Math.log(f.fromAltitude),Math.log(f.toAltitude),e));
-      const q=new T.Quaternion().slerp(f.rotation,e),direction=f.direction.clone().applyQuaternion(q);
+      const q=flightRotation.identity().slerp(f.rotation,e),direction=flightDirection.copy(f.direction).applyQuaternion(q);
       camera.position.copy(center).addScaledVector(direction,R+altitude);
       controls.target.lerpVectors(f.targetFrom,f.target,e);camera.lookAt(controls.target);
       if(k===1){
-        camera.position.copy(f.to);controls.target.copy(f.target);transition=null;controls.enabled=true;armedAt=now+1800;
+        camera.position.copy(f.to);controls.target.copy(f.target);transition=null;controls.enabled=true;armNavigation(1800);
         if(mode==='globe'){controls.minDistance=R*1.08;controls.maxPolarAngle=Math.PI-.001;controls.minPolarAngle=.001;controls.zoomSpeed=1.25;controls.enablePan=false;}else localLimits();
         // Drain OrbitControls' pending damping so the flight cannot inherit an earlier drag.
         const damping=controls.enableDamping;controls.enableDamping=false;controls.update();controls.enableDamping=damping;
@@ -137,7 +150,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     const groundOpacity=1-T.MathUtils.smoothstep(altitude,9000,45000);groundMaterial.opacity=groundOpacity;
     Object.values(contextMaterials).forEach(m=>m.opacity=groundOpacity);
     marker.visible=altitude>180000;const markerScale=Math.max(.6,Math.min(12,altitude/R*2));marker.scale.setScalar(markerScale);
-    scene.background=localBackground.clone().lerp(new T.Color('#17232c'),planetMix);
+    background.copy(localBackground).lerp(skyBackground,planetMix);
     const near=altitude>15000?Math.max(5,altitude/1800):Math.max(1,Math.min(32,distance/55));
     const far=altitude>4800?R*18:12000;
     if(Math.abs(camera.near-near)>.02||camera.far!==far){camera.near=near;camera.far=far;camera.updateProjectionMatrix();}

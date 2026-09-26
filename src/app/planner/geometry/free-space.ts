@@ -67,11 +67,13 @@ export class FreeSpaceMap {
    * Every valid placement of a width x length stall, in both orientations when they differ.
    * `ignoreId` excludes the stall being moved from the obstacles check.
    */
-  validPlacements(width: number, length: number, ignoreId: string | null = null): Footprint[] {
+  validPlacements(width: number, length: number, ignoreId: string | null = null,
+    openSides: Footprint['openSides'] = ['FRONT']): Footprint[] {
     const out: Footprint[] = [];
     for (const [w, l] of orientations(width, length)) {
       for (const candidate of this.lattice(w, l)) {
-        if (validatePlacement(candidate, this.ctx, ignoreId).valid) out.push(candidate);
+        const oriented = { ...candidate, openSides };
+        if (validatePlacement(oriented, this.ctx, ignoreId).valid) out.push(oriented);
       }
     }
     return out;
@@ -85,13 +87,16 @@ export class FreeSpaceMap {
     width: number,
     length: number,
     target: { x: number; z: number },
-    ignoreId: string | null = null
+    ignoreId: string | null = null,
+    openSides: Footprint['openSides'] = ['FRONT'],
+    allowRotate = true,
+    rotation = 0
   ): Footprint | null {
     const candidates: Array<{ footprint: Footprint; distance: number }> = [];
-    for (const [w, l] of orientations(width, length)) {
-      for (const footprint of this.lattice(w, l)) {
+    for (const [w, l] of (allowRotate ? orientations(width, length) : [[width, length]])) {
+      for (const footprint of this.lattice(w, l, rotation !== 0)) {
         candidates.push({
-          footprint,
+          footprint: { ...footprint, openSides, ...(rotation ? { rotation } : {}) },
           distance: Math.hypot(footprint.posX - target.x, footprint.posZ - target.z)
         });
       }
@@ -105,9 +110,22 @@ export class FreeSpaceMap {
   }
 
   /** Candidate windows on the snap lattice that pass the raster pre-check. */
-  private *lattice(width: number, length: number): Generator<Footprint> {
+  private *lattice(width: number, length: number, rotated = false): Generator<Footprint> {
     const step = this.grid.snapStep;
     const b = this.grid.bounds;
+
+    if (rotated) {
+      // An unrotated rectangle is not a conservative pre-check for a rotated one.
+      // Keep the same edge-based snap phase and let exact polygons test containment.
+      const startX = b.minX + (width / 2) % step;
+      const startZ = b.minZ + (length / 2) % step;
+      for (let posZ = startZ; posZ <= b.maxZ; posZ += step) {
+        for (let posX = startX; posX <= b.maxX; posX += step) {
+          yield { posX, posZ, width, length };
+        }
+      }
+      return;
+    }
 
     for (let minZ = b.minZ; minZ + length <= b.maxZ + 1e-9; minZ += step) {
       for (let minX = b.minX; minX + width <= b.maxX + 1e-9; minX += step) {
@@ -123,7 +141,8 @@ export class FreeSpaceMap {
     const sat = new Int32Array(w * (rows + 1));
     const peripheral = this.ctx.rules.peripheralClearance;
     const halfDiagonal = (cell * Math.SQRT2) / 2;
-    const stalls = this.ctx.stalls.filter(s => s.status !== 'CANCELLED').map(s => ({
+    // A rotated stall's bounding box contains usable floor: leave it to exact validation.
+    const stalls = this.ctx.stalls.filter(s => s.status !== 'CANCELLED' && !(s.rotation ?? 0)).map(s => ({
       minX: s.posX - s.width / 2,
       maxX: s.posX + s.width / 2,
       minZ: s.posZ - s.length / 2,
@@ -145,10 +164,10 @@ export class FreeSpaceMap {
   }
 
   private isBlocked(rect: Rect, stalls: Rect[], peripheral: number, halfDiagonal: number): boolean {
-    const boundary = this.ctx.boundary;
+    const outlines = [this.ctx.boundary, ...(this.ctx.regions ?? [])].filter(o => o && o.length >= 3);
+    const boundary = outlines.find(o => rectOverlapsPolygon(rect, o!));
+    if (outlines.length && !boundary) return true;
     if (boundary && boundary.length >= 3) {
-      if (!rectOverlapsPolygon(rect, boundary)) return true;
-
       // Wholly inside the peripheral band: every point of the cell is closer than the clearance.
       const cx = (rect.minX + rect.maxX) / 2;
       const cz = (rect.minZ + rect.maxZ) / 2;

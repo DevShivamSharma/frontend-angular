@@ -16,6 +16,9 @@
       <span class="status-badge" [attr.data-status]="stall.status">{{ stall.status }}</span>
       <span class="stall-identity-meta">{{ stall.width }} × {{ stall.length }} m · {{ stall.width * stall.length }} m²</span>
     </div>
+    @if (stall.parentStallNumber) {
+      <p class="panel-hint">Split from {{ stall.parentStallNumber }}</p>
+    }
 
     <label class="field-label" for="edit-stall-name">Name</label>
     <input id="edit-stall-name" class="control" maxlength="255" formControlName="name" />
@@ -35,8 +38,19 @@
       </label>
     </div>
 
+    <label class="number-field">Rotation (°)
+      <input class="control" type="number" step="1" inputmode="decimal" formControlName="rotation" />
+    </label>
+    <p class="panel-hint">Clockwise from the plan axes. Open sides rotate with the stall.</p>
     <span class="field-label" id="edit-stall-gate-label">Open Sides</span>
-    <div class="panel-hint">Click to toggle. At least one side stays open.</div>
+    <div class="panel-hint">Keep {{ passageWidth() }} m clear in front of every open side. Touching stalls need opposite outward openings.</div>
+    <label class="field-label" for="edit-facing">Face one direction</label>
+    <select id="edit-facing" class="control" [value]="stall.openSides.length === 1 ? stall.openSides[0] : ''"
+      (change)="setFacing($any($event.target))">
+      <option value="" disabled>Multiple open sides</option>
+      <option value="FRONT">Front (+Z)</option><option value="BACK">Back (−Z)</option>
+      <option value="LEFT">Left (−X)</option><option value="RIGHT">Right (+X)</option>
+    </select>
     <div class="gate-compass" role="group" aria-labelledby="edit-stall-gate-label">
       @for (cell of gateCompass; track $index) {
         @if (cell.side; as side) {
@@ -75,6 +89,46 @@
       <app-icon name="check" [size]="14" />
       Apply Shop Changes
     </button>
+    <details class="split-controls" [formGroup]="splitForm">
+      <summary>Split stall</summary>
+      <p class="panel-hint">Divide this footprint into equal children. Passage gaps come from the parent's area.</p>
+      <div class="row">
+        <label class="number-field">Children
+          <input class="control" type="number" min="2" max="100" step="1" formControlName="count" />
+        </label>
+        <label class="number-field">Direction
+          <select class="control" formControlName="axis">
+            <option value="X">Across X</option><option value="Z">Along Z</option>
+          </select>
+        </label>
+      </div>
+      <label class="field-label" for="split-arrangement">Arrangement</label>
+      <select id="split-arrangement" class="control" formControlName="arrangement">
+        <option value="PASSAGE">{{ passageWidth() }} m passages</option>
+        <option value="BACK_TO_BACK">Back-to-back pair</option>
+      </select>
+      <button type="button" class="btn-secondary is-block gap-top" [disabled]="busy() || stall.status !== 'AVAILABLE'"
+        (click)="previewSplit()">Preview split</button>
+      @if (splitPreview(); as preview) {
+        <div aria-live="polite" class="split-preview">
+          @if (preview.error) { <p role="alert">{{ preview.error }}</p> }
+          @for (v of preview.violations; track $index) { <p class="violation-message">{{ v.message }}</p> }
+          @if (preview.children.length) {
+            <p class="panel-hint">Proposed numbering — confirmed when the split is saved.</p>
+            <ul>
+              @for (child of preview.children; track child.id) {
+                <li>{{ child.stallNumber }} · {{ child.width }} × {{ child.length }} m · {{ child.openSides.join(', ') }}</li>
+              }
+            </ul>
+          }
+          @if (!stall.stallNumber) { <p class="panel-hint">Save this parent in a layout before confirming a split.</p> }
+          <button type="button" class="btn-primary is-block" [disabled]="!canConfirmSplit()" (click)="confirmSplit()">
+            {{ busy() ? 'Saving split…' : 'Confirm split' }}
+          </button>
+          <button type="button" class="btn-secondary is-block" [disabled]="busy()" (click)="cancelSplit()">Close preview</button>
+        </div>
+      }
+    </details>
     <button
       type="button"
       class="btn-danger"
