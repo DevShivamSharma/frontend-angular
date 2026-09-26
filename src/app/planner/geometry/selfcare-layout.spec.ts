@@ -1,5 +1,7 @@
 import {
+  importSelfcareEventHalls,
   importSelfcareLayout,
+  importSelfcareResponse,
   iconUrlFor,
   PX_PER_METRE,
   pixelToPlanner,
@@ -163,5 +165,152 @@ describe('coordinate conversion', () => {
 describe('iconUrlFor', () => {
   it('points at the asset SelfCare names in helper_text', () => {
     expect(iconUrlFor('toilet-male')).toBe('assets/images/toilet-male.svg');
+  });
+});
+
+/**
+ * The live SelfCare API responses, verbatim apart from a trimmed `nonClickableAreas` list.
+ *
+ * These differ from the database export in three ways that broke the first importer: the hall id
+ * is `hallId` not `hall_id`, the hall has a `name`, and everything is wrapped in a
+ * `{ header, data }` envelope with the single hall inside a one-element array.
+ */
+function hallLayoutResponse() {
+  return {
+    header: { code: 200, error: false, success: true, msg: 'Success' },
+    data: [
+      {
+        hallId: 63,
+        name: 'Hall 8-9-10',
+        length: 133,
+        breadth: 43,
+        layout_data: {
+          shape: 'non-circular',
+          stallWidth: 1,
+          stallHeight: 1,
+          nonClickableAreas: [
+            { x: 18, y: 0, width: 54, height: 3, fillColor: '#ffffff', strokeColor: '#ffffff' },
+            { x: 1.5, y: 0.5, width: 0.5, height: 37, fillColor: '#742371', strokeColor: '#742371' }
+          ]
+        },
+        legends: [
+          { label: 'Compulsory passage for entry/exit/services', colorCode: 'red' },
+          { label: 'NC - No Construction Zone', colorCode: 'saddlebrown' },
+          {
+            label: 'Entry or exit gates',
+            htmlContent: '<p class="color-dark fw-500 mb-0">E:</p>',
+            visibleInBookMode: false
+          }
+        ],
+        helper_text: [
+          {
+            image: [
+              { url: 'assets/images/toilet-male.svg', label: 'Toilet (Male)' },
+              { url: 'assets/images/toilet-female.svg', label: 'Toilet (Female)' },
+              { url: 'assets/images/stairs.svg', label: 'Stairs/Elevators' }
+            ],
+            positionX: 2210,
+            positionY: 350
+          },
+          { image: [{ url: 'assets/images/entry-up.svg', label: 'Entry' }], positionX: 1255, positionY: 855 }
+        ],
+        exit_labels: [{ text: 'HALL 10', positionX: 720, positionY: 860 }],
+        direction: {
+          image: { url: 'assets/images/direction.svg', width: 100, height: 100, rotation: -90, positionX: 10, positionY: 10 },
+          label: { text: 'N', positionX: -28, positionY: -35 },
+          positionX: 2600,
+          positionY: 950
+        },
+        default_stalls: null
+      }
+    ]
+  };
+}
+
+function eventResponse() {
+  return {
+    header: { code: 200, error: false, success: true, msg: 'Success' },
+    data: {
+      id: '60fb0781-5145-450d-9a24-a71eb2174ef1',
+      eventName: 'Shivam Tesing',
+      halls: [
+        { hallId: 78, hallName: 'Convention Center', stallCount: 0, eventLayoutId: null },
+        { hallId: 63, hallName: 'Hall 8-9-10', stallCount: 0, eventLayoutId: 103 },
+        { hallId: 64, hallName: 'Hall 11', stallCount: 0, eventLayoutId: null }
+      ]
+    }
+  };
+}
+
+describe('live SelfCare API payloads', () => {
+  it('unwraps the { header, data: [row] } envelope', () => {
+    const halls = importSelfcareResponse(hallLayoutResponse());
+
+    expect(halls.length).toBe(1);
+    expect(halls[0].id).toBe(63);
+    expect(halls[0].name).toBe('Hall 8-9-10');
+    expect(halls[0].width).toBe(133);
+    expect(halls[0].length).toBe(43);
+  });
+
+  it('reads hallId, the API spelling, as well as the export hall_id', () => {
+    expect(importSelfcareLayout({ hallId: 63 }).hallId).toBe(63);
+    expect(importSelfcareLayout({ hall_id: 63 }).hallId).toBe(63);
+    expect(importSelfcareLayout({}).hallId).toBeNull();
+  });
+
+  it('still marks no passage for the live Hall 8-9-10 payload', () => {
+    // The live response carries the same white/purple-only rectangles as the export: the plan
+    // genuinely has no compulsory-passage or no-construction zone.
+    expect(importSelfcareResponse(hallLayoutResponse())[0].zones).toEqual([]);
+  });
+
+  it('imports the north arrow from `direction`', () => {
+    const compass = importSelfcareResponse(hallLayoutResponse())[0].compass!;
+
+    // 2600 px / 20 = 130 m across, 950 px / 20 = 47.5 m down -> outside a 133 x 43 m hall.
+    expect(compass.position).toEqual({ x: 63.5, z: 26 });
+    expect(compass.size).toBe(5); // 100 px / 20
+    expect(compass.rotation).toBe(-90);
+    expect(compass.label).toBe('N');
+    expect(compass.labelOffset).toEqual({ x: -1.4, z: -1.75 });
+  });
+
+  it('carries the legend rows, colour swatches and markup notes alike', () => {
+    const legends = importSelfcareResponse(hallLayoutResponse())[0].legends!;
+
+    expect(legends.length).toBe(3);
+    expect(legends[0]).toEqual({ label: 'Compulsory passage for entry/exit/services', colorCode: 'red' });
+    expect(legends[2].htmlContent).toContain('E:');
+    expect(legends[2].visibleInBookMode).toBe(false);
+  });
+
+  it('has no compass or legends when the row omits them', () => {
+    const hall = importSelfcareLayout({ length: 133, breadth: 43 });
+
+    expect(hall.compass).toBeNull();
+    expect(hall.legends).toEqual([]);
+  });
+});
+
+describe('importSelfcareEventHalls', () => {
+  it('lists the event halls and flags which ones have a published layout', () => {
+    const halls = importSelfcareEventHalls(eventResponse());
+
+    expect(halls.map(h => h.name)).toEqual(['Convention Center', 'Hall 8-9-10', 'Hall 11']);
+    expect(halls.find(h => h.id === 63)).toEqual({
+      id: 63,
+      name: 'Hall 8-9-10',
+      hasLayout: true,
+      eventLayoutId: 103,
+      stallCount: 0
+    });
+    // Only Hall 8-9-10 has a layout to fetch in this event.
+    expect(halls.filter(h => h.hasLayout).length).toBe(1);
+  });
+
+  it('falls back to a generated name and tolerates a missing halls array', () => {
+    expect(importSelfcareEventHalls({ data: { halls: [{ hallId: 9 }] } })[0].name).toBe('Hall 9');
+    expect(importSelfcareEventHalls({ data: {} })).toEqual([]);
   });
 });

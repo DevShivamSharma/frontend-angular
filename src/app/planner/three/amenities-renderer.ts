@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 import { iconUrlFor } from '../geometry/selfcare-layout';
-import { HallAmenity } from '../models/hall.model';
+import { HallAmenity, HallCompass } from '../models/hall.model';
 import { makeTextSprite } from './text-sprite';
 
 /** Side of an icon in metres. Large enough to read when the whole 133 m hall is in frame. */
@@ -52,6 +52,65 @@ export function buildAmenities(amenities: HallAmenity[]): THREE.Group {
 
   return group;
 }
+
+/**
+ * Layer 9b — the plan's north arrow, from the SelfCare `direction` field.
+ *
+ * SelfCare draws it outside the hall outline, so like the amenities it is pure decoration. The
+ * rose is a sprite, which is camera-facing; `material.rotation` turns it in plane. SelfCare's
+ * angle is measured clockwise on a 2D canvas and three's is counter-clockwise, hence the
+ * negation.
+ */
+export function buildCompass(compass: HallCompass | null | undefined): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'compass';
+  if (!compass || !Number.isFinite(compass.position?.x) || !Number.isFinite(compass.position?.z)) {
+    return group;
+  }
+
+  const size = compass.size > 0 ? compass.size : 5;
+  const material = new THREE.SpriteMaterial({
+    map: placeholderTexture('#ffffff'),
+    depthTest: false,
+    transparent: true
+  });
+  material.rotation = (-compass.rotation * Math.PI) / 180;
+
+  const rose = new THREE.Sprite(material);
+  rose.scale.set(size, size, 1);
+  rose.position.set(compass.position.x, ICON_Y, compass.position.z);
+  rose.renderOrder = 29;
+  group.add(rose);
+
+  loadTexture(COMPASS_ICON_URL).then(texture => {
+    if (!texture) return;
+    if (!isAttachedToScene(rose)) {
+      texture.dispose();
+      return;
+    }
+    material.map?.dispose();
+    material.map = texture;
+    material.needsUpdate = true;
+  });
+
+  const label = makeTextSprite([compass.label], {
+    color: '#0f172a',
+    background: 'rgba(255,255,255,0.92)',
+    lineHeight: 0.8,
+    bold: true
+  });
+  label.position.set(
+    compass.position.x + compass.labelOffset.x,
+    ICON_Y,
+    compass.position.z + compass.labelOffset.z
+  );
+  group.add(label);
+
+  return group;
+}
+
+/** The compass rose asset SelfCare names in `direction.image.url`. */
+const COMPASS_ICON_URL = 'assets/images/direction.svg';
 
 function buildIcon(amenity: HallAmenity): THREE.Sprite {
   const material = new THREE.SpriteMaterial({

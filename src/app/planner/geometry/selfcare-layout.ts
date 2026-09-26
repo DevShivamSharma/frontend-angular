@@ -1,5 +1,13 @@
 import type { HallZone, Point, ZoneKind } from './placement-rules';
-import type { AmenityKind, BlockedArea, Hall, HallAmenity, HallMarker } from '../models/hall.model';
+import type {
+  AmenityKind,
+  BlockedArea,
+  Hall,
+  HallAmenity,
+  HallCompass,
+  HallLegend,
+  HallMarker
+} from '../models/hall.model';
 
 /**
  * Import of a SelfCare hall plan (`t_event_hall_layout_data`) into a planner `Hall`.
@@ -72,18 +80,60 @@ export interface SelfcareExitLabel {
   positionY?: number;
 }
 
+/** `direction` — the north arrow, positioned in the same pixel space as the labels. */
+export interface SelfcareDirection {
+  image?: { url?: string; width?: number; height?: number; rotation?: number };
+  label?: { text?: string; positionX?: number; positionY?: number };
+  positionX?: number;
+  positionY?: number;
+}
+
+/** One row of `legends[]`: either a colour swatch or a markup note. */
+export interface SelfcareLegend {
+  label?: string;
+  colorCode?: string;
+  htmlContent?: string;
+  visibleInBookMode?: boolean;
+}
+
 /**
- * A row of `t_event_hall_layout_data`, as the SelfCare export delivers it. The JSON columns may
- * arrive already parsed or still as text; `parseJson()` accepts both.
+ * A SelfCare hall layout.
+ *
+ * The live API (`data[]` of the hall-layout endpoint) and the `t_event_hall_layout_data` export
+ * are the same record under two spellings: the API sends `hallId` and `name`, the export sends
+ * `hall_id` and no name. Both are accepted so one importer serves both. The JSON columns may
+ * arrive parsed or still as text; `parseJson()` takes either.
  */
 export interface SelfcareLayoutRow {
+  /** Live API spelling. */
+  hallId?: number | string;
+  /** Database-export spelling. */
   hall_id?: number | string;
+  name?: string;
   event_id?: string;
   length?: number | string;
   breadth?: number | string;
   layout_data?: SelfcareLayoutData | string | null;
   helper_text?: SelfcareHelperText[] | string | null;
   exit_labels?: SelfcareExitLabel[] | string | null;
+  legends?: SelfcareLegend[] | string | null;
+  direction?: SelfcareDirection | string | null;
+}
+
+/** One hall of the event endpoint's `data.halls[]`. */
+export interface SelfcareEventHall {
+  hallId?: number | string;
+  hallName?: string;
+  stallCount?: number;
+  /** Non-null when this hall has a published layout for the event. */
+  eventLayoutId?: number | null;
+  hallCategoryId?: number | null;
+}
+
+/** The envelope every SelfCare endpoint replies with. */
+export interface SelfcareEnvelope<T> {
+  header?: { code?: number; error?: boolean; success?: boolean; msg?: string };
+  data?: T;
 }
 
 /**
@@ -113,12 +163,18 @@ const AMENITY_BY_URL: Record<string, AmenityKind> = {
 
 /** Everything one SelfCare row contributes to a planner hall. */
 export interface SelfcareImport {
+  /** `hallId` / `hall_id`, or null when the row carries neither. */
+  hallId: number | string | null;
+  /** `name`, or null in the database export, which has no name column. */
+  name: string | null;
   width: number;
   length: number;
   blockedAreas: BlockedArea[];
   zones: HallZone[];
   markers: HallMarker[];
   amenities: HallAmenity[];
+  compass: HallCompass | null;
+  legends: HallLegend[];
 }
 
 /**
@@ -138,6 +194,8 @@ export function importSelfcareLayout(row: SelfcareLayoutRow): SelfcareImport {
   const data = parseJson<SelfcareLayoutData>(row.layout_data) ?? {};
   const helpers = parseJson<SelfcareHelperText[]>(row.helper_text) ?? [];
   const labels = parseJson<SelfcareExitLabel[]>(row.exit_labels) ?? [];
+  const legendRows = parseJson<SelfcareLegend[]>(row.legends) ?? [];
+  const direction = parseJson<SelfcareDirection>(row.direction);
 
   const blockedAreas: BlockedArea[] = [];
   const zones: HallZone[] = [];
@@ -193,7 +251,131 @@ export function importSelfcareLayout(row: SelfcareLayoutRow): SelfcareImport {
     });
   }
 
-  return { width, length, blockedAreas, zones, markers, amenities };
+  const legends: HallLegend[] = legendRows
+    .filter(l => String(l?.label ?? '').trim())
+    .map(l => ({
+      label: String(l.label).trim(),
+      ...(l.colorCode ? { colorCode: normalizeColor(l.colorCode) } : {}),
+      ...(l.htmlContent ? { htmlContent: l.htmlContent } : {}),
+      ...(l.visibleInBookMode === undefined ? {} : { visibleInBookMode: l.visibleInBookMode })
+    }));
+
+  return {
+    hallId: row.hallId ?? row.hall_id ?? null,
+    name: row.name?.trim() || null,
+    width,
+    length,
+    blockedAreas,
+    zones,
+    markers,
+    amenities,
+    compass: toCompass(direction, width, length),
+    legends
+  };
+}
+
+/**
+ * The north arrow. Its pixel size converts at the same 20 px/m as its position, so Hall 8-9-10's
+ * 100 px rose is 5 m across and lands at (63.5, 26) — below and right of the outline, which is
+ * where the SelfCare plan draws it.
+ */
+function toCompass(
+  direction: SelfcareDirection | null,
+  hallWidth: number,
+  hallLength: number
+): HallCompass | null {
+  if (!direction) return null;
+
+  const position = pixelToPlanner(direction.positionX, direction.positionY, hallWidth, hallLength);
+  if (!Number.isFinite(position.x) || !Number.isFinite(position.z)) return null;
+
+  const size = numberOf(direction.image?.width, 0) / PX_PER_METRE;
+
+  return {
+    position,
+    size: size > 0 ? size : DEFAULT_COMPASS_SIZE,
+    rotation: numberOf(direction.image?.rotation, 0),
+    label: String(direction.label?.text ?? 'N').trim() || 'N',
+    labelOffset: {
+      x: numberOf(direction.label?.positionX, 0) / PX_PER_METRE,
+      z: numberOf(direction.label?.positionY, 0) / PX_PER_METRE
+    }
+  };
+}
+
+/** Used when `direction.image.width` is missing; 5 m is what every hall in the export resolves to. */
+const DEFAULT_COMPASS_SIZE = 5;
+
+/**
+ * Unwrap a SelfCare response envelope. Every endpoint replies `{ header, data }`, and the
+ * hall-layout endpoint puts a single hall in a one-element array, so both shapes are flattened
+ * to a list here rather than at each call site.
+ */
+export function unwrapSelfcareData<T>(payload: SelfcareEnvelope<T | T[]> | T | T[]): T[] {
+  const body =
+    payload && typeof payload === 'object' && 'data' in (payload as SelfcareEnvelope<T>)
+      ? (payload as SelfcareEnvelope<T | T[]>).data
+      : payload;
+
+  if (body == null) return [];
+  return (Array.isArray(body) ? body : [body]) as T[];
+}
+
+/** Import the hall-layout endpoint's response — `{ header, data: [row] }` — into planner halls. */
+export function importSelfcareResponse(
+  payload: SelfcareEnvelope<SelfcareLayoutRow | SelfcareLayoutRow[]> | SelfcareLayoutRow
+): Hall[] {
+  return unwrapSelfcareData<SelfcareLayoutRow>(payload).map(row => hallFromSelfcare(row));
+}
+
+/** Build a standalone planner hall from one SelfCare row. */
+export function hallFromSelfcare(row: SelfcareLayoutRow): Hall {
+  const imported = importSelfcareLayout(row);
+
+  return applySelfcareLayout(
+    {
+      id: imported.hallId ?? `selfcare-hall-${Date.now()}`,
+      name: imported.name ?? 'SelfCare Hall',
+      shape: 'SQUARE',
+      width: imported.width,
+      length: imported.length,
+      radius: 0
+    },
+    row
+  );
+}
+
+/**
+ * The halls of the event endpoint (`data.halls[]`), as picker entries.
+ *
+ * These carry no geometry — only `eventLayoutId` tells you whether a hall has a published plan
+ * to fetch. Sizes stay 0 until that plan is imported, so callers should treat a hall with
+ * `hasLayout: false` as unfetchable rather than as an empty room.
+ */
+export interface SelfcareHallSummary {
+  id: number | string;
+  name: string;
+  hasLayout: boolean;
+  eventLayoutId: number | null;
+  stallCount: number;
+}
+
+export function importSelfcareEventHalls(
+  payload: SelfcareEnvelope<{ halls?: SelfcareEventHall[] }> | { halls?: SelfcareEventHall[] }
+): SelfcareHallSummary[] {
+  const events = unwrapSelfcareData<{ halls?: SelfcareEventHall[] }>(payload);
+
+  return events.flatMap(event =>
+    (event?.halls ?? [])
+      .filter(h => h?.hallId != null)
+      .map(h => ({
+        id: h.hallId as number | string,
+        name: String(h.hallName ?? '').trim() || `Hall ${h.hallId}`,
+        hasLayout: h.eventLayoutId != null,
+        eventLayoutId: h.eventLayoutId ?? null,
+        stallCount: numberOf(h.stallCount, 0)
+      }))
+  );
 }
 
 /** Metres between neighbouring icons of one `helper_text` cluster. */
@@ -205,6 +387,7 @@ export function applySelfcareLayout(hall: Hall, row: SelfcareLayoutRow): Hall {
 
   return {
     ...hall,
+    ...(imported.name ? { name: imported.name } : {}),
     shape: 'SQUARE',
     width: imported.width,
     length: imported.length,
@@ -212,7 +395,9 @@ export function applySelfcareLayout(hall: Hall, row: SelfcareLayoutRow): Hall {
     blockedAreas: imported.blockedAreas,
     zones: imported.zones,
     markers: imported.markers,
-    amenities: imported.amenities
+    amenities: imported.amenities,
+    compass: imported.compass,
+    legends: imported.legends
   };
 }
 

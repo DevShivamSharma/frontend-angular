@@ -60,6 +60,10 @@ export interface Hall {
   markers?: HallMarker[] | null;
   /** Utility icons (toilets, stairs, entries) carried over from the SelfCare reference plan. */
   amenities?: HallAmenity[] | null;
+  /** North arrow of the SelfCare plan, when its row carries one. */
+  compass?: HallCompass | null;
+  /** The SelfCare legend rows, so the UI can show the plan's own key rather than a hardcoded one. */
+  legends?: HallLegend[] | null;
   rules?: Partial<LayoutRules> | null;
 }
 
@@ -91,6 +95,39 @@ export interface HallAmenity {
   /** The SelfCare caption, e.g. `Toilet (Male)`. Rendered under the icon. */
   label: string;
   position: Point;
+}
+
+/**
+ * The plan's north arrow (`direction` in the SelfCare payload).
+ *
+ * SelfCare places it outside the hall outline — for Hall 8-9-10 at (130, 47.5) m, below and to
+ * the right of a 133 x 43 m hall — so it is a scene decoration, never part of the geometry.
+ */
+export interface HallCompass {
+  position: Point;
+  /** Side of the rose in metres, from the payload's pixel `width`/`height`. */
+  size: number;
+  /** In-plane rotation in degrees, as SelfCare stores it. */
+  rotation: number;
+  /** Usually `N`. */
+  label: string;
+  /** Offset of the label from the rose centre, in metres. */
+  labelOffset: Point;
+}
+
+/**
+ * One row of the SelfCare legend.
+ *
+ * A row carries EITHER a `colorCode` (the red passage / brown NC swatches) OR `htmlContent` (the
+ * gate-numbering notes, which SelfCare ships as markup). `htmlContent` is untrusted API output:
+ * bind it only through Angular's sanitiser, never with `bypassSecurityTrustHtml`.
+ */
+export interface HallLegend {
+  label: string;
+  colorCode?: string | null;
+  htmlContent?: string | null;
+  /** SelfCare hides some rows in its printed book view. */
+  visibleInBookMode?: boolean;
 }
 
 /** A text label on the plan, e.g. a gate or foyer name. Visual only. */

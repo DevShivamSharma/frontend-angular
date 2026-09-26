@@ -23,7 +23,7 @@ import type { EditorMode, EditorOverlay, FocusTarget } from '../planner-store.se
 import { buildFreeSpace, buildPreview, buildViolations } from './editor-overlay-renderer';
 import { buildHallBoundary } from './hall-boundary-renderer';
 import { buildHallGrid } from './hall-grid-renderer';
-import { buildAmenities } from './amenities-renderer';
+import { buildAmenities, buildCompass } from './amenities-renderer';
 import { buildBlockedAreas } from './blocked-areas-renderer';
 import { disposeChildren, StallObject } from './stall3d-renderer';
 import { disposeSpriteTextures } from './text-sprite';
@@ -305,6 +305,7 @@ export class Scene3dComponent implements AfterViewInit {
       this.restrictedGroup.add(buildRestrictedZones(hall.zones ?? [], effectiveRules(hall.rules)));
       this.markerGroup.add(buildMarkers(hall.markers ?? [], hall.openings ?? []));
       this.amenityGroup.add(buildAmenities(hall.amenities ?? []));
+      this.amenityGroup.add(buildCompass(hall.compass));
       this.frameHall(hall, grid);
       return;
     }
@@ -346,6 +347,9 @@ export class Scene3dComponent implements AfterViewInit {
     }
     if (hall.amenities?.length) {
       this.amenityGroup.add(buildAmenities(hall.amenities));
+    }
+    if (hall.compass) {
+      this.amenityGroup.add(buildCompass(hall.compass));
     }
   }
 
