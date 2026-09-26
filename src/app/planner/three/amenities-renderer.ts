@@ -149,7 +149,7 @@ function buildIcon(amenity: HallAmenity): THREE.Sprite {
  * icons would go soft as soon as the camera moved in. Drawing the SVG into a canvas of this size
  * instead re-rasterises it from the vector data, so it stays crisp at any zoom.
  */
-const ICON_TEXTURE_PX = 128;
+const ICON_TEXTURE_PX = 512;
 
 /**
  * One shared load per URL: a hall repeats the same few icons several times and re-renders on
