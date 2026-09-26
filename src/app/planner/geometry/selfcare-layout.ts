@@ -82,7 +82,15 @@ export interface SelfcareExitLabel {
 
 /** `direction` — the north arrow, positioned in the same pixel space as the labels. */
 export interface SelfcareDirection {
-  image?: { url?: string; width?: number; height?: number; rotation?: number };
+  image?: {
+    url?: string;
+    width?: number;
+    height?: number;
+    rotation?: number;
+    /** Offset of the rose inside its own box. Not used: the rose is centred on `positionX/Y`. */
+    positionX?: number;
+    positionY?: number;
+  };
   label?: { text?: string; positionX?: number; positionY?: number };
   positionX?: number;
   positionY?: number;
@@ -118,6 +126,19 @@ export interface SelfcareLayoutRow {
   exit_labels?: SelfcareExitLabel[] | string | null;
   legends?: SelfcareLegend[] | string | null;
   direction?: SelfcareDirection | string | null;
+  /**
+   * Pre-drawn stall blocks. Declared because the API sends the key, but null in every response
+   * seen so far and not imported: the planner draws stalls from its own data, not from here.
+   */
+  default_stalls?: SelfcareDefaultStall[] | null;
+}
+
+/** `default_stalls[]` — a pre-drawn stall block. Carried for completeness; not consumed. */
+export interface SelfcareDefaultStall {
+  id?: number | string;
+  area?: number;
+  stallCoords?: Array<{ x: number; y: number }>;
+  borderCoords?: Array<{ x1: number; y1: number; x2: number; y2: number; isDashed?: boolean }>;
 }
 
 /** One hall of the event endpoint's `data.halls[]`. */

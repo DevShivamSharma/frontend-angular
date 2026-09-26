@@ -37,12 +37,32 @@ describe('PlannerStore', () => {
     store = TestBed.inject(PlannerStore);
   });
 
-  it('starts on the offline fallback hall with no stalls', () => {
-    // Real halls arrive from GET /api/halls; this is only what shows before that answers.
-    expect(store.halls().length).toBe(1);
-    expect(store.currentHall()?.name).toBe('Sample Hall (offline)');
-    expect(store.currentHall()?.width).toBe(40);
+  it('starts on the imported SelfCare Hall 8-9-10, with the blank hall behind it', () => {
+    // Real halls arrive from GET /api/halls; this is what shows before that answers. Hall
+    // 8-9-10 comes from the checked-in SelfCare response, so the plan is never blank on open.
+    expect(store.halls().map(h => h.name)).toEqual(['Hall 8-9-10', 'Sample Hall (offline)']);
+    expect(store.currentHall()?.name).toBe('Hall 8-9-10');
+    expect(store.currentHall()?.width).toBe(133);
+    expect(store.currentHall()?.length).toBe(43);
     expect(store.currentStalls()).toEqual([]);
+  });
+
+  it('carries the SelfCare amenities, markers and compass onto the starting hall', () => {
+    const hall = store.currentHall()!;
+
+    expect(hall.amenities?.map(a => a.kind)).toEqual([
+      'toilet-male',
+      'toilet-female',
+      'stairs',
+      'toilet-male',
+      'toilet-female',
+      'stairs',
+      'entry-up'
+    ]);
+    expect(hall.markers?.map(m => m.text)).toContain('HALL 10');
+    expect(hall.compass?.label).toBe('N');
+    // The official plan marks no compulsory passage for this hall, so the planner draws none.
+    expect(hall.zones).toEqual([]);
   });
 
   describe('loadHalls', () => {
@@ -72,7 +92,7 @@ describe('PlannerStore', () => {
       http.expectOne(`${API}/halls?standalone=true`).error(new ProgressEvent('network error'));
       await promise;
 
-      expect(store.currentHall()?.name).toBe('Sample Hall (offline)');
+      expect(store.currentHall()?.name).toBe('Hall 8-9-10');
       expect(store.hallsStatus()).toBe('unavailable');
     });
 
@@ -81,8 +101,8 @@ describe('PlannerStore', () => {
       http.expectOne(`${API}/halls?standalone=true`).flush([]);
       await promise;
 
-      expect(store.halls().length).toBe(1);
-      expect(store.currentHall()?.name).toBe('Sample Hall (offline)');
+      expect(store.halls().length).toBe(2);
+      expect(store.currentHall()?.name).toBe('Hall 8-9-10');
       expect(store.hallsStatus()).toBe('empty');
     });
 
@@ -129,7 +149,18 @@ describe('PlannerStore', () => {
     });
   });
 
+  /**
+   * The placement specs below measure against a 40 x 40 hall. The planner now opens on the
+   * imported SelfCare Hall 8-9-10 (133 x 43), so they select the blank sample hall explicitly
+   * rather than relying on whichever hall happens to be first.
+   */
+  function useSampleHall(): void {
+    store.setActiveHall('local-fallback-hall');
+  }
+
   describe('addStall', () => {
+    beforeEach(useSampleHall);
+
     it('places the first shop at the far -X/-Z corner', () => {
       const created = store.addStall({
         name: '',
@@ -216,6 +247,8 @@ describe('PlannerStore', () => {
   });
 
   describe('moveStall', () => {
+    beforeEach(useSampleHall);
+
     function addShop() {
       return store.addStall({
         name: 'A',
@@ -350,7 +383,7 @@ describe('PlannerStore', () => {
     it('zeroes width/length for a circular hall and names it by default', () => {
       const hall = store.createHall({ name: '', shape: 'CIRCLE', w: 30, l: 20, r: 9 });
 
-      expect(hall.name).toBe('Custom Hall 2');
+      expect(hall.name).toBe('Custom Hall 3');
       expect(hall.width).toBe(0);
       expect(hall.length).toBe(0);
       expect(hall.radius).toBe(9);

@@ -351,6 +351,11 @@ export class Scene3dComponent implements AfterViewInit {
     if (hall.compass) {
       this.amenityGroup.add(buildCompass(hall.compass));
     }
+
+    // Frame this hall too, not only the ones with a boundary polygon. The default camera suits
+    // a ~40 m room; an imported hall like the 133 x 43 m Hall 8-9-10 opens far off-frame without
+    // this. `frameHall` is a no-op once a hall has been framed, so it never fights the user.
+    this.frameHall(hall, grid);
   }
 
   private syncClearances(hall: Hall | undefined, show: boolean, eventType: EventType): void {

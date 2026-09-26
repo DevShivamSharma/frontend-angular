@@ -28,6 +28,8 @@ import {
   validGate,
   withinHall
 } from './geometry/planner-geometry';
+import { importSelfcareResponse } from './geometry/selfcare-layout';
+import { HALL_8_9_10_SELFCARE } from './fixtures/hall-8-9-10.selfcare';
 import { buildApiPayload, LayoutApiService } from './layout-api.service';
 import { EventType, Hall, HallShape, StallType } from './models/hall.model';
 import { LayoutSummary, ServerViolation } from './models/layout.model';
@@ -112,16 +114,27 @@ const FALLBACK_HALL_ID = 'local-fallback-hall';
 /**
  * The halls shown before `GET /api/halls` answers, and the fallback if it never does.
  *
- * The React app started from two invented halls (App.js:480). The planner now loads real halls
- * from the backend instead; this single local hall exists only so the 3D view is never blank
- * while that request is in flight, or if the API is unreachable during a demo. It is named so
- * that nobody mistakes it for real master data.
+ * First is Hall 8-9-10, imported from the checked-in SelfCare response
+ * (`fixtures/hall-8-9-10.selfcare.ts`) — a real 133 x 43 m hall with its outline, gate labels,
+ * amenity icons and north arrow, exactly as the official plan draws them. It is what the
+ * planner opens on, so the SelfCare geometry is visible without a backend.
+ *
+ * Second is the blank 40 x 40 room the React app started from (App.js:480), kept so there is
+ * still an empty hall to draw in. It is named so nobody mistakes it for real master data.
  */
 function fallbackHalls(): Hall[] {
   return [
+    ...importSelfcareResponse(HALL_8_9_10_SELFCARE),
     { id: FALLBACK_HALL_ID, name: 'Sample Hall (offline)', shape: 'SQUARE', width: 40, length: 40, radius: 0 }
   ];
 }
+
+/**
+ * Ids of the starting halls. They stand in for real master data, so `loadHalls()` drops all of
+ * them once the backend answers — otherwise the imported Hall 8-9-10 would sit alongside the
+ * real list and keep the selection, hiding the halls the user actually asked for.
+ */
+const PLACEHOLDER_HALL_IDS = new Set(fallbackHalls().map(h => String(h.id)));
 
 /**
  * All planner state and every state transition, ported from the React
@@ -654,8 +667,11 @@ export class PlannerStore {
       }
 
       const isNew = (h: Hall) => !halls.some(x => String(x.id) === String(h.id));
-      this.halls.update(prev => [...halls, ...prev.filter(h => h.id !== FALLBACK_HALL_ID && isNew(h))]);
-      if (String(this.activeHallId()) === FALLBACK_HALL_ID) {
+      this.halls.update(prev => [
+        ...halls,
+        ...prev.filter(h => !PLACEHOLDER_HALL_IDS.has(String(h.id)) && isNew(h))
+      ]);
+      if (PLACEHOLDER_HALL_IDS.has(String(this.activeHallId()))) {
         this.activeHallId.set(halls[0].id);
         this.selectedStallId.set(null);
       }
