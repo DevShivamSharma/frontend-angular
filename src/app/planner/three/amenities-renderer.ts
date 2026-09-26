@@ -4,8 +4,14 @@ import { iconUrlFor } from '../geometry/selfcare-layout';
 import { HallAmenity, HallCompass } from '../models/hall.model';
 import { makeTextSprite } from './text-sprite';
 
-/** Side of an icon in metres. Large enough to read when the whole 133 m hall is in frame. */
-const ICON_SIZE = 3;
+/**
+ * Side of an icon in metres.
+ *
+ * 4.5 rather than 3: at 3 m the chips were legible only when zoomed well in, and their captions
+ * collided with the neighbouring icon's. Kept just under `AMENITY_SPACING` so a cluster of three
+ * reads as three separate chips rather than one blurred strip.
+ */
+const ICON_SIZE = 4.5;
 
 /** Height above the floor. Above the zone fills (0.14) and below the marker text (1.6). */
 const ICON_Y = 0.9;
@@ -43,10 +49,10 @@ export function buildAmenities(amenities: HallAmenity[]): THREE.Group {
     const caption = makeTextSprite([amenity.label], {
       color: '#0f172a',
       background: 'rgba(255,255,255,0.92)',
-      lineHeight: 0.62,
+      lineHeight: 1,
       bold: true
     });
-    caption.position.set(amenity.position.x, ICON_Y, amenity.position.z + ICON_SIZE * 0.75);
+    caption.position.set(amenity.position.x, ICON_Y, amenity.position.z + ICON_SIZE * 0.72);
     group.add(caption);
   }
 

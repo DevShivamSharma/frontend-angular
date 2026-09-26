@@ -399,8 +399,14 @@ export function importSelfcareEventHalls(
   );
 }
 
-/** Metres between neighbouring icons of one `helper_text` cluster. */
-const AMENITY_SPACING = 2.5;
+/**
+ * Metres between neighbouring icons of one `helper_text` cluster.
+ *
+ * SelfCare gives one position for a whole row of icons, so this is the only placement value not
+ * taken from the data. It must stay above the renderer's `ICON_SIZE` or a cluster's chips
+ * overlap and their captions collide. The cluster stays centred on the position SelfCare gives.
+ */
+const AMENITY_SPACING = 5;
 
 /** Apply a SelfCare row to a hall, replacing its geometry. The hall's id and name are kept. */
 export function applySelfcareLayout(hall: Hall, row: SelfcareLayoutRow): Hall {
