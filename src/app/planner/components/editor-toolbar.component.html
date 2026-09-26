@@ -1,5 +1,6 @@
 <div class="editor-toolbar" role="toolbar" aria-label="Layout editor">
-  <div class="toolbar-group" role="group" aria-label="Mode">
+  <!-- Select and Draw are mutually exclusive, so they sit in one track and look it. -->
+  <div class="toolbar-group tool-track" role="group" aria-label="Mode">
     <button
       type="button"
       class="tool-btn"
@@ -28,7 +29,7 @@
     <span class="toolbar-label" aria-hidden="true">Size</span>
     <button
       type="button"
-      class="tool-btn"
+      class="tool-btn is-chip"
       [class.is-active]="mode() === 'draw' && selectedStallTypeId() === null"
       [attr.aria-pressed]="mode() === 'draw' && selectedStallTypeId() === null"
       title="Drag any size on the grid"
@@ -39,7 +40,7 @@
     @for (type of stallTypes(); track type.id) {
       <button
         type="button"
-        class="tool-btn"
+        class="tool-btn is-chip"
         [class.is-active]="mode() === 'draw' && selectedStallTypeId() === type.id"
         [attr.aria-pressed]="mode() === 'draw' && selectedStallTypeId() === type.id"
         [title]="type.width + ' × ' + type.height + ' m — drag sideways or up/down to orient'"

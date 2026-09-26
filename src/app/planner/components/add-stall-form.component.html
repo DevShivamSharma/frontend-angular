@@ -27,24 +27,58 @@
     </label>
   </div>
 
-  <label class="field-label" for="new-stall-color">Color</label>
-  <input id="new-stall-color" class="color-input" type="color" formControlName="color" />
+  <!-- The three numbers and the colour, drawn once, so the shop is checked before it is added. -->
+  <div class="footprint">
+    <span class="footprint-chip" [style.background]="preview().color"></span>
+    <span>
+      <span class="footprint-title">{{ preview().width }} × {{ preview().length }} m</span>
+      <span class="footprint-meta">{{ preview().area }} m² · {{ preview().height }} m tall</span>
+    </span>
+  </div>
 
-  <span class="field-label" id="new-stall-gate-label">Customer Entry / Open Side</span>
-  <div class="grid-2" role="group" aria-labelledby="new-stall-gate-label">
-    @for (side of gateSides; track side[0]) {
+  <span class="field-label" id="new-stall-color-label">Color</span>
+  <div class="swatch-row" role="group" aria-labelledby="new-stall-color-label">
+    @for (swatch of palette; track swatch) {
       <button
         type="button"
-        class="btn-gate"
-        [class.is-selected]="gateSide() === side[0]"
-        [attr.aria-pressed]="gateSide() === side[0]"
-        (click)="setGateSide(side[0])"
-      >
-        <app-icon [name]="side[2]" [size]="14" />
-        {{ side[1] }}
-      </button>
+        class="swatch"
+        [class.is-selected]="preview().color === swatch"
+        [style.background]="swatch"
+        [attr.aria-label]="swatch"
+        [attr.aria-pressed]="preview().color === swatch"
+        (click)="setColor(swatch)"
+      ></button>
+    }
+    <span class="swatch-custom" [style.background]="preview().color">
+      <input id="new-stall-color" type="color" formControlName="color" aria-label="Custom color" />
+      <app-icon name="plus" [size]="12" />
+    </span>
+  </div>
+
+  <span class="field-label" id="new-stall-gate-label">Customer Entry / Open Side</span>
+  <div class="gate-compass" role="group" aria-labelledby="new-stall-gate-label">
+    @for (cell of gateCompass; track $index) {
+      @if (cell.side; as side) {
+        <button
+          type="button"
+          class="btn-gate"
+          [class.is-selected]="gateSide() === side"
+          [attr.aria-pressed]="gateSide() === side"
+          [title]="cell.label"
+          [attr.aria-label]="cell.label"
+          (click)="setGateSide(side)"
+        >
+          <app-icon [name]="cell.icon!" [size]="12" />
+          {{ cell.short }}
+        </button>
+      } @else if (cell.centre) {
+        <span class="gate-center" aria-hidden="true">STALL</span>
+      } @else {
+        <span></span>
+      }
     }
   </div>
+  <div class="gate-caption">{{ gateLabel() }} faces the aisle</div>
 
   <button type="button" class="btn-success" (click)="addStall()">
     <app-icon name="plus" [size]="16" />

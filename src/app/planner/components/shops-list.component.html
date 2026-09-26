@@ -17,37 +17,86 @@
 
   <!-- Kept while a query is set, so a filter can never be left applied with no box to clear it. -->
   @if (currentStalls().length > 6 || query()) {
-    <label class="search-field">
-      <app-icon name="search" [size]="14" />
-      <span class="sr-only">Search shops</span>
-      <input
-        type="search"
-        placeholder="Search by number or name"
-        [value]="query()"
-        (input)="query.set($any($event.target).value)"
-      />
-    </label>
+    <div class="list-tools">
+      <label class="search-field">
+        <app-icon name="search" [size]="14" />
+        <span class="sr-only">Search shops</span>
+        <input
+          type="search"
+          placeholder="Search by number or name"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+        />
+      </label>
+      <label>
+        <span class="sr-only">Sort shops</span>
+        <select class="control sort-select" [value]="sort()" (change)="setSort($any($event.target).value)">
+          <option value="number">By number</option>
+          <option value="name">By name</option>
+          <option value="size">By size</option>
+        </select>
+      </label>
+    </div>
   }
 
   <div class="stall-list">
     @for (stall of visibleStalls(); track stall.id) {
-      <button
-        type="button"
-        class="stall-row"
+      <!--
+        The row is a container: one button selects, the rest act on that stall. They used to be
+        nested inside the select button, which is invalid and unreachable by keyboard.
+      -->
+      <div
+        class="stall-row-shell"
         [class.is-selected]="isSelected(stall.id)"
         [class.is-cancelled]="stall.status === 'CANCELLED'"
-        [attr.aria-pressed]="isSelected(stall.id)"
-        (click)="select(stall.id)"
       >
-        <span class="stall-chip">{{ stall.stallNumber ?? 'NEW' }}</span>
-        <span class="stall-row-body">
-          <span class="stall-row-name">{{ stall.name || 'Shop' }}</span>
-          <span class="stall-row-meta">{{ stall.width }} × {{ stall.length }} m · Open {{ openSidesLabel(stall) }}</span>
+        <button
+          type="button"
+          class="stall-row"
+          [attr.aria-pressed]="isSelected(stall.id)"
+          (click)="select(stall.id)"
+        >
+          <span class="stall-chip">{{ stall.stallNumber ?? 'NEW' }}</span>
+          <span class="stall-row-body">
+            <span class="stall-row-name">{{ stall.name || 'Shop' }}</span>
+            <span class="stall-row-meta">{{ stall.width }} × {{ stall.length }} m · Open {{ openSidesLabel(stall) }}</span>
+          </span>
+          <span class="status-pill" [attr.data-status]="stall.status">{{ stall.status }}</span>
+        </button>
+
+        <!-- Hidden until the row is hovered, focused or selected: three icons on every row
+             turned the list into a wall of buttons. -->
+        <span class="stall-row-actions">
+          <button
+            type="button"
+            class="icon-btn"
+            [attr.aria-label]="'Rotate ' + (stall.stallNumber ?? stall.name)"
+            title="Turn a quarter turn"
+            (click)="rotate(stall.id)"
+          >
+            <app-icon name="rotate" [size]="13" />
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            [attr.aria-label]="'Duplicate ' + (stall.stallNumber ?? stall.name)"
+            title="Copy into the first free spot"
+            (click)="duplicate(stall.id)"
+          >
+            <app-icon name="copy" [size]="13" />
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            [disabled]="stall.status === 'CANCELLED'"
+            [attr.aria-label]="(stall.stallNumber ? 'Cancel ' : 'Remove ') + (stall.stallNumber ?? stall.name)"
+            [title]="stall.stallNumber ? 'Cancel stall (keeps its number)' : 'Remove shop'"
+            (click)="remove(stall.id)"
+          >
+            <app-icon name="trash" [size]="13" />
+          </button>
         </span>
-        <span class="status-dot" [attr.data-status]="stall.status" [title]="stall.status">
-          <span class="sr-only">{{ stall.status }}</span>
-        </span>
-      </button>
+      </div>
     } @empty {
       @if (query()) {
         <div class="empty-state">

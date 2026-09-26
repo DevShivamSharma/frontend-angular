@@ -84,6 +84,24 @@ export function buildViolations(overlay: EditorOverlay): THREE.Group {
 }
 
 /**
+ * A plan from the Assist tab: one translucent box per proposed stall, blue where it fits and
+ * red where it does not, so the whole plan can be looked at before any of it is applied.
+ */
+export function buildProposals(
+  proposals: ReadonlyArray<{ footprint: Footprint; valid: boolean }> | null
+): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'proposals';
+  if (!proposals?.length) return group;
+
+  for (const proposal of proposals) {
+    group.add(draftBox(proposal.footprint, proposal.valid ? SUGGESTION : INVALID, 0.24));
+  }
+
+  return group;
+}
+
+/**
  * "Show free space": every 1-cell square covered by at least one valid placement of the
  * selected size, drawn as one instanced mesh (thousands of cells, one draw call).
  */

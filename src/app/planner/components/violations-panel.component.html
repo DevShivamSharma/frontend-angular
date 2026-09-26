@@ -1,66 +1,67 @@
 @if (section() === 'alerts') {
   @if (rejection(); as r) {
-    <section class="card violation-card" role="alert" aria-live="assertive">
-      <div class="panel-header">
-        <h3 class="panel-title">
-          <app-icon class="icon-slot" name="alert" />
-          {{ r.title }}
-        </h3>
-        <button type="button" class="btn-mini" (click)="dismiss()">Dismiss</button>
+    <div class="toast is-danger" role="alert" aria-live="assertive">
+      <div class="toast-header">
+        <app-icon name="alert" [size]="15" />
+        <span class="toast-title">{{ r.title }}</span>
+        <button type="button" class="icon-btn" aria-label="Dismiss" (click)="dismiss()">
+          <app-icon name="x" [size]="13" />
+        </button>
       </div>
-      <div class="panel-hint">
-        Requested {{ r.footprint.width }} × {{ r.footprint.length }} m at X {{ r.footprint.posX }}, Z {{ r.footprint.posZ }}.
-        Nothing was created or moved.
-      </div>
-
-      @for (v of r.violations; track $index) {
-        <div class="violation-row">
-          <span class="violation-code">{{ v.code }}</span>
-          <span class="violation-ref">{{ v.ruleRef }}</span>
-          <div class="violation-message">{{ v.message }}</div>
-          @if (v.geometry.length) {
-            <button type="button" class="btn-mini" (click)="locate(v, r.footprint)">Locate</button>
-          }
-        </div>
-      }
-
-      @if (r.suggestion; as s) {
-        <div class="suggestion-row">
-          Nearest valid spot for {{ s.width }} × {{ s.length }} m: X {{ s.posX }}, Z {{ s.posZ }}
-          <div class="row">
-            <button type="button" class="btn-primary" (click)="placeSuggestion()">
-              <app-icon name="check" [size]="14" />
-              Place here
-            </button>
-            <button type="button" class="btn-secondary" (click)="showSuggestion(s)">
-              <app-icon name="eye" [size]="14" />
-              Show
-            </button>
+      <div class="toast-body">
+        @for (v of r.violations; track $index) {
+          <div>
+            <span class="toast-code">{{ v.code }}</span>
+            {{ v.message }}
           </div>
+        }
+        <div class="panel-hint gap-top">
+          {{ r.footprint.width }} × {{ r.footprint.length }} m at X {{ r.footprint.posX }}, Z
+          {{ r.footprint.posZ }} — nothing was created or moved.
         </div>
-      }
-    </section>
+      </div>
+
+      <div class="toast-actions">
+        @if (r.suggestion; as s) {
+          <button type="button" class="btn-mini is-blue" (click)="placeSuggestion()">
+            <app-icon name="check" [size]="12" />
+            Place at X {{ s.posX }}, Z {{ s.posZ }}
+          </button>
+          <button type="button" class="btn-mini" (click)="showSuggestion(s)">
+            <app-icon name="eye" [size]="12" />
+            Show
+          </button>
+        }
+        @for (v of r.violations; track $index) {
+          @if (v.geometry.length) {
+            <button type="button" class="btn-mini" (click)="locate(v, r.footprint)">Locate {{ v.code }}</button>
+          }
+        }
+      </div>
+    </div>
   }
 
   @if (serverViolations().length) {
-    <section class="card violation-card" role="alert">
-      <div class="panel-header">
-        <h3 class="panel-title">
-          <app-icon class="icon-slot" name="alert" />
-          Rejected by the server
-        </h3>
-        <button type="button" class="btn-mini" (click)="dismiss()">Dismiss</button>
+    <div class="toast is-danger" role="alert">
+      <div class="toast-header">
+        <app-icon name="alert" [size]="15" />
+        <span class="toast-title">Rejected by the server</span>
+        <button type="button" class="icon-btn" aria-label="Dismiss" (click)="dismiss()">
+          <app-icon name="x" [size]="13" />
+        </button>
       </div>
-      <div class="panel-hint">The backend re-checked every new or moved stall and refused the save.</div>
-      @for (v of serverViolations(); track $index) {
-        <div class="violation-row">
-          <span class="violation-code">{{ v.code }}</span>
-          <span class="violation-ref">{{ stallLabel(v) }} · {{ v.ruleRef }}</span>
-          <div class="violation-message">{{ v.message }}</div>
-          <button type="button" class="btn-mini" (click)="locateServer(v)">Locate</button>
-        </div>
-      }
-    </section>
+      <div class="toast-body">
+        The backend re-checked every new or moved stall and refused the save.
+        @for (v of serverViolations(); track $index) {
+          <div class="violation-row">
+            <span class="violation-code">{{ v.code }}</span>
+            <span class="violation-ref">{{ stallLabel(v) }} · {{ v.ruleRef }}</span>
+            <div class="violation-message">{{ v.message }}</div>
+            <button type="button" class="btn-mini" (click)="locateServer(v)">Locate</button>
+          </div>
+        }
+      </div>
+    </div>
   }
 }
 

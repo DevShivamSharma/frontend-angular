@@ -758,4 +758,54 @@ describe('PlannerStore', () => {
       expect(store.audit()[0].violations[0].code).toBe('PERIPHERAL_CLEARANCE');
     });
   });
+  describe('assisted layout', () => {
+    it('keeps the stalls of a plan that fit and rejects the ones that do not', () => {
+      const reviewed = store.reviewPlan([
+        { name: 'A', width: 4, length: 4, posX: -10, posZ: -10 },
+        { name: 'B', width: 4, length: 4, posX: -10, posZ: -10 }, // on top of A
+        { name: 'C', width: 4, length: 4, posX: 400, posZ: 0 } // outside the 40 x 40 hall
+      ]);
+
+      expect(reviewed.map(p => p.valid)).toEqual([true, false, false]);
+      expect(reviewed[1].violations.some(v => v.code === 'STALL_OVERLAP')).toBeTrue();
+      // Reviewing changes nothing: the plan is only drawn until it is applied.
+      expect(store.currentStalls()).toEqual([]);
+    });
+
+    it('creates only the stalls that fit when the plan is applied', () => {
+      store.reviewPlan([
+        { name: 'A', width: 4, length: 4, posX: -10, posZ: -10 },
+        { name: 'B', width: 4, length: 4, posX: -10, posZ: -10 }
+      ]);
+
+      expect(store.applyPlan()).toBe(1);
+      expect(store.currentStalls().length).toBe(1);
+      expect(store.currentStalls()[0].name).toBe('A');
+      expect(store.proposals()).toBeNull();
+    });
+  });
+
+  describe('rotate and duplicate', () => {
+    beforeEach(() => {
+      store.stalls.set([
+        { id: 's1', hallId: store.activeHallId(), name: 'A', width: 6, length: 2, height: 4, posX: 0, posZ: 0, color: '#3498db', gateSide: 'FRONT', openSides: ['FRONT'], stallNumber: null, status: 'AVAILABLE', stallTypeId: null }
+      ]);
+    });
+
+    it('swaps the sides of a stall and turns its opening with it', () => {
+      store.rotateStall('s1');
+      const stall = store.currentStalls()[0];
+      expect([stall.width, stall.length]).toEqual([2, 6]);
+      expect(stall.openSides).toEqual(['RIGHT']);
+      expect(stall.gateSide).toBe('RIGHT');
+    });
+
+    it('places a copy somewhere else, never on the original', () => {
+      store.duplicateStall('s1');
+      const [first, copy] = store.currentStalls();
+      expect(store.currentStalls().length).toBe(2);
+      expect(copy.width).toBe(first.width);
+      expect(copy.posX === first.posX && copy.posZ === first.posZ).toBeFalse();
+    });
+  });
 });

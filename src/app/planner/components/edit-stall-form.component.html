@@ -37,18 +37,26 @@
 
     <span class="field-label" id="edit-stall-gate-label">Open Sides</span>
     <div class="panel-hint">Click to toggle. At least one side stays open.</div>
-    <div class="grid-2" role="group" aria-labelledby="edit-stall-gate-label">
-      @for (side of gateSides; track side[0]) {
-        <button
-          type="button"
-          class="btn-gate"
-          [class.is-selected]="stall.openSides.includes(side[0])"
-          [attr.aria-pressed]="stall.openSides.includes(side[0])"
-          (click)="toggleGateSide(side[0])"
-        >
-          <app-icon [name]="side[2]" [size]="14" />
-          {{ side[1] }}
-        </button>
+    <div class="gate-compass" role="group" aria-labelledby="edit-stall-gate-label">
+      @for (cell of gateCompass; track $index) {
+        @if (cell.side; as side) {
+          <button
+            type="button"
+            class="btn-gate"
+            [class.is-selected]="stall.openSides.includes(side)"
+            [attr.aria-pressed]="stall.openSides.includes(side)"
+            [title]="cell.label"
+            [attr.aria-label]="cell.label"
+            (click)="toggleGateSide(side)"
+          >
+            <app-icon [name]="cell.icon!" [size]="12" />
+            {{ cell.short }}
+          </button>
+        } @else if (cell.centre) {
+          <span class="gate-center" aria-hidden="true">STALL</span>
+        } @else {
+          <span></span>
+        }
       }
     </div>
 

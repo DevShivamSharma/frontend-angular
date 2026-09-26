@@ -15,12 +15,12 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { GridSystem } from '../geometry/grid-system';
-import { effectiveRules, Point } from '../geometry/placement-rules';
+import { effectiveRules, Point, Rect } from '../geometry/placement-rules';
 import { hallSize } from '../geometry/planner-geometry';
 import { EventType, Hall } from '../models/hall.model';
 import { GateSide, Stall } from '../models/stall.model';
 import type { EditorMode, EditorOverlay, FocusTarget } from '../planner-store.service';
-import { buildFreeSpace, buildPreview, buildViolations } from './editor-overlay-renderer';
+import { buildFreeSpace, buildPreview, buildProposals, buildViolations } from './editor-overlay-renderer';
 import { buildHallBoundary } from './hall-boundary-renderer';
 import { buildHallGrid } from './hall-grid-renderer';
 import { buildAmenities, buildCompass, updateAmenityScales } from './amenities-renderer';
@@ -40,6 +40,15 @@ export interface StallMove {
 export interface StallOpenSide {
   id: string | number;
   side: GateSide;
+}
+
+/**
+ * A camera command from the view dock. `seq` makes a repeat of the same command
+ * distinct, the way `FocusTarget` does for "Locate".
+ */
+export interface ViewCommand {
+  kind: 'reset' | 'fit' | 'top';
+  seq: number;
 }
 
 /** Drag must exceed this before it counts as a move. App.js:167. */
@@ -71,6 +80,8 @@ export class Scene3dComponent implements AfterViewInit {
   readonly showClearances = input(true);
   readonly eventType = input<EventType>('B2B');
   readonly focusTarget = input<FocusTarget | null>(null);
+  /** Reset / fit / top-down, from the view dock over the stage. */
+  readonly viewCommand = input<ViewCommand | null>(null);
 
   readonly selectStall = output<string | number | null>();
   readonly moveStall = output<StallMove>();
@@ -199,6 +210,14 @@ export class Scene3dComponent implements AfterViewInit {
       const target = this.focusTarget();
       if (!this.ready || !target) return;
       this.focusOn(target);
+    });
+
+    // View dock: put the camera back somewhere useful.
+    effect(() => {
+      const command = this.viewCommand();
+      const hall = this.hall();
+      if (!this.ready || !command || !hall) return;
+      this.applyView(command, hall);
     });
 
     // Leaving draw mode ends any drag in progress. Esc can do that mid-drag, while pointerdown
@@ -373,6 +392,7 @@ export class Scene3dComponent implements AfterViewInit {
     if (!overlay || !hall) return;
 
     this.previewGroup.add(buildPreview(overlay));
+    this.previewGroup.add(buildProposals(overlay.proposals));
     this.violationGroup.add(buildViolations(overlay));
     this.freeSpaceGroup.add(buildFreeSpace(overlay.freeSpace, GridSystem.forHall(hall).cellSize));
   }
@@ -389,20 +409,44 @@ export class Scene3dComponent implements AfterViewInit {
     const { rect } = target;
     const cx = (rect.minX + rect.maxX) / 2;
     const cz = (rect.minZ + rect.maxZ) / 2;
-    // Distance at which the area spans roughly `fill` of the view, in whichever direction is
-    // tighter: a long hall like Hall 8-9-10 (129 x 41 m) is limited by the width, not the height.
-    const vHalf = THREE.MathUtils.degToRad(this.camera.fov) / 2;
-    const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
-    const width = Math.max(rect.maxX - rect.minX, 6);
-    const depth = Math.max(rect.maxZ - rect.minZ, 6);
-    const distance = Math.min(
-      this.controls.maxDistance,
-      Math.max(width / (2 * Math.tan(hHalf)), depth / (2 * Math.tan(vHalf))) / fill
-    );
+    const distance = this.frameDistance(rect, fill);
 
     this.controls.target.set(cx, 0, cz);
     this.camera.position.set(cx, distance * 0.82, cz + distance * 0.58);
     this.controls.update();
+  }
+
+  /**
+   * Distance at which `rect` spans roughly `fill` of the view, in whichever direction is
+   * tighter: a long hall like Hall 8-9-10 (129 x 41 m) is limited by the width, not the height.
+   */
+  private frameDistance(rect: Rect, fill: number): number {
+    const vHalf = THREE.MathUtils.degToRad(this.camera.fov) / 2;
+    const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
+    const width = Math.max(rect.maxX - rect.minX, 6);
+    const depth = Math.max(rect.maxZ - rect.minZ, 6);
+    return Math.min(
+      this.controls.maxDistance,
+      Math.max(width / (2 * Math.tan(hHalf)), depth / (2 * Math.tan(vHalf))) / fill
+    );
+  }
+
+  /** The view dock. Frames the whole hall, the same way a newly opened hall is framed. */
+  private applyView(command: ViewCommand, hall: Hall): void {
+    const rect = GridSystem.forHall(hall).bounds;
+
+    if (command.kind === 'top') {
+      const cx = (rect.minX + rect.maxX) / 2;
+      const cz = (rect.minZ + rect.maxZ) / 2;
+      this.controls.target.set(cx, 0, cz);
+      // Not exactly overhead: straight down leaves the camera's up vector undefined and
+      // OrbitControls flips the view on the next drag.
+      this.camera.position.set(cx, this.frameDistance(rect, 0.95), cz + 0.01);
+      this.controls.update();
+      return;
+    }
+
+    this.focusOn({ rect, seq: command.seq }, command.kind === 'fit' ? 0.95 : 0.75);
   }
 
   private syncStalls(

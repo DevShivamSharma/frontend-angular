@@ -23,11 +23,12 @@ import { SavedLayoutsPanelComponent } from './components/saved-layouts-panel.com
 import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
+import { AssistPanelComponent } from './components/assist-panel.component';
 import { PlannerStore } from './planner-store.service';
-import { Scene3dComponent, StallMove, StallOpenSide } from './three/scene3d.component';
+import { Scene3dComponent, StallMove, StallOpenSide, ViewCommand } from './three/scene3d.component';
 
 /** Sidebar sections. UI only: which group of panels is visible. */
-export type SidebarTab = 'stalls' | 'layouts' | 'hall' | 'rules';
+export type SidebarTab = 'stalls' | 'assist' | 'layouts' | 'hall' | 'rules';
 
 interface SidebarTabView {
   id: SidebarTab;
@@ -38,7 +39,7 @@ interface SidebarTabView {
   warn: boolean;
 }
 
-const TAB_ORDER: readonly SidebarTab[] = ['stalls', 'layouts', 'hall', 'rules'];
+const TAB_ORDER: readonly SidebarTab[] = ['stalls', 'assist', 'layouts', 'hall', 'rules'];
 
 /** Same breakpoint as the stacked layout in planner-page.component.css. */
 const COMPACT_QUERY = '(max-width: 900px)';
@@ -63,6 +64,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
     WorkingHallPanelComponent,
     CreateHallFormComponent,
     AddStallFormComponent,
+    AssistPanelComponent,
     EditStallFormComponent,
     ShopsListComponent,
     SavedLayoutsPanelComponent,
@@ -132,14 +134,48 @@ export class PlannerPageComponent implements OnInit {
   private readonly injector = inject(Injector);
 
   readonly tabs = computed<SidebarTabView[]>(() => {
-    const issues = this.store.audit().reduce((n, e) => n + e.violations.length, 0);
+    const issues = this.issueCount();
+    // A badge reading "0" is noise on every tab of an empty hall: no badge says the same thing.
+    const badge = (n: number) => (n > 0 ? n : null);
+
     return [
-      { id: 'stalls', label: 'Stalls', icon: 'store', count: this.currentStalls().length, warn: false },
-      { id: 'layouts', label: 'Layouts', icon: 'save', count: this.store.savedLayouts().length, warn: false },
+      { id: 'stalls', label: 'Stalls', icon: 'store', count: badge(this.currentStalls().length), warn: false },
+      { id: 'assist', label: 'Assist', icon: 'sparkles', count: null, warn: false },
+      { id: 'layouts', label: 'Layouts', icon: 'save', count: badge(this.store.savedLayouts().length), warn: false },
       { id: 'hall', label: 'Hall', icon: 'building', count: null, warn: false },
-      { id: 'rules', label: 'Rules', icon: 'shield', count: this.ruleDriven() ? issues : null, warn: issues > 0 }
+      { id: 'rules', label: 'Rules', icon: 'shield', count: this.ruleDriven() ? badge(issues) : null, warn: issues > 0 }
     ];
   });
+
+  private readonly issueCount = computed(() =>
+    this.store.audit().reduce((n, e) => n + e.violations.length, 0)
+  );
+
+  /**
+   * The header totals. Cancelled stalls keep their number but free their area, so they count
+   * as shops and not as occupied floor.
+   */
+  readonly stats = computed(() => {
+    const hall = this.currentHall();
+    const used = this.store
+      .activeStalls()
+      .reduce((total, stall) => total + stall.width * stall.length, 0);
+    const floor = hall
+      ? hall.shape === 'CIRCLE'
+        ? Math.PI * hall.radius * hall.radius
+        : hall.width * hall.length
+      : 0;
+
+    return {
+      shops: this.currentStalls().length,
+      area: Math.round(used),
+      occupancy: floor > 0 ? Math.round((used / floor) * 100) : 0,
+      issues: this.ruleDriven() ? this.issueCount() : 0
+    };
+  });
+
+  /** Latest view-dock command. The counter makes pressing the same button twice take effect. */
+  readonly viewCommand = signal<ViewCommand | null>(null);
 
   constructor() {
     // Selecting a stall (in the list or the 3D view) brings its editor into view: the Stalls
@@ -211,6 +247,10 @@ export class PlannerPageComponent implements OnInit {
 
   dismissError(): void {
     this.store.dismissError();
+  }
+
+  setView(kind: ViewCommand['kind']): void {
+    this.viewCommand.update(previous => ({ kind, seq: (previous?.seq ?? 0) + 1 }));
   }
 
   onHallInfoToggle(event: Event): void {

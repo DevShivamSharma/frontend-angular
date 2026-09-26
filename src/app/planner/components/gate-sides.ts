@@ -18,6 +18,42 @@ export const GATE_SIDES: ReadonlyArray<readonly [GateSide, string, IconName]> = 
   ['RIGHT', 'Right (+X)', 'arrow-right']
 ];
 
+/** One cell of the 3x3 compass. `side` null is an empty corner or the stall in the middle. */
+export interface GateCompassCell {
+  side: GateSide | null;
+  /** Short label for the button; the axis stays in `title`. */
+  short: string;
+  /** Full label, e.g. "Front (+Z)". */
+  label: string;
+  icon: IconName | null;
+  centre: boolean;
+}
+
+const EMPTY: GateCompassCell = { side: null, short: '', label: '', icon: null, centre: false };
+
+function cell(side: GateSide): GateCompassCell {
+  const [, label, icon] = GATE_SIDES.find(entry => entry[0] === side)!;
+  return { side, short: label.replace(/\s*\(.*\)$/, ''), label, icon, centre: false };
+}
+
+/**
+ * The same four sides, laid out where they actually are (row-major).
+ *
+ * As a 2x2 grid the buttons were in no particular place, so picking "the left side" meant
+ * reading all four labels. On a compass it is a pointing task instead of a reading one.
+ */
+export const GATE_COMPASS: ReadonlyArray<GateCompassCell> = [
+  EMPTY,
+  cell('FRONT'),
+  EMPTY,
+  cell('LEFT'),
+  { ...EMPTY, centre: true },
+  cell('RIGHT'),
+  EMPTY,
+  cell('BACK'),
+  EMPTY
+];
+
 /** A stall's open sides for display, e.g. "Front, Left". Falls back to the gate side. */
 export function openSidesLabel(stall: Pick<Stall, 'openSides' | 'gateSide'>): string {
   const sides = stall.openSides?.length ? stall.openSides : [stall.gateSide];

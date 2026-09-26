@@ -122,7 +122,7 @@
   margin-inline: auto;
 }
 
-/* Everything along the bottom edge: selection summary and drag hint. */
+/* Everything along the bottom edge: scale bar, selection summary and drag hint. */
 .stage-bottom {
   position: absolute;
   left: var(--space-3);
@@ -133,6 +133,21 @@
   gap: var(--space-3);
   pointer-events: none;
   z-index: 2;
+}
+
+.stage-bottom > * {
+  pointer-events: auto;
+}
+
+/* Reference for the grid, so it keeps its place at the left edge. */
+.stage-bottom > .hud-scale {
+  flex: none;
+  pointer-events: none;
+}
+
+/* Centred in whatever the scale bar leaves. */
+.stage-bottom > .hud-selection {
+  margin-inline: auto;
 }
 
 /*

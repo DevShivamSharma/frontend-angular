@@ -3,7 +3,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { num } from '../geometry/planner-geometry';
-import { GATE_SIDES } from './gate-sides';
+import { GATE_COMPASS, GATE_SIDES } from './gate-sides';
 import { IconComponent } from './icon.component';
 import { GateSide, Stall } from '../models/stall.model';
 import { PlannerStore } from '../planner-store.service';
@@ -26,6 +26,7 @@ export class EditStallFormComponent {
   private readonly fb = inject(FormBuilder);
 
   readonly gateSides = GATE_SIDES;
+  readonly gateCompass = GATE_COMPASS;
   readonly selectedStall = this.store.selectedStall;
 
   readonly form = this.fb.nonNullable.group({

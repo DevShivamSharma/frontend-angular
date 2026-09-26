@@ -93,6 +93,31 @@ export interface EditorOverlay {
   highlight: ViolationGeometry[];
   /** Passage width drawn as a halo around the draft or the stall being moved. */
   passageWidth: number | null;
+  /** A plan from the Assist tab, shown as outlines until it is applied. */
+  proposals: ReadonlyArray<{ footprint: Footprint; valid: boolean }> | null;
+}
+
+/** One stall of a proposed plan, with the result of checking it against this hall. */
+export interface ProposedStall {
+  footprint: Footprint;
+  name: string;
+  height: number;
+  color: string;
+  openSides: GateSide[];
+  valid: boolean;
+  violations: Violation[];
+}
+
+/** A stall as the assistant returns it, before it has been checked against anything. */
+export interface PlannedStall {
+  name?: string;
+  width: number;
+  length: number;
+  height?: number;
+  posX: number;
+  posZ: number;
+  color?: string;
+  openSides?: GateSide[];
 }
 
 /**
@@ -108,6 +133,14 @@ export type ListStatus = 'loading' | 'ready' | 'error';
 const ERROR_TIMEOUT_MS = 4500;
 
 const FALLBACK_HALL_ID = 'local-fallback-hall';
+
+/** A quarter turn clockwise seen from above: the side that faced +Z now faces +X. */
+const ROTATED_SIDE: Record<GateSide, GateSide> = {
+  FRONT: 'RIGHT',
+  RIGHT: 'BACK',
+  BACK: 'LEFT',
+  LEFT: 'FRONT'
+};
 
 /**
  * The halls shown before `GET /api/halls` answers, and the fallback if it never does.
@@ -169,6 +202,8 @@ export class PlannerStore {
   /** Result of the last server-side audit (POST /api/layout/{id}/validate). */
   readonly serverAudit = signal<AuditEntry[] | null>(null);
   readonly focusTarget = signal<FocusTarget | null>(null);
+  /** The Assist tab's plan, checked but not applied. Drawn as outlines on the 3D view. */
+  readonly proposals = signal<ProposedStall[] | null>(null);
   readonly highlight = signal<ViolationGeometry[]>([]);
   /** Live problems of the stall being dragged in a rule-driven hall. */
   private readonly moveCheck = signal<Violation[]>([]);
@@ -242,7 +277,8 @@ export class PlannerStore {
       freeSpace: this.freeSpace(),
       highlight: this.highlight(),
       passageWidth:
-        ctx && (draft || this.dragging()) ? ctx.rules.minPassageWidth[ctx.eventType] : null
+        ctx && (draft || this.dragging()) ? ctx.rules.minPassageWidth[ctx.eventType] : null,
+      proposals: this.proposals()
     };
   });
 
@@ -576,6 +612,142 @@ export class PlannerStore {
     } else {
       this.deleteStall(id);
     }
+  }
+
+  /**
+   * A quarter turn: width and length swap, and every open side turns with the stall.
+   * Checked like any other change, so a rotation that no longer fits is reported, not applied.
+   */
+  rotateStall(id: string | number): void {
+    const stall = this.stalls().find(s => String(s.id) === String(id));
+    if (!stall) return;
+
+    const current = stall.openSides?.length ? stall.openSides : [validGate(stall.gateSide)];
+    const openSides = current.map(side => ROTATED_SIDE[side]);
+    const candidate: Stall = {
+      ...stall,
+      width: stall.length,
+      length: stall.width,
+      openSides,
+      gateSide: openSides[0]
+    };
+    const currentHall = this.currentHall();
+
+    if (this.ruleDriven()) {
+      const violations = this.checkPlacement(candidate, stall.id);
+      if (violations.length) {
+        this.reject('Rotation rejected', candidate, violations, stall.id);
+        return;
+      }
+    } else if (
+      !withinHall(currentHall, candidate) ||
+      overlaps(candidate, this.activeStalls(), stall.id) ||
+      overlapsBlockedArea(candidate, currentHall?.blockedAreas)
+    ) {
+      this.showError('⚠️ The rotated shop would leave the hall or overlap another shop.');
+      return;
+    }
+
+    this.updateStall(id, {
+      width: candidate.width,
+      length: candidate.length,
+      openSides,
+      gateSide: openSides[0]
+    });
+  }
+
+  /**
+   * Copy a stall into the first free position. The copy goes through `addStall`, so it is
+   * placed and validated exactly like a new shop - it never lands on top of its original.
+   */
+  duplicateStall(id: string | number): void {
+    const stall = this.stalls().find(s => String(s.id) === String(id));
+    if (!stall) return;
+
+    this.addStall({
+      name: stall.name,
+      width: stall.width,
+      length: stall.length,
+      height: stall.height,
+      color: stall.color,
+      gateSide: stall.gateSide,
+      openSides: [...(stall.openSides ?? [])]
+    });
+  }
+
+  // --- assisted layout -----------------------------------------------------
+
+  /**
+   * Check a plan against this hall without changing anything.
+   *
+   * The model proposes positions; it never writes into the layout. Every proposed footprint
+   * goes through the same `validatePlacement` the drag path uses, plus a check against the
+   * other stalls of the same plan, so a plan can be reported as "17 of 20 fit" before a
+   * single stall exists.
+   */
+  reviewPlan(planned: ReadonlyArray<PlannedStall>): ProposedStall[] {
+    const grid = this.grid();
+    const accepted: Footprint[] = [];
+
+    const reviewed = planned.map(stall => {
+      const raw: Footprint = {
+        posX: num(stall.posX, 0),
+        posZ: num(stall.posZ, 0),
+        width: Math.max(num(stall.width, 3), 0.5),
+        length: Math.max(num(stall.length, 3), 0.5)
+      };
+      const footprint = this.snap() && grid ? grid.snapFootprint(raw) : raw;
+
+      // Against the hall and the stalls that already exist...
+      const violations = this.checkPlacement(footprint, null);
+      // ...and against the earlier stalls of this same plan, which do not exist yet.
+      const clash = accepted.some(other => footprintsOverlap(footprint, other));
+      const valid = violations.length === 0 && !clash;
+      if (valid) accepted.push(footprint);
+
+      return {
+        footprint,
+        name: String(stall.name ?? '').trim(),
+        height: num(stall.height, 4),
+        color: stall.color || '#3498db',
+        openSides: normalizeOpenSides(stall.openSides, validGate(stall.openSides?.[0])),
+        valid,
+        violations: clash
+          ? [...violations, legacyViolation('STALL_OVERLAP', 'Overlaps another stall in this plan.', footprintRect(footprint))]
+          : violations
+      };
+    });
+
+    this.proposals.set(reviewed);
+    return reviewed;
+  }
+
+  /** Create the stalls of the reviewed plan that fit. Returns how many were added. */
+  applyPlan(): number {
+    const proposals = this.proposals();
+    if (!proposals?.length) return 0;
+
+    let added = 0;
+    for (const proposal of proposals) {
+      if (!proposal.valid) continue;
+      const created = this.createStall(proposal.footprint, null, {
+        name: proposal.name,
+        height: proposal.height,
+        color: proposal.color,
+        gateSide: proposal.openSides[0],
+        openSides: proposal.openSides
+      });
+      if (created) added += 1;
+    }
+
+    this.proposals.set(null);
+    this.selectedStallId.set(null);
+    if (added) this.notify.success(`${added} ${added === 1 ? 'stall' : 'stalls'} placed. Save the layout to keep them.`);
+    return added;
+  }
+
+  clearPlan(): void {
+    this.proposals.set(null);
   }
 
   /** App.js:528. */
@@ -1032,6 +1204,13 @@ export class PlannerStore {
     this.highlight.set([]);
     this.moveCheck.set([]);
   }
+}
+
+/** Two footprints of the same plan sharing floor. Touching edges are fine. */
+function footprintsOverlap(a: Footprint, b: Footprint): boolean {
+  const ra = footprintRect(a);
+  const rb = footprintRect(b);
+  return ra.minX < rb.maxX - 1e-9 && rb.minX < ra.maxX - 1e-9 && ra.minZ < rb.maxZ - 1e-9 && rb.minZ < ra.maxZ - 1e-9;
 }
 
 function legacyViolation(code: Violation['code'], message: string, rect: Rect): Violation {
