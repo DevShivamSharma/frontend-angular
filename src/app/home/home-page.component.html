@@ -1,58 +1,47 @@
-<div class="venue">
-  <canvas #canvas class="venue-canvas" aria-label="3D model of the IITF 2026 venue"></canvas>
+<link rel="stylesheet" href="/assets/venue/venue-explorer.css">
 
-  <!-- Placed every frame over the globe's Delhi pin (see updateGlobeLabel()); hidden in the venue view. -->
-  <div #globeLabel class="globe-label">
-    <strong>Bharat Mandapam</strong>
-    <span>ITPO · Pragati Maidan, New Delhi</span>
+<div id="viewport" aria-label="Interactive model of Bharat Mandapam"></div>
+<section id="loading" aria-labelledby="loading-title" aria-busy="true">
+  <div class="load-shell">
+    <div class="load-location"><span></span> New Delhi, India <span></span></div>
+    <svg class="load-architecture" viewBox="0 0 440 155" aria-hidden="true">
+      <path class="load-sketch-ground" d="M18 142h404M44 147h352M84 153h272"/>
+      <path d="M73 37C92 6 347 6 367 37M73 37c28 27 266 27 294 0M74 37l9 32c37 27 239 27 275 0l9-32M80 57c37 29 245 29 282 0M85 71c34 25 233 25 271 0M97 80l9 41c58 14 170 14 228 0l11-41M106 103c59 17 168 17 231 0M106 121v12m228-12v12M111 83l15 42 10-36m15 3 15 37 11-35m18 2 13 35 13-35m18-1 13 35 12-38m17-3 11 37 15-43M95 82c-24 8-41 21-47 37l48 15m251-52c24 8 41 21 47 37l-50 15M96 93c-19 7-30 14-35 23l35 8m248-31c19 7 30 14 35 23l-35 8M97 124v12m247-12v12M131 135h178"/>
+      <path class="load-sketch-fine" d="M99 31c42-19 200-19 244 0M104 36c50-16 182-16 232 0M119 57l3 21m20-17 2 23m21-20 1 24m22-21v23m23-21v22m24-22v22m23-24-1 23m23-25-2 22m22-27-3 23m23-29-4 23M184 141l-9 14m81-14 9 14"/>
+    </svg>
+    <h1 id="loading-title"><span>Welcome to</span> Bharat Mandapam</h1>
+    <p class="load-subtitle">Your virtual venue experience</p>
+    <div class="load-progress-section">
+      <div class="load-progress-heading"><p id="loading-status" role="status" aria-live="polite">Loading your experience…</p><small id="progress">0%</small></div>
+      <div class="load-track" id="loading-progressbar" role="progressbar" aria-label="Experience loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="load-bar"></span></div>
+      <ul class="load-stages" aria-label="Preparing your visit">
+        <li><span class="load-stage-name">Venue &amp; surroundings</span><span id="loading-stage-venue" class="load-stage-state" data-state="loading">Loading…</span></li>
+        <li><span class="load-stage-name">Convention Centre rooms</span><span id="loading-stage-rooms" class="load-stage-state" data-state="loading">Loading…</span></li>
+        <li><span class="load-stage-name">Exhibition halls</span><span id="loading-stage-halls" class="load-stage-state" data-state="loading">Loading…</span></li>
+      </ul>
+      <button id="loading-retry" hidden>Retry loading <span aria-hidden="true">↻</span></button>
+    </div>
+    <p class="load-footnote">A place to meet. A world to explore.</p>
   </div>
-
-  <header class="title-card">
-    <h1>IITF 2026 · Venue Layout</h1>
-    <p>Drag to explore · Scroll to zoom</p>
-    <a routerLink="/planner" class="planner-link">Open stall planner →</a>
-  </header>
-
-  @if (state() === 'ready') {
-    <div class="view-controls" role="group" aria-label="View controls">
-      <button type="button" (click)="zoomIn()" aria-label="Zoom in">+</button>
-      <button type="button" (click)="zoomOut()" aria-label="Zoom out">−</button>
-      <button type="button" (click)="resetView()">Reset</button>
-    </div>
-  }
-
-  @if (imageryCredit(); as credit) {
-    <button
-      type="button"
-      class="imagery-credit"
-      [attr.aria-expanded]="creditExpanded()"
-      [attr.aria-label]="credit.full"
-      [title]="credit.full"
-      (click)="toggleCredit()"
-    >
-      {{ creditExpanded() ? credit.full : credit.short }}
-    </button>
-  }
-
-  @if (state() === 'loading') {
-    <div class="status" role="status" aria-live="polite">
-      <div class="spinner" aria-hidden="true"></div>
-      @if (progress() !== null) {
-        <p>Loading venue model… {{ progress() }}%</p>
-        <div class="progress-track" aria-hidden="true">
-          <div class="progress-fill" [style.width.%]="progress()"></div>
-        </div>
-      } @else {
-        <p>Loading venue model… {{ loadedMb().toFixed(1) }} MB</p>
-      }
-    </div>
-  }
-
-  @if (state() === 'error') {
-    <div class="status" role="alert">
-      <p class="status-title">Model load nahi ho paya, retry karein</p>
-      <p class="status-detail">Check your connection and try again.</p>
-      <button type="button" class="retry" (click)="retry()">Retry</button>
-    </div>
-  }
+</section>
+<div class="identity"><span>BHARAT MANDAPAM</span><small>NEW DELHI</small></div>
+<div id="navigation" class="navigation">
+<button id="collapse-menu" class="collapse-menu" aria-label="Collapse menu" aria-expanded="true">‹</button>
+<nav id="menu" aria-label="Discover the venue">
+<button class="section-row active" data-view="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20V9l6-3 6 3 6-3v14l-6 2-6-3-6 1M9 6v13m6-10v13M9 2v2m6-1v3"/></svg><span>Entire venue</span></button>
+<button class="section-row" id="cc-group" aria-expanded="false" aria-controls="cc-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm0 0v20M3 7l9 5 9-5M7 5l10 6v8"/></svg><span>Convention Centre</span><b>›</b></button>
+<div id="cc-menu" class="sub-menu" hidden><button data-view="cc">Overview <span>›</span></button><button data-level="1">Level 1 <span>›</span></button><button data-level="2">Level 2 <span>›</span></button><button data-level="3">Level 3 <span>›</span></button></div>
+<button class="section-row" id="halls-group" aria-expanded="false" aria-controls="hall-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16l-6 9 6 9H4l6-9-6-9ZM8 3l8 18M16 3 8 21"/></svg><span>Halls</span><b>›</b></button>
+<div id="hall-menu" class="sub-menu hall-menu" hidden></div>
+</nav>
+<aside id="detail-panel" class="detail-panel" aria-label="Venue details" hidden>
+<div class="detail-heading"><h2 id="detail-title"></h2><button id="close-detail" aria-label="Close details">×</button></div>
+<div class="detail-body"><div class="kicker" id="detail-subtitle"></div><p id="detail-description"></p><div id="detail-levels"></div><div id="room-browser" hidden></div><dl id="detail-facts"></dl><button class="plan-card" id="open-plan"><img id="detail-plan" alt=""><span>View floor plan <b>↗</b></span></button><p class="source" id="detail-source">Supplied venue plan</p></div>
+</aside>
 </div>
+<div class="map-tools" aria-label="View controls"><button id="home-view" aria-label="Return to venue" title="Return to venue"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg></button><button id="globe-view" aria-label="Explore globe" title="Explore globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button><button id="light-mode" aria-label="Switch to daylight" title="Switch to daylight"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/></svg></button><div class="tool-gap"></div><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button></div>
+<footer><span id="status" aria-live="polite">Bharat Mandapam</span><span class="interaction-hint">Drag to orbit · Right drag to pan · Scroll to zoom</span></footer>
+<div id="geo-credit" hidden></div>
+<dialog class="plan-dialog" id="plan-dialog" aria-labelledby="plan-title"><div class="plan-toolbar"><strong id="plan-title"></strong><button id="plan-minus" aria-label="Zoom plan out">−</button><button id="plan-plus" aria-label="Zoom plan in">+</button><button id="plan-fit">Fit</button><a id="plan-original" target="_blank" rel="noopener">Original ↗</a><button id="close-plan" aria-label="Close floor plan">×</button></div><div class="plan-scroll"><img id="large-plan" alt=""></div></dialog>
+
+<a class="planner-link" routerLink="/planner">Stall planner ↗</a>

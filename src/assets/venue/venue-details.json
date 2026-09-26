@@ -1,0 +1,183 @@
+{
+  "overview": {
+    "title": "Entire venue",
+    "subtitle": "Bharat Mandapam \u00b7 New Delhi",
+    "description": "Explore the Convention Centre and each exhibition hall. Select a destination to see its plan and move to it in the model.",
+    "plan": "floorplans/venue-map.png",
+    "facts": [
+      [
+        "Convention Centre",
+        "3 levels"
+      ],
+      [
+        "Exhibition halls",
+        "1\u20136, 8\u201312, 12A and 14"
+      ]
+    ]
+  },
+  "cc": {
+    "title": "Convention Centre",
+    "subtitle": "Bharat Mandapam",
+    "description": "Explore meeting rooms, auditoriums and shared spaces across three levels. Choose a level to see room photos, floor areas and capacities.",
+    "plan": "floorplans/cc-level1.png",
+    "facts": [
+      [
+        "Level 1",
+        "Ground floor"
+      ],
+      [
+        "Level 2",
+        "Podium level"
+      ],
+      [
+        "Level 3",
+        "Plenary level"
+      ]
+    ]
+  },
+  "level1": {
+    "title": "Convention Centre \u00b7 Level 1",
+    "subtitle": "Ground floor",
+    "description": "Auditorium, meeting and hospitality spaces arranged around the central foyer.",
+    "plan": "floorplans/cc-level1.png",
+    "facts": []
+  },
+  "level2": {
+    "title": "Convention Centre \u00b7 Level 2",
+    "subtitle": "Podium level",
+    "description": "Auditorium seating, conference rooms and meeting spaces with side entries.",
+    "plan": "floorplans/cc-level2.png",
+    "facts": []
+  },
+  "level3": {
+    "title": "Convention Centre \u00b7 Level 3",
+    "subtitle": "Plenary level",
+    "description": "Tiered auditorium and the large plenary hall, with circulation and service rooms around the perimeter.",
+    "plan": "floorplans/cc-level3.png",
+    "facts": []
+  },
+  "hall1": {
+    "title": "Hall 1",
+    "subtitle": "Exhibition hall",
+    "description": "Ground-floor exhibition plan with entries, circulation and service areas.",
+    "plan": "floorplans/hall1.png",
+    "facts": []
+  },
+  "hall2": {
+    "title": "Hall 2",
+    "subtitle": "Exhibition hall",
+    "description": "Part of the connected exhibition block. The shared plan shows Halls 2, 3, 4 and 5, their foyers and the covered front pathway.",
+    "plan": "floorplans/halls2-5.png",
+    "facts": []
+  },
+  "hall3": {
+    "title": "Hall 3",
+    "subtitle": "Exhibition hall",
+    "description": "Part of the connected exhibition block. The shared plan shows Halls 2, 3, 4 and 5, their foyers and the covered front pathway.",
+    "plan": "floorplans/halls2-5.png",
+    "facts": []
+  },
+  "hall4": {
+    "title": "Hall 4",
+    "subtitle": "Exhibition hall",
+    "description": "Part of the connected exhibition block. The shared plan shows Halls 2, 3, 4 and 5, their foyers and the covered front pathway.",
+    "plan": "floorplans/halls2-5.png",
+    "facts": []
+  },
+  "hall5": {
+    "title": "Hall 5",
+    "subtitle": "Exhibition hall",
+    "description": "Part of the connected exhibition block. The shared plan shows Halls 2, 3, 4 and 5, their foyers and the covered front pathway.",
+    "plan": "floorplans/halls2-5.png",
+    "facts": []
+  },
+  "hall6": {
+    "title": "Hall 6",
+    "subtitle": "Exhibition hall",
+    "description": "Ground-floor exhibition plan with entries, circulation and service areas.",
+    "plan": "floorplans/hall6.png",
+    "facts": []
+  },
+  "hall8": {
+    "title": "Hall 8",
+    "subtitle": "Exhibition hall",
+    "description": "Part of the connected Halls 8\u201311 complex. The shared plan identifies each hall and the connecting foyers.",
+    "plan": "floorplans/halls8-11.png",
+    "facts": []
+  },
+  "hall9": {
+    "title": "Hall 9",
+    "subtitle": "Exhibition hall",
+    "description": "Part of the connected Halls 8\u201311 complex. The shared plan identifies each hall and the connecting foyers.",
+    "plan": "floorplans/halls8-11.png",
+    "facts": []
+  },
+  "hall10": {
+    "title": "Hall 10",
+    "subtitle": "Exhibition hall",
+    "description": "Part of the connected Halls 8\u201311 complex. The shared plan identifies each hall and the connecting foyers.",
+    "plan": "floorplans/halls8-11.png",
+    "facts": []
+  },
+  "hall11": {
+    "title": "Hall 11",
+    "subtitle": "Exhibition hall",
+    "description": "Part of the connected Halls 8\u201311 complex. The shared plan identifies each hall and the connecting foyers.",
+    "plan": "floorplans/halls8-11.png",
+    "facts": []
+  },
+  "hall12": {
+    "title": "Hall 12",
+    "subtitle": "Exhibition hall",
+    "description": "Hall 12 and Hall 12A form a connected L-shaped complex with a shared foyer. Hall 12 is the shorter wing; Hall 12A is the long wing.",
+    "plan": "floorplans/halls12-12a.png",
+    "facts": [
+      [
+        "Hall 12 area",
+        "1,681 m\u00b2"
+      ],
+      [
+        "Shared foyer",
+        "400 m\u00b2"
+      ],
+      [
+        "Combined area",
+        "6,714 m\u00b2"
+      ]
+    ]
+  },
+  "hall12A": {
+    "title": "Hall 12A",
+    "subtitle": "Exhibition hall",
+    "description": "Hall 12 and Hall 12A form a connected L-shaped complex with a shared foyer. Hall 12 is the shorter wing; Hall 12A is the long wing.",
+    "plan": "floorplans/halls12-12a.png",
+    "facts": [
+      [
+        "Hall 12A area",
+        "4,633 m\u00b2"
+      ],
+      [
+        "Shared foyer",
+        "400 m\u00b2"
+      ],
+      [
+        "Combined area",
+        "6,714 m\u00b2"
+      ]
+    ]
+  },
+  "hall14": {
+    "title": "Hall 14",
+    "subtitle": "Exhibition hall",
+    "description": "Ground-floor exhibition plan with entries, circulation and service areas.",
+    "plan": "floorplans/hall14.png",
+    "facts": []
+  },
+  "fountain": {
+    "title": "Musical Fountain",
+    "subtitle": "Beside Hall 1",
+    "description": "The curved lake and fountain sit between Hall 1 and the Mathura Road entrance, alongside stepped seating and the covered walkway.",
+    "plan": "floorplans/venue-map.png",
+    "facts": []
+  }
+}

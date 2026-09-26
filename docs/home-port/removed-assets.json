@@ -1,0 +1,50 @@
+[
+  {
+    "path": "src/assets/buildings/ITPO_OFFICE.glb",
+    "bytes": 1056840
+  },
+  {
+    "path": "src/assets/buildings/HALL_14.glb",
+    "bytes": 1897904
+  },
+  {
+    "path": "src/assets/buildings/HALLS_1_5.glb",
+    "bytes": 2627848
+  },
+  {
+    "path": "src/assets/buildings/CC_HALL_14_paving.webp",
+    "bytes": 7272
+  },
+  {
+    "path": "src/assets/buildings/CC_HALL_14_lawn.webp",
+    "bytes": 454
+  },
+  {
+    "path": "src/assets/draco/draco_decoder.js",
+    "bytes": 512465
+  },
+  {
+    "path": "src/assets/draco/draco_decoder.wasm",
+    "bytes": 192420
+  },
+  {
+    "path": "src/assets/draco/draco_wasm_wrapper.js",
+    "bytes": 58456
+  },
+  {
+    "path": "src/assets/globe/EARTH.glb",
+    "bytes": 726368
+  },
+  {
+    "path": "src/assets/satellite/satellite-inner.jpg",
+    "bytes": 1329009
+  },
+  {
+    "path": "src/assets/satellite/satellite-outer.jpg",
+    "bytes": 683486
+  },
+  {
+    "path": "src/assets/satellite/satellite.json",
+    "bytes": 1372
+  }
+]

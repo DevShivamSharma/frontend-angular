@@ -1,0 +1,25 @@
+{
+  "vanilla": {
+    "readyMs": 2069,
+    "logs": [
+      {
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+      }
+    ],
+    "state": {
+      "hidden": true,
+      "text": "\n  \n     New Delhi, India \n    \n      \n      \n      \n    \n    Welcome to Bharat Mandapam\n    Your virtual venue experience\n    \n      Your experience is ready.100%\n      \n      \n        Venue & surroundingsReady\n        Convention Centre roomsReady\n        Exhibition hallsReady\n      \n      Retry loading ↻\n    \n    A place to meet. A world to explore.\n  \n"
+    },
+    "gpu": "ANGLE (Intel, Intel(R) Graphics (0x0000A7AC) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "angular": {
+    "readyMs": 1769,
+    "logs": [],
+    "state": {
+      "hidden": true,
+      "text": " New Delhi, India Welcome to Bharat MandapamYour virtual venue experienceYour experience is ready.100%Venue & surroundingsReadyConvention Centre roomsReadyExhibition hallsReadyRetry loading ↻A place to meet. A world to explore."
+    },
+    "gpu": "ANGLE (Intel, Intel(R) Graphics (0x0000A7AC) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  }
+}
