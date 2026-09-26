@@ -1,48 +1,40 @@
-# Bharat Mandapam home viewer port
+# Bharat Mandapam: Angular-native home viewer
 
-Completed 26 September 2026. The home route `/` now mounts the supplied venue explorer. The initial camera shows Bharat Mandapam, not the planet. The source's optional globe control is retained.
+Completed 26 September 2026. The home page now uses **Angular components/templates and TypeScript throughout**. The previous hybrid port's five plain-JavaScript modules and declaration shims are removed. There is no iframe, injected HTML, standalone-page wrapper or runtime JavaScript loader. The initial view remains Bharat Mandapam; the source's optional globe is preserved.
 
-## Source used and inspection
+## Source of truth
 
-Repository: `C:/Users/Shivam Sharma/Downloads/3d_stall_designer_postgres_project/3d_stall_designer_postgres_project/frontend-angular`.
+Actual vanilla path used for this conversion and all current comparisons: **`C:/Users/Shivam Sharma/Downloads/outputs/outputs/venue-explorer.html`**, with its sibling JS/CSS/assets. The matching `frontend-angular/outputs/venue-explorer.html` was used in the preceding port but is no longer present in this checkout. The task's literal `output/index.html` is absent; the delivered viewer is named `outputs`, plural. `blender-prototype/output` was never used as the viewer.
 
-**Source of truth used:** `frontend-angular/outputs/venue-explorer.html` with its sibling JS/CSS/JSON and assets. The requested `output/index.html` does not exist in either repository root. The actual copied delivery is named **outputs**, plural, and its entry point is **venue-explorer.html**. Its README identifies it as the current 26 September venue delivery, and a corresponding delivery exists at `C:/Users/Shivam Sharma/Downloads/outputs/outputs`. `blender-prototype/output` was not used as the viewer.
+Repository: `C:/Users/Shivam Sharma/Downloads/3d_stall_designer_postgres_project/3d_stall_designer_postgres_project/frontend-angular`. Source inventory: [368 files and their byte sizes](source-inventory.json), totaling 395,004,098 bytes. [Implemented plan](conversion-plan.md). The earlier hybrid implementation/report and its original evidence remain historical; all current verification is under **`angular-native/`**.
 
-The source contains 368 files, 395,004,098 bytes. [source-inventory.json](source-inventory.json) lists every file with its byte size, including local vendor dependencies and source/export artifacts. [conversion-plan.md](conversion-plan.md) records the conversion decisions.
+Source and installed Three.js are **0.169.0**, including matching types. The source uses a local import map/vendor tree, with no external JS CDN or web-font dependency. The current conversion changes no packages or lockfile and adds no dependency. The preceding port's version pin remains. Arial/Helvetica and Georgia/Times font stacks are preserved.
 
-- Source Three.js: **0.169.0**, from `outputs/vendor/three/package.json` and the local HTML import map. The installed NPM module is byte-identical to the supplied `three.module.js`.
-- Loaders: `GLTFLoader` for `IITF_2026_ARCHITECTURAL.glb`; `TextureLoader` for Earth; `fetch` for local navigation/details and Delhi outlines. No external JavaScript CDN or web-font dependency. Fonts are the supplied Arial/Helvetica and Georgia/Times families.
-- GLB: **58,845,376 bytes**, unchanged SHA-256 `2314f539932d1bc72f49ec68a21d726a7fe7e2d2f5e60b0f23258bcda97172ba`. All 222 nodes, 221 meshes, 122 materials, 6 textures and 3 embedded images remain intact. `KHR_materials_emissive_strength` is retained. The source GLB contains no animations, embedded cameras, Draco, Meshopt or KTX2 requirements; nothing of those types was removed. See [glb-summary.json](glb-summary.json).
-- Effects preserved: `RoomEnvironment`/PMREM, `EffectComposer`, `RenderPass`, `SSAOPass`, `UnrealBloomPass`, `OutputPass`; AgX tone mapping, exposure 0.86, SRGB output, DPR cap 1.5, 4096×4096 PCF soft shadows, clipping and the original camera/control/flight values. Geographic desaturation `onBeforeCompile` and atmosphere vertex/fragment shaders are retained verbatim.
-- External runtime services remain the original ITPO rooms endpoint `https://api.indiatradefair.com/cc/itpo/api/v1/rooms/usr/room/all` and the three `https://api.indiatradefair.com/admin/itpo/api/v1/halls?hallCategory=N&size=100` requests (N=1,2,3), plus the photo URLs those services return. The welcome gate still waits for all directories and the venue, and still offers retry on failure.
+Loaders/effects: GLTFLoader, TextureLoader, local metadata/Delhi JSON, RoomEnvironment/PMREM, EffectComposer, RenderPass, SSAOPass, UnrealBloomPass and OutputPass. Original AgX exposure 0.86, SRGB output, DPR cap 1.5, 4096-square PCF shadows, camera/control values, clipping, geographic desaturation shader and atmosphere shaders remain. The untouched GLB has 222 nodes, 221 meshes, 122 materials, six textures and three embedded images; KHR_materials_emissive_strength is retained. It has no embedded animations/cameras or Draco, Meshopt or KTX2 requirement to port. [GLB inspection](glb-summary.json).
 
-## Implementation and files changed
+The original rooms API and three hall-category requests remain at `api.indiatradefair.com`, along with the photo URLs they return. Loading still waits for venue/rooms/halls weighted 80/10/10. Venue retry reloads; directory retry reruns failed stages. Real directory data, shared-hall naming, gallery ordering, lazy images, placeholders, source quirks and animations remain.
 
-- Replaced `src/app/home/home-page.component.ts`, `.html`, `.css`. The standalone component uses `AfterViewInit`, `OnDestroy`, `NgZone.runOutsideAngular` and the original OnPush convention.
-- Added `src/app/home/venue-viewer.ts`: a direct TypeScript port of the vanilla scene/controller. Original numbers, selections, highlights, menus, loading weights, cameras, transitions and rendering logic are preserved.
-- The component uses a native shadow root to reproduce the original standalone document's CSS without inheriting the planner stylesheet or affecting `/planner`. The only CSS scope substitutions are `:root`/`body` to `:host`; a host size rule and the planner-link styling are added. Dynamic gallery DOM receives the same source CSS.
-- Added `src/app/home/vanilla/venue-loading.js`, `venue-rooms.js`, `venue-halls.js`, `venue-gallery.js`, `venue-globe.js`, with four `.d.ts` boundaries.
-- Added the assets listed below under `src/assets/venue/`, preserving relative names and layout. Existing `angular.json` already copies `src/assets` to `assets`; no registration change was needed.
-- Updated `package.json` and `package-lock.json`: `three` and `@types/three` are pinned to **0.169.0**. These replace the older 0.164 versions to match source rendering. The types package adds its normal development-only `@webgpu/types` dependency. No other runtime dependency was introduced. Planner builds and all existing tests pass with this version.
-- Added this report, plan, design contract, inventory/verification JSON and screenshots under `docs/home-port/`.
+## What became Angular and TypeScript
 
-No planner source, app routes, shared styles, backend or database files were changed. Existing unrelated parent-repository changes and the untracked source delivery were preserved. No commit or push was performed.
+- **HomePageComponent** owns the canvas, navigation, active selections, tool buttons, status, geography credit and Angular RouterLink. Standalone, OnPush, AfterViewInit/OnDestroy and NgZone remain the existing pattern.
+- **VenueLoadingComponent + VenueLoadingState** render the source welcome UI using typed signal/computed state, progress bindings, retry and background inert bindings.
+- **VenueDetailsComponent, RoomBrowserComponent and HallBrowserComponent** render source details, level/floor tabs and directory cards using Angular inputs, outputs, loops and conditionals.
+- **PhotoGalleryComponent** owns image state, counters, load/error placeholders, arrow keys and swipe input through Angular bindings.
+- **FloorPlanDialogComponent** owns the supplied-plan modal, image bindings, fit/zoom controls and Original link. Native dialog showModal/close and element measurement remain appropriate browser operations.
+- **VenueDataService** is scoped to one home visit. Typed parsing, coalesced requests, caches, timeout and AbortController disposal replace the room/hall JS helpers.
+- **venue-viewer.ts + venue-globe.ts** contain the exact scene/geography behavior with typed commands/callbacks. They render into Angular's canvas and never construct interface HTML. The frame loop and scene controls execute outside Angular's zone; low-frequency callbacks update Angular state.
 
-### Plain JavaScript retained and why
+**Plain JavaScript retained: none.** Three.js remains its normal NPM library dependency. Angular's `ViewEncapsulation.ShadowDom` isolates the exact source CSS from shared/planner CSS; it is not a vanilla-page embedding mechanism. Original CSS is now bundled through component `styleUrls`, split at rule boundaries to respect component style budgets. The supplied markup/spacing is preserved through attribute-selector child components where additional host boxes would alter layout.
 
-The five `vanilla/venue-*.js` modules remain isolated JavaScript under the existing home feature. They contain DOM construction, heterogeneous API normalization/cache/retry behavior, focus and swipe handlers, the readiness gate, and geographic shader/motion code. They were kept under the permitted plain-JS fallback to preserve those tightly coupled behaviors without a second Angular UI implementation or a redesign of the source's dynamic data structures. The scene controller and Angular lifecycle are TypeScript; typed declarations make their integration explicit.
+Teardown stops rendering, removes signal-bound scene listeners, aborts service requests, ignores late component responses and releases controls, passes, render targets, environment, geometry, materials, textures/image bitmaps, shadows and the WebGL context. GLTFLoader 0.169 cannot cancel its model request; a late model is disposed and never remounted. Angular removes template handlers and component views.
 
-Changes at those JS boundaries are limited to the scoped UI root, asset URL resolver, abort signal, detached-view guards, disposal of intermediate geometry, and shadow-root-aware focus lookup. The gallery module itself is unchanged. There is no iframe.
+## Files, assets and removals
 
-### Teardown
+[Complete changed-file listing](angular-native/files-changed.txt). Implementation changes are confined to `src/app/home/`, removal of obsolete `src/assets/venue/venue-explorer.css`, and documentation/evidence. Seven standalone components, a typed data service, loading state, models and globe TS module are under the existing home folder. Four new spec files add 12 behavior tests.
 
-Route exit aborts component-owned fetches and signal-bound listeners, cancels pending directory DOM updates, stops the animation loop, disposes controls/composer passes/render targets/environment, mesh geometry/materials/textures/image bitmaps and shadow resources, and releases the renderer context. Three 0.169's GLTFLoader does not support request cancellation; a GLB that finishes after exit is disposed immediately instead of being attached. Both normal exit and exit during a held model response were exercised. The original renderer context reports lost after navigation; returning creates exactly one viewer canvas.
+Removed in this conversion: `vanilla/venue-gallery.js`, `venue-globe.js`, `venue-halls.js`, `venue-loading.js`, `venue-rooms.js` and all four declaration shims, after reference checks. Removed the external CSS asset after moving its exact rules into Angular styles. No new scene assets were needed. The **17 remaining venue assets total 66,240,513 bytes** and are all byte-identical to the supplied source. [Current sizes/hashes](angular-native/retained-assets.json).
 
-## Added assets
-
-Total: **66,254,864 bytes across 18 files**. Everything except the stylesheet is byte-identical to the corresponding supplied asset. Hashes are in [added-assets.json](added-assets.json).
-
-| Path under `src/assets/venue/` | Bytes |
+| Path under src/assets/venue | Bytes |
 |---|---:|
 | `floorplans/cc-level1.png` | 371,233 |
 | `floorplans/cc-level2.png` | 386,924 |
@@ -60,93 +52,60 @@ Total: **66,254,864 bytes across 18 files**. Everything except the stylesheet is
 | `IITF_2026_ARCHITECTURAL.glb` | 58,845,376 |
 | `materials/red-kota-stone.jpeg` | 5,007 |
 | `venue-details.json` | 5,866 |
-| `venue-explorer.css` | 14,351 |
 | `venue-navigation.json` | 4,260 |
 
-The source's supporting material image is retained conservatively alongside its floorplan/reference assets. The unused 238 MB Blender source, 75.9 MB source-export GLB, Python export tools and full vendor distribution remain in the untouched input delivery; they are not duplicated into web assets. The used Three.js/addons are supplied by the matching NPM package.
+The main GLB remains 58,845,376 bytes, SHA-256 `2314f539932d1bc72f49ec68a21d726a7fe7e2d2f5e60b0f23258bcda97172ba`. Existing angular.json already registers `src/assets`; no config change was needed.
 
-## Removed and retained old files
+The preceding port removed 12 positively home-only assets (9,093,894 bytes): [original removal inventory](removed-assets.json). Shared/uncertain files remain: planner `src/assets/images/*`; `IITF_2026_Layout.glb` referenced by Blender tooling; `buildings/bharat-mandapam.glb chat gpt.glb` and `buildings/CC_HALL_1422.glb` of uncertain external ownership; the source supporting material/floorplan files and external original delivery. No Blender source/export tools or vendor tree are newly bundled.
 
-The previous home viewer implementation, template and styles were fully replaced. Graph discovery and text usage checks covered the frontend, planner and parent Blender/backend tooling before removal. These 12 old home-only assets were removed, totaling **9,093,894 bytes**:
+Planner source/tests, app routes, global styles, package files, backend and database are unchanged in this conversion. No commit or push was performed.
 
-| Removed asset | Bytes |
-|---|---:|
-| `src/assets/buildings/ITPO_OFFICE.glb` | 1,056,840 |
-| `src/assets/buildings/HALL_14.glb` | 1,897,904 |
-| `src/assets/buildings/HALLS_1_5.glb` | 2,627,848 |
-| `src/assets/buildings/CC_HALL_14_paving.webp` | 7,272 |
-| `src/assets/buildings/CC_HALL_14_lawn.webp` | 454 |
-| `src/assets/draco/draco_decoder.js` | 512,465 |
-| `src/assets/draco/draco_decoder.wasm` | 192,420 |
-| `src/assets/draco/draco_wasm_wrapper.js` | 58,456 |
-| `src/assets/globe/EARTH.glb` | 726,368 |
-| `src/assets/satellite/satellite-inner.jpg` | 1,329,009 |
-| `src/assets/satellite/satellite-outer.jpg` | 683,486 |
-| `src/assets/satellite/satellite.json` | 1,372 |
-
-Retained because shared or uncertain:
-
-- `src/assets/images/*`: used by the planner.
-- `src/assets/IITF_2026_Layout.glb` (14,115,296 bytes): still referenced as geometry/placement source by `blender-prototype/generate-itpo-office.py` and `blender-prototype/import-hall14.py`.
-- `src/assets/buildings/bharat-mandapam.glb chat gpt.glb` (3,648,104 bytes) and `CC_HALL_1422.glb` (2,456,128 bytes): pre-existing supplied models whose ownership/use outside the current frontend is uncertain. They are not loaded by the new viewer.
-- The entire source `outputs/` delivery, including licenses and export sources.
-
-## Verification
+## Current verification
 
 | Check | Result |
 |---|---|
-| `npx ng build` | Pass; existing 1.5 MB initial bundle warning only (1.80 MB total). [build.txt](build.txt) |
-| `npx ng test --watch=false --browsers=ChromeHeadless` | **179/179 pass**, final process exit 0. [tests.txt](tests.txt), [test-exit-code.txt](test-exit-code.txt) |
-| `/` on dev server | Venue loads; **zero viewer console errors/warnings**, real directory calls succeed. |
-| Menus, CC Level 1, Hall 1/floor tabs, gallery next photo | Pass on vanilla and Angular; matching card counts. |
-| Home, zoom buttons, daylight toggle, collapse/expand, globe round trip | Pass. |
-| Resize/mobile | Matching 390×844 rendering; no new layout differences. |
-| Retry after an injected room-service 503 | Pass, including background inert/restored state. |
-| Keyboard hall-tab focus inside shadow root | Pass. |
-| Exit during model loading and normal exit; back navigation | Pass; no late remount or page errors; old GPU context released. |
-| `/planner` link | Route, component, canvas and existing fallback UI open; old viewer is destroyed. Backend-backed data is limited as described below. |
+| Production build | Pass, exit 0. Initial bundle 1.70 MB; only the existing 1.50 MB initial-budget warning. [Log](angular-native/build.txt) |
+| ChromeHeadless unit tests | **191/191 pass**, exit 0, including all 179 existing tests. [Log](angular-native/tests.txt) |
+| Home browser | Real model/directories load; zero viewer console warnings/errors. [Evidence](angular-native/verification.json) |
+| Controls | CC levels, hall floors, galleries, close, collapse, daylight, zoom, globe/home and mobile pass; nine room cards and one hall card match source. |
+| Retry and teardown | Injected 503 retry, inert/restored state, keyboard tab focus, leaving during held model load, no late remount and context release pass. [Evidence](angular-native/lifecycle.json) |
+| Floor-plan dialog | Open, zoom, fit, resize, Original link, Escape and close button pass. [Evidence](angular-native/dialog.json); destination selected through the public component command. |
+| Planner link/back | Planner component and fallback canvas render; returning gives exactly one home canvas. Backend unavailable as noted below. |
 
-Evidence: [verification.json](verification.json), [lifecycle.json](lifecycle.json), [planner screenshot](planner.png). A test rerun briefly encountered a Windows `EPERM` while the Angular runner deleted its temporary output **after all 179 tests passed**; a subsequent identical command completed cleanly with exit 0. No application workaround or test change was needed.
+New tests cover weighted loading/coalescing/retry/late updates, directory normalization and fetch lifetime, gallery buttons/keyboard/swipes/error state, room level output and destruction guards. No planner test was rewritten.
 
-### Screenshot comparisons
+## Visual comparison
 
-Desktop 1440×900, mobile 390×844, device scale factor 1, Chrome 153 on the same Intel GPU. Screenshots use the same source camera destinations and settled animations. A fixed random seed was injected into both test pages only for comparable SSAO noise; it is not part of shipping code. The loading comparison holds real requests until the same initial gate state, then releases them.
+Current comparisons: [loading](angular-native/compare-loading.png), [full venue](angular-native/compare-full.png), [CC close-up](angular-native/compare-closeup-cc.png), [Hall 1 close-up](angular-native/compare-closeup-hall.png), [mobile](angular-native/compare-mobile.png). Individual images and amplified differences are saved alongside them.
 
-- [Loading](compare-loading.png)
-- [Full venue](compare-full.png)
-- [Convention Centre close-up](compare-closeup-cc.png)
-- [Hall 1 close-up](compare-closeup-hall.png)
-- [Mobile](compare-mobile.png)
+Same Chrome/GPU, cameras, 1440×900 desktop and 390×844 mobile, DPR 1. Test-only seeded randomness aligns SSAO; it is not shipped. Loading requests were held at the same initial state then released. Only the required top-right planner link rectangle is excluded from scene statistics; no loading area is excluded.
 
-Every individual `vanilla-*.png` / `angular-*.png` capture and amplified `diff-*.png` is saved alongside the comparisons. Only the intentional planner-link rectangle is excluded from scene pixel statistics; no part of the loading screen is excluded.
-
-| View | Mean absolute channel difference | Pixels differing by >8 channel levels |
+| View | Mean channel error | Pixels differing by >8 channel levels |
 |---|---:|---:|
-| loading | 0.000000 / 255 | 0.000000% |
-| full | 0.000000 / 255 | 0.000000% |
-| closeup-cc | 0.013547 / 255 | 0.041283% |
-| closeup-hall | 0.002759 / 255 | 0.003576% |
-| mobile | 0.000000 / 255 | 0.000000% |
+| loading | 0.000000/255 | 0.000000% |
+| full | 0.000000/255 | 0.000000% |
+| closeup-cc | 0.009174/255 | 0.028455% |
+| closeup-hall | 0.002843/255 | 0.003576% |
+| mobile | 0.000000/255 | 0.000000% |
 
-The loading, full and mobile captures are **pixel-identical** outside the added planner link. Close-ups match visibly but are not byte-for-byte pixel-identical: tiny residual raster differences remain, consistent with WebGL/animation timing. Those differences are quantified rather than presented as zero. An independent screenshot review returned **ship for visual fidelity**, with no actionable mismatch. See [pixel-comparison.json](pixel-comparison.json).
+Loading, full and mobile are pixel-identical outside the added link. Close-ups match visibly but have the quantified tiny raster differences; byte-for-byte cross-run WebGL identity is not claimed. Independent finish review: **ship**, no material visual findings. [Metrics](angular-native/pixel-comparison.json), [review](angular-native/visual-review.md).
 
-### Performance
+## Performance and limits
 
-The production build and original vanilla delivery were served by the same Python HTTP-server implementation on loopback. Seven alternating pairs of fresh browser contexts used real APIs; the first pair was warm-up. FPS was sampled for 3 seconds after settling. Full run data and methodology: [performance.json](performance.json).
+Production and vanilla were served by the same Python HTTP server implementation on loopback, alternating fresh contexts, real APIs, identical viewport/GPU. Each batch has seven pairs; the first is warm-up and six contribute to medians. Initial three-second frame samples varied substantially, so one confirmation batch used two seconds settling and ten-second samples. Both batches are retained; no rendering quality was reduced.
 
-| Median of 6 measured runs | Vanilla | Angular production |
-|---|---:|---:|
-| Welcome gate ready | 1.74 s | 1.52 s |
-| FPS | 17.4 | 19.2 |
+| Batch | Vanilla ready | Angular ready | Vanilla FPS | Angular FPS |
+|---|---:|---:|---:|---:|
+| Initial 3-second FPS sample | 2.558s | 2.648s | 22.20 | 21.74 |
+| Confirmation 10-second FPS sample | 2.639s | 2.760s | 21.72 | 22.99 |
 
-No measured production regression. These are local measurements, not a guarantee across devices or networks. The earlier development-server pass was slower to become ready (Angular median 2.58 s versus vanilla 2.10 s); production figures above exclude dev transformation/debug overhead. That original evidence is retained in [development-first-pass.json](development-first-pass.json).
+[Initial measurements](angular-native/performance.json), [confirmation measurements](angular-native/performance-confirmation.json). These are local samples including external API timing and GPU contention, not a guarantee across devices. The initial sample measured Angular 3.5% slower to ready and 2.1% lower FPS; do not treat it as a strict no-regression pass. The longer confirmation measured Angular 4.6% slower to ready (about 121 ms) and 5.9% higher FPS. The strict load-time requirement therefore remains unmet in these local samples; no source behavior or rendering quality was changed to hide that overhead. The frame-loop algorithms, effects and quality settings remain source-identical; Angular also carries the existing planner application bundle. Universal equal-or-better load time/FPS cannot be established from this environment.
 
-## Known differences, constraints and manual actions
+## Known differences and manual actions
 
-1. The only intended visible addition is the matching **Stall planner ↗** link at top right.
-2. The folder/entry-point naming differs from the task description; the actual path used is explicitly recorded above. No missing `output/index.html` was fabricated.
-3. Close-ups have the small quantified pixel-level differences above; exact cross-run WebGL raster identity is not claimed.
-4. The local planner backend at `http://localhost:8080` was not running. Planner navigation and fallback rendering work, and planner tests pass, but successful loading of saved layouts/halls/stall types could not be verified against that backend. Start your usual backend if you need those data; it was not modified or started by this task.
-5. The source's external room/hall APIs and photos still require internet access. Their original retry/failure behavior is preserved. No fabricated fallback directory data was added.
-6. The design detector found inherited low-contrast/stylistic patterns. These are intentionally preserved per the no-visual-cleanup instruction; [design-detector.json](design-detector.json) records them.
-7. **Restart `ng serve` so the new asset files are served.** Use the repo's normal command/port. If installing in another checkout, run `npm ci` to obtain the pinned Three.js/types versions. There are no database migrations or other setup steps.
+1. The matching **Stall planner ↗** link is the intentional visible addition. Source identity, assets, typography, layout and behavior are retained.
+2. Small close-up pixel differences and measured performance variability are disclosed above; strict zero-difference/performance guarantees are not claimed.
+3. Planner navigation and all existing tests pass, but `http://localhost:8080` refused backend connections. Successful saved-layout/hall/stall-type loading could not be verified. Start the usual backend when those data are needed; it was not modified or started.
+4. The source ITPO APIs/photos still require internet. Their loading/error/retry behavior is preserved; no fabricated directory fallback was introduced.
+5. Source visual quirks and inherited detector findings are intentionally preserved. [Design contract](DESIGN.md), [historical detector](design-detector.json).
+6. **Restart `ng serve` so the asset changes are served.** No new install, migration or database step is required for this conversion.

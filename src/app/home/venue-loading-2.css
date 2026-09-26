@@ -1,0 +1,8 @@
+
+#loading-retry:hover{background:#756042}#loading-retry span{font-size:18px;line-height:1}
+#loading .load-footnote{font-family:Georgia,'Times New Roman',serif;font-size:12px;font-style:italic;line-height:1.7;letter-spacing:.1px;color:#a09580;margin:36px 0 0}
+@keyframes load-breathe{0%,100%{opacity:.35}50%{opacity:1}}
+@media(max-width:480px){#loading{padding:30px 24px}.load-location{font-size:9px;letter-spacing:2px}.load-architecture{margin:25px auto 20px;max-width:310px}#loading h1{font-size:34px;letter-spacing:-.8px}#loading h1 span{font-size:14px}.load-progress-section{margin-top:29px}#loading .load-subtitle{font-size:11px;letter-spacing:.8px}.load-stages li{font-size:10px;gap:10px}#loading .load-footnote{margin-top:28px}}
+@media(max-height:650px){#loading{padding-top:22px;padding-bottom:22px}.load-architecture{width:250px;margin:15px auto 12px}#loading h1{font-size:31px}#loading h1 span{font-size:13px;margin-bottom:5px}#loading .load-subtitle{margin-top:8px}.load-progress-section{margin-top:22px}.load-stages{gap:7px;margin-top:13px}#loading .load-footnote{margin-top:20px}}
+@media(prefers-reduced-motion:reduce){.load-stage-state::before{animation:none}.load-track #load-bar{transition:none}}
+

@@ -1,6 +1,3 @@
-import { createLoadingScreen } from './vanilla/venue-loading.js';
-import { createHallBrowser } from './vanilla/venue-halls.js';
-import { createRoomBrowser } from './vanilla/venue-rooms.js';
 import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -10,57 +7,28 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { createGlobeContext } from './vanilla/venue-globe.js';
-type Triple = [
-    number,
-    number,
-    number
-];
+import { createGlobeContext } from './venue-globe';
+import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
-interface Destination {
-    id: string;
-    hall?: string;
-    label: string;
-    center: Triple;
-}
-interface Detail {
-    title: string;
-    subtitle: string;
-    description: string;
-    plan: string;
-    facts: [
-        string,
-        string
-    ][];
-}
-interface Tween {
-    start: number;
-    duration: number;
-    a: T.Vector3;
-    b: T.Vector3;
-    p: T.Vector3;
-    t: T.Vector3;
-}
+interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
+interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; }
+export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; readonly isGlobe:boolean; dispose:()=>void; }
 /** Direct port of outputs/venue-explorer.js; values and event behavior follow that source. */
-export function createVenueViewer(host: ShadowRoot): () => void {
+export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents): VenueViewer {
     const lifetime = new AbortController();
     const { signal } = lifetime;
     const cleanups: (() => void)[] = [];
-    const asset = (path: string) => new URL('assets/venue/' + path, document.baseURI).href;
+    const asset = venueAsset;
     const listen = <K extends keyof WindowEventMap>(type: K, callback: (event: WindowEventMap[K]) => void) => window.addEventListener(type, callback, { signal });
-    const loading = createLoadingScreen(host, signal);
-    const rooms = createRoomBrowser(host.querySelector<HTMLElement>('#room-browser')!, signal), halls = createHallBrowser(host.querySelector<HTMLElement>('#room-browser')!, signal);
-    loading.run('rooms', () => rooms.preload());
-    loading.run('halls', () => halls.preload());
-    loading.run('venue', initializeVenue);
-    return () => { lifetime.abort(); rooms.cancel(); halls.cancel(); for (const cleanup of cleanups.reverse())
-        cleanup(); };
+    let viewCommand = (_id:string) => {}, levelCommand = (_level:number) => {}, globeCommand = () => {}, zoomCommand = (_factor:number) => {}, lightCommand = (_enabled:boolean) => {}, isGlobe = () => false;
+    const ready = initializeVenue();
+    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), get isGlobe(){return isGlobe();}, dispose:()=>{lifetime.abort();for(const cleanup of cleanups.reverse())cleanup();} };
     async function initializeVenue() {
         signal.throwIfAborted();
-        const $ = <E extends HTMLElement = HTMLElement>(s: string) => host.querySelector<E>(s)!, scene = new T.Scene();
+        const scene = new T.Scene();
         cleanups.push(() => disposeScene(scene));
         scene.background = new T.Color('#8b9391');
-        const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        const renderer = new T.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(innerWidth, innerHeight);
         renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
         renderer.outputColorSpace = T.SRGBColorSpace;
@@ -69,8 +37,7 @@ export function createVenueViewer(host: ShadowRoot): () => void {
         renderer.localClippingEnabled = true;
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = T.PCFSoftShadowMap;
-        $('#viewport').append(renderer.domElement);
-        cleanups.push(() => { renderer.setAnimationLoop(null); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); });
+        cleanups.push(() => { renderer.setAnimationLoop(null); renderer.dispose(); renderer.forceContextLoss(); });
         const camera = new T.PerspectiveCamera(40, innerWidth / innerHeight, 1, 5e7);
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
@@ -124,21 +91,15 @@ export function createVenueViewer(host: ShadowRoot): () => void {
             p: Triple;
             t: Triple;
         }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
-        let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined, activeDetail: Detail | null = null, activeId = 'overview', planZoom = 1, daylight = false;
+        let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
         const ccMaterials: T.MeshStandardMaterial[] = [], originals = new Map<T.Object3D, {
             color: T.Color;
             emissive: T.Color;
             emissiveIntensity: number;
         }[]>();
-        const [destinations, detailData] = await Promise.all(['venue-navigation.json', 'venue-details.json?v=rooms-1'].map(async (url) => { const response = await fetch(asset(url), { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) }); if (!response.ok)
-            throw new Error('Venue information unavailable'); return response.json(); })) as [
-            Destination[],
-            Record<string, Detail>
-        ];
+        const information = await loadInformation();
         signal.throwIfAborted();
-        for (const detail of Object.values(detailData))
-            detail.plan = asset(detail.plan);
-        const panel = $('#detail-panel'), dialog = $<HTMLDialogElement>('#plan-dialog');
+        const { destinations } = information;
         const hallIds = new Set(destinations.filter(d => d.hall).map(d => String(d.hall)));
         function ancestorMatches(o: T.Object3D, re: RegExp) { for (let n: T.Object3D | null = o; n; n = n.parent)
             if (re.test(n.name))
@@ -163,127 +124,34 @@ export function createVenueViewer(host: ShadowRoot): () => void {
             mats.forEach((m: T.MeshStandardMaterial) => { if (!['glazing', 'water', 'water_spray', 'roof_label', 'conceptual_edge_light', 'supplied_floor_plan'].includes(m.userData['architecturalCategory']))
                 m.color.lerp(new T.Color('#ac7855'), .25); });
         } }); }
-        function setGroup(group: string, open: boolean) { const button = $('#' + group + '-group'), menu = $('#' + (group === 'cc' ? 'cc-menu' : 'hall-menu')); button.setAttribute('aria-expanded', String(open)); menu.hidden = !open; }
-        function closeDetails() { rooms.cancel(); halls.cancel(); panel.hidden = true; }
-        function showDetails(id: string) {
-            rooms.cancel();
-            halls.cancel();
-            const n = /^level([123])$/.exec(id)?.[1], hall = /^hall(\d+[A-Z]?)$/.exec(id)?.[1], galleryMode = !!(n || hall);
-            panel.classList.toggle('rooms-mode', galleryMode);
-            $('#room-browser').hidden = !galleryMode;
-            for (const sel of ['#detail-description', '#detail-facts', '#detail-levels', '#open-plan', '#detail-source'])
-                $(sel).hidden = galleryMode;
-            if (galleryMode) {
-                activeDetail = null;
-                panel.hidden = false;
-                panel.scrollTop = 0;
-                $('#detail-title').textContent = hall ? 'Hall ' + hall : 'Convention Centre';
-                $('#detail-subtitle').textContent = hall ? 'Exhibition hall · Photos & details' : 'Level ' + n + ' · ' + ['', 'Ground floor', 'Podium level', 'Plenary level'][Number(n)];
-                if (hall)
-                    halls.show(hall);
-                else
-                    rooms.show(Number(n), selectLevel);
-                return;
-            }
-            const d = detailData[id];
-            if (!d)
-                return;
-            activeDetail = d;
-            panel.hidden = false;
-            $('#detail-subtitle').textContent = d.subtitle;
-            $('#detail-title').textContent = d.title;
-            $('#detail-description').textContent = d.description;
-            $<HTMLImageElement>('#detail-plan').src = d.plan;
-            $<HTMLImageElement>('#detail-plan').alt = d.title + ' floor plan';
-            $('#detail-facts').replaceChildren();
-            $('#detail-facts').hidden = !d.facts.length;
-            for (const [key, value] of d.facts) {
-                const row = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
-                dt.textContent = key;
-                dd.textContent = value;
-                row.append(dt, dd);
-                $('#detail-facts').append(row);
-            }
-            $('#detail-levels').replaceChildren();
-            if (id === 'cc')
-                for (let i = 1; i <= 3; i++) {
-                    const b = document.createElement('button');
-                    b.className = 'level-link';
-                    b.textContent = 'Level ' + i + ' · ' + ['', 'Ground floor', 'Podium level', 'Plenary level'][i];
-                    b.onclick = () => selectLevel(i);
-                    $('#detail-levels').append(b);
-                }
-            if (id === 'cc') {
-                $('#open-plan').hidden = true;
-                $('#detail-source').hidden = true;
-            }
-            panel.scrollTop = 0;
+        function resetLevel() {
+            level = 0;
+            root?.traverse(o => { if(o.userData['cc_level'])o.visible=false; });
+            ccMaterials.forEach(m=>{m.clippingPlanes=[];m.needsUpdate=true;});
         }
-        function resetLevel() { level = 0; if (root)
-            root.traverse(o => { if (o.userData['cc_level'])
-                o.visible = false; }); ccMaterials.forEach(m => { m.clippingPlanes = []; m.needsUpdate = true; }); host.querySelectorAll<HTMLElement>('[data-level]').forEach(b => b.classList.remove('active')); }
         function fly(position: T.Vector3, target: T.Vector3, duration = 1350) { if (globe?.isGlobe || globe?.transitioning) {
             tween = null;
             globe.goVenue({ position, target });
             return;
         } tween = { start: performance.now(), duration, a: camera.position.clone(), b: controls.target.clone(), p: position, t: target }; }
-        function view(id: string, { details = true } = {}) { resetLevel(); activeId = id; highlight(id); const v = views[id]; if (!v)
-            return; $('#navigation').classList.remove('collapsed'); $('#collapse-menu').textContent = '‹'; $('#collapse-menu').setAttribute('aria-expanded', 'true'); $('#collapse-menu').setAttribute('aria-label', 'Collapse menu'); if (details && id !== 'overview')
-            showDetails(id);
-        else
-            closeDetails(); const target = W(...v.t), eye = W(...v.p); const radius: number = ({ overview: 490, cc: 110, hall1: 70, hall14: 70, hall6: 86, hall11: 74, hall12A: 74, hall12: 56, fountain: 72 } as Record<string, number>)[id] || 62; const fit = radius / Math.tan(T.MathUtils.degToRad(camera.fov / 2)) * Math.max(.78, 1 / camera.aspect); if (eye.distanceTo(target) < fit)
-            eye.sub(target).setLength(fit).add(target); fly(eye, target); $('#status').textContent = detailData[id]?.title || 'Bharat Mandapam'; host.querySelectorAll<HTMLElement>('[data-view]').forEach(b => b.classList.toggle('active', b.dataset['view'] === id)); }
-        function selectLevel(n: number) { view('cc', { details: false }); host.querySelectorAll<HTMLElement>('[data-view]').forEach(b => b.classList.remove('active')); level = n; showDetails('level' + n); $('#status').textContent = 'Convention Centre · Level ' + n; host.querySelectorAll<HTMLElement>('[data-level]').forEach(b => b.classList.toggle('active', Number(b.dataset['level']) === n)); }
-        $('#cc-group').onclick = () => { const open = $('#cc-menu').hidden; setGroup('cc', open); setGroup('halls', false); if (open)
-            view('cc');
-        else
-            closeDetails(); };
-        $('#halls-group').onclick = () => { const open = $('#hall-menu').hidden; setGroup('halls', open); setGroup('cc', false); closeDetails(); if (open && globe?.isGlobe)
-            view('overview', { details: false }); };
-        for (const d of destinations.filter(d => d.hall).sort((a, b) => parseInt(a.hall!) - parseInt(b.hall!) || a.hall!.localeCompare(b.hall!))) {
-            const [s, t, z] = d.center;
-            views[d.id] = { p: [s - 105, t - 120, z + 105], t: [s, t, z * .45] };
-            if (d.hall === '14')
-                views[d.id].p = [s - 95, t + 125, z + 95];
-            const b = document.createElement('button');
-            b.dataset['view'] = d.id;
-            const name = document.createElement('span');
-            name.textContent = d.label;
-            name.style.fontSize = '11px';
-            const arrow = document.createElement('span');
-            arrow.textContent = '›';
-            b.append(name, arrow);
-            b.onclick = () => view(d.id);
-            $('#hall-menu').append(b);
+        function view(id:string) {
+            resetLevel();highlight(id);const v=views[id];if(!v)return;
+            const target=W(...v.t),eye=W(...v.p);
+            const radius=({overview:490,cc:110,hall1:70,hall14:70,hall6:86,hall11:74,hall12A:74,hall12:56,fountain:72} as Record<string,number>)[id]||62;
+            const fit=radius/Math.tan(T.MathUtils.degToRad(camera.fov/2))*Math.max(.78,1/camera.aspect);
+            if(eye.distanceTo(target)<fit)eye.sub(target).setLength(fit).add(target);
+            fly(eye,target);
         }
-        for (const b of host.querySelectorAll<HTMLElement>('[data-level]'))
-            b.onclick = () => selectLevel(Number(b.dataset['level']));
-        for (const b of host.querySelectorAll<HTMLElement>('.section-row[data-view],#cc-menu [data-view]'))
-            b.onclick = () => { if (b.dataset['view'] === 'overview') {
-                setGroup('cc', false);
-                setGroup('halls', false);
-            } view(b.dataset['view']!); };
-        $('#close-detail').onclick = closeDetails;
-        $('#collapse-menu').onclick = () => { const collapsed = $('#navigation').classList.toggle('collapsed'); $('#collapse-menu').textContent = collapsed ? '›' : '‹'; $('#collapse-menu').setAttribute('aria-expanded', String(!collapsed)); $('#collapse-menu').setAttribute('aria-label', collapsed ? 'Expand menu' : 'Collapse menu'); };
-        function fitPlan() { const img = $<HTMLImageElement>('#large-plan'), sc = $('.plan-scroll'); if (!img.naturalWidth)
-            return; const fit = Math.min((sc.clientWidth - 40) / img.naturalWidth, (sc.clientHeight - 40) / img.naturalHeight); img.style.width = img.naturalWidth * fit * planZoom + 'px'; img.style.height = 'auto'; }
-        $('#open-plan').onclick = () => { if (!activeDetail)
-            return; $('#plan-title').textContent = activeDetail.title; $<HTMLAnchorElement>('#plan-original').href = activeDetail.plan; const img = $<HTMLImageElement>('#large-plan'); img.alt = activeDetail.title + ' supplied floor plan'; img.onload = fitPlan; img.src = activeDetail.plan; planZoom = 1; dialog.showModal(); fitPlan(); };
-        $('#close-plan').onclick = () => dialog.close();
-        $('#plan-plus').onclick = () => { planZoom = Math.min(5, planZoom * 1.4); fitPlan(); };
-        $('#plan-minus').onclick = () => { planZoom = Math.max(1, planZoom / 1.4); fitPlan(); };
-        $('#plan-fit').onclick = () => { planZoom = 1; fitPlan(); };
-        dialog.addEventListener('click', e => { if (e.target === dialog)
-            dialog.close(); }, { signal });
-        listen('keydown', e => { if (e.key === 'Escape' && !dialog.open)
-            closeDetails(); });
-        $('#home-view').onclick = () => { setGroup('cc', false); setGroup('halls', false); view('overview', { details: false }); };
-        $('#globe-view').onclick = () => { closeDetails(); resetLevel(); tween = null; globe?.goGlobe(); };
-        function zoom(f: number) { if (globe?.transitioning)
-            return; tween = null; camera.position.sub(controls.target).multiplyScalar(f).add(controls.target); controls.update(); }
-        $('#zoom-in').onclick = () => zoom(.74);
-        $('#zoom-out').onclick = () => zoom(1.35);
-        $('#light-mode').onclick = () => { daylight = !daylight; sun.intensity = daylight ? 3.8 : 4.5; hemi.intensity = daylight ? 1.3 : .38; renderer.toneMappingExposure = daylight ? 1.05 : .86; scene.environmentIntensity = daylight ? .6 : .32; bloom.strength = daylight ? .075 : .19; $('#light-mode').classList.toggle('active', daylight); $('#light-mode').setAttribute('aria-label', daylight ? 'Switch to evening' : 'Switch to daylight'); $('#light-mode').title = daylight ? 'Switch to evening' : 'Switch to daylight'; };
+        for(const d of destinations.filter(d=>d.hall).sort((a,b)=>parseInt(a.hall!)-parseInt(b.hall!)||a.hall!.localeCompare(b.hall!))){
+            const [s,t,z]=d.center;views[d.id]={p:[s-105,t-120,z+105],t:[s,t,z*.45]};
+            if(d.hall==='14')views[d.id].p=[s-95,t+125,z+95];
+        }
+        viewCommand=view;
+        levelCommand=n=>{view('cc');level=n;};
+        globeCommand=()=>{resetLevel();tween=null;globe?.goGlobe();};
+        isGlobe=()=>!!globe?.isGlobe;
+        zoomCommand=f=>{if(globe?.transitioning)return;tween=null;camera.position.sub(controls.target).multiplyScalar(f).add(controls.target);controls.update();};
+        lightCommand=daylight=>{sun.intensity=daylight?3.8:4.5;hemi.intensity=daylight?1.3:.38;renderer.toneMappingExposure=daylight?1.05:.86;scene.environmentIntensity=daylight?.6:.32;bloom.strength=daylight?.075:.19;};
         controls.addEventListener('start', () => { tween = null; });
         camera.position.copy(W(...views['overview'].p));
         controls.target.copy(W(...views['overview'].t));
@@ -291,19 +159,12 @@ export function createVenueViewer(host: ShadowRoot): () => void {
         camera.position.sub(controls.target).setLength(initialFit).add(controls.target);
         controls.update();
         try {
-            globe = await createGlobeContext({ THREE: T, scene, camera, controls, renderer, root: host, signal, asset, onModeChange: (mode: string) => { const away = mode === 'globe'; $('#globe-view').classList.toggle('active', away); if (away) {
-                    closeDetails();
-                    $('#status').textContent = 'Earth · New Delhi';
-                }
-                else
-                    $('#status').textContent = 'Bharat Mandapam'; } });
-        }
-        catch (error) {
-            console.warn('Geographic context unavailable', error);
-            $<HTMLButtonElement>('#globe-view').disabled = true;
-        }
+            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange:events.modeChanged});
+            events.geographyReady(true);
+        } catch(error) { if(!signal.aborted)console.warn('Geographic context unavailable',error);events.geographyReady(false); }
+        signal.throwIfAborted();
         const g = await new Promise<GLTF>((resolve, reject) => new GLTFLoader().load(asset('IITF_2026_ARCHITECTURAL.glb?v=cc-aerial-20260926-r5'), resolve, p => { if (p.total)
-            loading.progress('venue', p.loaded / p.total * .95); }, reject));
+            events.progress(p.loaded / p.total * .95); }, reject));
         if (signal.aborted) {
             disposeScene(g.scene);
             signal.throwIfAborted();
@@ -315,12 +176,12 @@ export function createVenueViewer(host: ShadowRoot): () => void {
             ccMaterials.push(...mats); o.castShadow = !ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i) && !mats.every((m: T.MeshStandardMaterial) => ['paved_ground', 'context_ground', 'water', 'road', 'road_marking', 'supplied_floor_plan'].includes(m.userData['architecturalCategory'])); o.receiveShadow = true; mats.forEach((m: T.MeshStandardMaterial) => { if (m.map)
             m.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); }); originals.set(o, mats.map((m: T.MeshStandardMaterial) => ({ color: m.color.clone(), emissive: m.emissive?.clone() || new T.Color(0), emissiveIntensity: m.emissiveIntensity }))); if (o.userData['cc_level'])
             o.visible = false; });
-        $('#status').textContent = 'Bharat Mandapam';
+        events.status('Bharat Mandapam');
         if (new URLSearchParams(location.search).get('view') === 'cc-forecourt') {
             camera.position.copy(W(10.685, 141.551, 220));
             controls.target.copy(W(-284.315, -123.449, 5));
             controls.update();
-            $('#status').textContent = 'Convention Centre · Forecourt';
+            events.status('Convention Centre · Forecourt');
         }
         const ray = new T.Raycaster(), pointer = new T.Vector2();
         let down: [
@@ -341,27 +202,11 @@ export function createVenueViewer(host: ShadowRoot): () => void {
             if (mat.clippingPlanes?.some((p: T.Plane) => p.distanceToPoint(hit.point) < 0))
                 continue;
             const id = classify(hit.object);
-            if (id) {
-                if (level && id === 'cc') {
-                    showDetails('level' + level);
-                    break;
-                }
-                if (id.startsWith('hall')) {
-                    setGroup('halls', true);
-                    setGroup('cc', false);
-                }
-                if (id === 'cc') {
-                    setGroup('cc', true);
-                    setGroup('halls', false);
-                }
-                view(id);
-                break;
-            }
+            if (id) { events.selected(id, level); break; }
             if (!mat.transparent || mat.opacity > .9)
                 break;
         } }, { signal });
-        function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); composer.setSize(innerWidth, innerHeight); globe?.resize?.(); if (dialog.open)
-            fitPlan(); }
+        function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); composer.setSize(innerWidth, innerHeight); }
         listen('resize', resize);
         listen('pageshow', resize);
         renderer.setAnimationLoop(() => { if (tween) {
@@ -389,6 +234,7 @@ export function createVenueViewer(host: ShadowRoot): () => void {
         signal.throwIfAborted();
         controls.update();
         composer.render();
+        return information;
     }
 }
 /** Release shared textures once, including uniforms and shadow render targets. */

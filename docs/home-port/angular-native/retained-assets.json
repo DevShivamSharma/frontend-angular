@@ -1,0 +1,104 @@
+[
+  {
+    "path": "src/assets/venue/floorplans/cc-level1.png",
+    "bytes": 371233,
+    "sha256": "bf41e320f46eeb7335187949fa97258619e629bd0455646edd8be8d3da57b01e",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/cc-level2.png",
+    "bytes": 386924,
+    "sha256": "cdb4b29e1e5414a1e29499ef6c9307b011f260d5bf5bb957911728faaf82c61a",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/cc-level3.png",
+    "bytes": 394464,
+    "sha256": "6c298fb7f00d15ab34ce8029ac17ee9fe173c9c2cf3487c8359369406842000e",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/hall1.png",
+    "bytes": 497144,
+    "sha256": "718626f7faa8d7228b84d03a2673e8bf5c0a5bc969ccadcb63615a567ba62c7b",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/hall14.png",
+    "bytes": 544637,
+    "sha256": "60f7ebce8c545bcc4cf463cefbe5b808dfa6d4c5085e5d1a3a6c29a0b00fc6df",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/hall6.png",
+    "bytes": 426018,
+    "sha256": "9264acdc613c0f12edd4ecd33ac48fc20d52c4ae09e7fd3af1285b1b29397271",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/halls12-12a.png",
+    "bytes": 479364,
+    "sha256": "1178784248f875a893c972bc3cda99ef2f32fd6b100c1dc484ba67af23b1ba32",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/halls2-5.png",
+    "bytes": 825871,
+    "sha256": "d12f47bc28d667161149c1513e666770b7a62156f6d4c81a052b0eb1dc397c1e",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/halls8-11.png",
+    "bytes": 399871,
+    "sha256": "308bf3590d6a52a69db95d9abbd93589649349764a8830140d22a65bed343ae5",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/floorplans/venue-map.png",
+    "bytes": 1786408,
+    "sha256": "50ad436e6bd3f8b29bebe5a0a3942e5841bb9097eb0da2ee559d83297afbe277",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/geography/ATTRIBUTION.md",
+    "bytes": 1644,
+    "sha256": "800fa38d45dc34c964771eadc4ca3114b9bf02aaa2911d08f50449558b21fc32",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/geography/delhi-context.json",
+    "bytes": 1094898,
+    "sha256": "6af7a0e69f27ab2a3d69a5baeaadaa66358999ab7078358b7d74b77233f178a0",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/geography/earth-day.jpg",
+    "bytes": 171528,
+    "sha256": "e926316ec611ef53d1d3122983faf94ea8db3ab13e4a60c355b07da02f75696d",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/IITF_2026_ARCHITECTURAL.glb",
+    "bytes": 58845376,
+    "sha256": "2314f539932d1bc72f49ec68a21d726a7fe7e2d2f5e60b0f23258bcda97172ba",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/materials/red-kota-stone.jpeg",
+    "bytes": 5007,
+    "sha256": "8366a0e5b3bf19e7938e22dbbcf489a80063b02abd8ebf7f70203a12cee7460c",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/venue-details.json",
+    "bytes": 5866,
+    "sha256": "92c4d8bb397731dbe35ad70e48f982d3338d140a96e74daa321da77c494bcad7",
+    "byteIdenticalToSource": true
+  },
+  {
+    "path": "src/assets/venue/venue-navigation.json",
+    "bytes": 4260,
+    "sha256": "519a8c6f380c47f991bbf7e657f6280ff4cefa25dad321dde03863786acb707f",
+    "byteIdenticalToSource": true
+  }
+]

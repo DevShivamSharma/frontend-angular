@@ -1,0 +1,19 @@
+<div class="room-level-tabs" aria-label="Convention Centre levels">
+  @for (n of [1, 2, 3]; track n) { <button [class.active]="n === level" [attr.aria-pressed]="n === level" (click)="levelChange.emit(n)">Level {{ n }}</button> }
+</div>
+<p class="room-list-status" role="status">{{ pending() ? 'Loading rooms…' : error() ? 'Room details could not be loaded. Please try again.' : rooms().length ? rooms().length + ' spaces · photos & details' : 'No rooms listed for this level.' }}</p>
+@if (error()) { <button class="room-retry" (click)="load()">Retry</button> }
+@if (!pending() && !error()) {
+  <div class="room-list">
+    @for (room of rooms(); track selection + ':' + room.id) {
+      <article class="room-card" [attr.data-room-id]="room.id">
+        <div appPhotoGallery [name]="room.name" [photos]="room.photos"></div>
+        <div class="room-info"><h3>{{ room.name }}</h3><dl class="room-facts">
+          <div><dt>Floor area</dt><dd>{{ format(room.area, ' m²') }}</dd></div>
+          <div><dt>Capacity</dt><dd>{{ format(room.capacity, ' people') }}</dd></div>
+        </dl></div>
+      </article>
+    }
+  </div>
+  <p class="room-source">Room information and photos · ITPO</p>
+}

@@ -1,0 +1,22 @@
+> Building...
+√ Building...
+Initial chunk files   | Names         | Raw size | Estimated transfer size
+main-YOWADSXI.js      | main          |  1.65 MB |               397.33 kB
+polyfills-5CFQRCPP.js | polyfills     | 34.59 kB |                11.33 kB
+styles-MAPO66WH.css   | styles        | 22.52 kB |                 3.96 kB
+
+                      | Initial total |  1.70 MB |               412.62 kB
+
+Application bundle generation complete. [19.637 seconds] - 2026-09-26T13:42:17.538Z
+
+▲ [WARNING] bundle initial exceeded maximum budget. Budget 1.50 MB was not met by 202.45 kB with a total of 1.70 MB.
+
+
+▲ [WARNING] src/app/home/home-page.component.css exceeded maximum budget. Budget 4.00 kB was not met by 2.85 kB with a total of 6.85 kB.
+
+
+▲ [WARNING] src/app/home/venue-loading.css exceeded maximum budget. Budget 4.00 kB was not met by 531 bytes with a total of 4.53 kB.
+
+
+Output location: C:\Users\Shivam Sharma\Downloads\3d_stall_designer_postgres_project\3d_stall_designer_postgres_project\frontend-angular\dist\frontend-angular
+

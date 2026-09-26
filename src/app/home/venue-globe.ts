@@ -1,10 +1,20 @@
 /* Geographic context. Local frame: east +X, up +Y, south +Z.
  * Sources and limitations: geography/ATTRIBUTION.md, work/venue/globe-notes.md.
  */
+import * as T from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-export async function createGlobeContext({THREE:T,scene,camera,controls,renderer,root,signal,asset,onModeChange=()=>{}}) {
-  const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background?.clone?.()||new T.Color('#e5e7e5');
+
+type Mode = 'venue' | 'globe';
+interface Pose { position: T.Vector3; target: T.Vector3; }
+interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
+type Kind = 'road' | 'building' | 'water' | 'park';
+interface Geography { features: { k: Kind; p: [number, number][]; w: number; h: number }[]; }
+interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; }
+
+export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange}: GlobeOptions) {
+  const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background instanceof T.Color ? scene.background.clone() : new T.Color('#e5e7e5');
   const group=new T.Group();group.name='Geographic context — Delhi to Earth';scene.add(group);
   const earthGroup=new T.Group();earthGroup.position.copy(center);earthGroup.visible=false;group.add(earthGroup);
   const groundGroup=new T.Group();groundGroup.name='OpenStreetMap Delhi context';group.add(groundGroup);
@@ -35,8 +45,8 @@ export async function createGlobeContext({THREE:T,scene,camera,controls,renderer
     park:new T.MeshStandardMaterial({color:0x576c58,roughness:1,transparent:true})
   };
   // These are actual OSM outlines; default heights are deliberately neutral massing.
-  fetch(asset('geography/delhi-context.json'),{signal}).then(r=>{if(!r.ok)throw Error(r.status);return r.json();}).then(data=>{if(signal.aborted)return;
-    const bins={road:[],building:[],water:[],park:[]};
+  fetch(asset('geography/delhi-context.json'),{signal}).then(r=>{if(!r.ok)throw Error(String(r.status));return r.json();}).then((data:Geography)=>{if(signal.aborted)return;
+    const bins:Record<Kind,T.BufferGeometry[]>={road:[],building:[],water:[],park:[]};
     for(const f of data.features){
       let geometry;
       if(f.k==='road'){
@@ -52,28 +62,25 @@ export async function createGlobeContext({THREE:T,scene,camera,controls,renderer
     }
     for(const [kind,geometries]of Object.entries(bins))if(geometries.length){
       const combined=mergeGeometries(geometries,false);geometries.forEach(g=>g.dispose());if(!combined)continue;
-      const mesh=new T.Mesh(combined,contextMaterials[kind]);mesh.name='OSM Delhi '+kind;mesh.receiveShadow=true;mesh.castShadow=false;groundGroup.add(mesh);
+      const mesh=new T.Mesh(combined,contextMaterials[kind as Kind]);mesh.name='OSM Delhi '+kind;mesh.receiveShadow=true;mesh.castShadow=false;groundGroup.add(mesh);
     }
   }).catch(error=>{if(!signal.aborted)console.warn('Delhi context unavailable',error);});
   // A geographic destination marker, never a replacement for roof labels.
   const marker=new T.Group();marker.position.set(0,38000,0);marker.visible=false;group.add(marker);
   const pin=new T.Mesh(new T.SphereGeometry(20000,24,16),new T.MeshBasicMaterial({color:0xe0af62}));marker.add(pin);
   const ring=new T.Mesh(new T.TorusGeometry(46000,3400,8,64),new T.MeshBasicMaterial({color:0xf3dab3,transparent:true,opacity:.7}));ring.rotation.x=-Math.PI/2;marker.add(ring);
-  const credit=root.querySelector('#geo-credit');
-  credit.id='geo-credit';credit.hidden=false;
-  credit.innerHTML='<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> · <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/" target="_blank" rel="noopener">Earth: NASA</a>';
-  let mode='venue',transition=null,armedAt=performance.now()+1800,lastLocal=null;
+  let mode:Mode='venue',transition:Flight|null=null,armedAt=performance.now()+1800,lastLocal:Pose|null=null;
   const initial={minDistance:controls.minDistance,maxPolarAngle:controls.maxPolarAngle,minPolarAngle:controls.minPolarAngle,zoomSpeed:controls.zoomSpeed,enablePan:controls.enablePan};
   controls.maxDistance=R*7;
-  const copyVector=(v,fallback)=>v?.isVector3?v.clone():Array.isArray(v)?new T.Vector3(...v):fallback.clone();
+  const copyVector=(v:T.Vector3|[number,number,number]|undefined,fallback:T.Vector3)=>v instanceof T.Vector3?v.clone():Array.isArray(v)?new T.Vector3(...v):fallback.clone();
   function localLimits(){controls.minDistance=initial.minDistance;controls.maxPolarAngle=initial.maxPolarAngle;controls.minPolarAngle=initial.minPolarAngle;controls.zoomSpeed=initial.zoomSpeed;controls.enablePan=initial.enablePan;}
-  function startFlight(destination,position,target){
+  function startFlight(destination:Mode,position:T.Vector3,target:T.Vector3){
     const from=camera.position.clone(),to=position.clone(),a=from.clone().sub(center),b=to.clone().sub(center);
     const fromAltitude=Math.max(25,a.length()-R),toAltitude=Math.max(25,b.length()-R),rotation=new T.Quaternion().setFromUnitVectors(a.clone().normalize(),b.clone().normalize());
     transition={time:performance.now(),duration:2600,from,targetFrom:controls.target.clone(),to,target,fromAltitude,toAltitude,direction:a.normalize(),rotation,destination};
     controls.enabled=false;mode=destination;onModeChange(mode);
   }
-  function rememberVenuePose(position,target){
+  function rememberVenuePose(position:T.Vector3,target:T.Vector3){
     const pose={position:position.clone(),target:target.clone()};
     // Only local destinations may be retained. A geographic flight's target is below the surface.
     if(![...pose.position.toArray(),...pose.target.toArray()].every(Number.isFinite)||Math.abs(pose.target.y)>500||pose.position.y<0){
@@ -91,7 +98,7 @@ export async function createGlobeContext({THREE:T,scene,camera,controls,renderer
     const desired=center.clone().add(new T.Vector3(.50,2.72,.38).normalize().multiplyScalar(R/Math.sin(fitAngle)*1.08));
     startFlight('globe',desired,center.clone());
   }
-  function goVenue(options={}){
+  function goVenue(options:Partial<Pose>={}){
     const fallback=lastLocal||{position:new T.Vector3(740,800,930),target:new T.Vector3(0,0,0)};
     const position=copyVector(options.position,fallback.position),target=copyVector(options.target,fallback.target);
     // A broad view is saved at automatic departure; cap the return so it cannot immediately retrigger.
@@ -99,7 +106,7 @@ export async function createGlobeContext({THREE:T,scene,camera,controls,renderer
     if(mode==='venue'&&!transition){localLimits();camera.position.copy(position);controls.target.copy(target);controls.update();armedAt=performance.now()+1500;return;}
     localLimits();startFlight('venue',position,target);
   }
-  let pointerDown=null;
+  let pointerDown:[number,number]|null=null;
   renderer.domElement.addEventListener('pointerdown',event=>{pointerDown=[event.clientX,event.clientY];},{signal});
   renderer.domElement.addEventListener('pointerup',event=>{
     if(mode!=='globe'||transition||!pointerDown||Math.hypot(event.clientX-pointerDown[0],event.clientY-pointerDown[1])>5)return;
