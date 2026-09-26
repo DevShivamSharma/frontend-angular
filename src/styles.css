@@ -1465,6 +1465,56 @@ select.control {
   color: var(--text-secondary);
 }
 
+/* The plan's own legend (SelfCare legends[]), under the hall facts. */
+.hud-plan-legend {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.hud-plan-legend-title {
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+  color: var(--text-primary, inherit);
+}
+
+.hud-plan-legend ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-secondary);
+}
+
+.hud-plan-legend li {
+  display: grid;
+  grid-template-columns: minmax(28px, auto) 1fr;
+  align-items: start;
+  gap: var(--space-2);
+  line-height: 1.35;
+}
+
+.plan-legend-swatch {
+  display: inline-block;
+  width: 22px;
+  height: 12px;
+  margin-top: 2px;
+  border-radius: 2px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+.plan-legend-code {
+  font-weight: 600;
+  color: var(--text-primary, inherit);
+  white-space: nowrap;
+}
+
+.plan-legend-code .is-underlined {
+  text-decoration: underline;
+}
+
 /* The translucent swatches above are meant for the hall floor. The legend is a panel, not the
    floor, so they are drawn as the solid colour each overlay actually shows on it (#f1f5f9). */
 .hud-legend .legend-swatch.is-passage {

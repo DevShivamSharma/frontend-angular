@@ -16,7 +16,9 @@ export type HallShape = 'SQUARE' | 'CIRCLE';
  * What a blocked area represents in the hall:
  * - `'outside'` — carves the irregular outline; blocks stall placement.
  * - `'wall'`    — the thick boundary wall itself; blocks stall placement.
- * - `'zone'`    — visual overlay (fire curtains etc.); does NOT block placement.
+ * - `'zone'`    — any other coloured rectangle of the source plan (pillars...). Visual only: it
+ *                 does NOT block placement (pavilions are built around pillars). The restrictions
+ *                 that block — passages, no-construction areas, fire curtains — are `Hall.zones`.
  */
 export type BlockedAreaKind = 'outside' | 'wall' | 'zone';
 
@@ -31,7 +33,15 @@ export interface BlockedArea {
   length: number;
   kind: BlockedAreaKind;
   color: string;
+  /** Outline colour, when the source gives one that differs from the fill. */
+  strokeColor?: string;
+  /** Tooltip text of the source plan, e.g. `Pillar`. */
   title?: string;
+  /**
+   * SelfCare `visibleInView: false`: not drawn in the planner's view. (Curtains, the rows that
+   * carry this flag, are imported as hidden `zones`, which still block.)
+   */
+  hidden?: boolean;
 }
 
 /**
@@ -68,50 +78,48 @@ export interface Hall {
 }
 
 /**
- * The amenity kinds the SelfCare plan marks with an icon. The string is also the base name of
- * the SVG under `src/assets/images/`, so `iconUrlFor()` needs no lookup table.
+ * The icon of an amenity: the base name of its SVG under `src/assets/images/` (`toilet-male`,
+ * `drinking-water`, `emergency-exit`, `cargo-truck`, `circulation`, `entry-left` ...). SelfCare
+ * stores the icon as `assets/images/<name>.svg`; every such name is accepted, so a new icon in the
+ * source plan shows up without a code change. Only local asset names are ever loaded.
  */
-export type AmenityKind = 'toilet-male' | 'toilet-female' | 'stairs' | 'entry-up';
-
-export const AMENITY_KINDS: readonly AmenityKind[] = [
-  'toilet-male',
-  'toilet-female',
-  'stairs',
-  'entry-up'
-];
+export type AmenityKind = string;
 
 /**
- * One utility icon on the plan: a toilet, a staircase/lift, an entry arrow.
+ * One utility icon on the plan (a `helper_text[].image[]` entry): a toilet, stairs/lifts,
+ * drinking water, an emergency exit, a cargo entry...
  *
- * `position` is in the planner's centre-origin metres, like every other hall coordinate — the
- * SelfCare pixel position is converted once, on import (`selfcare-layout.ts`).
+ * `position` is the icon centre in the planner's centre-origin metres. SelfCare groups icons in
+ * rows: one `helper_text` entry is one row of icons on a white card, anchored by its top-left
+ * corner. `anchor` is that corner (metres) and `slot` the icon's place in the row, so the
+ * renderer can draw the card exactly as the plan does. Both are absent on older data, which is
+ * then drawn one icon at a time around `position`.
  *
  * Visual only: amenities never take part in placement validation. They sit outside the hall
- * outline as often as inside it (SelfCare puts the Hall 10 toilet block above FOYER C), which is
- * exactly why they must not be modelled as zones.
+ * outline as often as inside it.
  */
 export interface HallAmenity {
   kind: AmenityKind;
   /** The SelfCare caption, e.g. `Toilet (Male)`. Rendered under the icon. */
   label: string;
   position: Point;
+  anchor?: Point | null;
+  slot?: number | null;
 }
 
 /**
- * The plan's north arrow (`direction` in the SelfCare payload).
- *
- * SelfCare places it outside the hall outline — for Hall 8-9-10 at (130, 47.5) m, below and to
- * the right of a 133 x 43 m hall — so it is a scene decoration, never part of the geometry.
+ * The plan's north arrow (`direction` in the SelfCare payload). Scene decoration only.
  */
 export interface HallCompass {
+  /** Centre of the rose. */
   position: Point;
   /** Side of the rose in metres, from the payload's pixel `width`/`height`. */
   size: number;
-  /** In-plane rotation in degrees, as SelfCare stores it. */
+  /** In-plane rotation in degrees, clockwise on the plan, as SelfCare stores it. */
   rotation: number;
   /** Usually `N`. */
   label: string;
-  /** Offset of the label from the rose centre, in metres. */
+  /** Top-left of the label relative to the rose centre, in metres. */
   labelOffset: Point;
 }
 
@@ -120,13 +128,15 @@ export interface HallCompass {
  *
  * A row carries EITHER a `colorCode` (the red passage / brown NC swatches) OR `htmlContent` (the
  * gate-numbering notes, which SelfCare ships as markup). `htmlContent` is untrusted API output:
- * bind it only through Angular's sanitiser, never with `bypassSecurityTrustHtml`.
+ * it is never bound as HTML; `legend-content.ts` reduces it to plain text runs.
  */
 export interface HallLegend {
   label: string;
   colorCode?: string | null;
   htmlContent?: string | null;
-  /** SelfCare hides some rows in its printed book view. */
+  /** false: SelfCare hides the row in its view mode — the planner is a view, so it hides it too. */
+  visibleInViewMode?: boolean;
+  /** false: SelfCare hides the row in its booking view. */
   visibleInBookMode?: boolean;
 }
 

@@ -131,6 +131,7 @@
         [hidden]="activeTab() !== 'hall'"
       >
         <app-create-hall-form />
+        <app-selfcare-import />
       </div>
       <div
         role="tabpanel"
@@ -238,6 +239,29 @@
               <dd>Per shop</dd>
             </div>
           </dl>
+          <!-- The plan's own legend (SelfCare legends[]). Markup notes arrive as text runs, never
+               as HTML: see legend-content.ts. -->
+          @if (planLegend().length) {
+            <div class="hud-plan-legend">
+              <div class="hud-plan-legend-title">Legend</div>
+              <ul aria-label="Plan legend">
+                @for (entry of planLegend(); track $index) {
+                  <li>
+                    @if (entry.swatch) {
+                      <span class="plan-legend-swatch" [style.background-color]="entry.swatch" aria-hidden="true"></span>
+                    } @else if (entry.runs.length) {
+                      <span class="plan-legend-code">
+                        @for (run of entry.runs; track $index) {
+                          <span [class.is-underlined]="run.underline">{{ run.text }}</span>
+                        }
+                      </span>
+                    }
+                    <span class="plan-legend-label">{{ entry.label }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
         </details>
       }
     </div>

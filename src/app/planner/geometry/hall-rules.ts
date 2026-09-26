@@ -1,6 +1,7 @@
 import { EventType, Hall } from '../models/hall.model';
 import { Stall } from '../models/stall.model';
-import { effectiveRules, PlacementContext, PlacementStall } from './placement-rules';
+import { hallFloor } from './hall-plan';
+import { effectiveRules, extraFloorRegions, PlacementContext, PlacementStall } from './placement-rules';
 
 /**
  * Bridges planner state (Hall, Stall) to the pure placement rules.
@@ -31,6 +32,9 @@ export function placementContextFor(
 ): PlacementContext {
   return {
     boundary: hall.boundary ?? null,
+    // Floor regions the single boundary polygon cannot hold (a separate foyer), traced from the
+    // plan's rectangles.
+    regions: extraFloorRegions(hall.boundary, hallFloor(hall)),
     zones: hall.zones ?? [],
     openings: hall.openings ?? [],
     rules: effectiveRules(hall.rules),

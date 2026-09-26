@@ -304,7 +304,7 @@ describe('PlannerStore', () => {
       expect(store.error()).toContain('outside the hall boundary');
     });
 
-    it('allows a move onto a zone blocked area', () => {
+    it('allows a move onto a pillar but not onto a fire curtain, hidden or not', () => {
       store.halls.set([{
         id: 'zone-hall',
         name: 'Hall With Zone',
@@ -313,7 +313,17 @@ describe('PlannerStore', () => {
         length: 40,
         radius: 0,
         blockedAreas: [
-          { posX: 5, posZ: 5, width: 6, length: 6, kind: 'zone', color: '#8A2BE2' }
+          { posX: 5, posZ: 5, width: 1, length: 1, kind: 'zone', color: 'gray', title: 'Pillar' }
+        ],
+        zones: [
+          {
+            id: 'sc-zone-1',
+            kind: 'SMOKE_CURTAIN',
+            label: 'Fire curtains (No construction zone below)',
+            color: '#8a2be2',
+            hidden: true,
+            polygon: [{ x: -20, z: -10.5 }, { x: 20, z: -10.5 }, { x: 20, z: -10 }, { x: -20, z: -10 }]
+          }
         ]
       }]);
       store.setActiveHall('zone-hall');
@@ -327,11 +337,56 @@ describe('PlannerStore', () => {
         gateSide: 'FRONT'
       })!;
 
-      // Move onto the zone — should succeed because zones don't block
+      // A pavilion may stand around a pillar.
       store.moveStall(shop.id, 5, 5);
-
       expect(store.selectedStall()!.posX).toBe(5);
       expect(store.selectedStall()!.posZ).toBe(5);
+
+      // Under the (hidden) fire curtain: refused, the stall stays put.
+      store.moveStall(shop.id, 0, -10);
+      expect(store.selectedStall()!.posX).toBe(5);
+      expect(store.selectedStall()!.posZ).toBe(5);
+      expect(store.error()).toContain('non-clickable');
+    });
+
+    it('lets a stall into a walled foyer that lies past the plan breadth', () => {
+      // 20 x 10 canvas. Main floor fills z -5..0 (behind a wall at 0..1); an outside strip
+      // follows, then a foyer walled on every side whose bottom wall reaches z = 8, 3 m past the
+      // breadth. The old rectangle check stopped every stall at z = 5.
+      store.halls.set([{
+        id: 'foyer-hall',
+        name: 'Foyer Hall',
+        shape: 'SQUARE',
+        width: 20,
+        length: 10,
+        radius: 0,
+        blockedAreas: [
+          { posX: 0, posZ: 0.5, width: 20, length: 1, kind: 'wall', color: '#742371' },
+          { posX: 0, posZ: 1.5, width: 20, length: 1, kind: 'outside', color: '#ffffff' },
+          { posX: 0, posZ: 2.5, width: 12, length: 1, kind: 'wall', color: '#742371' },
+          { posX: 0, posZ: 7.5, width: 12, length: 1, kind: 'wall', color: '#742371' },
+          { posX: -5.5, posZ: 5, width: 1, length: 6, kind: 'wall', color: '#742371' },
+          { posX: 5.5, posZ: 5, width: 1, length: 6, kind: 'wall', color: '#742371' },
+          { posX: -8, posZ: 3.5, width: 4, length: 3, kind: 'outside', color: '#ffffff' },
+          { posX: 8, posZ: 3.5, width: 4, length: 3, kind: 'outside', color: '#ffffff' }
+        ]
+      }]);
+      store.setActiveHall('foyer-hall');
+
+      const shop = store.addStall({
+        name: 'A',
+        width: 2,
+        length: 2,
+        height: 4,
+        color: '#3498db',
+        gateSide: 'FRONT'
+      })!;
+
+      store.moveStall(shop.id, 0, 6);
+
+      expect(store.selectedStall()!.posX).toBe(0);
+      expect(store.selectedStall()!.posZ).toBe(6);
+      expect(store.error()).toBe('');
     });
   });
 

@@ -34,22 +34,7 @@ export function buildApiPayload(
 ): LayoutSaveRequest {
   if (!currentHall) throw new Error('No hall selected.');
 
-  const hall: HallPayload = {
-    ...(isBackendId(currentHall.id) ? { id: Number(currentHall.id) } : {}),
-    name: currentHall.name,
-    shape: currentHall.shape,
-    width: num(currentHall.width, 0),
-    length: num(currentHall.length, 0),
-    radius: num(currentHall.radius, 0),
-    ...(currentHall.blockedAreas?.length ? { blockedAreas: currentHall.blockedAreas } : {}),
-    // Rule-driven geometry travels with the hall so a saved layout keeps its shape and rules.
-    ...(currentHall.boundary?.length ? { boundary: currentHall.boundary } : {}),
-    ...(currentHall.zones?.length ? { zones: currentHall.zones } : {}),
-    ...(currentHall.openings?.length ? { openings: currentHall.openings } : {}),
-    ...(currentHall.markers?.length ? { markers: currentHall.markers } : {}),
-    ...(currentHall.amenities?.length ? { amenities: currentHall.amenities } : {}),
-    ...(currentHall.rules ? { rules: currentHall.rules as Record<string, unknown> } : {})
-  };
+  const hall = buildHallPayload(currentHall);
 
   const stalls: StallPayload[] = currentStalls.map(s => {
     const openSides = normalizeOpenSides(s.openSides, s.gateSide);
@@ -80,6 +65,32 @@ export function buildApiPayload(
   };
 }
 
+/**
+ * The hall part of every write: the layout save/update body and PUT /api/halls/{id}. Everything
+ * the plan carries travels with it, so a saved hall keeps its shape, rules, labels, icons, north
+ * arrow and legend.
+ */
+export function buildHallPayload(currentHall: Hall): HallPayload {
+  return {
+    ...(isBackendId(currentHall.id) ? { id: Number(currentHall.id) } : {}),
+    name: currentHall.name,
+    shape: currentHall.shape,
+    width: num(currentHall.width, 0),
+    length: num(currentHall.length, 0),
+    radius: num(currentHall.radius, 0),
+    ...(currentHall.blockedAreas?.length ? { blockedAreas: currentHall.blockedAreas } : {}),
+    // Rule-driven geometry travels with the hall so a saved layout keeps its shape and rules.
+    ...(currentHall.boundary?.length ? { boundary: currentHall.boundary } : {}),
+    ...(currentHall.zones?.length ? { zones: currentHall.zones } : {}),
+    ...(currentHall.openings?.length ? { openings: currentHall.openings } : {}),
+    ...(currentHall.markers?.length ? { markers: currentHall.markers } : {}),
+    ...(currentHall.amenities?.length ? { amenities: currentHall.amenities } : {}),
+    ...(currentHall.compass ? { compass: currentHall.compass as unknown as Record<string, unknown> } : {}),
+    ...(currentHall.legends?.length ? { legends: currentHall.legends } : {}),
+    ...(currentHall.rules ? { rules: currentHall.rules as Record<string, unknown> } : {})
+  };
+}
+
 /** `Number.isFinite(Number(id)) && String(id).trim() !== ''` from `App.js:553`. */
 function isBackendId(id: string | number): boolean {
   return Number.isFinite(Number(id)) && String(id).trim() !== '';
@@ -107,6 +118,14 @@ export class LayoutApiService {
     // `standalone=true` excludes the private hall copy every saved layout creates (BR-18),
     // so the picker keeps showing the master halls and does not grow with each save.
     return firstValueFrom(this.http.get<Hall[]>(`${this.api}/halls?standalone=true`));
+  }
+
+  /**
+   * `PUT /api/halls/{id}` — store a hall's plan (outline rectangles, zones, labels, icons, north
+   * arrow, legend) on the master hall, e.g. after importing its SelfCare layout.
+   */
+  updateHall(hall: Hall): Promise<Hall> {
+    return firstValueFrom(this.http.put<Hall>(`${this.api}/halls/${hall.id}`, buildHallPayload(hall)));
   }
 
   /** `GET /api/layouts` — tolerates both a bare array and `{ layouts: [] }`. */

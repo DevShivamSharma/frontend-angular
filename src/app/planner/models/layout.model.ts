@@ -40,6 +40,8 @@ export interface HallPayload {
   openings?: unknown[];
   markers?: unknown[];
   amenities?: unknown[];
+  compass?: Record<string, unknown>;
+  legends?: unknown[];
   rules?: Record<string, unknown>;
 }
 

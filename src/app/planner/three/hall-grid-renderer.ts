@@ -13,15 +13,16 @@ import { HallShape } from '../models/hall.model';
  * `depthTest: false`, exactly as in React.
  *
  * Lines come from the hall's GridSystem, so they start at the hall corner and every drawn line
- * is a real snap line. With a boundary polygon each line is clipped to the polygon, so the grid
- * exists only inside the hall.
+ * is a real snap line. With a floor outline each line is clipped to it, so the grid exists only
+ * on the hall floor. The outline may be several rings — separate floor regions and holes — and
+ * clipping is even-odd over all of their edges together.
  */
 export function buildHallGrid(
   width: number,
   length: number,
   shape: HallShape,
   grid?: GridSystem,
-  boundary?: Point[] | null
+  boundary?: Point[] | Point[][] | null
 ): THREE.Group {
   const group = new THREE.Group();
   group.name = 'hall-grid';
@@ -30,7 +31,8 @@ export function buildHallGrid(
   const w = Math.max(1, Number(width) || 40);
   const l = Math.max(1, Number(length) || 40);
   const system = grid ?? new GridSystem(-w / 2, -l / 2, w, l);
-  const polygon = boundary && boundary.length >= 3 ? boundary : null;
+  const rings = toRings(boundary);
+  const polygon = rings.length ? rings : null;
   const { minX, minZ, maxX, maxZ } = system.bounds;
   const cell = system.cellSize;
   const cols = Math.round(system.width / cell);
@@ -80,18 +82,22 @@ export function buildHallGrid(
     )
   );
 
-  // Hall border: the polygon outline, or the rectangle.
-  const outline = polygon ?? [
-    { x: minX, z: minZ },
-    { x: maxX, z: minZ },
-    { x: maxX, z: maxZ },
-    { x: minX, z: maxZ }
+  // Hall border: the floor outline(s), or the rectangle.
+  const outlines = polygon ?? [
+    [
+      { x: minX, z: minZ },
+      { x: maxX, z: minZ },
+      { x: maxX, z: maxZ },
+      { x: minX, z: maxZ }
+    ]
   ];
   const borderVertices: number[] = [];
-  outline.forEach((p, i) => {
-    const q = outline[(i + 1) % outline.length];
-    pushLine(borderVertices, p.x, p.z, q.x, q.z);
-  });
+  for (const outline of outlines) {
+    outline.forEach((p, i) => {
+      const q = outline[(i + 1) % outline.length];
+      pushLine(borderVertices, p.x, p.z, q.x, q.z);
+    });
+  }
   group.add(lineSegments(borderVertices, new THREE.LineBasicMaterial({ color: '#0f172a', depthTest: false })));
 
   if (shape === 'SQUARE' && !polygon) {
@@ -118,27 +124,38 @@ export function buildHallGrid(
  * Even-odd crossings with the half-open rule (an edge counts when x is in [min, max) of its
  * endpoints), so lines through vertices and along vertical walls are handled consistently.
  */
-export function clipVertical(polygon: Point[], x: number): Array<[number, number]> {
+export function clipVertical(polygon: Point[] | Point[][], x: number): Array<[number, number]> {
   const hits: number[] = [];
-  polygon.forEach((a, i) => {
-    const b = polygon[(i + 1) % polygon.length];
-    if ((a.x <= x) !== (b.x <= x)) {
-      hits.push(a.z + ((x - a.x) * (b.z - a.z)) / (b.x - a.x));
-    }
-  });
+  for (const ring of toRings(polygon)) {
+    ring.forEach((a, i) => {
+      const b = ring[(i + 1) % ring.length];
+      if ((a.x <= x) !== (b.x <= x)) {
+        hits.push(a.z + ((x - a.x) * (b.z - a.z)) / (b.x - a.x));
+      }
+    });
+  }
   return pairs(hits);
 }
 
 /** The parts of the horizontal line z = const inside the polygon, as [x1, x2] pairs. */
-export function clipHorizontal(polygon: Point[], z: number): Array<[number, number]> {
+export function clipHorizontal(polygon: Point[] | Point[][], z: number): Array<[number, number]> {
   const hits: number[] = [];
-  polygon.forEach((a, i) => {
-    const b = polygon[(i + 1) % polygon.length];
-    if ((a.z <= z) !== (b.z <= z)) {
-      hits.push(a.x + ((z - a.z) * (b.x - a.x)) / (b.z - a.z));
-    }
-  });
+  for (const ring of toRings(polygon)) {
+    ring.forEach((a, i) => {
+      const b = ring[(i + 1) % ring.length];
+      if ((a.z <= z) !== (b.z <= z)) {
+        hits.push(a.x + ((z - a.z) * (b.x - a.x)) / (b.z - a.z));
+      }
+    });
+  }
   return pairs(hits);
+}
+
+/** One polygon or several rings -> a list of rings with at least 3 points. */
+function toRings(polygon: Point[] | Point[][] | null | undefined): Point[][] {
+  if (!polygon || !polygon.length) return [];
+  const rings = Array.isArray(polygon[0]) ? (polygon as Point[][]) : [polygon as Point[]];
+  return rings.filter(r => r.length >= 3);
 }
 
 function pairs(hits: number[]): Array<[number, number]> {

@@ -18,16 +18,20 @@ import {
   ViolationGeometry
 } from './geometry/placement-rules';
 import {
-  hallSize,
   normalizeOpenSides,
   normalizeStall,
   num,
   overlaps,
-  overlapsBlockedArea,
   snapValue,
-  validGate,
-  withinHall
+  validGate
 } from './geometry/planner-geometry';
+import { blockedInPlan, planBounds, withinPlan } from './geometry/hall-plan';
+import {
+  applySelfcareLayout,
+  hallFromSelfcare,
+  SelfcareLayoutRow,
+  unwrapSelfcareData
+} from './geometry/selfcare-layout';
 import { buildApiPayload, LayoutApiService } from './layout-api.service';
 import { EventType, Hall, HallShape, StallType } from './models/hall.model';
 import { LayoutSummary, ServerViolation } from './models/layout.model';
@@ -429,13 +433,13 @@ export class PlannerStore {
     const nz = useSnap ? snapValue(z) : z;
     const candidate: Stall = { ...s, posX: nx, posZ: nz };
 
-    if (!withinHall(currentHall, candidate, nx, nz)) {
+    if (!withinPlan(currentHall, candidate, nx, nz)) {
       this.showError('⚠️ Shop cannot move outside the hall boundary.');
       return;
     }
 
-    if (overlapsBlockedArea(candidate, currentHall.blockedAreas)) {
-      this.showError('⚠️ Shop cannot move outside the hall boundary.');
+    if (blockedInPlan(currentHall, candidate)) {
+      this.showError('⚠️ Shop cannot stand on a wall, compulsory passage, fire curtain or other non-clickable area.');
       return;
     }
 
@@ -487,9 +491,9 @@ export class PlannerStore {
         return;
       }
     } else if (
-      !withinHall(currentHall, candidate) ||
+      !withinPlan(currentHall, candidate) ||
       overlaps(candidate, this.activeStalls(), selected.id) ||
-      overlapsBlockedArea(candidate, currentHall?.blockedAreas)
+      blockedInPlan(currentHall, candidate)
     ) {
       this.showError('⚠️ Updated shop position/dimensions are invalid or overlap another shop.');
       return;
@@ -531,17 +535,21 @@ export class PlannerStore {
     };
 
     let pos: { x: number; z: number } | null = null;
-    const { width, length } = hallSize(currentHall);
-    const maxX = Math.floor(width / 2 - base.width / 2);
-    const maxZ = Math.floor(length / 2 - base.length / 2);
+    // Scan the whole plan, not only the centred width x length: a traced hall's floor (a foyer
+    // beyond the breadth) can lie outside it.
+    const bounds = planBounds(currentHall);
+    const minX = Math.ceil(bounds.minX + base.width / 2);
+    const maxX = Math.floor(bounds.maxX - base.width / 2);
+    const minZ = Math.ceil(bounds.minZ + base.length / 2);
+    const maxZ = Math.floor(bounds.maxZ - base.length / 2);
 
-    for (let z = -maxZ; z <= maxZ && !pos; z += 1) {
-      for (let x = -maxX; x <= maxX && !pos; x += 1) {
+    for (let z = minZ; z <= maxZ && !pos; z += 1) {
+      for (let x = minX; x <= maxX && !pos; x += 1) {
         const trial = { ...base, posX: x, posZ: z };
         if (
-          withinHall(currentHall, base, x, z) &&
+          withinPlan(currentHall, base, x, z) &&
           !overlaps(trial, this.activeStalls()) &&
-          !overlapsBlockedArea(trial, currentHall.blockedAreas)
+          !blockedInPlan(currentHall, trial)
         ) {
           pos = { x, z };
         }
@@ -640,9 +648,9 @@ export class PlannerStore {
         return;
       }
     } else if (
-      !withinHall(currentHall, candidate) ||
+      !withinPlan(currentHall, candidate) ||
       overlaps(candidate, this.activeStalls(), stall.id) ||
-      overlapsBlockedArea(candidate, currentHall?.blockedAreas)
+      blockedInPlan(currentHall, candidate)
     ) {
       this.showError('⚠️ The rotated shop would leave the hall or overlap another shop.');
       return;
@@ -835,6 +843,62 @@ export class PlannerStore {
     } catch (e) {
       console.warn('Hall list unavailable, using the local fallback hall:', extractErrorMessage(e));
       this.hallsStatus.set('unavailable');
+    }
+  }
+
+  /**
+   * Import SelfCare hall-layout responses (the `event-hall-layouts-data` payload: `{ header, data:
+   * [row] }`, a bare row, or a list of either) and apply each to the hall of the same name. A row
+   * whose hall is not in the list is added as a new local hall. The first imported hall becomes
+   * active. Returns the names applied; throws when the file holds no layout row.
+   */
+  importSelfcare(payload: unknown): string[] {
+    const bodies = Array.isArray(payload) ? payload : [payload];
+    const rows = bodies.flatMap(body => unwrapSelfcareData<SelfcareLayoutRow>(body as SelfcareLayoutRow));
+    const usable = rows.filter(r => r && typeof r === 'object' && (r.layout_data != null || r.length != null));
+    if (!usable.length) throw new Error('No SelfCare hall layout found in this file.');
+
+    const names: string[] = [];
+    let firstId: string | number | null = null;
+    for (const row of usable) {
+      const name = String(row.name ?? '').trim().toLowerCase();
+      const existing = name ? this.halls().find(h => h.name.trim().toLowerCase() === name) : undefined;
+      const hall = existing
+        ? applySelfcareLayout(existing, row)
+        : { ...hallFromSelfcare(row), id: `selfcare-hall-${row.hallId ?? row.hall_id ?? names.length}-${Date.now()}` };
+      this.halls.update(list => (existing ? list.map(h => (h === existing ? hall : h)) : [...list, hall]));
+      firstId ??= hall.id;
+      names.push(hall.name);
+    }
+
+    if (firstId !== null) {
+      this.activeHallId.set(firstId);
+      this.selectedStallId.set(null);
+    }
+    return names;
+  }
+
+  /**
+   * Store the current hall's plan on its master hall (PUT /api/halls/{id}), so the imported
+   * outline, labels, icons, north arrow and legend load from the server next time.
+   */
+  async saveHallPlan(): Promise<boolean> {
+    const hall = this.currentHall();
+    if (!hall || !Number.isFinite(Number(hall.id)) || String(hall.id).trim() === '') {
+      this.showError('Only a hall that exists on the server can be saved. Save a layout on it instead.');
+      return false;
+    }
+    this.busy.set(true);
+    try {
+      const saved = await this.api.updateHall(hall);
+      this.halls.update(list => list.map(h => (String(h.id) === String(hall.id) ? { ...hall, ...saved } : h)));
+      this.notify.success('Hall plan saved.');
+      return true;
+    } catch (e) {
+      this.showError(`❌ Hall Save Error: ${extractErrorMessage(e)}`);
+      return false;
+    } finally {
+      this.busy.set(false);
     }
   }
 
@@ -1104,10 +1168,12 @@ export class PlannerStore {
     const hall = this.currentHall();
     const rect = footprintRect(footprint);
     const violations: Violation[] = [];
-    if (!withinHall(hall, footprint, footprint.posX, footprint.posZ)) {
+    if (!withinPlan(hall, footprint, footprint.posX, footprint.posZ)) {
       violations.push(legacyViolation('OUTSIDE_HALL', 'Stall is outside the hall boundary.', rect));
-    } else if (overlapsBlockedArea(footprint, hall?.blockedAreas)) {
-      violations.push(legacyViolation('OUTSIDE_HALL', 'Stall is outside the hall boundary.', rect));
+    } else if (blockedInPlan(hall, footprint)) {
+      violations.push(
+        legacyViolation('RESTRICTED_ZONE', 'Stall stands on a wall, compulsory passage, fire curtain or other non-clickable area.', rect)
+      );
     }
     const others = this.activeStalls().filter(s => ignoreId === null || String(s.id) !== String(ignoreId));
     if (overlaps(footprint, others)) {

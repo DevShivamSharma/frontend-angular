@@ -1,4 +1,5 @@
 import {
+  amenityKindOf,
   importSelfcareEventHalls,
   importSelfcareLayout,
   importSelfcareResponse,
@@ -89,16 +90,56 @@ describe('importSelfcareLayout', () => {
     expect(areas[1].title).toBe('Pillar');
   });
 
-  it('skips rectangles SelfCare flags visibleInView: false', () => {
+  it('keeps rectangles SelfCare flags visibleInView: false — hidden, but still restricting', () => {
     const row = hall8910();
     (row.layout_data as { nonClickableAreas: unknown[] }).nonClickableAreas = [
-      { x: 1, y: 19.5, width: 84, height: 1, fillColor: '#8a2be2', strokeColor: '#8a2be2', visibleInView: false }
+      { x: 1, y: 19.5, width: 84, height: 1, fillColor: '#8a2be2', strokeColor: '#8a2be2', visibleInView: false },
+      { x: 3, y: 3, width: 1, height: 1, fillColor: 'gray', title: 'Pillar', visibleInView: false }
     ];
 
     const result = importSelfcareLayout(row);
 
-    expect(result.zones).toEqual([]);
-    expect(result.blockedAreas).toEqual([]);
+    expect(result.zones.length).toBe(1);
+    expect(result.zones[0].kind).toBe('SMOKE_CURTAIN');
+    expect(result.zones[0].hidden).toBe(true);
+    expect(result.blockedAreas.length).toBe(1);
+    expect(result.blockedAreas[0].hidden).toBe(true);
+    expect(result.blockedAreas[0].title).toBe('Pillar');
+  });
+
+  it('types a colour from the plan legend, curtains before "no construction"', () => {
+    const row = hall8910();
+    (row.layout_data as { nonClickableAreas: unknown[] }).nonClickableAreas = [
+      { x: 1, y: 19.5, width: 84, height: 0.5, fillColor: '#8A2BE2' }
+    ];
+    row.legends = [{ label: 'Fire curtains (No construction zone below)', colorCode: '#8A2BE2' }];
+
+    const zone = importSelfcareLayout(row).zones[0];
+
+    expect(zone.kind).toBe('SMOKE_CURTAIN');
+    expect(zone.label).toBe('Fire curtains (No construction zone below)');
+  });
+
+  it('never clips a rectangle to length x breadth', () => {
+    const row = hall8910();
+    (row.layout_data as { nonClickableAreas: unknown[] }).nonClickableAreas = [
+      { x: 20, y: 40, width: 30, height: 6, fillColor: '#742371' }
+    ];
+
+    const [wall] = importSelfcareLayout(row).blockedAreas;
+
+    // 40..46 m on a 43 m breadth: the part past the breadth is kept.
+    expect(wall.posZ + wall.length / 2).toBe(46 - 21.5);
+  });
+
+  it('accepts any local SVG icon and refuses anything that is not a local asset name', () => {
+    expect(amenityKindOf('assets/images/drinking-water.svg')).toBe('drinking-water');
+    expect(amenityKindOf('assets/images/Cargo-Truck.svg')).toBe('cargo-truck');
+    expect(amenityKindOf('emergency-exit-left.svg')).toBe('emergency-exit-left');
+    expect(amenityKindOf('https://evil.example/x.svg')).toBeUndefined();
+    expect(amenityKindOf('assets/images/../../x.svg')).toBeUndefined();
+    expect(amenityKindOf('assets/images/a b.svg')).toBeUndefined();
+    expect(amenityKindOf('assets/images/x.png')).toBeUndefined();
   });
 
   it('turns every helper_text icon into an amenity at its converted position', () => {
@@ -111,8 +152,13 @@ describe('importSelfcareLayout', () => {
       'entry-up'
     ]);
     expect(amenities[0].label).toBe('Toilet (Male)');
-    // 2210 px / 20 = 110.5 m from the left edge -> 110.5 - 66.5 = 44 m, then the cluster spread.
-    expect(amenities[1].position).toEqual({ x: 44, z: -4 });
+    // The card's top-left: 2210 px / 20 = 110.5 m from the left edge -> 110.5 - 66.5 = 44 m;
+    // 350 px / 20 = 17.5 m down -> 17.5 - 21.5 = -4 m. The icons sit in a row on that card.
+    expect(amenities[1].anchor).toEqual({ x: 44, z: -4 });
+    expect(amenities[1].slot).toBe(1);
+    expect(amenities[1].position.x).toBeCloseTo(55.39375, 6);
+    expect(amenities[1].position.z).toBeCloseTo(-2.45, 6);
+    expect(amenities[0].position.x).toBeLessThan(amenities[1].position.x);
   });
 
   it('converts exit labels into plan markers', () => {
@@ -268,12 +314,16 @@ describe('live SelfCare API payloads', () => {
   it('imports the north arrow from `direction`', () => {
     const compass = importSelfcareResponse(hallLayoutResponse())[0].compass!;
 
-    // 2600 px / 20 = 130 m across, 950 px / 20 = 47.5 m down -> outside a 133 x 43 m hall.
-    expect(compass.position).toEqual({ x: 63.5, z: 26 });
-    expect(compass.size).toBe(5); // 100 px / 20
+    // The box's top-left is 2600 px / 20 = 130 m across, 950 px / 20 = 47.5 m down; the 100 px
+    // (5 m) rose is drawn 10 px into it, so its centre is at 130 + 0.5 + 2.5 = 133 m and
+    // 47.5 + 0.5 + 2.5 = 50.5 m -> (66.5, 29) from the centre of a 133 x 43 m hall.
+    expect(compass.position).toEqual({ x: 66.5, z: 29 });
+    expect(compass.size).toBe(5);
     expect(compass.rotation).toBe(-90);
     expect(compass.label).toBe('N');
-    expect(compass.labelOffset).toEqual({ x: -1.4, z: -1.75 });
+    // The letter's top-left is at (-28, -35) px in the box: up and left of the rose.
+    expect(compass.labelOffset.x).toBeCloseTo(-4.4, 9);
+    expect(compass.labelOffset.z).toBeCloseTo(-4.75, 9);
   });
 
   it('carries the legend rows, colour swatches and markup notes alike', () => {

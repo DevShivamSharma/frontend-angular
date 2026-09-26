@@ -23,11 +23,12 @@ import type { EditorMode, EditorOverlay, FocusTarget } from '../planner-store.se
 import { buildFreeSpace, buildPreview, buildProposals, buildViolations } from './editor-overlay-renderer';
 import { buildHallBoundary } from './hall-boundary-renderer';
 import { buildHallGrid } from './hall-grid-renderer';
-import { buildAmenities, buildCompass, updateAmenityScales } from './amenities-renderer';
-import { buildBlockedAreas } from './blocked-areas-renderer';
+import { annotationBounds, buildAmenityCards, buildCompass, buildExitLabels } from './annotations-renderer';
+import { hallFloor, planBounds } from '../geometry/hall-plan';
+import { buildFloorRegions, buildPlanAreas, UD_TOOLTIP } from './plan-renderer';
 import { disposeChildren, StallObject } from './stall3d-renderer';
 import { disposeSpriteTextures } from './text-sprite';
-import { buildClearances, buildMarkers, buildRestrictedZones } from './zones-renderer';
+import { buildClearances, buildOpeningMarkers, buildRestrictedZones } from './zones-renderer';
 
 /** Payload of the `moveStall` output. */
 export interface StallMove {
@@ -98,6 +99,7 @@ export class Scene3dComponent implements AfterViewInit {
 
   private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
   private readonly overlay = viewChild.required<ElementRef<HTMLDivElement>>('overlay');
+  private readonly tooltip = viewChild.required<ElementRef<HTMLDivElement>>('tooltip');
 
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
@@ -129,7 +131,7 @@ export class Scene3dComponent implements AfterViewInit {
   private readonly violationGroup = new THREE.Group();
   /** 8. Entry/exit markers and plan labels. */
   private readonly markerGroup = new THREE.Group();
-  /** 9. SelfCare amenity icons (toilets, stairs/elevators, entries). Visual only. */
+  /** 9. The plan's annotations: icon cards, gate / foyer captions, north arrow. Visual only. */
   private readonly amenityGroup = new THREE.Group();
   /** "Show free space" cells. */
   private readonly freeSpaceGroup = new THREE.Group();
@@ -312,69 +314,43 @@ export class Scene3dComponent implements AfterViewInit {
     disposeLayer(this.restrictedGroup);
     disposeLayer(this.markerGroup);
     disposeLayer(this.amenityGroup);
+    this.hideTooltip();
     if (!hall) return;
 
     const { width, length } = hallSize(hall);
     const grid = GridSystem.forHall(hall);
+    const floor = hallFloor(hall);
 
-    if (hall.boundary && hall.boundary.length >= 3) {
-      // Real outline: the floor IS the polygon, the grid is clipped to it. No masks needed.
+    if (floor.length) {
+      // A hall with a source plan: every floor region the plan draws (a foyer below the main
+      // floor, floor past the breadth), the plan's own walls and coloured areas, grid on the floor
+      // only. The rectangles are the source of truth, whatever `boundary` the hall stores.
+      this.hallGroup.add(buildFloorRegions(floor));
+      this.gridGroup.add(buildHallGrid(grid.width, grid.length, hall.shape, grid, floor.flatMap(r => [r.outer, ...r.holes])));
+      this.blockedAreasGroup.add(buildPlanAreas(hall.blockedAreas ?? [], { drawOutside: false }));
+    } else if (hall.boundary && hall.boundary.length >= 3) {
+      // Real outline without plan rectangles: the floor IS the polygon, the grid is clipped to it.
       this.hallGroup.add(buildHallBoundary(hall.boundary));
       this.gridGroup.add(buildHallGrid(width, length, hall.shape, grid, hall.boundary));
-      this.restrictedGroup.add(buildRestrictedZones(hall.zones ?? [], effectiveRules(hall.rules)));
-      this.markerGroup.add(buildMarkers(hall.markers ?? [], hall.openings ?? []));
-      this.amenityGroup.add(buildAmenities(hall.amenities ?? []));
-      this.amenityGroup.add(buildCompass(hall.compass));
-      this.frameHall(hall, grid);
-      return;
-    }
-
-    // Hall floor.
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, length),
-      new THREE.MeshStandardMaterial({ color: '#f1f5f9', roughness: 0.78 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    this.hallGroup.add(floor);
-
-    if (hall.shape === 'CIRCLE') {
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(Math.max(0, width / 2 - 0.06), width / 2, 96),
-        new THREE.MeshBasicMaterial({ color: '#475569', side: THREE.DoubleSide })
-      );
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.y = 0.015;
-      this.hallGroup.add(ring);
+      this.blockedAreasGroup.add(buildPlanAreas(hall.blockedAreas ?? [], { drawOutside: false }));
     } else {
-      const border = new THREE.Mesh(
-        new THREE.PlaneGeometry(width + 0.08, length + 0.08),
-        new THREE.MeshBasicMaterial({ color: '#334155', wireframe: true })
-      );
-      border.rotation.x = -Math.PI / 2;
-      border.position.y = 0.02;
-      this.hallGroup.add(border);
+      this.hallGroup.add(buildPlainFloor(width, length, hall.shape));
+      this.gridGroup.add(buildHallGrid(width, length, hall.shape, grid));
+      this.blockedAreasGroup.add(buildPlanAreas(hall.blockedAreas ?? [], { drawOutside: true }));
     }
 
-    this.gridGroup.add(buildHallGrid(width, length, hall.shape, grid));
-    this.blockedAreasGroup.add(buildBlockedAreas(hall));
     if (hall.zones?.length) {
-      this.restrictedGroup.add(buildRestrictedZones(hall.zones, effectiveRules(hall.rules)));
+      // Clearance outlines belong to the rule engine; a hall without rules shows the plan as is.
+      this.restrictedGroup.add(buildRestrictedZones(hall.zones, effectiveRules(hall.rules), !!hall.rules));
     }
-    if (hall.markers?.length || hall.openings?.length) {
-      this.markerGroup.add(buildMarkers(hall.markers ?? [], hall.openings ?? []));
-    }
-    if (hall.amenities?.length) {
-      this.amenityGroup.add(buildAmenities(hall.amenities));
-    }
-    if (hall.compass) {
-      this.amenityGroup.add(buildCompass(hall.compass));
-    }
+    if (hall.openings?.length) this.markerGroup.add(buildOpeningMarkers(hall.openings));
+    this.markerGroup.add(buildExitLabels(hall.markers ?? []));
+    this.amenityGroup.add(buildAmenityCards(hall.amenities ?? []));
+    this.amenityGroup.add(buildCompass(hall.compass));
 
-    // Frame this hall too, not only the ones with a boundary polygon. The default camera suits
-    // a ~40 m room; an imported hall like the 133 x 43 m Hall 8-9-10 opens far off-frame without
-    // this. `frameHall` is a no-op once a hall has been framed, so it never fights the user.
-    this.frameHall(hall, grid);
+    // Frame every hall once, with its annotations: the default camera suits a ~40 m room, and
+    // SelfCare puts icons and the north arrow outside the outline.
+    this.frameHall(hall);
   }
 
   private syncClearances(hall: Hall | undefined, show: boolean, eventType: EventType): void {
@@ -398,11 +374,25 @@ export class Scene3dComponent implements AfterViewInit {
   }
 
   /** Fit a large irregular hall into view once, when it is first shown. */
-  private frameHall(hall: Hall, grid: GridSystem): void {
+  private frameHall(hall: Hall): void {
     const key = String(hall.id);
     if (this.framedHallId === key) return;
     this.framedHallId = key;
-    this.focusOn({ rect: grid.bounds, seq: 0 }, 0.9);
+    this.focusOn({ rect: this.planRect(hall), seq: 0 }, 0.9);
+  }
+
+  /** The hall's plan with its icon cards, captions and compass. */
+  private planRect(hall: Hall): Rect {
+    const plan = planBounds(hall);
+    const notes = annotationBounds(hall.amenities ?? [], hall.markers ?? [], hall.compass);
+    return notes
+      ? {
+          minX: Math.min(plan.minX, notes.minX),
+          maxX: Math.max(plan.maxX, notes.maxX),
+          minZ: Math.min(plan.minZ, notes.minZ),
+          maxZ: Math.max(plan.maxZ, notes.maxZ)
+        }
+      : plan;
   }
 
   private focusOn(target: FocusTarget, fill = 0.35): void {
@@ -433,7 +423,7 @@ export class Scene3dComponent implements AfterViewInit {
 
   /** The view dock. Frames the whole hall, the same way a newly opened hall is framed. */
   private applyView(command: ViewCommand, hall: Hall): void {
-    const rect = GridSystem.forHall(hall).bounds;
+    const rect = this.planRect(hall);
 
     if (command.kind === 'top') {
       const cx = (rect.minX + rect.maxX) / 2;
@@ -542,7 +532,10 @@ export class Scene3dComponent implements AfterViewInit {
       return;
     }
 
-    if (!this.drag) return;
+    if (!this.drag) {
+      if (event.buttons === 0) this.updateTooltip(event);
+      return;
+    }
 
     const point = this.intersectDragPlane(event);
     if (!point) return;
@@ -600,8 +593,40 @@ export class Scene3dComponent implements AfterViewInit {
   };
 
   private readonly onPointerLeave = (): void => {
+    this.hideTooltip();
     if (this.mode() === 'draw' && this.drawPointerId === null) this.draftLeave.emit();
   };
+
+  /**
+   * The plan's hover text: a rectangle with a `title` (e.g. "Pillar") or a plan zone shows it
+   * next to the pointer, as SelfCare's tooltip does. A stall under the pointer wins.
+   */
+  private updateTooltip(event: PointerEvent): void {
+    const tip = this.tooltip().nativeElement;
+    this.updatePointer(event);
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    if (this.raycaster.intersectObjects(this.stallGroup.children, true).length) {
+      this.hideTooltip();
+      return;
+    }
+    const hit = this.raycaster
+      .intersectObjects([...this.blockedAreasGroup.children, ...this.restrictedGroup.children], true)
+      .find(h => typeof h.object.userData[UD_TOOLTIP] === 'string');
+    if (!hit) {
+      this.hideTooltip();
+      return;
+    }
+    const bounds = this.host().nativeElement.getBoundingClientRect();
+    tip.textContent = hit.object.userData[UD_TOOLTIP];
+    tip.style.left = `${event.clientX - bounds.left + 14}px`;
+    tip.style.top = `${event.clientY - bounds.top + 14}px`;
+    tip.hidden = false;
+  }
+
+  private hideTooltip(): void {
+    const tip = this.tooltip?.()?.nativeElement;
+    if (tip) tip.hidden = true;
+  }
 
   /** Did the pointer hit the suggested-spot ghost? */
   private pickSuggestion(event: PointerEvent): boolean {
@@ -654,10 +679,7 @@ export class Scene3dComponent implements AfterViewInit {
     this.frameId = requestAnimationFrame(this.animate);
     this.controls.update();
 
-    // Scale amenity icons to hold a constant screen-pixel size across all zoom levels, and
-    // fade captions when zoomed out to avoid label collisions on dense clusters.
     const { clientWidth, clientHeight } = this.host().nativeElement;
-    updateAmenityScales(this.amenityGroup, this.camera, clientHeight);
 
     this.renderer.render(this.scene, this.camera);
 
@@ -735,7 +757,43 @@ export class Scene3dComponent implements AfterViewInit {
 }
 
 /** Free one layer: sprite canvas textures first, then every geometry and material. */
+/** A hall without a traced floor or outline: its rectangle (or circle) floor and border. */
+function buildPlainFloor(width: number, length: number, shape: Hall['shape']): THREE.Group {
+  const group = new THREE.Group();
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, length),
+    new THREE.MeshStandardMaterial({ color: '#f1f5f9', roughness: 0.78 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  group.add(floor);
+
+  if (shape === 'CIRCLE') {
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(Math.max(0, width / 2 - 0.06), width / 2, 96),
+      new THREE.MeshBasicMaterial({ color: '#475569', side: THREE.DoubleSide })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.015;
+    group.add(ring);
+  } else {
+    const border = new THREE.Mesh(
+      new THREE.PlaneGeometry(width + 0.08, length + 0.08),
+      new THREE.MeshBasicMaterial({ color: '#334155', wireframe: true })
+    );
+    border.rotation.x = -Math.PI / 2;
+    border.position.y = 0.02;
+    group.add(border);
+  }
+  return group;
+}
+
 function disposeLayer(group: THREE.Group): void {
   disposeSpriteTextures(group);
+  // Canvas textures of the flat plan annotations live on meshes, not sprites.
+  group.traverse(child => {
+    const material = (child as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
+    if (material && !Array.isArray(material) && !(child instanceof THREE.Sprite)) material.map?.dispose();
+  });
   disposeChildren(group);
 }

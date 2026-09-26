@@ -270,6 +270,10 @@ describe('overlapsBlockedArea', () => {
     expect(overlapsBlockedArea(candidate, [area({ kind: 'zone' })])).toBe(false);
   });
 
+  it('blocks on a hidden wall (hiding is display only)', () => {
+    expect(overlapsBlockedArea(candidate, [area({ kind: 'wall', hidden: true })])).toBe(true);
+  });
+
   it('edge-touching is allowed (1e-8 epsilon)', () => {
     // Candidate is 8 wide centred at 0, so its right edge is at x=4.
     // Area is 8 wide centred at 8, so its left edge is at x=4. Edge-touching only.

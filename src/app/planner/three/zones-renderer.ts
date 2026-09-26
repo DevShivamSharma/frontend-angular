@@ -13,7 +13,6 @@ import {
   ZoneKind,
   zoneClearanceFor
 } from '../geometry/placement-rules';
-import { HallMarker } from '../models/hall.model';
 import { makeTextSprite } from './text-sprite';
 
 /** Colour of each zone kind. Red / brown match the source layout's legend colours. */
@@ -42,27 +41,35 @@ const ZONE_SHORT: Record<ZoneKind, string> = {
 const CLEARANCE_COLOR = '#f59e0b';
 
 /**
- * Layer 3 — restricted areas: every zone as a filled, outlined polygon with a short label, plus
- * a dashed outline at its configured clearance distance. These are the same polygons the rules
- * check, not decoration.
+ * Layer 3 — restricted areas: every zone as a filled, outlined polygon, plus a dashed outline at
+ * its configured clearance distance. These are the same polygons the rules check, not decoration.
+ *
+ * A zone that comes from the source plan carries the plan's own colour: it is drawn solid in that
+ * colour and without a caption, exactly as the plan shows it (the plan's legend explains it).
+ * A rule-engine zone (no colour) gets the translucent kind colour and a short caption.
+ * Hidden zones (`visibleInView: false` on the plan, the fire curtains) are not drawn at all —
+ * they still restrict placement.
  */
-export function buildRestrictedZones(zones: HallZone[], rules: LayoutRules): THREE.Group {
+export function buildRestrictedZones(zones: HallZone[], rules: LayoutRules, drawClearance = true): THREE.Group {
   const group = new THREE.Group();
   group.name = 'restricted-zones';
 
   for (const zone of zones) {
-    if (!zone.polygon || zone.polygon.length < 3) continue;
-    const color = ZONE_COLORS[zone.kind] ?? '#dc2626';
+    if (!zone.polygon || zone.polygon.length < 3 || zone.hidden) continue;
+    const fromPlan = !!zone.color;
+    const color = zone.color || ZONE_COLORS[zone.kind] || '#dc2626';
 
-    const fill = flatPolygon(zone.polygon, color, 0.42, 0.14);
+    const fill = flatPolygon(zone.polygon, color, fromPlan ? 0.95 : 0.42, 0.14);
     fill.userData['zoneId'] = zone.id;
+    if (fromPlan) fill.userData['planTooltip'] = zone.label;
     group.add(fill);
     group.add(outline(zone.polygon, color, 0.15));
 
-    const clearance = zoneClearanceFor(zone, rules);
+    const clearance = drawClearance ? zoneClearanceFor(zone, rules) : 0;
     if (clearance > 0) {
       group.add(dashedRect(inflate(bounds(zone.polygon), clearance), color, 0.15));
     }
+    if (fromPlan) continue;
 
     const b = bounds(zone.polygon);
     const label = makeTextSprite([ZONE_SHORT[zone.kind]], {
@@ -136,16 +143,14 @@ export function buildClearances(
   return group;
 }
 
-/** Layer 8 — entry/exit markers: gate and foyer labels from the source layout, and openings. */
-export function buildMarkers(markers: HallMarker[], openings: HallOpening[]): THREE.Group {
+/**
+ * Layer 8 — rule-engine openings (doors with an access area). The plan's own gate / foyer
+ * captions (`markers`) are drawn flat at plan scale by `buildExitLabels` in
+ * annotations-renderer.ts.
+ */
+export function buildOpeningMarkers(openings: HallOpening[]): THREE.Group {
   const group = new THREE.Group();
   group.name = 'markers';
-
-  for (const marker of markers) {
-    const sprite = makeTextSprite([marker.text], { color: '#0f172a', background: 'rgba(255,255,255,0.9)', lineHeight: 0.8, bold: true });
-    sprite.position.set(marker.position.x, 1.6, marker.position.z);
-    group.add(sprite);
-  }
 
   for (const opening of openings) {
     const sprite = makeTextSprite([`${opening.kind} ${opening.label}`], {

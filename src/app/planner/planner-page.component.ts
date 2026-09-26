@@ -20,10 +20,12 @@ import { EditorToolbarComponent } from './components/editor-toolbar.component';
 import { openSidesLabel } from './components/gate-sides';
 import { IconComponent, IconName } from './components/icon.component';
 import { SavedLayoutsPanelComponent } from './components/saved-layouts-panel.component';
+import { SelfcareImportComponent } from './components/selfcare-import.component';
 import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
 import { AssistPanelComponent } from './components/assist-panel.component';
+import { legendEntries } from './geometry/legend-content';
 import { PlannerStore } from './planner-store.service';
 import { Scene3dComponent, StallMove, StallOpenSide, ViewCommand } from './three/scene3d.component';
 
@@ -61,6 +63,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
   styleUrl: './planner-page.component.css',
   providers: [PlannerStore],
   imports: [
+    SelfcareImportComponent,
     WorkingHallPanelComponent,
     CreateHallFormComponent,
     AddStallFormComponent,
@@ -83,6 +86,8 @@ export class PlannerPageComponent implements OnInit {
   readonly error = this.store.error;
   readonly stalls = this.store.stalls;
   readonly currentHall = this.store.currentHall;
+  /** The current hall's plan legend, in view mode (rows hidden in view mode left out). */
+  readonly planLegend = computed(() => legendEntries(this.currentHall()?.legends));
   readonly currentStalls = this.store.currentStalls;
   readonly selectedStall = this.store.selectedStall;
   readonly selectedStallId = this.store.selectedStallId;

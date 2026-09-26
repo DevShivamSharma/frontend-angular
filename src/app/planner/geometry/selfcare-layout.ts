@@ -1,3 +1,4 @@
+import { traceFloor } from './placement-rules';
 import type { HallZone, Point, ZoneKind } from './placement-rules';
 import type {
   AmenityKind,
@@ -8,6 +9,7 @@ import type {
   HallLegend,
   HallMarker
 } from '../models/hall.model';
+import { cardLayout } from './plan-annotations';
 
 /**
  * Import of a SelfCare hall plan (`t_event_hall_layout_data`) into a planner `Hall`.
@@ -32,9 +34,13 @@ import type {
  * CENTRE plus size. `toPlanner()` is the single place that converts.
  *
  * Label and icon positions (`exit_labels`, `helper_text`, `direction`) are NOT in metres — they
- * are canvas pixels at 20 px per metre. Hall 8-9-10 pins this down exactly: it is 133 x 43 m,
- * and its `HALL 8` / `HALL 9` / `HALL 10` captions all sit at `positionY` 860 = 43 x 20, the
- * bottom edge. See `PX_PER_METRE`.
+ * are canvas pixels at 20 px per metre, measured from the same top-left origin as the areas, and
+ * they give the TOP-LEFT corner of the thing drawn there (SelfCare places them as absolutely
+ * positioned boxes). Hall 8-9-10 pins the scale down exactly: it is 133 x 43 m, and its
+ * `HALL 8` / `HALL 9` / `HALL 10` captions all sit at `positionY` 860 = 43 x 20, the bottom edge.
+ * Hall 1GF confirms it independently: at 20 px/m every `EE1-n` gate label lands against the wall
+ * rectangle it names, `FOYER-1G` on the foyer and `GG1-1` / `GG1-2` on their red passage markers.
+ * See `PX_PER_METRE`.
  */
 
 /**
@@ -54,7 +60,10 @@ export interface SelfcareArea {
   fillColor?: string;
   strokeColor?: string;
   title?: string;
-  /** Present on smoke-curtain rows; those are construction data, not part of the drawn plan. */
+  /**
+   * `false` on the fire-curtain rows: SelfCare does not draw them in its view mode, but they stay
+   * non-clickable. The planner hides them and still blocks them.
+   */
   visibleInView?: boolean;
 }
 
@@ -101,6 +110,7 @@ export interface SelfcareLegend {
   label?: string;
   colorCode?: string;
   htmlContent?: string;
+  visibleInViewMode?: boolean;
   visibleInBookMode?: boolean;
 }
 
@@ -168,19 +178,32 @@ const ZONE_BY_COLOR: Record<string, ZoneKind> = {
   '#8a2be2': 'SMOKE_CURTAIN'
 };
 
+/**
+ * Zone kind from the legend label SelfCare shows for a colour. Checked before the colour table,
+ * because the legend is the plan's own statement of what a colour means. Curtains are matched
+ * before "no construction": the curtain legend reads "Fire curtains (No construction zone
+ * below)", which the old order typed as a plain no-construction zone.
+ */
+function zoneKindOfLabel(label: string): ZoneKind | null {
+  const l = label.toLowerCase();
+  if (l.includes('curtain')) return 'SMOKE_CURTAIN';
+  if (l.includes('passage')) return 'PASSAGE';
+  if (l.includes('no construction') || /\bnc\b/.test(l)) return 'NO_CONSTRUCTION';
+  if (l.includes('partition')) return 'PARTITION';
+  return null;
+}
+
 /** The purple hall outline of the SelfCare plan; these rectangles are the wall itself. */
 const WALL_COLOR = '#742371';
 
 /** SelfCare paints everything outside the irregular outline white to hide the base rectangle. */
 const OUTSIDE_COLOR = '#ffffff';
 
-/** `helper_text` icon URL -> amenity kind. The URL is the SelfCare contract, so match on it. */
-const AMENITY_BY_URL: Record<string, AmenityKind> = {
-  'toilet-male.svg': 'toilet-male',
-  'toilet-female.svg': 'toilet-female',
-  'stairs.svg': 'stairs',
-  'entry-up.svg': 'entry-up'
-};
+/**
+ * An icon name SelfCare may reference: the base name of a local SVG. Anything else (a remote
+ * URL, a path with directories, odd characters) is refused rather than loaded.
+ */
+const ICON_NAME = /^[a-z0-9][a-z0-9_-]*$/i;
 
 /** Everything one SelfCare row contributes to a planner hall. */
 export interface SelfcareImport {
@@ -188,6 +211,15 @@ export interface SelfcareImport {
   hallId: number | string | null;
   /** `name`, or null in the database export, which has no name column. */
   name: string | null;
+  /**
+   * SelfCare `shape` is "circular" or "non-circular". A circular plan is still drawn on its
+   * `length x breadth` canvas and its outline is still carved by the rectangles, so it stays a
+   * SQUARE (canvas) hall here; only a circular plan WITHOUT any outline rectangle becomes a planner
+   * CIRCLE, inscribed in the canvas. Turning a carved circular plan into a CIRCLE of radius
+   * length / 2 would drop everything below that circle — Hall 14GF's lower floor and foyer.
+   */
+  shape: 'SQUARE' | 'CIRCLE';
+  radius: number;
   width: number;
   length: number;
   blockedAreas: BlockedArea[];
@@ -221,21 +253,30 @@ export function importSelfcareLayout(row: SelfcareLayoutRow): SelfcareImport {
   const blockedAreas: BlockedArea[] = [];
   const zones: HallZone[] = [];
 
+  const legendByColor = new Map<string, string>();
+  for (const legend of legendRows) {
+    if (legend?.colorCode && legend.label) legendByColor.set(normalizeColor(legend.colorCode), legend.label.trim());
+  }
+
+  // EVERY rectangle is kept. None is clipped to `length x breadth` (walls and masks legitimately
+  // reach past it), and `visibleInView: false` rows are kept too: they are hidden, not free.
   for (const area of data.nonClickableAreas ?? []) {
-    if (!isDrawable(area)) continue;
+    if (!isArea(area)) continue;
 
     const color = normalizeColor(area.fillColor ?? area.strokeColor);
-    const zoneKind = ZONE_BY_COLOR[color];
+    const stroke = normalizeColor(area.strokeColor);
+    const hidden = area.visibleInView === false;
+    const legend = legendByColor.get(color);
+    const zoneKind = (legend ? zoneKindOfLabel(legend) : null) ?? ZONE_BY_COLOR[color];
 
     if (zoneKind) {
-      // A restriction. SelfCare's own smoke-curtain rows are flagged `visibleInView: false`;
-      // they are construction metadata and are skipped by `isDrawable`.
       zones.push({
         id: `sc-zone-${zones.length + 1}`,
         kind: zoneKind,
-        label: area.title ?? zoneKind,
+        label: area.title?.trim() || legend || zoneKind,
         polygon: rectPolygon(area, width, length),
-        color
+        color,
+        ...(hidden ? { hidden: true } : {})
       });
       continue;
     }
@@ -244,7 +285,9 @@ export function importSelfcareLayout(row: SelfcareLayoutRow): SelfcareImport {
       ...toPlanner(area, width, length),
       kind: color === WALL_COLOR ? 'wall' : color === OUTSIDE_COLOR ? 'outside' : 'zone',
       color,
-      ...(area.title ? { title: area.title } : {})
+      ...(stroke && stroke !== color ? { strokeColor: stroke } : {}),
+      ...(area.title?.trim() ? { title: area.title.trim() } : {}),
+      ...(hidden ? { hidden: true } : {})
     });
   }
 
@@ -257,17 +300,23 @@ export function importSelfcareLayout(row: SelfcareLayoutRow): SelfcareImport {
 
   const amenities: HallAmenity[] = [];
   for (const helper of helpers) {
-    const images = helper.image ?? [];
-    // One `helper_text` entry is a ROW of icons sharing a pixel position. Spreading them keeps
-    // the cluster readable at plan scale instead of stacking every icon on one point.
-    images.forEach((image, i) => {
-      const kind = amenityKindOf(image.url);
-      if (!kind) return;
-      const base = pixelToPlanner(helper.positionX, helper.positionY, width, length);
+    if (!Number.isFinite(helper?.positionX) || !Number.isFinite(helper?.positionY)) continue;
+    // One `helper_text` entry is a ROW of icons on one card whose top-left corner is the given
+    // position; `cardLayout` places each icon in the row exactly as the plan does.
+    const icons = (helper.image ?? [])
+      .map(image => ({ kind: amenityKindOf(image?.url), label: String(image?.label ?? '').trim() }))
+      .filter((icon): icon is { kind: AmenityKind; label: string } => !!icon.kind);
+    if (!icons.length) continue;
+
+    const anchor = pixelToPlanner(helper.positionX, helper.positionY, width, length);
+    const layout = cardLayout(icons.map(icon => icon.label || icon.kind));
+    icons.forEach((icon, slot) => {
       amenities.push({
-        kind,
-        label: image.label ?? kind,
-        position: { x: base.x + (i - (images.length - 1) / 2) * AMENITY_SPACING, z: base.z }
+        kind: icon.kind,
+        label: icon.label || icon.kind,
+        position: { x: anchor.x + layout.slots[slot].iconX, z: anchor.z + layout.slots[slot].iconZ },
+        anchor,
+        slot
       });
     });
   }
@@ -278,12 +327,18 @@ export function importSelfcareLayout(row: SelfcareLayoutRow): SelfcareImport {
       label: String(l.label).trim(),
       ...(l.colorCode ? { colorCode: normalizeColor(l.colorCode) } : {}),
       ...(l.htmlContent ? { htmlContent: l.htmlContent } : {}),
-      ...(l.visibleInBookMode === undefined ? {} : { visibleInBookMode: l.visibleInBookMode })
+      ...(typeof l.visibleInViewMode === 'boolean' ? { visibleInViewMode: l.visibleInViewMode } : {}),
+      ...(typeof l.visibleInBookMode === 'boolean' ? { visibleInBookMode: l.visibleInBookMode } : {})
     }));
+
+  const carved = blockedAreas.some(a => a.kind === 'outside' || a.kind === 'wall');
+  const circular = String(data.shape ?? '').trim().toLowerCase() === 'circular' && !carved;
 
   return {
     hallId: row.hallId ?? row.hall_id ?? null,
     name: row.name?.trim() || null,
+    shape: circular ? 'CIRCLE' : 'SQUARE',
+    radius: circular ? Math.min(width, length) / 2 : 0,
     width,
     length,
     blockedAreas,
@@ -296,9 +351,11 @@ export function importSelfcareLayout(row: SelfcareLayoutRow): SelfcareImport {
 }
 
 /**
- * The north arrow. Its pixel size converts at the same 20 px/m as its position, so Hall 8-9-10's
- * 100 px rose is 5 m across and lands at (63.5, 26) — below and right of the outline, which is
- * where the SelfCare plan draws it.
+ * The north arrow. `direction.positionX/Y` is the top-left of its box; the rose is drawn at
+ * `image.positionX/Y` inside that box and the letter at `label.positionX/Y`, all in the same
+ * 20 px/m. Hall 8-9-10's 100 px rose is therefore 5 m across, centred at (2660, 1010) px =
+ * (133, 50.5) m on the plan, below and right of the outline, with its "N" up and to the left —
+ * where the SelfCare plan draws them.
  */
 function toCompass(
   direction: SelfcareDirection | null,
@@ -307,19 +364,24 @@ function toCompass(
 ): HallCompass | null {
   if (!direction) return null;
 
-  const position = pixelToPlanner(direction.positionX, direction.positionY, hallWidth, hallLength);
-  if (!Number.isFinite(position.x) || !Number.isFinite(position.z)) return null;
+  if (!Number.isFinite(direction.positionX) || !Number.isFinite(direction.positionY)) return null;
+  const box = pixelToPlanner(direction.positionX, direction.positionY, hallWidth, hallLength);
 
-  const size = numberOf(direction.image?.width, 0) / PX_PER_METRE;
+  const measured = numberOf(direction.image?.width, 0) / PX_PER_METRE;
+  const size = measured > 0 ? measured : DEFAULT_COMPASS_SIZE;
+  const position = {
+    x: box.x + numberOf(direction.image?.positionX, 0) / PX_PER_METRE + size / 2,
+    z: box.z + numberOf(direction.image?.positionY, 0) / PX_PER_METRE + size / 2
+  };
 
   return {
     position,
-    size: size > 0 ? size : DEFAULT_COMPASS_SIZE,
+    size,
     rotation: numberOf(direction.image?.rotation, 0),
     label: String(direction.label?.text ?? 'N').trim() || 'N',
     labelOffset: {
-      x: numberOf(direction.label?.positionX, 0) / PX_PER_METRE,
-      z: numberOf(direction.label?.positionY, 0) / PX_PER_METRE
+      x: box.x + numberOf(direction.label?.positionX, 0) / PX_PER_METRE - position.x,
+      z: box.z + numberOf(direction.label?.positionY, 0) / PX_PER_METRE - position.z
     }
   };
 }
@@ -357,10 +419,10 @@ export function hallFromSelfcare(row: SelfcareLayoutRow): Hall {
     {
       id: imported.hallId ?? `selfcare-hall-${Date.now()}`,
       name: imported.name ?? 'SelfCare Hall',
-      shape: 'SQUARE',
+      shape: imported.shape,
       width: imported.width,
       length: imported.length,
-      radius: 0
+      radius: imported.radius
     },
     row
   );
@@ -400,25 +462,26 @@ export function importSelfcareEventHalls(
 }
 
 /**
- * Metres between neighbouring icons of one `helper_text` cluster.
+ * Apply a SelfCare row to a hall, replacing its geometry. The hall's id and name are kept.
  *
- * SelfCare gives one position for a whole row of icons, so this is the only placement value not
- * taken from the data. It must stay above the renderer's `ICON_SIZE` or a cluster's chips
- * overlap and their captions collide. The cluster stays centred on the position SelfCare gives.
+ * A rule-driven hall keeps its rules, but its stored `boundary` polygon is re-traced from the new
+ * rectangles (the main floor region) so it can never disagree with them. Further floor regions,
+ * such as a separate foyer, are derived from the rectangles wherever they are needed.
  */
-const AMENITY_SPACING = 5;
-
-/** Apply a SelfCare row to a hall, replacing its geometry. The hall's id and name are kept. */
 export function applySelfcareLayout(hall: Hall, row: SelfcareLayoutRow): Hall {
   const imported = importSelfcareLayout(row);
+  const boundary = hall.boundary
+    ? traceFloor(imported.blockedAreas, imported.width, imported.length)[0]?.outer ?? null
+    : hall.boundary;
 
   return {
     ...hall,
+    boundary,
     ...(imported.name ? { name: imported.name } : {}),
-    shape: 'SQUARE',
+    shape: imported.shape,
     width: imported.width,
     length: imported.length,
-    radius: 0,
+    radius: imported.radius,
     blockedAreas: imported.blockedAreas,
     zones: imported.zones,
     markers: imported.markers,
@@ -482,20 +545,21 @@ function rectPolygon(area: SelfcareArea, hallWidth: number, hallLength: number):
   ];
 }
 
-function amenityKindOf(url: string | undefined): AmenityKind | undefined {
-  const file = String(url ?? '').split('/').pop() ?? '';
-  return AMENITY_BY_URL[file.toLowerCase()];
+/**
+ * `assets/images/drinking-water.svg` -> `drinking-water`. Only a local asset path is accepted:
+ * the name must be a plain file name, so no API value can make the planner load a remote URL.
+ */
+export function amenityKindOf(url: string | undefined): AmenityKind | undefined {
+  const text = String(url ?? '').trim();
+  const match = /^(?:\.?\/)?(?:assets\/images\/)?([^/\\?#]+)\.svg$/i.exec(text);
+  const name = match?.[1];
+  return name && ICON_NAME.test(name) ? name.toLowerCase() : undefined;
 }
 
-/**
- * A rectangle is drawn only if it has a real size and SelfCare has not flagged it
- * `visibleInView: false` — that flag marks rows kept for construction reference, such as the
- * smoke-curtain lines, which the published plan does not show.
- */
-function isDrawable(area: SelfcareArea | null | undefined): area is SelfcareArea {
+/** A rectangle with a real size. Hidden ones (`visibleInView: false`) count: they still block. */
+function isArea(area: SelfcareArea | null | undefined): area is SelfcareArea {
   return (
     !!area &&
-    area.visibleInView !== false &&
     Number.isFinite(area.x) &&
     Number.isFinite(area.y) &&
     Number(area.width) > 0 &&
