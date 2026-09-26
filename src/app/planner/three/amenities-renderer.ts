@@ -221,18 +221,16 @@ export function updateAmenityScales(
 ): void {
   if (amenityGroup.children.length === 0) return;
 
-  // Camera distance from the orbit-controls target (which sits on the floor plane, y=0).
-  // For a perspective camera, the projected size of a world-space unit scales as
-  // worldSize = (screenPx / viewportHeight) * 2 * distance * tan(fov/2).
-  const distance = camera.position.length()
-    ? camera.position.distanceTo(
-        // OrbitControls does not expose its target on the camera. Use the
-        // camera's lookAt direction projected onto the floor: the camera
-        // position's Y component (height above floor) is a good proxy for
-        // the orbit distance on our top-down-ish view.
-        new THREE.Vector3(camera.position.x, 0, camera.position.z)
-      )
-    : camera.position.y;
+  // Camera distance from the floor plane. For our orbit camera the target
+  // sits on y = 0 and the camera orbits above, so the Euclidean distance
+  // from the camera to its ground-plane projection is camera.position.y
+  // (the height). This is a better proxy than the full orbit radius for
+  // the "how much world fits in a pixel" calculation, because the vertical
+  // component of the view frustum maps to world-space Y (vertical), while
+  // the horizontal / depth component maps to the floor (XZ). What we want
+  // is the camera's height above the floor — as height grows, each pixel
+  // covers more world-space metres.
+  const distance = Math.abs(camera.position.y) || 1;
 
   const vFov = THREE.MathUtils.degToRad(camera.fov);
   const worldPerPx = (2 * distance * Math.tan(vFov / 2)) / Math.max(viewportHeight, 1);
