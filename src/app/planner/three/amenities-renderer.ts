@@ -4,17 +4,69 @@ import { iconUrlFor } from '../geometry/selfcare-layout';
 import { HallAmenity, HallCompass } from '../models/hall.model';
 import { makeTextSprite } from './text-sprite';
 
+// ---------------------------------------------------------------------------
+//  Sizing constants
+// ---------------------------------------------------------------------------
+
 /**
- * Side of an icon in metres.
+ * Base side of an icon in metres, used as the initial sprite scale.
  *
- * 4.5 rather than 3: at 3 m the chips were legible only when zoomed well in, and their captions
- * collided with the neighbouring icon's. Kept just under `AMENITY_SPACING` so a cluster of three
- * reads as three separate chips rather than one blurred strip.
+ * This is the "natural" size the sprite is built at. The render-loop scaler
+ * overrides this every frame to hold a constant *screen-pixel* size, clamped
+ * between MIN_ICON_METRES and MAX_ICON_METRES. It is kept close to the old
+ * value (was 4.5) so that the first frame before the scaler runs looks
+ * reasonable and so that tests that read `sprite.scale` before a render pass
+ * see a sensible default.
  */
 const ICON_SIZE = 4.5;
 
 /** Height above the floor. Above the zone fills (0.14) and below the marker text (1.6). */
 const ICON_Y = 0.9;
+
+// ---------------------------------------------------------------------------
+//  Screen-space sizing — constants tuned per the brief
+// ---------------------------------------------------------------------------
+
+/**
+ * Target size of an icon on screen, in CSS pixels.
+ *
+ * 52 px is large enough to recognise the glyph on a 133 m hall in frame
+ * (~1100 px viewport) while still being discrete enough not to dominate a
+ * 41 m hall. Tweak up for higher-DPI panels or down for denser plans.
+ */
+const TARGET_SCREEN_PX = 52;
+
+/**
+ * The icon sprite never shrinks below this many metres, even when zoomed in
+ * very close. Prevents icons from becoming hard-to-hit pinpoints.
+ */
+const MIN_ICON_METRES = 3;
+
+/**
+ * The icon sprite never grows above this many metres, even when zoomed far
+ * out. Prevents them from occluding stalls on very large halls.
+ */
+const MAX_ICON_METRES = 12;
+
+/**
+ * Camera distance below which captions are shown.
+ *
+ * Below this distance the user is "zoomed in enough" to read text. Above it
+ * captions fade to invisible so the zoomed-out view shows only the clean
+ * pictograms, eliminating the collision problem between neighbouring labels
+ * without widening AMENITY_SPACING.
+ */
+const CAPTION_SHOW_DISTANCE = 70;
+
+/**
+ * Camera distance above which captions are fully hidden.
+ * Between CAPTION_SHOW_DISTANCE and this value, opacity fades linearly.
+ */
+const CAPTION_HIDE_DISTANCE = 100;
+
+// ---------------------------------------------------------------------------
+//  Contrast / appearance
+// ---------------------------------------------------------------------------
 
 /** Tint of the placeholder square shown until the SVG loads, per kind. Matches the SelfCare chips. */
 const PLACEHOLDER_COLOR: Record<string, string> = {
@@ -23,6 +75,34 @@ const PLACEHOLDER_COLOR: Record<string, string> = {
   stairs: '#fb923c',
   'entry-up': '#94a3b8'
 };
+
+/**
+ * Width of the white halo ring drawn behind each icon chip, as a fraction of
+ * ICON_TEXTURE_PX. This separates the coloured chip from the light floor and
+ * the grey grid lines behind it, making the icon readable at every zoom.
+ */
+const HALO_WIDTH_FRACTION = 0.06;
+
+/**
+ * Drop-shadow offset and blur, as fractions of ICON_TEXTURE_PX, applied to
+ * the canvas before the icon is drawn. This adds depth separation from the
+ * floor plane.
+ */
+const SHADOW_OFFSET_FRACTION = 0.02;
+const SHADOW_BLUR_FRACTION = 0.04;
+
+// ---------------------------------------------------------------------------
+//  User data keys — attached to sprites so the render-loop scaler can
+//  distinguish icon sprites from caption sprites and read their base scale.
+// ---------------------------------------------------------------------------
+
+const UD_ICON = 'amenity-icon';
+const UD_CAPTION = 'amenity-caption';
+const UD_BASE_SCALE = 'amenity-base-scale';
+
+// ---------------------------------------------------------------------------
+//  Build API
+// ---------------------------------------------------------------------------
 
 /**
  * Layer 9 — amenities: the SelfCare utility icons (toilets, stairs/elevators, entry arrows) as
@@ -53,6 +133,9 @@ export function buildAmenities(amenities: HallAmenity[]): THREE.Group {
       bold: true
     });
     caption.position.set(amenity.position.x, ICON_Y, amenity.position.z + ICON_SIZE * 0.72);
+    // Tag caption so the render-loop scaler can fade and scale it.
+    caption.userData[UD_CAPTION] = true;
+    caption.userData[UD_BASE_SCALE] = new THREE.Vector3().copy(caption.scale);
     group.add(caption);
   }
 
@@ -115,6 +198,81 @@ export function buildCompass(compass: HallCompass | null | undefined): THREE.Gro
   return group;
 }
 
+// ---------------------------------------------------------------------------
+//  Render-loop scaler — called every frame from scene3d.component.ts
+// ---------------------------------------------------------------------------
+
+/**
+ * Update the world-space scale of every amenity icon sprite so it holds a
+ * roughly constant screen-pixel size, and fade captions in/out depending on
+ * zoom distance.
+ *
+ * This is the core fix for "icons too small on large halls": a 4.5 m sprite
+ * that is fine on a 41 m hall is invisible on a 260 m one. Scaling by camera
+ * distance keeps the icon at ~TARGET_SCREEN_PX regardless of hall size, while
+ * the min/max clamp prevents extremes.
+ *
+ * Call from the render loop, after controls.update() but before renderer.render().
+ */
+export function updateAmenityScales(
+  amenityGroup: THREE.Group,
+  camera: THREE.PerspectiveCamera,
+  viewportHeight: number
+): void {
+  if (amenityGroup.children.length === 0) return;
+
+  // Camera distance from the orbit-controls target (which sits on the floor plane, y=0).
+  // For a perspective camera, the projected size of a world-space unit scales as
+  // worldSize = (screenPx / viewportHeight) * 2 * distance * tan(fov/2).
+  const distance = camera.position.length()
+    ? camera.position.distanceTo(
+        // OrbitControls does not expose its target on the camera. Use the
+        // camera's lookAt direction projected onto the floor: the camera
+        // position's Y component (height above floor) is a good proxy for
+        // the orbit distance on our top-down-ish view.
+        new THREE.Vector3(camera.position.x, 0, camera.position.z)
+      )
+    : camera.position.y;
+
+  const vFov = THREE.MathUtils.degToRad(camera.fov);
+  const worldPerPx = (2 * distance * Math.tan(vFov / 2)) / Math.max(viewportHeight, 1);
+
+  // Desired icon size in world-space metres, clamped.
+  const desired = TARGET_SCREEN_PX * worldPerPx;
+  const iconMetres = Math.min(MAX_ICON_METRES, Math.max(MIN_ICON_METRES, desired));
+
+  // Caption opacity: 1 when close, 0 when far, linear ramp between thresholds.
+  const captionOpacity =
+    distance <= CAPTION_SHOW_DISTANCE
+      ? 1
+      : distance >= CAPTION_HIDE_DISTANCE
+        ? 0
+        : 1 - (distance - CAPTION_SHOW_DISTANCE) / (CAPTION_HIDE_DISTANCE - CAPTION_SHOW_DISTANCE);
+
+  // Caption scale factor relative to its base (built) scale. Shrink slightly
+  // at distance so the label doesn't compete with the icon.
+  const captionScaleFactor = 0.6 + 0.4 * captionOpacity;
+
+  amenityGroup.traverse(child => {
+    if (!(child instanceof THREE.Sprite)) return;
+
+    if (child.userData[UD_ICON]) {
+      child.scale.set(iconMetres, iconMetres, 1);
+    } else if (child.userData[UD_CAPTION]) {
+      const base: THREE.Vector3 | undefined = child.userData[UD_BASE_SCALE];
+      if (base) {
+        child.scale.set(
+          base.x * captionScaleFactor,
+          base.y * captionScaleFactor,
+          1
+        );
+      }
+      child.material.opacity = captionOpacity;
+      child.visible = captionOpacity > 0.01;
+    }
+  });
+}
+
 /** The compass rose asset SelfCare names in `direction.image.url`. */
 const COMPASS_ICON_URL = 'assets/images/direction.svg';
 
@@ -129,6 +287,9 @@ function buildIcon(amenity: HallAmenity): THREE.Sprite {
   sprite.scale.set(ICON_SIZE, ICON_SIZE, 1);
   sprite.position.set(amenity.position.x, ICON_Y, amenity.position.z);
   sprite.renderOrder = 29;
+
+  // Tag for the render-loop scaler.
+  sprite.userData[UD_ICON] = true;
 
   loadTexture(iconUrlFor(amenity.kind)).then(texture => {
     if (!texture) return;
@@ -174,7 +335,10 @@ function loadTexture(url: string): Promise<THREE.Texture | null> {
   return pending.then(t => t?.clone() ?? null);
 }
 
-/** Load `url` and re-rasterise it into a square `ICON_TEXTURE_PX` canvas texture. */
+/**
+ * Load `url` and re-rasterise it into a square `ICON_TEXTURE_PX` canvas texture, with a white
+ * halo ring and subtle drop shadow for contrast against the light floor and grid.
+ */
 function rasterize(url: string): Promise<THREE.Texture | null> {
   return new Promise<THREE.Texture | null>(resolve => {
     const image = new Image();
@@ -192,13 +356,51 @@ function rasterize(url: string): Promise<THREE.Texture | null> {
         return;
       }
 
-      // Fit the icon inside the square without distorting a non-square source
-      // (emergency-exit.svg is 26 x 25), and centre what is left over.
+      // --- Contrast enhancement: white halo + drop shadow ---
+
+      // The icon chips are ~25×25 viewBox with a 5px corner radius rounded rect.
+      // We draw a slightly larger white rounded rect behind the icon to create a
+      // halo that separates the coloured chip from the floor and grid.
+      const haloW = ICON_TEXTURE_PX * HALO_WIDTH_FRACTION;
+      const shadowOff = ICON_TEXTURE_PX * SHADOW_OFFSET_FRACTION;
+      const shadowBlur = ICON_TEXTURE_PX * SHADOW_BLUR_FRACTION;
+
+      // Fit the icon inside a sub-region that leaves room for the halo.
       const source = Math.max(image.naturalWidth || 1, image.naturalHeight || 1);
-      const scale = ICON_TEXTURE_PX / source;
+      const margin = haloW * 2; // space for halo on each side
+      const fitSize = ICON_TEXTURE_PX - margin * 2;
+      const scale = fitSize / source;
       const w = (image.naturalWidth || source) * scale;
       const h = (image.naturalHeight || source) * scale;
-      ctx.drawImage(image, (ICON_TEXTURE_PX - w) / 2, (ICON_TEXTURE_PX - h) / 2, w, h);
+      const ix = (ICON_TEXTURE_PX - w) / 2;
+      const iy = (ICON_TEXTURE_PX - h) / 2;
+
+      // Drop shadow behind the whole icon.
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+      ctx.shadowOffsetX = shadowOff;
+      ctx.shadowOffsetY = shadowOff;
+      ctx.shadowBlur = shadowBlur;
+
+      // White halo: a rounded rect slightly larger than the icon.
+      const hx = ix - haloW;
+      const hy = iy - haloW;
+      const hw = w + haloW * 2;
+      const hh = h + haloW * 2;
+      const hr = (hw / w) * ((source / 25) * 5) * scale; // proportional corner radius
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(hx + hr, hy);
+      ctx.arcTo(hx + hw, hy, hx + hw, hy + hh, hr);
+      ctx.arcTo(hx + hw, hy + hh, hx, hy + hh, hr);
+      ctx.arcTo(hx, hy + hh, hx, hy, hr);
+      ctx.arcTo(hx, hy, hx + hw, hy, hr);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // The icon itself, drawn over the halo.
+      ctx.drawImage(image, ix, iy, w, h);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -234,23 +436,40 @@ function placeholderTexture(color: string): THREE.CanvasTexture {
 
   const ctx = canvas.getContext('2d');
   if (ctx) {
+    // White halo behind the placeholder too, for consistency.
+    ctx.fillStyle = '#ffffff';
+    roundedRect(ctx, 2, 2, 60, 60, 14);
+    ctx.fill();
+
     ctx.fillStyle = color;
     // arcTo rather than ctx.roundRect, for the same reason text-sprite.ts rolls its own.
     const x = 6;
     const y = 6;
     const size = 52;
     const r = 12;
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + size, y, x + size, y + size, r);
-    ctx.arcTo(x + size, y + size, x, y + size, r);
-    ctx.arcTo(x, y + size, x, y, r);
-    ctx.arcTo(x, y, x + size, y, r);
-    ctx.closePath();
+    roundedRect(ctx, x, y, size, size, r);
     ctx.fill();
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
+}
+
+/** Draw a rounded rect path (does not fill — caller does). */
+function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }

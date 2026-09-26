@@ -23,7 +23,7 @@ import type { EditorMode, EditorOverlay, FocusTarget } from '../planner-store.se
 import { buildFreeSpace, buildPreview, buildViolations } from './editor-overlay-renderer';
 import { buildHallBoundary } from './hall-boundary-renderer';
 import { buildHallGrid } from './hall-grid-renderer';
-import { buildAmenities, buildCompass } from './amenities-renderer';
+import { buildAmenities, buildCompass, updateAmenityScales } from './amenities-renderer';
 import { buildBlockedAreas } from './blocked-areas-renderer';
 import { disposeChildren, StallObject } from './stall3d-renderer';
 import { disposeSpriteTextures } from './text-sprite';
@@ -609,9 +609,14 @@ export class Scene3dComponent implements AfterViewInit {
   private readonly animate = (): void => {
     this.frameId = requestAnimationFrame(this.animate);
     this.controls.update();
+
+    // Scale amenity icons to hold a constant screen-pixel size across all zoom levels, and
+    // fade captions when zoomed out to avoid label collisions on dense clusters.
+    const { clientWidth, clientHeight } = this.host().nativeElement;
+    updateAmenityScales(this.amenityGroup, this.camera, clientHeight);
+
     this.renderer.render(this.scene, this.camera);
 
-    const { clientWidth, clientHeight } = this.host().nativeElement;
     for (const object of this.stallObjects.values()) {
       object.projectLabels(this.camera, clientWidth, clientHeight);
     }
