@@ -83,8 +83,20 @@ function buildIcon(amenity: HallAmenity): THREE.Sprite {
 }
 
 /**
- * One shared loader, and one promise per URL: a hall repeats the same three icons several times
- * and re-renders on every state change, so the icons are fetched and decoded once.
+ * Side of the rasterised icon texture, in pixels.
+ *
+ * The SelfCare icons declare an intrinsic size of 25 x 25, and a browser rasterises an SVG in an
+ * `<img>` at exactly that — so `THREE.TextureLoader` would hand back a 25 px texture and the
+ * icons would go soft as soon as the camera moved in. Drawing the SVG into a canvas of this size
+ * instead re-rasterises it from the vector data, so it stays crisp at any zoom.
+ */
+const ICON_TEXTURE_PX = 128;
+
+/**
+ * One shared load per URL: a hall repeats the same few icons several times and re-renders on
+ * every state change, so each SVG is fetched, decoded and rasterised once. Callers get a clone,
+ * which shares that single GPU source but owns its own handle, so disposing one sprite's texture
+ * with its layer never pulls the image out from under the others.
  */
 const textureCache = new Map<string, Promise<THREE.Texture | null>>();
 
@@ -92,23 +104,53 @@ function loadTexture(url: string): Promise<THREE.Texture | null> {
   const cached = textureCache.get(url);
   if (cached) return cached.then(t => t?.clone() ?? null);
 
-  const pending = new Promise<THREE.Texture | null>(resolve => {
-    new THREE.TextureLoader().load(
-      url,
-      texture => {
-        texture.colorSpace = THREE.SRGBColorSpace;
-        resolve(texture);
-      },
-      undefined,
-      () => {
-        console.warn(`Amenity icon missing: ${url}`);
-        resolve(null);
-      }
-    );
-  });
-
+  const pending = rasterize(url);
   textureCache.set(url, pending);
   return pending.then(t => t?.clone() ?? null);
+}
+
+/** Load `url` and re-rasterise it into a square `ICON_TEXTURE_PX` canvas texture. */
+function rasterize(url: string): Promise<THREE.Texture | null> {
+  return new Promise<THREE.Texture | null>(resolve => {
+    const image = new Image();
+    // The icons are same-origin assets; this only keeps the canvas untainted if that ever changes.
+    image.crossOrigin = 'anonymous';
+
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = ICON_TEXTURE_PX;
+      canvas.height = ICON_TEXTURE_PX;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+
+      // Fit the icon inside the square without distorting a non-square source
+      // (emergency-exit.svg is 26 x 25), and centre what is left over.
+      const source = Math.max(image.naturalWidth || 1, image.naturalHeight || 1);
+      const scale = ICON_TEXTURE_PX / source;
+      const w = (image.naturalWidth || source) * scale;
+      const h = (image.naturalHeight || source) * scale;
+      ctx.drawImage(image, (ICON_TEXTURE_PX - w) / 2, (ICON_TEXTURE_PX - h) / 2, w, h);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      // The texture is drawn far smaller than 128 px when the whole hall is in frame, so let the
+      // GPU mip it down rather than alias.
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.generateMipmaps = true;
+      resolve(texture);
+    };
+
+    image.onerror = () => {
+      console.warn(`Amenity icon missing: ${url}`);
+      resolve(null);
+    };
+
+    image.src = url;
+  });
 }
 
 /** True while `object` still hangs off a `THREE.Scene`, i.e. its layer has not been disposed. */
