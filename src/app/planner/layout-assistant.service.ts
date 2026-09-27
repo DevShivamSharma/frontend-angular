@@ -22,8 +22,15 @@ export interface AssistantRequest {
     blockedAreas?: unknown;
     zones?: unknown;
     rules?: unknown;
+    markers?: unknown;
+    openings?: unknown;
+    eventType?: 'B2B' | 'B2C';
   };
   existingStalls: Array<{
+    id?: string | number;
+    rotation?: number;
+    openSides?: string[];
+    gateSide?: string;
     name: string;
     width: number;
     length: number;
@@ -35,6 +42,12 @@ export interface AssistantRequest {
 
 /** What comes back. `stalls` are proposals in hall metres; nothing is applied until reviewed. */
 export interface AssistantResponse {
+  action?: 'place' | 'clear' | 'none';
+  requestedCount?: number | null;
+  placedCount?: number;
+  clarification?: string | null;
+  removals?: { id: string; name: string }[];
+  source?: string;
   summary?: string;
   notes?: string[];
   stalls: PlannedStall[];
@@ -69,12 +82,19 @@ export class LayoutAssistantService {
         length: hall.length,
         radius: hall.radius,
         gridCell,
+        markers: hall.markers ?? [],
+        openings: hall.openings ?? [],
+        eventType: (hall as Hall & { eventType?: 'B2B' | 'B2C' }).eventType,
         ...(hall.boundary?.length ? { boundary: hall.boundary } : {}),
         ...(hall.blockedAreas?.length ? { blockedAreas: hall.blockedAreas } : {}),
         ...(hall.zones?.length ? { zones: hall.zones } : {}),
         ...(hall.rules ? { rules: hall.rules } : {})
       },
       existingStalls: stalls.map(s => ({
+        id: s.id,
+        rotation: s.rotation ?? 0,
+        openSides: s.openSides,
+        gateSide: s.gateSide,
         name: s.name,
         width: s.width,
         length: s.length,

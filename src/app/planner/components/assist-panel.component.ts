@@ -6,6 +6,7 @@ import { extractErrorMessage } from '../../core/http-error.util';
 import { LayoutAssistantService } from '../layout-assistant.service';
 import { PlannerStore } from '../planner-store.service';
 import { IconComponent } from './icon.component';
+import { AiChatComponent } from './ai-chat.component';
 
 /**
  * Starters, so the first use is not a blank page. The chip shows a short label; clicking it puts
@@ -26,8 +27,8 @@ const EXAMPLES: ReadonlyArray<{ label: string; text: string }> = [
  */
 @Component({
   selector: 'app-assist-panel',
-  templateUrl: './assist-panel.component.html',
-  imports: [ReactiveFormsModule, IconComponent],
+  template: '<app-ai-chat style="display:flex;height:560px;max-height:70dvh" />',
+  imports: [AiChatComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssistPanelComponent {

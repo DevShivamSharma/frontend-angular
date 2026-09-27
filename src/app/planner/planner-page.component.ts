@@ -25,6 +25,8 @@ import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
 import { AssistPanelComponent } from './components/assist-panel.component';
+import { AiChatLauncherComponent } from './components/ai-chat-launcher.component';
+import { AiChatSession } from './ai-chat-session.service';
 import { legendEntries } from './geometry/legend-content';
 import { PlannerStore } from './planner-store.service';
 import { Scene3dComponent, StallMove, StallOpenSide, ViewCommand } from './three/scene3d.component';
@@ -61,13 +63,14 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
   selector: 'app-planner-page',
   templateUrl: './planner-page.component.html',
   styleUrl: './planner-page.component.css',
-  providers: [PlannerStore],
+  providers: [PlannerStore, AiChatSession],
   imports: [
     SelfcareImportComponent,
     WorkingHallPanelComponent,
     CreateHallFormComponent,
     AddStallFormComponent,
     AssistPanelComponent,
+    AiChatLauncherComponent,
     EditStallFormComponent,
     ShopsListComponent,
     SavedLayoutsPanelComponent,
