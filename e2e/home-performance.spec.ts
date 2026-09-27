@@ -10,6 +10,24 @@ test('home: measure rendering and trusted input responsiveness', async ({ page }
   test.setTimeout(180_000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
+  const edgeFeaturesOff = process.env['VENUE_EDGE_FEATURES_OFF'] === '1';
+  let comparisonApplied = false;
+  if (edgeFeaturesOff) await page.route('**/main.js', async route => {
+    // Diagnostic control on a development response only. The user's server and
+    // workspace stay unchanged; fail explicitly if the bundle shape changes.
+    const response = await route.fetch();
+    let body = await response.text();
+    for (const [source, replacement, count] of [
+      ['addFrontGarden(root);', 'void root;', 1],
+      ['groundGroup.position.y = 6.6;', 'groundGroup.position.y = 0;', 1],
+      ['revealMappedRoads(root);', 'void root;', 2]
+    ] as const) {
+      expect(body.split(source).length - 1, source).toBe(count);
+      body = body.replaceAll(source, replacement);
+    }
+    comparisonApplied = true;
+    await route.fulfill({ response, body });
+  });
   await page.addInitScript(() => {
     const state = { draws: 0, frames: [] as { time: number; draws: number }[],
       inputs: [] as { type: string; delay: number }[], longTasks: [] as number[] };
@@ -52,6 +70,7 @@ test('home: measure rendering and trusted input responsiveness', async ({ page }
     await expect(page.getByRole('button', {name:'Color',exact:true})).toHaveAttribute('aria-pressed','true',{timeout:60_000});
   }
   await page.waitForTimeout(4000);
+  if (edgeFeaturesOff) expect(comparisonApplied).toBe(true);
   const gpu = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
     const gl = canvas.getContext('webgl2')!;
     const debug = gl.getExtension('WEBGL_debug_renderer_info');
@@ -100,7 +119,7 @@ test('home: measure rendering and trusted input responsiveness', async ({ page }
   await page.waitForTimeout(2500);
   const settled = await measure();
   await page.screenshot({ path: info.outputPath('home-desktop.png') });
-  const result = { gpu, idle, orbit, destination, settled, errors };
+  const result = { variant: edgeFeaturesOff ? 'edge-features-disabled-control' : 'current', gpu, idle, orbit, destination, settled, errors };
   await info.attach('home-performance.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
   console.log('HOME_PERFORMANCE ' + JSON.stringify(result));
   expect(errors).toEqual([]);

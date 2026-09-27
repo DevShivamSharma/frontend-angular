@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { DEFAULT_LAYOUT_RULES } from '../src/app/planner/geometry/placement-rules';
+import { dismissPlottingRules } from './planner-test-helpers';
 
 const hall = { id: 901, name: 'Passage test hall', shape: 'SQUARE', width: 50, length: 50, radius: 0,
   rules: { ...DEFAULT_LAYOUT_RULES } };
@@ -18,6 +19,7 @@ async function setup(page: Page, stalls: unknown[] = [], customHall = hall) {
     await route.fulfill({ json: body });
   });
   await page.goto('/planner');
+  await dismissPlottingRules(page);
   await page.waitForFunction(() => (window as any).ng?.getComponent(document.querySelector('app-planner-page'))?.store.hallsStatus() === 'ready');
   await page.evaluate(({ stalls }) => {
     const store = (window as any).ng.getComponent(document.querySelector('app-planner-page')).store;

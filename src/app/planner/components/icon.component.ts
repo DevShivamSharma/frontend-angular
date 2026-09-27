@@ -20,6 +20,7 @@ export type IconName =
   | 'search'
   | 'shield'
   | 'layers'
+  | 'floor-plan'
   | 'x'
   | 'alert'
   | 'chevron-down'

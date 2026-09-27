@@ -11,6 +11,11 @@
   focusable="false"
 >
   @switch (name()) {
+    @case ('floor-plan') {
+      <path d="M3 3h18v18H3z" />
+      <path d="M3 11h7V3M10 11v4M10 19v2M10 15h5M19 15h2" />
+      <path d="M15 3v5h6" />
+    }
     @case ('building') {
       <path d="M3 21h18" />
       <path d="M5 21V8l7-5 7 5v13" />

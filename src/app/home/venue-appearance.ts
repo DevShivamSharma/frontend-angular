@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createPavingTexture } from './venue-surface-detail';
 
 export type VenueAppearance = 'natural' | 'color';
 
@@ -11,6 +12,8 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
     const surfaces = new Map<T.MeshStandardMaterial, T.MeshStandardMaterial>();
     const ownedMaterials = new Set<T.Material>(), textures = new Set<T.Texture>();
     let disposed = false;
+    const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    let naturalPaving: T.Texture | undefined;
     const own = (material: T.Material) => {
         ownedMaterials.add(material);
         for (const value of Object.values(material)) if (value instanceof T.Texture) textures.add(value);
@@ -19,6 +22,12 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
         if (!(object instanceof T.Mesh)) return;
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
             if (!(material instanceof T.MeshStandardMaterial) || surfaces.has(material)) continue;
+            if (material.userData['architecturalCategory'] === 'paved_ground') {
+                naturalPaving ??= createPavingTexture(null, anisotropy);
+                material.map = naturalPaving;
+                material.color.setRGB(.20, .218, .213);
+                renderer.initTexture(naturalPaving);
+            }
             const natural = material.clone(); surfaces.set(material, natural); own(natural);
         }
     });
@@ -39,6 +48,11 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
         for (const result of materials) {
             if (result.status === 'rejected') { failed = true; continue; }
             const material = result.value as T.MeshStandardMaterial;
+            // Keep ownership of the supplied texture even after composing its
+            // image into the plaza atlas, so inactive palettes also clean up.
+            own(material);
+            if (material.userData['architecturalCategory'] === 'paved_ground')
+                material.map = createPavingTexture(material.map, anisotropy);
             own(material); palette.set(material.name, material);
             for (const value of Object.values(material)) if (value instanceof T.Texture) {
                 value.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());

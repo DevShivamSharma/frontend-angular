@@ -410,15 +410,51 @@ export class Scene3dComponent implements AfterViewInit {
    * Distance at which `rect` spans roughly `fill` of the view, in whichever direction is
    * tighter: a long hall like Hall 8-9-10 (129 x 41 m) is limited by the width, not the height.
    */
-  private frameDistance(rect: Rect, fill: number): number {
+  private frameDistance(rect: Rect, fill: number, perspective = true): number {
+    const viewport = this.framingViewport();
     const vHalf = THREE.MathUtils.degToRad(this.camera.fov) / 2;
     const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
     const width = Math.max(rect.maxX - rect.minX, 6);
     const depth = Math.max(rect.maxZ - rect.minZ, 6);
-    return Math.min(
-      this.controls.maxDistance,
-      Math.max(width / (2 * Math.tan(hHalf)), depth / (2 * Math.tan(vHalf))) / fill
-    );
+    const horizontal = width / (2 * Math.tan(hHalf) * viewport.widthFraction * fill);
+    const vertical = depth / (2 * Math.tan(vHalf) * viewport.heightFraction * fill);
+    // focusOn tilts the camera by (0, .82, .58). The near edge projects larger than the
+    // centre plane; include its depth so foreground cards do not leave the left/right edges.
+    const tiltLength = Math.hypot(0.82, 0.58);
+    const distance = perspective
+      ? (Math.max(horizontal, vertical * 0.82 / tiltLength) + depth / 2 * 0.58 / tiltLength) / tiltLength
+      : Math.max(horizontal, vertical);
+    return Math.min(this.controls.maxDistance, distance);
+  }
+
+  /** Fit in the uncovered canvas: annotation meshes can be in-frustum but behind the HUD. */
+  private framingViewport(): { widthFraction: number; heightFraction: number } {
+    const bounds = this.host().nativeElement.getBoundingClientRect();
+    const width = bounds.width || 1;
+    const height = bounds.height || 1;
+    const stage = this.host().nativeElement.closest('.stage');
+    let top = 12, right = 12, bottom = 12;
+    const left = 12;
+    stage?.querySelectorAll<HTMLElement>('.stage-top > *').forEach(element => {
+      const box = element.getBoundingClientRect();
+      if (!box.width || !box.height) return;
+      if (element.matches('.hud-info[open]')) {
+        right = Math.max(right, bounds.right - box.left + 12);
+      } else {
+        top = Math.max(top, box.bottom - bounds.top + 12);
+      }
+    });
+    const footer = stage?.querySelector('.stage-bottom')?.getBoundingClientRect();
+    if (footer?.height) bottom = Math.max(bottom, bounds.bottom - footer.top + 12);
+    const dock = stage?.querySelector('.hud-dock')?.getBoundingClientRect();
+    if (dock?.width) right = Math.max(right, bounds.right - dock.left + 12);
+    // Keep a usable view even when a transient panel fills a very small viewport.
+    right = Math.min(right, width * 0.45);
+    top = Math.min(top, height * 0.4);
+    bottom = Math.min(bottom, height * 0.2);
+    this.camera.setViewOffset(width, height, (right - left) / 2, (bottom - top) / 2, width, height);
+    return { widthFraction: Math.max(0.1, (width - left - right) / width),
+      heightFraction: Math.max(0.1, (height - top - bottom) / height) };
   }
 
   /** The view dock. Frames the whole hall, the same way a newly opened hall is framed. */
@@ -431,7 +467,7 @@ export class Scene3dComponent implements AfterViewInit {
       this.controls.target.set(cx, 0, cz);
       // Not exactly overhead: straight down leaves the camera's up vector undefined and
       // OrbitControls flips the view on the next drag.
-      this.camera.position.set(cx, this.frameDistance(rect, 0.95), cz + 0.01);
+      this.camera.position.set(cx, this.frameDistance(rect, 0.95, false), cz + 0.01);
       this.controls.update();
       return;
     }
@@ -716,6 +752,8 @@ export class Scene3dComponent implements AfterViewInit {
     const height = host.clientHeight || 1;
 
     this.camera.aspect = width / height;
+    this.camera.clearViewOffset();
+    this.framingViewport();
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
   }

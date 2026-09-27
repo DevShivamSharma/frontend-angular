@@ -1,10 +1,11 @@
+<app-planner-rules-dialog #rulesGuide />
 <div class="planner" [class.is-sidebar-collapsed]="!sidebarOpen()">
   <!-- `inert` while hidden: its controls leave the tab order and the accessibility tree. -->
   <aside class="sidebar" id="planner-sidebar" aria-label="Planner controls" [inert]="!sidebarOpen()">
     <header class="sidebar-header">
       <div class="brand">
         <a class="brand-mark" routerLink="/" title="Back to venue overview" aria-label="Back to venue overview">
-          <app-icon name="layers" [size]="18" />
+          <app-icon name="floor-plan" [size]="20" />
         </a>
         <div class="brand-text">
           <h1 class="app-title">3D Floor Planner</h1>
@@ -28,6 +29,17 @@
           <app-icon name="panel-left-close" [size]="18" />
         </button>
       </div>
+
+      <button
+        type="button"
+        class="btn-primary planner-save"
+        [disabled]="store.busy() || !currentHall()"
+        [title]="selectedSavedId() === null ? 'Save this layout' : 'Save changes to the open layout'"
+        (click)="saveCurrentLayout()"
+      >
+        <app-icon name="save" [size]="16" />
+        {{ saving() ? 'Saving…' : selectedSavedId() === null ? 'Save layout' : 'Save changes' }}
+      </button>
 
       <!-- The hall picker and its two Excel buttons read as one control, not three loose ones. -->
       <div class="hall-card">
@@ -139,6 +151,10 @@
         aria-labelledby="sidebar-tab-rules"
         [hidden]="activeTab() !== 'rules'"
       >
+        <app-violations-panel section="alerts" />
+        <button type="button" class="btn-secondary is-block" (click)="rulesGuide.open()">
+          <app-icon name="file" [size]="16" /> Read plotting rules
+        </button>
         <app-violations-panel section="rules" />
       </div>
     </div>
@@ -185,6 +201,19 @@
         >
           <app-icon name="panel-left-open" [size]="18" />
         </button>
+      }
+
+      @if (!sidebarOpen()) {
+      <button
+        type="button"
+        class="btn-primary planner-save"
+        [disabled]="store.busy() || !currentHall()"
+        [title]="selectedSavedId() === null ? 'Save this layout' : 'Save changes to the open layout'"
+        (click)="saveCurrentLayout()"
+      >
+        <app-icon name="save" [size]="16" />
+        {{ saving() ? 'Saving…' : selectedSavedId() === null ? 'Save layout' : 'Save changes' }}
+      </button>
       }
 
       <div class="hud hud-left">
@@ -265,27 +294,6 @@
           }
         </details>
       }
-    </div>
-
-    <!--
-      Transient problems belong over the canvas, not in the sidebar: a rejected drag used to
-      insert a card above the form the user was filling and push it down the page.
-      `assertive` so a rejection is announced without waiting for focus to move.
-    -->
-    <div class="toast-stack" [class.is-below-info]="hallInfoOpen() && currentHall()">
-      @if (error()) {
-        <div class="toast is-danger" role="alert" aria-live="assertive">
-          <div class="toast-header">
-            <app-icon name="alert" [size]="15" />
-            <span class="toast-title">Not allowed</span>
-            <button type="button" class="icon-btn" aria-label="Dismiss" (click)="dismissError()">
-              <app-icon name="x" [size]="13" />
-            </button>
-          </div>
-          <div class="toast-body">{{ errorText() }}</div>
-        </div>
-      }
-      <app-violations-panel section="alerts" />
     </div>
 
     @if (hallsStatus() === 'loading') {

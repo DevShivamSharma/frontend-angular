@@ -6,6 +6,8 @@ import { createGlobeContext } from './venue-globe';
 import { createVenueRenderLoop } from './venue-render-loop';
 import { createVenueAmbientOcclusion } from './venue-ambient-occlusion';
 import { batchVenue } from './venue-batching';
+import { prepareVenueSurfaceDetail } from './venue-surface-detail';
+import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
 import { createVenueAppearance, VenueAppearance } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
@@ -84,7 +86,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             radius?: number;
         }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
-        let prepared = false;
+        let prepared = false, localMapReady = false;
         const frames = createVenueRenderLoop(updateFrame, renderFrame);
         const invalidate = () => { if (prepared) frames.invalidate(); };
         cleanups.push(() => frames.dispose());
@@ -196,7 +198,12 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         camera.position.sub(controls.target).setLength(initialFit).add(controls.target);
         controls.update();
         try {
-            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange:events.modeChanged,onInvalidate:invalidate});
+            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange:events.modeChanged,onInvalidate:invalidate,
+                onLocalMapReady: () => {
+                    localMapReady = true;
+                    if (root) revealMappedRoads(root);
+                    renderer.shadowMap.needsUpdate = true;
+                }});
             events.geographyReady(true);
         } catch(error) { if(!signal.aborted)console.warn('Geographic context unavailable',error);events.geographyReady(false); }
         signal.throwIfAborted();
@@ -207,13 +214,16 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             signal.throwIfAborted();
         }
         root = g.scene;
+        prepareVenueSurfaceDetail(root);
         // Export is already metres, Y-up, east +X / south +Z. Do not rotate the
         // glTF a second time; W converts only the authored navigation coordinates.
         batchVenue(root, classify, o => [
             ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i),
             ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/),
-            /label|sign|glass|glazing|light|spray/i.test(o.name)
+            /label|sign|glass|glazing|light|spray/i.test(o.name),
+            isLegacyContextRoad(o)
         ].join(':'));
+        if (localMapReady) revealMappedRoads(root);
         scene.add(root);
         const replacedMaterials = new Set<T.Material>();
         root.traverse(o => {

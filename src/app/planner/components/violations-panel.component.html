@@ -1,17 +1,17 @@
 @if (section() === 'alerts') {
   @if (rejection(); as r) {
-    <div class="toast is-danger" role="alert" aria-live="assertive">
-      <div class="toast-header">
+    <div class="feedback is-danger" role="region" [attr.aria-label]="r.title">
+      <div class="feedback-header">
         <app-icon name="alert" [size]="15" />
-        <span class="toast-title">{{ r.title }}</span>
+        <span class="feedback-title">{{ r.title }}</span>
         <button type="button" class="icon-btn" aria-label="Dismiss" (click)="dismiss()">
           <app-icon name="x" [size]="13" />
         </button>
       </div>
-      <div class="toast-body">
+      <div class="feedback-body">
         @for (v of r.violations; track $index) {
           <div>
-            <span class="toast-code">{{ v.code }}</span>
+            <span class="feedback-code">{{ v.code }}</span>
             {{ v.message }}
           </div>
         }
@@ -21,7 +21,7 @@
         </div>
       </div>
 
-      <div class="toast-actions">
+      <div class="feedback-actions">
         @if (r.suggestion; as s) {
           <button type="button" class="btn-mini is-blue" (click)="placeSuggestion()">
             <app-icon name="check" [size]="12" />
@@ -42,15 +42,15 @@
   }
 
   @if (serverViolations().length) {
-    <div class="toast is-danger" role="alert">
-      <div class="toast-header">
+    <div class="feedback is-danger" role="region" aria-label="Rejected by the server">
+      <div class="feedback-header">
         <app-icon name="alert" [size]="15" />
-        <span class="toast-title">Rejected by the server</span>
+        <span class="feedback-title">Rejected by the server</span>
         <button type="button" class="icon-btn" aria-label="Dismiss" (click)="dismiss()">
           <app-icon name="x" [size]="13" />
         </button>
       </div>
-      <div class="toast-body">
+      <div class="feedback-body">
         The backend re-checked every new or moved stall and refused the save.
         @for (v of serverViolations(); track $index) {
           <div class="violation-row">

@@ -431,9 +431,9 @@ export function hallFromSelfcare(row: SelfcareLayoutRow): Hall {
 /**
  * The halls of the event endpoint (`data.halls[]`), as picker entries.
  *
- * These carry no geometry — only `eventLayoutId` tells you whether a hall has a published plan
- * to fetch. Sizes stay 0 until that plan is imported, so callers should treat a hall with
- * `hasLayout: false` as unfetchable rather than as an empty room.
+ * These carry booking metadata, not geometry. `hasLayout` means an EVENT layout exists;
+ * a null eventLayoutId says nothing about the base hall plan. Fetch detailed hall data by
+ * hallId independently, and never replace its geometry or annotations with these summaries.
  */
 export interface SelfcareHallSummary {
   id: number | string;

@@ -240,5 +240,298 @@
       182,
       0
     ]
+  },
+  {
+    "id": "gate1",
+    "gate": "1",
+    "label": "Gate 1",
+    "center": [
+      586.189,
+      224.621,
+      3.7
+    ],
+    "position": [
+      487.6218853433652,
+      395.3436466279176,
+      7.4
+    ],
+    "camera": [
+      613.177,
+      173.704,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_1 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate3",
+    "gate": "3",
+    "label": "Gate 3",
+    "center": [
+      507.892,
+      243.911,
+      3.7
+    ],
+    "position": [
+      465.1789128237938,
+      317.8924637760018,
+      7.4
+    ],
+    "camera": [
+      531.779,
+      296.354,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_3 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate4",
+    "gate": "4",
+    "label": "Gate 4",
+    "center": [
+      274.059,
+      369.187,
+      3.7
+    ],
+    "position": [
+      456.7548190687745,
+      52.74858722219287,
+      7.4
+    ],
+    "camera": [
+      313.347,
+      411.346,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_4 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate5a",
+    "gate": "5A",
+    "label": "Gate 5A",
+    "center": [
+      232.952,
+      395.235,
+      3.7
+    ],
+    "position": [
+      458.7601168363927,
+      4.125000846003587,
+      7.4
+    ],
+    "camera": [
+      272.24,
+      437.394,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_5A sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate5b",
+    "gate": "5B",
+    "label": "Gate 5B",
+    "center": [
+      170.42,
+      422.182,
+      3.7
+    ],
+    "position": [
+      450.82985382138816,
+      -63.50311171842813,
+      7.4
+    ],
+    "camera": [
+      210.734,
+      463.361,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_5B sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate5c",
+    "gate": "5C",
+    "label": "Gate 5C",
+    "center": [
+      -122.533,
+      349.131,
+      3.7
+    ],
+    "position": [
+      241.0903517433931,
+      -280.68203378874614,
+      7.4
+    ],
+    "camera": [
+      -138.666,
+      404.454,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_5C sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate6",
+    "gate": "6",
+    "label": "Gate 6",
+    "center": [
+      -282,
+      151,
+      6.6
+    ],
+    "position": [
+      -10.230164026199986,
+      -319.7191638716,
+      13.2
+    ],
+    "camera": [
+      -353.04,
+      159.32,
+      31.168
+    ],
+    "radius": 19,
+    "source_object": "PHOTO_GATE_6 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": false,
+    "target": [
+      -282,
+      146,
+      6.6
+    ]
+  },
+  {
+    "id": "gate7",
+    "gate": "7",
+    "label": "Gate 7",
+    "center": [
+      -434.357,
+      -145.244,
+      3.7
+    ],
+    "position": [
+      -342.96352791451744,
+      -303.54271241052516,
+      7.4
+    ],
+    "camera": [
+      -447.532,
+      -89.143,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_7 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate8",
+    "gate": "8",
+    "label": "Gate 8",
+    "center": [
+      -470.644,
+      -211.775,
+      3.7
+    ],
+    "position": [
+      -418.7251094775826,
+      -301.7023505842577,
+      7.4
+    ],
+    "camera": [
+      -514.995,
+      -174.98,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_8 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate9",
+    "gate": "9",
+    "label": "Gate 9",
+    "center": [
+      -542.692,
+      -363.315,
+      3.7
+    ],
+    "position": [
+      -585.9856025637469,
+      -288.32768494737434,
+      7.4
+    ],
+    "camera": [
+      -593.753,
+      -390.029,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_9 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate10",
+    "gate": "10",
+    "label": "Gate 10",
+    "center": [
+      -314.239,
+      -522.333,
+      3.7
+    ],
+    "position": [
+      -609.4729969158412,
+      -10.97281860381139,
+      7.4
+    ],
+    "camera": [
+      -343.612,
+      -571.912,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_10 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate11",
+    "gate": "11",
+    "label": "Gate 11",
+    "center": [
+      317.0,
+      -68.0,
+      3.7
+    ],
+    "position": [
+      99.6102725416,
+      308.5300530046,
+      7.4
+    ],
+    "camera": [
+      364.883,
+      -100.064,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_11 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
   }
 ]

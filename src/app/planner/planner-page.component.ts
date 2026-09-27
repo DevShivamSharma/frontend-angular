@@ -9,9 +9,11 @@ import {
   Injector,
   OnInit,
   signal,
+  untracked,
   viewChild
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { NotifyService } from '../core/notify.service';
 
 import { AddStallFormComponent } from './components/add-stall-form.component';
 import { CreateHallFormComponent } from './components/create-hall-form.component';
@@ -25,6 +27,7 @@ import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
 import { AssistPanelComponent } from './components/assist-panel.component';
+import { PlannerRulesDialogComponent } from './components/planner-rules-dialog.component';
 import { AiChatLauncherComponent } from './components/ai-chat-launcher.component';
 import { AiChatSession } from './ai-chat-session.service';
 import { legendEntries } from './geometry/legend-content';
@@ -48,7 +51,7 @@ const TAB_ORDER: readonly SidebarTab[] = ['stalls', 'assist', 'layouts', 'hall',
 /** Same breakpoint as the stacked layout in planner-page.component.css. */
 const COMPACT_QUERY = '(max-width: 900px)';
 
-/** The store's error messages start with an emoji; the error box draws its own icon instead. */
+/** The notification draws its own icon. */
 const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
 
 /**
@@ -70,6 +73,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
     CreateHallFormComponent,
     AddStallFormComponent,
     AssistPanelComponent,
+    PlannerRulesDialogComponent,
     AiChatLauncherComponent,
     EditStallFormComponent,
     ShopsListComponent,
@@ -85,6 +89,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
 export class PlannerPageComponent implements OnInit {
   /** Public so the template can hand the draw-mode pointer events straight to the store. */
   readonly store = inject(PlannerStore);
+  private readonly notify = inject(NotifyService);
 
   readonly error = this.store.error;
   readonly stalls = this.store.stalls;
@@ -110,6 +115,7 @@ export class PlannerPageComponent implements OnInit {
   readonly openSidesLabel = openSidesLabel;
 
   readonly activeTab = signal<SidebarTab>('stalls');
+  readonly saving = signal(false);
 
   /** The sidebar can be hidden so the 3D view gets the full width. UI only. */
   readonly sidebarOpen = signal(true);
@@ -119,8 +125,6 @@ export class PlannerPageComponent implements OnInit {
    * otherwise cover most of the 3D view.
    */
   readonly hallInfoOpen = signal(!window.matchMedia(COMPACT_QUERY).matches);
-
-  readonly errorText = computed(() => this.error().replace(LEADING_EMOJI, ''));
 
   /** Offline fallback in use: the server did not answer, or has no halls. */
   readonly offline = computed(() => {
@@ -186,6 +190,18 @@ export class PlannerPageComponent implements OnInit {
   readonly viewCommand = signal<ViewCommand | null>(null);
 
   constructor() {
+    // One shared toast surface; detailed placement diagnostics stay in the Rules panel.
+    effect(() => {
+      const message = this.error().replace(LEADING_EMOJI, '');
+      if (!message) return;
+      untracked(() => {
+        const parts = message.match(/^([^:]+):\s+([\s\S]+)$/);
+        const hasDetails = !!this.store.rejection() || this.store.serverViolations().length > 0;
+        this.notify.error(parts?.[1] ?? 'Not allowed', parts?.[2] ?? message,
+          hasDetails ? () => this.showFeedbackDetails() : undefined);
+      });
+    });
+
     // Selecting a stall (in the list or the 3D view) brings its editor into view: the Stalls
     // tab, scrolled to the top where the editor sits.
     effect(() => {
@@ -199,6 +215,18 @@ export class PlannerPageComponent implements OnInit {
       this.activeTab();
       this.sidebarBody()?.nativeElement.scrollTo({ top: 0 });
     });
+  }
+
+  /** Keep the current layout's save action available while editing any panel. */
+  async saveCurrentLayout(): Promise<void> {
+    if (this.store.busy() || !this.currentHall()) return;
+    this.saving.set(true);
+    try {
+      if (this.selectedSavedId() === null) await this.store.saveLayout();
+      else await this.store.updateLayout();
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   setTab(tab: SidebarTab): void {
@@ -253,8 +281,13 @@ export class PlannerPageComponent implements OnInit {
     void this.store.loadStallTypes();
   }
 
-  dismissError(): void {
-    this.store.dismissError();
+  private showFeedbackDetails(): void {
+    this.sidebarOpen.set(true);
+    this.activeTab.set('rules');
+    afterNextRender(() => {
+      document.getElementById('sidebar-tab-rules')?.focus();
+      this.sidebarBody()?.nativeElement.scrollTo({ top: 0 });
+    }, { injector: this.injector });
   }
 
   setView(kind: ViewCommand['kind']): void {

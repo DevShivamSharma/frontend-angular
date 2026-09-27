@@ -1,0 +1,913 @@
+{
+  "Hall 14FF": {
+    "cards": [
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit",
+          "toilet-male",
+          "toilet-female"
+        ],
+        "ink": 71275,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit"
+        ],
+        "ink": 17497,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "drinking-water"
+        ],
+        "ink": 19002,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "toilet-male"
+        ],
+        "ink": 17146,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "toilet-female"
+        ],
+        "ink": 17906,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs"
+        ],
+        "ink": 18938,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit"
+        ],
+        "ink": 17497,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit"
+        ],
+        "ink": 17497,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit",
+          "stairs",
+          "toilet-male",
+          "toilet-female"
+        ],
+        "ink": 71338,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "circulation"
+        ],
+        "ink": 9701,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    ],
+    "labels": [
+      {
+        "name": "exit-label",
+        "text": "EE14-2",
+        "ink": 2649,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-3",
+        "ink": 2672,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-4",
+        "ink": 2661,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-5",
+        "ink": 2682,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-6",
+        "ink": 2778,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-7",
+        "ink": 2508,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-9",
+        "ink": 2772,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FA",
+        "ink": 2430,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-1",
+        "ink": 2464,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FB",
+        "ink": 2523,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "FOYER-14F",
+        "ink": 4220,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "GF14-2",
+        "ink": 2665,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "GF14-1",
+        "ink": 2480,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "compass-rose",
+        "ink": 64645,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "compass-label",
+        "ink": 1730,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    ]
+  },
+  "Hall 14GF": {
+    "cards": [
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit",
+          "toilet-male",
+          "toilet-female"
+        ],
+        "ink": 71275,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "cargo-truck"
+        ],
+        "ink": 20861,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit"
+        ],
+        "ink": 17497,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "cargo-truck",
+          "emergency-exit"
+        ],
+        "ink": 38207,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "drinking-water"
+        ],
+        "ink": 19002,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "toilet-male"
+        ],
+        "ink": 17146,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "toilet-female"
+        ],
+        "ink": 17906,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "drinking-water"
+        ],
+        "ink": 19002,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "cargo-truck",
+          "emergency-exit",
+          "stairs"
+        ],
+        "ink": 57309,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit"
+        ],
+        "ink": 17497,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit",
+          "toilet-male",
+          "toilet-female"
+        ],
+        "ink": 71275,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "circulation"
+        ],
+        "ink": 9701,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    ],
+    "labels": [
+      {
+        "name": "exit-label",
+        "text": "EE14-2",
+        "ink": 2649,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-3",
+        "ink": 2672,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-4",
+        "ink": 2661,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-5",
+        "ink": 2682,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-6",
+        "ink": 2778,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-7",
+        "ink": 2508,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-8",
+        "ink": 2783,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-9",
+        "ink": 2772,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14GC",
+        "ink": 2646,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14GC",
+        "ink": 2646,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14GC",
+        "ink": 2646,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14GA",
+        "ink": 2678,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-1",
+        "ink": 2464,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14GB",
+        "ink": 2750,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "FOYER-14G",
+        "ink": 4469,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "GG14-2",
+        "ink": 2855,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "GG14-1",
+        "ink": 2681,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "compass-rose",
+        "ink": 64645,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "compass-label",
+        "ink": 1730,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    ]
+  },
+  "Hall 8-9-10": {
+    "cards": [
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "toilet-male",
+          "toilet-female",
+          "stairs"
+        ],
+        "ink": 53827,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "toilet-male",
+          "toilet-female",
+          "stairs"
+        ],
+        "ink": 53827,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs"
+        ],
+        "ink": 18938,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "entry-up"
+        ],
+        "ink": 13981,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    ],
+    "labels": [
+      {
+        "name": "exit-label",
+        "text": "S1001",
+        "ink": 2524,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "E1001",
+        "ink": 2485,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "FOYER C",
+        "ink": 3390,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "FOYER B",
+        "ink": 3516,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "TH9-1/8",
+        "ink": 3098,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "FOYER A",
+        "ink": 3415,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "S0901",
+        "ink": 2804,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "HALL 8",
+        "ink": 2659,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "HALL 9",
+        "ink": 2645,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "HALL 10",
+        "ink": 2953,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "compass-rose",
+        "ink": 64645,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "compass-label",
+        "ink": 1730,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    ]
+  }
+}

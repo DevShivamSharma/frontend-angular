@@ -19,6 +19,7 @@ import { IconComponent } from './icon.component';
 @Component({
   selector: 'app-editor-toolbar',
   templateUrl: './editor-toolbar.component.html',
+  styleUrl: './editor-toolbar.component.css',
   imports: [IconComponent],
   host: { '(document:keydown.escape)': 'onEscape()' },
   changeDetection: ChangeDetectionStrategy.OnPush

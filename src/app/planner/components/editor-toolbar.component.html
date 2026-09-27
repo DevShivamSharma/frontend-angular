@@ -70,7 +70,7 @@
   </div>
 
   @if (ruleDriven()) {
-    <div class="toolbar-group" role="group" aria-label="Rules view">
+    <div class="toolbar-group rules-view-group" role="group" aria-label="Rules view">
       <label class="tool-select">
         <span class="sr-only">Event type</span>
         <select class="control" [value]="eventType()" (change)="setEventType($any($event.target).value)">
@@ -83,15 +83,15 @@
         <input class="control" aria-label="Passage width (m)" type="number" min="3" max="5" step="0.5"
           [value]="passageWidth()" (change)="setPassageWidth($any($event.target))" />
       </label>
-      <label class="tool-check">
+      <label class="layer-toggle" [class.is-on]="showClearances()">
         <input type="checkbox" [checked]="showClearances()" (change)="toggleClearances($any($event.target).checked)" />
-        Clearances
+        <span>Clearances</span>
       </label>
-      <label class="tool-check">
+      <label class="layer-toggle" [class.is-on]="showFreeSpace()">
         <input type="checkbox" [checked]="showFreeSpace()" (change)="toggleFreeSpace($any($event.target).checked)" />
-        Free space for {{ freeSizeLabel() }}
+        <span>Free space for <strong>{{ freeSizeLabel() }}</strong></span>
         @if (freeCount() !== null) {
-          <b>({{ freeCount() }} fit)</b>
+          <span class="fit-count">{{ freeCount() }} fit</span>
         }
       </label>
     </div>

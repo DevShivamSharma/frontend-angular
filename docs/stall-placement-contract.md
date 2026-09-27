@@ -63,7 +63,7 @@ at X=0.5/Z=0, two 4 × 4 m children leave exactly a 3 m passage:
 
 ```json
 {
-  "idempotencyKey": "d41a57f1-bbcd-44b5-9264-8b66df6a3390",
+  "idempotencyKey": "<generate-a-fresh-uuid-v4-per-request>",
   "children": [
     { "name": "5-10-A", "width": 4, "length": 4, "height": 3,
       "posX": -3, "posZ": 0, "rotation": 0, "color": "#3498db",

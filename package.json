@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:planner-rules": "playwright test e2e/planner-rules.spec.ts e2e/stall-editor.spec.ts e2e/placement-geometry.spec.ts e2e/backend-persistence.spec.ts"
   },
   "prettier": {
     "printWidth": 100,

@@ -186,7 +186,8 @@ export class PlannerStore {
   readonly selectedStallId = signal<string | number | null>(null);
   readonly dragging = signal(false);
   readonly snap = signal(true);
-  readonly error = signal('');
+  // Repeating the same rejected action must show a fresh notification too.
+  readonly error = signal('', { equal: () => false });
   readonly busy = signal(false);
   readonly layoutName = signal('');
   /** Shown in the sidebar so the offline fallback hall is never mistaken for real data. */

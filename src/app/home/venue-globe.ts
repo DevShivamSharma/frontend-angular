@@ -12,9 +12,9 @@ interface Pose { position: T.Vector3; target: T.Vector3; }
 interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
 type Kind = 'road' | 'building' | 'water' | 'park';
 interface Geography { features: { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][] }[]; }
-interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; }
+interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onLocalMapReady?: () => void; }
 
-export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate}: GlobeOptions) {
+export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onLocalMapReady}: GlobeOptions) {
   const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background instanceof T.Color ? scene.background.clone() : new T.Color('#e5e7e5');
   const naturalBackground = localBackground.clone();
   const skyBackground = new T.Color('#17232c'), background = localBackground.clone();
@@ -23,6 +23,9 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   const group=new T.Group();group.name='Geographic context — Delhi to Earth';scene.add(group);
   const earthGroup=new T.Group();earthGroup.position.copy(center);earthGroup.visible=false;group.add(earthGroup);
   const groundGroup=new T.Group();groundGroup.name='OpenStreetMap Delhi context';group.add(groundGroup);
+  // Put the local map at campus grade instead of seven metres below it. Only
+  // this flat context moves; Earth and all geographic X/Z coordinates are kept.
+  groundGroup.position.y = 6.6;
   const lat=28.6185*Math.PI/180,lon=77.2440*Math.PI/180;
   const east=new T.Vector3(-Math.sin(lon),0,-Math.cos(lon));
   const up=new T.Vector3(Math.cos(lat)*Math.cos(lon),Math.sin(lat),-Math.cos(lat)*Math.sin(lon));
@@ -106,6 +109,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       const combined=mergeGeometries(geometries,false);geometries.forEach(g=>g.dispose());if(!combined)continue;
       const mesh=new T.Mesh(combined,contextMaterials[kind as Kind]);mesh.name='OSM Delhi '+kind;groundGroup.add(mesh);
     }
+    if (bins.road.length) onLocalMapReady?.();
     onInvalidate();
   }).catch(error=>{if(!signal.aborted)console.warn('Delhi context unavailable',error);});
   // A geographic destination marker, never a replacement for roof labels.

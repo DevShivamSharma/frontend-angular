@@ -1,4 +1,5 @@
 import { test, expect, APIRequestContext } from '@playwright/test';
+import { dismissPlottingRules } from './planner-test-helpers';
 
 const api = process.env['STALL_API_URL'] ?? 'http://localhost:8080/api';
 
@@ -13,6 +14,7 @@ async function backendAvailable(request: APIRequestContext): Promise<boolean> {
 test('real backend: save/reload restores passage, geometry, open sides and server numbers', async ({ page, request }, info) => {
   test.skip(!await backendAvailable(request), 'Real backend is unavailable; no persistence claim is made.');
   await page.goto('/planner');
+  await dismissPlottingRules(page);
   await page.waitForFunction(() => {
     const s = (window as any).ng?.getComponent(document.querySelector('app-planner-page'))?.store;
     return s && s.hallsStatus() !== 'loading' && s.listStatus() !== 'loading';
@@ -40,6 +42,7 @@ test('real backend: save/reload restores passage, geometry, open sides and serve
     expect(id).toBeTruthy();
     await expect.poll(() => page.evaluate(() => (window as any).ng.getComponent(document.querySelector('app-planner-page')).store.busy())).toBe(false);
     await page.reload();
+    await dismissPlottingRules(page);
     await page.getByRole('tab', { name: /Layouts/ }).click();
     await page.getByRole('button', { name: `Open ${name}`, exact: true }).click();
     await expect(page.getByRole('spinbutton', { name: 'Passage width (m)' })).toHaveValue('5');
@@ -75,6 +78,7 @@ test('real backend: atomic split endpoint and child persistence', async ({ page,
     const opened = await (await request.get(`${api}/layout/${id}`)).json();
     const parent = opened.stalls[0];
     await page.goto('/planner');
+    await dismissPlottingRules(page);
     await page.getByRole('tab', { name: /Layouts/ }).click();
     await page.getByRole('button', { name: `Open ${name}`, exact: true }).click();
     await page.getByRole('tab', { name: /Stalls/ }).click();
@@ -89,6 +93,7 @@ test('real backend: atomic split endpoint and child persistence', async ({ page,
     test.skip([404, 405, 501].includes(split.status()), `Backend split endpoint unavailable (HTTP ${split.status()}); full split persistence is unverified.`);
     expect(split.ok(), await split.text()).toBe(true);
     await page.reload();
+    await dismissPlottingRules(page);
     await page.getByRole('tab', { name: /Layouts/ }).click();
     await page.getByRole('button', { name: `Open ${name}`, exact: true }).click();
     await page.getByRole('tab', { name: /Stalls/ }).click();

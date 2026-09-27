@@ -355,7 +355,7 @@ describe('importSelfcareEventHalls', () => {
       eventLayoutId: 103,
       stallCount: 0
     });
-    // Only Hall 8-9-10 has a layout to fetch in this event.
+    // Only Hall 8-9-10 has an event override; the other halls may still have base plans.
     expect(halls.filter(h => h.hasLayout).length).toBe(1);
   });
 

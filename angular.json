@@ -33,26 +33,7 @@
               {
                 "glob": "**/*",
                 "input": "src/assets",
-                "output": "assets",
-                "ignore": [
-                  "venue/IITF_2026_ARCHITECTURAL.glb",
-                  "venue/venue-navigation.json"
-                ]
-              },
-              {
-                "glob": "IITF_2026_ARCHITECTURAL.glb",
-                "input": "outputs/outputs",
-                "output": "assets/venue"
-              },
-              {
-                "glob": "venue-navigation.json",
-                "input": "outputs/outputs",
-                "output": "assets/venue"
-              },
-              {
-                "glob": "venue-colour-materials.glb",
-                "input": "outputs/outputs",
-                "output": "assets/venue"
+                "output": "assets"
               }
             ],
             "styles": [

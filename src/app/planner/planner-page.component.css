@@ -3,6 +3,13 @@
  * are styled in styles.css next to the editor toolbar; this file only places them.
  */
 
+:host {
+  display: block;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
 .planner {
   display: flex;
   height: 100vh;
@@ -36,11 +43,24 @@
   margin-left: -380px;
 }
 
+.sidebar-header > .planner-save {
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: var(--space-3);
+}
+
+.stage-top > .planner-save {
+  flex: none;
+  min-height: 40px;
+  align-self: flex-start;
+}
+
 /* Only the body scrolls; the header (hall + tabs) stays put. */
 .sidebar-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: var(--space-3) var(--space-4) var(--space-6);
   scrollbar-width: thin;
   scrollbar-color: var(--border-default) transparent;
@@ -156,6 +176,11 @@
  * desktop layout changes.
  */
 @media (max-width: 900px) {
+  :host {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
   .planner {
     flex-direction: column;
     height: auto;
@@ -167,13 +192,16 @@
     width: 100%;
     border-right: 0;
     border-bottom: 1px solid var(--border-default);
-    max-height: 50vh;
-    max-height: 50dvh;
+    /* Leave a scrollable body below the header even on short/landscape screens. */
+    max-height: max(50vh, 400px);
+    max-height: max(50dvh, 400px);
+    overflow: hidden;
   }
 
   /* `min-height: 0` overrides the flex default of `auto`, which would let the
      stage be sized by its contents instead of by the 50vh rule. */
   .stage {
+    flex: none;
     height: 50vh;
     height: 50dvh;
     min-height: 0;
