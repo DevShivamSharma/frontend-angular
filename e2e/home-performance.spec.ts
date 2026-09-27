@@ -47,6 +47,10 @@ test('home: measure rendering and trusted input responsiveness', async ({ page }
     const button = home?.shadowRoot?.querySelector('#globe-view');
     return button && !button.closest('[inert]');
   }, undefined, { timeout: 120_000 });
+  if (process.env['MODEL_APPEARANCE'] === 'color') {
+    await page.getByRole('button', {name:'Color',exact:true}).click();
+    await expect(page.getByRole('button', {name:'Color',exact:true})).toHaveAttribute('aria-pressed','true',{timeout:60_000});
+  }
   await page.waitForTimeout(4000);
   const gpu = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
     const gl = canvas.getContext('webgl2')!;

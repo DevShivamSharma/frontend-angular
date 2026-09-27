@@ -7,13 +7,14 @@ import { VenueDetailsComponent } from './venue-details.component';
 import { FloorPlanDialogComponent } from './floor-plan-dialog.component';
 import { Destination, VenueDetail, VenueInformation } from './venue.models';
 import { VenueViewer, createVenueViewer } from './venue-viewer';
+import { VenueAppearance } from './venue-appearance';
 
 @Component({
   selector: 'app-home-page', standalone: true,
   imports: [RouterLink, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent],
   providers: [VenueDataService],
   templateUrl: './home-page.component.html',
-  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css'],
+  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css'],
   encapsulation: ViewEncapsulation.ShadowDom,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -27,7 +28,8 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly loading = new VenueLoadingState();
   readonly destinations = signal<Destination[]>([]);
   readonly details = signal<Record<string, VenueDetail>>({});
-  readonly group = signal<'cc' | 'halls' | null>(null);
+  readonly group = signal<'cc' | 'halls' | 'gates' | null>(null);
+  readonly gates = signal<Destination[]>([]);
   readonly collapsed = signal(false);
   readonly activeView = signal('overview');
   readonly activeLevel = signal(0);
@@ -36,6 +38,9 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly selection = signal(0);
   readonly status = signal('Bharat Mandapam');
   readonly daylight = signal(false);
+  readonly appearance = signal<VenueAppearance>('natural');
+  readonly appearanceBusy = signal(false);
+  readonly appearanceError = signal('');
   readonly globeActive = signal(false);
   readonly globeAvailable = signal(true);
   readonly geographyReady = signal(false);
@@ -59,6 +64,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   }
   private setInformation(info: VenueInformation): void {
     this.destinations.set(info.destinations.filter(d => d.hall).sort((a, b) => parseInt(a.hall!) - parseInt(b.hall!) || a.hall!.localeCompare(b.hall!)));
+    this.gates.set(info.destinations.filter(d => d.gate).sort((a,b) => a.gate!.localeCompare(b.gate!, undefined, {numeric:true})));
     this.details.set(info.details);
   }
   showDetails(id: string): void { if (!/^level[123]$|^hall\d+[A-Z]?$/.test(id) && !this.details()[id]) return; this.detailId.set(id); this.detailsVisible.set(true); this.selection.update(n => n + 1); }
@@ -66,15 +72,15 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   view(id: string, details = true): void {
     this.zone.runOutsideAngular(() => this.viewer?.view(id));
     this.activeLevel.set(0); this.activeView.set(id); this.collapsed.set(false);
-    if (details && id !== 'overview') this.showDetails(id); else this.closeDetails();
-    this.status.set(this.details()[id]?.title || 'Bharat Mandapam');
+    if (details && id !== 'overview' && !id.startsWith('gate')) this.showDetails(id); else this.closeDetails();
+    this.status.set(this.gates().find(d => d.id === id)?.label || this.details()[id]?.title || 'Bharat Mandapam');
   }
   selectLevel(level: number): void {
     this.zone.runOutsideAngular(() => this.viewer?.selectLevel(level));
     this.collapsed.set(false); this.activeView.set(''); this.activeLevel.set(level);
     this.showDetails('level' + level); this.status.set('Convention Centre · Level ' + level);
   }
-  toggleGroup(group: 'cc' | 'halls'): void {
+  toggleGroup(group: 'cc' | 'halls' | 'gates'): void {
     const open = this.group() !== group; this.group.set(open ? group : null);
     if (group === 'cc') { if (open) this.view('cc'); else this.closeDetails(); }
     else { this.closeDetails(); if (open && this.viewer?.isGlobe) this.view('overview', false); }
@@ -82,6 +88,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   overview(): void { this.group.set(null); this.view('overview', false); }
   private pick(id: string, level: number): void {
     if (level && id === 'cc') { this.showDetails('level' + level); return; }
+    if (id.startsWith('gate')) this.group.set('gates');
     if (id.startsWith('hall')) this.group.set('halls');
     if (id === 'cc') this.group.set('cc');
     this.view(id);
@@ -89,6 +96,16 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   globe(): void { this.closeDetails(); this.activeLevel.set(0); this.zone.runOutsideAngular(() => this.viewer?.goGlobe()); }
   zoom(factor: number): void { this.zone.runOutsideAngular(() => this.viewer?.zoom(factor)); }
   toggleLight(): void { this.daylight.update(value => !value); this.zone.runOutsideAngular(() => this.viewer?.setDaylight(this.daylight())); }
+  async setAppearance(mode: VenueAppearance): Promise<void> {
+    if (!this.viewer || this.appearanceBusy() || mode === this.appearance()) return;
+    this.appearanceBusy.set(true); this.appearanceError.set('');
+    try {
+      await this.zone.runOutsideAngular(() => this.viewer!.setAppearance(mode));
+      if (!this.destroyed) this.appearance.set(mode);
+    } catch {
+      if (!this.destroyed) this.appearanceError.set('Color materials could not load. Select Color to retry.');
+    } finally { if (!this.destroyed) this.appearanceBusy.set(false); }
+  }
   retry(): void { if (this.loading.stages().venue.state === 'error') location.reload(); else void this.loading.retry(); }
   @HostListener('window:keydown', ['$event']) keyDown(event: KeyboardEvent): void { if (event.key === 'Escape' && !this.plan().isOpen) this.closeDetails(); }
   ngOnDestroy(): void { this.destroyed = true; this.loading.destroy(); this.zone.runOutsideAngular(() => this.viewer?.dispose()); }

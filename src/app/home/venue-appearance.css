@@ -1,0 +1,8 @@
+.appearance-control{position:absolute;right:14px;top:66px;z-index:2;max-width:235px;text-align:right}
+.appearance-switch{display:inline-flex;gap:3px;padding:4px;background:#f3f0ea;box-shadow:0 2px 8px #172c2926}
+.appearance-switch button{min-height:36px;padding:7px 12px;background:transparent;font-size:11px;font-weight:600;color:#414b44}
+.appearance-switch button[aria-pressed=true]{background:#353c36;color:#fff}
+.appearance-switch button:disabled{cursor:wait;opacity:.65}
+.appearance-switch button:focus-visible{outline:2px solid #9a623f;outline-offset:2px}
+#appearance-status{margin:6px 0 0;padding:8px 10px;background:#f3f0ea;color:#353c36;font-size:11px;line-height:1.5;text-align:left}
+@media(max-width:700px){.appearance-control{right:10px;top:50px}.appearance-switch button{min-height:38px;padding:7px 10px}}

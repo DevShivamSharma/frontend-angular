@@ -4,11 +4,14 @@ import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createGlobeContext } from './venue-globe';
 import { createVenueRenderLoop } from './venue-render-loop';
+import { createVenueAmbientOcclusion } from './venue-ambient-occlusion';
+import { batchVenue } from './venue-batching';
+import { createVenueAppearance, VenueAppearance } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; }
-export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; readonly isGlobe:boolean; dispose:()=>void; }
+export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; readonly isGlobe:boolean; dispose:()=>void; }
 /** Demand-rendered venue with identical shading during movement and at rest. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents): VenueViewer {
     const lifetime = new AbortController();
@@ -17,8 +20,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
     const asset = venueAsset;
     const listen = <K extends keyof WindowEventMap>(type: K, callback: (event: WindowEventMap[K]) => void) => window.addEventListener(type, callback, { signal });
     let viewCommand = (_id:string) => {}, levelCommand = (_level:number) => {}, globeCommand = () => {}, zoomCommand = (_factor:number) => {}, lightCommand = (_enabled:boolean) => {}, isGlobe = () => false;
+    let appearanceCommand = async (_mode: VenueAppearance) => {};
     const ready = initializeVenue();
-    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), get isGlobe(){return isGlobe();}, dispose:()=>{lifetime.abort();for(const cleanup of cleanups.reverse())cleanup();} };
+    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setAppearance:mode=>appearanceCommand(mode), get isGlobe(){return isGlobe();}, dispose:()=>{lifetime.abort();for(const cleanup of cleanups.reverse())cleanup();} };
     async function initializeVenue() {
         signal.throwIfAborted();
         const scene = new T.Scene();
@@ -71,10 +75,13 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const fill = new T.DirectionalLight(0xbacfff, .25);
         fill.position.set(600, 260, -400);
         scene.add(fill);
+        const ambientOcclusion = createVenueAmbientOcclusion(renderer, scene, camera);
+        cleanups.push(() => ambientOcclusion.dispose());
         const W = (s: number, t: number, z: number) => new T.Vector3(.5 * s + .8660254038 * t, z, -.8660254038 * s + .5 * t);
         const views: Record<string, {
             p: Triple;
             t: Triple;
+            radius?: number;
         }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
         let prepared = false;
@@ -102,10 +109,13 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         signal.throwIfAborted();
         const { destinations } = information;
         const hallIds = new Set(destinations.filter(d => d.hall).map(d => String(d.hall)));
+        const gateIds = new Set(destinations.filter(d => d.gate).map(d => d.id));
         function ancestorMatches(o: T.Object3D, re: RegExp) { for (let n: T.Object3D | null = o; n; n = n.parent)
             if (re.test(n.name))
                 return true; return false; }
         function classify(o: T.Object3D) { for (let n: T.Object3D | null = o; n; n = n.parent) {
+            if (n.userData['destinationId']) return n.userData['destinationId'] as string;
+            if (gateIds.has(n.userData['gate_id'])) return n.userData['gate_id'] as string;
             if (n.userData?.['hall'] && hallIds.has(String(n.userData['hall'])))
                 return 'hall' + n.userData['hall'];
             const h = n.name.match(/^(?:PHOTO_)?HALL_(12A|14|12|11|10|[1-9])(?:[ _]|$)|^ROOF_LABEL_H(12A|14|12|11|10|[1-9])$/);
@@ -161,7 +171,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         function view(id:string) {
             resetLevel();highlight(id);const v=views[id];if(!v)return;
             const target=W(...v.t),eye=W(...v.p);
-            const radius=({overview:490,cc:110,hall1:70,hall14:70,hall6:86,hall11:74,hall12A:74,hall12:56,fountain:72} as Record<string,number>)[id]||62;
+            const radius=v.radius ?? (({overview:490,cc:110,hall1:70,hall14:70,hall6:86,hall11:74,hall12A:74,hall12:56,fountain:72} as Record<string,number>)[id]||62);
             const fit=radius/Math.tan(T.MathUtils.degToRad(camera.fov/2))*Math.max(.78,1/camera.aspect);
             if(eye.distanceTo(target)<fit)eye.sub(target).setLength(fit).add(target);
             fly(eye,target);
@@ -171,6 +181,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             if(d.hall==='14')views[d.id].p=[s-95,t+125,z+95];
         }
         viewCommand=view;
+        for (const d of destinations.filter(d => d.gate && d.camera))
+            views[d.id] = { p: d.camera!, t: d.target ?? d.center, radius: d.radius };
         levelCommand=n=>{view('cc');level=n;};
         globeCommand=()=>{resetLevel();tween=null;globe?.goGlobe();};
         isGlobe=()=>!!globe?.isGlobe;
@@ -188,16 +200,26 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             events.geographyReady(true);
         } catch(error) { if(!signal.aborted)console.warn('Geographic context unavailable',error);events.geographyReady(false); }
         signal.throwIfAborted();
-        const g = await new Promise<GLTF>((resolve, reject) => new GLTFLoader().load(asset('IITF_2026_ARCHITECTURAL.glb?v=cc-aerial-20260926-r5'), resolve, p => { if (p.total)
+        const g = await new Promise<GLTF>((resolve, reject) => new GLTFLoader().load(asset('IITF_2026_ARCHITECTURAL.glb?v=outputs-20260927'), resolve, p => { if (p.total)
             events.progress(p.loaded / p.total * .95); }, reject));
         if (signal.aborted) {
             disposeScene(g.scene);
             signal.throwIfAborted();
         }
         root = g.scene;
+        // Export is already metres, Y-up, east +X / south +Z. Do not rotate the
+        // glTF a second time; W converts only the authored navigation coordinates.
+        batchVenue(root, classify, o => [
+            ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i),
+            ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/),
+            /label|sign|glass|glazing|light|spray/i.test(o.name)
+        ].join(':'));
         scene.add(root);
         const replacedMaterials = new Set<T.Material>();
         root.traverse(o => {
+            // The two rectangular placeholder slabs otherwise hide the local map.
+            // SITE_GROUND and the authored campus roads remain intact.
+            if (globe && (o.name === 'OUTER_GROUND' || o.name === 'CONTEXT_GROUND')) o.visible = false;
             if (o.userData['cc_level']) { levelObjects.push(o); o.visible = false; }
             if (!(o instanceof T.Mesh)) return;
             pickMeshes.push(o as VenueMesh);
@@ -215,6 +237,21 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             m.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); }); originals.set(o, mats.map((m: T.MeshStandardMaterial) => ({ color: m.color.clone(), emissive: m.emissive?.clone() || new T.Color(0), emissiveIntensity: m.emissiveIntensity }))); if (o.userData['cc_level'])
             o.visible = false; });
         replacedMaterials.forEach(material => material.dispose());
+        const appearance = createVenueAppearance(root, renderer, asset, signal);
+        cleanups.push(() => appearance.dispose());
+        appearanceCommand = async mode => {
+            await appearance.apply(mode);
+            globe?.setAppearance(mode);
+            // Refresh selection baselines once per explicit switch, never per frame.
+            for (const mesh of pickMeshes) {
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                originals.set(mesh, mats.map(m => ({color:m.color.clone(), emissive:m.emissive.clone(), emissiveIntensity:m.emissiveIntensity})));
+            }
+            const selected = highlighted; highlighted = undefined;
+            if (selected) highlight(selected);
+            renderer.shadowMap.needsUpdate = true;
+            invalidate();
+        };
         events.status('Bharat Mandapam');
         if (new URLSearchParams(location.search).get('view') === 'cc-forecourt') {
             camera.position.copy(W(10.685, 141.551, 220));
@@ -249,7 +286,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             if (!mat.transparent || mat.opacity > .9)
                 break;
         } }, { signal });
-        function resize() { renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); invalidate(); }
+        function resize() { renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); ambientOcclusion.resize(); invalidate(); }
         listen('resize', resize);
         listen('pageshow', resize);
         function updateFrame() { if (tween) {
@@ -266,9 +303,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }
         function renderFrame() {
             // Use the same antialiased materials, lighting and cached shadows for every frame.
-            // Switching post-processing after input caused a visible softness/shading jump.
+            // The AO mask is always applied, so stopping input never changes the finish.
             renderer.setRenderTarget(null);
             renderer.render(scene, camera);
+            ambientOcclusion.render(camera.position.distanceTo(controls.target));
         }
         // Draw a prepared scene before releasing the welcome screen.
         signal.throwIfAborted();

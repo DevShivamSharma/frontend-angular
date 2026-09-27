@@ -9,6 +9,8 @@
 <div id="cc-menu" class="sub-menu" [hidden]="group() !== 'cc'"><button data-view="cc" [class.active]="activeView() === 'cc'" (click)="view('cc')">Overview <span>›</span></button><button data-level="1" [class.active]="activeLevel() === 1" (click)="selectLevel(1)">Level 1 <span>›</span></button><button data-level="2" [class.active]="activeLevel() === 2" (click)="selectLevel(2)">Level 2 <span>›</span></button><button data-level="3" [class.active]="activeLevel() === 3" (click)="selectLevel(3)">Level 3 <span>›</span></button></div>
 <button class="section-row" id="halls-group" [attr.aria-expanded]="group() === 'halls'" (click)="toggleGroup('halls')" aria-controls="hall-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16l-6 9 6 9H4l6-9-6-9ZM8 3l8 18M16 3 8 21"/></svg><span>Halls</span><b>›</b></button>
 <div id="hall-menu" class="sub-menu hall-menu" [hidden]="group() !== 'halls'">@for (destination of destinations(); track destination.id) {<button [attr.data-view]="destination.id" [class.active]="activeView() === destination.id" (click)="view(destination.id)"><span style="font-size:11px">{{ destination.label }}</span><span>›</span></button>}</div>
+<button class="section-row" id="gates-group" [attr.aria-expanded]="group() === 'gates'" (click)="toggleGroup('gates')" aria-controls="gate-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V5h18v16M7 21V9h10v12M3 5V2m18 3V2"/></svg><span>Gates</span><b>›</b></button>
+<div id="gate-menu" class="sub-menu" [hidden]="group() !== 'gates'">@for (destination of gates(); track destination.id) {<button [attr.data-view]="destination.id" [class.active]="activeView() === destination.id" (click)="view(destination.id, false)"><span>{{ destination.label }}</span><span>›</span></button>}</div>
 </nav>
 <aside appVenueDetails [id]="detailId()" [detail]="details()[detailId()]" [visible]="detailsVisible()" [selection]="selection()" (close)="closeDetails()" (levelChange)="selectLevel($event)" (openPlan)="plan().open($event)"></aside>
 </div>
@@ -18,3 +20,11 @@
 <app-floor-plan-dialog />
 
 <a class="planner-link" [inert]="!loading.ready()" routerLink="/planner">Stall planner ↗</a>
+
+<div class="appearance-control" [inert]="!loading.ready()">
+  <div class="appearance-switch" role="group" aria-label="Model appearance" [attr.aria-busy]="appearanceBusy()">
+    <button type="button" data-appearance="natural" [attr.aria-pressed]="appearance() === 'natural'" [disabled]="appearanceBusy()" (click)="setAppearance('natural')">Natural</button>
+    <button type="button" data-appearance="color" [attr.aria-pressed]="appearance() === 'color'" [disabled]="appearanceBusy()" (click)="setAppearance('color')">Color</button>
+  </div>
+  <p id="appearance-status" role="status" [hidden]="!appearanceBusy() && !appearanceError()">{{ appearanceBusy() ? 'Preparing materials…' : appearanceError() }}</p>
+</div>

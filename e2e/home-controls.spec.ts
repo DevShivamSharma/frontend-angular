@@ -4,7 +4,7 @@ test.use({ trace: 'off', launchOptions: {
   args: process.platform === 'win32' ? ['--use-angle=d3d11'] : ['--enable-unsafe-swiftshader']
 } });
 
-test('home: rendering wakes for controls, globe, resize and late assets, and stops on teardown', async ({ page }, info) => {
+for (const appearance of ['natural', 'color']) test(appearance + ' home: rendering wakes for controls, globe, resize and late assets, and stops on teardown', async ({ page }, info) => {
   test.setTimeout(150_000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -29,6 +29,10 @@ test('home: rendering wakes for controls, globe, resize and late assets, and sto
   await page.route('**/geography/earth-day.jpg', async route => { await earthGate; await route.continue(); });
   await page.goto('/');
   await expect(page.locator('#loading')).toBeHidden({ timeout: 90_000 });
+  if (appearance === 'color') {
+    await page.getByRole('button', {name:'Color',exact:true}).click();
+    await expect(page.getByRole('button', {name:'Color',exact:true})).toHaveAttribute('aria-pressed','true',{timeout:60_000});
+  }
   const draws = () => page.evaluate(() => (window as any).__draws as number);
   const settle = async () => {
     await page.evaluate(() => { (window as any).__quiet = { draws: -1, since: performance.now() }; });

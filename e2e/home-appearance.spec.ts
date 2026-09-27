@@ -5,7 +5,7 @@ test.use({ trace: 'off', launchOptions: {
   args: process.platform === 'win32' ? ['--use-angle=d3d11'] : ['--enable-unsafe-swiftshader']
 } });
 
-test('home: zoom frame stays visually identical after the camera stops', async ({ page }, info) => {
+for (const appearance of ['natural', 'color']) test(appearance + ' home: zoom frame stays visually identical after the camera stops', async ({ page }, info) => {
   test.setTimeout(90_000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -42,6 +42,10 @@ test('home: zoom frame stays visually identical after the camera stops', async (
   });
   await page.goto('/');
   await expect(page.locator('#loading')).toBeHidden({ timeout: 60_000 });
+  if (appearance === 'color') {
+    await page.getByRole('button', {name:'Color',exact:true}).click();
+    await expect(page.getByRole('button', {name:'Color',exact:true})).toHaveAttribute('aria-pressed','true',{timeout:60_000});
+  }
   await page.waitForTimeout(4000);
   await page.evaluate(() => { (window as any).__appearance.captureNext = true; });
   await page.getByRole('button', { name: 'Zoom in', exact: true }).click();

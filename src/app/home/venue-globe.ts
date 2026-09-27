@@ -4,17 +4,19 @@
 import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import type { VenueAppearance } from './venue-appearance';
 
 
 type Mode = 'venue' | 'globe';
 interface Pose { position: T.Vector3; target: T.Vector3; }
 interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
 type Kind = 'road' | 'building' | 'water' | 'park';
-interface Geography { features: { k: Kind; p: [number, number][]; w: number; h: number }[]; }
+interface Geography { features: { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][] }[]; }
 interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; }
 
 export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate}: GlobeOptions) {
   const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background instanceof T.Color ? scene.background.clone() : new T.Color('#e5e7e5');
+  const naturalBackground = localBackground.clone();
   const skyBackground = new T.Color('#17232c'), background = localBackground.clone();
   const flightRotation = new T.Quaternion(), flightDirection = new T.Vector3();
   scene.background = background;
@@ -27,10 +29,13 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   const north=new T.Vector3(-Math.sin(lat)*Math.cos(lon),Math.cos(lat),Math.sin(lat)*Math.sin(lon));
   const geographicRotation=new T.Matrix4().set(east.x,east.y,east.z,0,up.x,up.y,up.z,0,-north.x,-north.y,-north.z,0,0,0,0,1);
   const globeMaterial=new T.MeshStandardMaterial({color:0xe4e9e6,roughness:1,metalness:0,envMapIntensity:.3});
+  const earthSaturation = { value: .36 };
   globeMaterial.onBeforeCompile=shader=>{
+    shader.uniforms['earthSaturation'] = earthSaturation;
+    shader.fragmentShader = 'uniform float earthSaturation;\n' + shader.fragmentShader;
     shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
       float luminance=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
-      diffuseColor.rgb=mix(vec3(luminance),diffuseColor.rgb,.36);`);
+      diffuseColor.rgb=mix(vec3(luminance),diffuseColor.rgb,earthSaturation);`);
   };
   const earthGeometry=new T.SphereGeometry(R,144,96);earthGeometry.applyMatrix4(geographicRotation);
   const earth=new T.Mesh(earthGeometry,globeMaterial);earth.name='Earth — geographically oriented';earthGroup.add(earth);
@@ -39,33 +44,67 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   const atmosphere=new T.Mesh(new T.SphereGeometry(R*1.017,96,64),atmosphereMaterial);earthGroup.add(atmosphere);
   const globeLight=new T.DirectionalLight(0xf5f7ff,2.5);globeLight.position.set(-R*2,R*4,R*2);globeLight.target.position.copy(center);earthGroup.add(globeLight);scene.add(globeLight.target);
   const globeFill=new T.HemisphereLight(0xc7d9e9,0x172735,1.15);earthGroup.add(globeFill);
-  const groundMaterial=new T.MeshStandardMaterial({color:0x606b66,roughness:1,transparent:true});
-  const ground=new T.Mesh(new T.CircleGeometry(14000,128),groundMaterial);ground.rotation.x=-Math.PI/2;ground.position.y=-7;ground.receiveShadow=true;groundGroup.add(ground);
-  const contextMaterials={
-    road:new T.MeshStandardMaterial({color:0x48514e,roughness:1,transparent:true}),
-    building:new T.MeshStandardMaterial({color:0x727b78,roughness:1,transparent:true}),
-    water:new T.MeshStandardMaterial({color:0xa6b6b5,roughness:.65,transparent:true}),
-    park:new T.MeshStandardMaterial({color:0x576c58,roughness:1,transparent:true})
+  // A quiet, flat map keeps the authored campus as the only detailed 3D subject.
+  // Unlit colours stay legible in both lighting modes and need no shadow passes.
+  const mapGround = new T.Color('#858b80');
+  const groundMaterial = new T.MeshBasicMaterial({color:mapGround,transparent:true,toneMapped:false});
+  const ground=new T.Mesh(new T.CircleGeometry(14000,128),groundMaterial);ground.rotation.x=-Math.PI/2;ground.position.y=-7;groundGroup.add(ground);
+  function mapMaterial(color: string) {
+    const material = new T.MeshBasicMaterial({color,transparent:true,toneMapped:false});
+    material.onBeforeCompile = shader => {
+      shader.uniforms['mapGround'] = { value: mapGround };
+      shader.vertexShader = 'varying vec2 vMapPosition;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        vMapPosition = (modelMatrix * vec4(transformed, 1.0)).xz;`);
+      shader.fragmentShader = 'varying vec2 vMapPosition;\nuniform vec3 mapGround;\n' + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+        diffuseColor.rgb = mix(diffuseColor.rgb, mapGround, smoothstep(1800.0, 3500.0, length(vMapPosition)));`);
+    };
+    return material;
+  }
+  const contextMaterials = {
+    road: mapMaterial('#b6baad'),
+    building: mapMaterial('#959b8c'),
+    water: mapMaterial('#719095'),
+    park: mapMaterial('#71876b')
   };
-  // These are actual OSM outlines; default heights are deliberately neutral massing.
+  const mapPalettes = {
+    natural: { ground: '#858b80', road: '#b6baad', building: '#959b8c', water: '#719095', park: '#71876b' },
+    color: { ground: '#b5bc99', road: '#e2dbc5', building: '#b9af99', water: '#5b9fac', park: '#719f57' }
+  };
+  function setAppearance(appearance: VenueAppearance) {
+    const palette = mapPalettes[appearance];
+    // Reuse all map geometry and the shader's shared fade colour. Updating this
+    // once per explicit switch also covers geography/Earth textures arriving late.
+    mapGround.set(palette.ground); groundMaterial.color.copy(mapGround);
+    for (const kind of Object.keys(contextMaterials) as Kind[]) contextMaterials[kind].color.set(palette[kind]);
+    earthSaturation.value = appearance === 'color' ? 1 : .36;
+    if (appearance === 'color') localBackground.set('#b9c9cd'); else localBackground.copy(naturalBackground);
+    onInvalidate();
+  }
+  // Keep the existing OSM coordinates and road widths. Fade distant data into the
+  // ground spatially, never by switching quality after an interaction stops.
   fetch(asset('geography/delhi-context.json'),{signal}).then(r=>{if(!r.ok)throw Error(String(r.status));return r.json();}).then((data:Geography)=>{if(signal.aborted)return;
     const bins:Record<Kind,T.BufferGeometry[]>={road:[],building:[],water:[],park:[]};
     for(const f of data.features){
       let geometry;
-      if(f.k==='road'){
+      if(f.k==='road' && f.p.length === 2){
         const [a,b]=f.p,dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);if(length<.2)continue;
-        geometry=new T.PlaneGeometry(f.w,length);geometry.rotateX(-Math.PI/2);geometry.rotateY(Math.atan2(dx,dz));geometry.translate((a[0]+b[0])/2,-6.6,(a[1]+b[1])/2);
+        geometry=new T.PlaneGeometry(f.w ?? 8,length);geometry.rotateX(-Math.PI/2);geometry.rotateY(Math.atan2(dx,dz));geometry.translate((a[0]+b[0])/2,-6.6,(a[1]+b[1])/2);
       }else{
         const shape=new T.Shape(f.p.map(p=>new T.Vector2(p[0],-p[1])));
-        geometry=f.k==='building'?new T.ExtrudeGeometry(shape,{depth:f.h,bevelEnabled:false,steps:1}):new T.ShapeGeometry(shape);
-        geometry.rotateX(-Math.PI/2);geometry.translate(0,f.k==='building'?-6.3:f.k==='water'?-6.8:-6.9,0);
+        // Nearby features are clipped offline against the real campus outline.
+        // Preserve interior rings so a park cannot fill the excluded campus.
+        for (const hole of f.holes ?? []) shape.holes.push(new T.Path(hole.map(p=>new T.Vector2(p[0],-p[1]))));
+        geometry=new T.ShapeGeometry(shape);
+        geometry.rotateX(-Math.PI/2);geometry.translate(0,f.k==='building'?-6.3:f.k==='road'?-6.6:f.k==='water'?-6.8:-6.9,0);
       }
       if(geometry.index){const indexed=geometry;geometry=geometry.toNonIndexed();indexed.dispose();}
       bins[f.k].push(geometry);
     }
     for(const [kind,geometries]of Object.entries(bins))if(geometries.length){
       const combined=mergeGeometries(geometries,false);geometries.forEach(g=>g.dispose());if(!combined)continue;
-      const mesh=new T.Mesh(combined,contextMaterials[kind as Kind]);mesh.name='OSM Delhi '+kind;mesh.receiveShadow=true;mesh.castShadow=false;groundGroup.add(mesh);
+      const mesh=new T.Mesh(combined,contextMaterials[kind as Kind]);mesh.name='OSM Delhi '+kind;groundGroup.add(mesh);
     }
     onInvalidate();
   }).catch(error=>{if(!signal.aborted)console.warn('Delhi context unavailable',error);});
@@ -159,5 +198,5 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       else if(mode==='globe'&&distance<R*1.19&&camera.position.clone().sub(center).normalize().y>.72)goVenue();
     }
   }
-  return{update,goGlobe,goVenue,get isGlobe(){return mode==='globe'},get transitioning(){return!!transition},get mode(){return mode},group,center,radius:R,attribution:'Earth: NASA Earth Observatory · © OpenStreetMap contributors'};
+  return{update,goGlobe,goVenue,setAppearance,get isGlobe(){return mode==='globe'},get transitioning(){return!!transition},get mode(){return mode},group,center,radius:R,attribution:'Earth: NASA Earth Observatory · © OpenStreetMap contributors'};
 }
