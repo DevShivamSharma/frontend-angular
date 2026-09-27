@@ -58,7 +58,7 @@ export class VenueDataService implements OnDestroy {
   private pendingRooms?: Promise<Room[]>;
   private pendingHalls?: Promise<Hall[]>;
   private async request(url: string): Promise<unknown> {
-    const response = await fetch(url, { signal: AbortSignal.any([this.lifetime.signal, AbortSignal.timeout(15000)]), credentials: 'omit' });
+    const response = await fetch(url, { signal: AbortSignal.any([this.lifetime.signal, AbortSignal.timeout(15000)]), credentials: 'same-origin' });
     if (!response.ok) throw new Error('Venue information unavailable');
     return response.json();
   }
