@@ -1,4 +1,5 @@
 import { Hall, StallType } from '../models/hall.model';
+import { hallFloor, planBounds } from './hall-plan';
 import { effectiveRules, Footprint, Point, polygonBounds, Rect, rectToFootprint } from './placement-rules';
 import { hallSize, num } from './planner-geometry';
 
@@ -30,6 +31,13 @@ export class GridSystem {
     const rules = effectiveRules(hall.rules);
     const cellSize = hall.rules ? rules.gridUnit : 1;
     const snapStep = hall.rules ? rules.snapStep : 1;
+
+    // A hall traced from its plan: the grid covers the whole plan, from the plan's own corner, so
+    // grid lines stay on the source's whole metres and reach a foyer beyond the breadth.
+    if (hallFloor(hall).length) {
+      const b = planBounds(hall);
+      return new GridSystem(b.minX, b.minZ, b.maxX - b.minX, b.maxZ - b.minZ, cellSize, snapStep);
+    }
 
     if (hall.boundary && hall.boundary.length >= 3) {
       const b = polygonBounds(hall.boundary);

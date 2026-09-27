@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { num, validGate } from '../geometry/planner-geometry';
-import { GATE_SIDES } from './gate-sides';
+import { GATE_COMPASS, GATE_SIDES } from './gate-sides';
 import { IconComponent } from './icon.component';
 import { GateSide } from '../models/stall.model';
 import { NewStallValue, PlannerStore } from '../planner-store.service';
@@ -25,6 +25,10 @@ export class AddStallFormComponent {
   private readonly fb = inject(FormBuilder);
 
   readonly gateSides = GATE_SIDES;
+  readonly gateCompass = GATE_COMPASS;
+
+  /** Presets for the colour most shops get; the native picker stays for everything else. */
+  readonly palette = ['#3498db', '#0d9488', '#7c3aed', '#d97706', '#e11d48', '#15803d', '#475569'];
 
   readonly form = this.fb.nonNullable.group({
     name: '',
@@ -35,12 +39,36 @@ export class AddStallFormComponent {
     gateSide: 'FRONT' as GateSide
   });
 
-  readonly gateSide = toSignal(this.form.controls.gateSide.valueChanges, {
-    initialValue: this.form.controls.gateSide.value
+  private readonly value = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue()
+  });
+
+  readonly gateSide = computed(() => validGate(this.value().gateSide));
+
+  readonly gateLabel = computed(
+    () => GATE_SIDES.find(entry => entry[0] === this.gateSide())?.[1] ?? 'Front (+Z)'
+  );
+
+  /** What the three number fields and the colour add up to, so the size is checked before adding. */
+  readonly preview = computed(() => {
+    const raw = this.value();
+    const width = num(raw.width, 5);
+    const length = num(raw.length, 5);
+    return {
+      width,
+      length,
+      height: num(raw.height, 4),
+      area: Math.round(width * length * 10) / 10,
+      color: raw.color ?? '#3498db'
+    };
   });
 
   setGateSide(value: GateSide): void {
     this.form.controls.gateSide.setValue(validGate(value));
+  }
+
+  setColor(value: string): void {
+    this.form.controls.color.setValue(value);
   }
 
   addStall(): void {

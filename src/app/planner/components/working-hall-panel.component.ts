@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, viewChild } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
 
 import { NotifyService } from '../../core/notify.service';
 import { ExcelLayoutService } from '../excel/excel-layout.service';
@@ -58,7 +58,9 @@ function compareHalls(a: string, b: string): number {
 @Component({
   selector: 'app-working-hall-panel',
   templateUrl: './working-hall-panel.component.html',
+  styleUrl: './working-hall-panel.component.css',
   imports: [IconComponent],
+  host: { '(window:resize)': 'positionPicker()' },
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkingHallPanelComponent {
@@ -67,6 +69,15 @@ export class WorkingHallPanelComponent {
   private readonly notify = inject(NotifyService);
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
+  private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('hallTrigger');
+  private readonly picker = viewChild.required<ElementRef<HTMLElement>>('hallPicker');
+  private readonly search = viewChild.required<ElementRef<HTMLInputElement>>('hallSearch');
+  private readonly options = viewChild.required<ElementRef<HTMLElement>>('hallOptions');
+  private readonly injector = inject(Injector);
+  readonly pickerOpen = signal(false);
+  readonly query = signal('');
+  readonly highlighted = signal(0);
+  readonly pickerPosition = signal({ left: 0, top: 0, width: 300, maxHeight: 360 });
 
   /**
    * The halls the picker offers, in compareHalls() order. The active hall always stays in the list, even if
@@ -80,23 +91,99 @@ export class WorkingHallPanelComponent {
   );
   readonly activeHallId = this.store.activeHallId;
   readonly hallsStatus = this.store.hallsStatus;
+  readonly currentHall = this.store.currentHall;
+  readonly filteredHalls = computed(() => {
+    const words = this.query().trim().toLowerCase().split(/\s+/).filter(Boolean);
+    return this.halls().filter(hall => words.every(word => hall.name.toLowerCase().includes(word)));
+  });
+  readonly activeOption = computed(() => this.filteredHalls()[this.highlighted()] ? `hall-option-${this.highlighted()}` : null);
 
   /**
-   * Drives `[selected]` on each option. The select's own `[value]` binding is not
-   * enough: when a hall is added and made active in the same tick (open saved
-   * layout, Generate Hall, Excel import), `[value]` is applied before the new
-   * `<option>` exists and the browser silently keeps the old selection.
+   * Compare IDs as strings so imported halls and saved copies retain their selection.
    */
   isActive(hallId: string | number): boolean {
     return String(hallId) === String(this.activeHallId());
   }
 
-  /**
-   * The select always reports a string, which is why every id comparison in
-   * the store goes through `String()`. React behaves the same way.
-   */
+  /** Selection follows the same store path as the original hall select. */
   onHallChange(value: string): void {
     this.store.setActiveHall(value);
+  }
+
+  onBeforePickerToggle(event: Event): void {
+    if ((event as ToggleEvent).newState !== 'open') return;
+    this.query.set('');
+    this.highlighted.set(Math.max(0, this.halls().findIndex(hall => this.isActive(hall.id))));
+    this.pickerOpen.set(true);
+    this.positionPicker();
+    afterNextRender(() => {
+      if (!this.pickerOpen()) return;
+      this.search().nativeElement.focus({ preventScroll: true });
+      this.scrollToHighlight();
+    }, { injector: this.injector });
+  }
+
+  onPickerToggle(event: Event): void {
+    this.pickerOpen.set((event as ToggleEvent).newState === 'open');
+  }
+
+  closePicker(restoreFocus = true): void {
+    this.picker().nativeElement.hidePopover();
+    this.pickerOpen.set(false);
+    if (restoreFocus) this.trigger().nativeElement.focus({ preventScroll: true });
+  }
+
+  chooseHall(id: string | number): void {
+    if (!this.isActive(id)) this.onHallChange(String(id));
+    this.closePicker();
+  }
+
+  filterHalls(value: string): void {
+    this.query.set(value);
+    this.highlighted.set(0);
+    this.options().nativeElement.scrollTop = 0;
+  }
+
+  onTriggerKey(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    if (!this.pickerOpen()) this.picker().nativeElement.showPopover();
+  }
+
+  onSearchKey(event: KeyboardEvent): void {
+    if (event.key === 'Escape' || event.key === 'Tab') {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); }
+      this.closePicker();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const hall = this.filteredHalls()[this.highlighted()];
+      if (hall) this.chooseHall(hall.id);
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const count = this.filteredHalls().length;
+      if (!count) return;
+      this.highlighted.update(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + count) % count);
+      this.scrollToHighlight();
+    }
+  }
+
+  private scrollToHighlight(): void {
+    this.options().nativeElement.children[this.highlighted()]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  positionPicker(): void {
+    if (!this.pickerOpen()) return;
+    const rect = this.trigger().nativeElement.getBoundingClientRect();
+    const width = Math.min(Math.max(rect.width, 300), window.innerWidth - 24);
+    const below = window.innerHeight - rect.bottom - 20;
+    const above = rect.top - 20;
+    const openAbove = below < 220 && above > below;
+    const maxHeight = Math.min(360, Math.max(100, openAbove ? above : below));
+    this.pickerPosition.set({
+      left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
+      top: openAbove ? rect.top - maxHeight - 8 : rect.bottom + 8,
+      width, maxHeight
+    });
   }
 
   openFilePicker(): void {

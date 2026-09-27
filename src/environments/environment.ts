@@ -1,11 +1,7 @@
-/**
- * Production environment (the default; `ng build` uses this file).
- *
- * The published deployment serves this SPA and the NestJS API from the same origin (the
- * backend serves the Angular build and forwards everything outside /api and /health to
- * index.html), so a relative base URL is correct and needs no per-deploy edit.
- */
+/** Production API base URL, supplied by the build or served through /api. */
+declare const APP_API_BASE_URL: string | undefined;
+
 export const environment = {
   production: true,
-  apiBaseUrl: '/api'
+  apiBaseUrl: typeof APP_API_BASE_URL !== 'undefined' ? APP_API_BASE_URL : '/api'
 };

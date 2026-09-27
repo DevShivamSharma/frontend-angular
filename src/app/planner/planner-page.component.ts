@@ -9,9 +9,11 @@ import {
   Injector,
   OnInit,
   signal,
+  untracked,
   viewChild
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { NotifyService } from '../core/notify.service';
 
 import { AddStallFormComponent } from './components/add-stall-form.component';
 import { CreateHallFormComponent } from './components/create-hall-form.component';
@@ -20,14 +22,20 @@ import { EditorToolbarComponent } from './components/editor-toolbar.component';
 import { openSidesLabel } from './components/gate-sides';
 import { IconComponent, IconName } from './components/icon.component';
 import { SavedLayoutsPanelComponent } from './components/saved-layouts-panel.component';
+import { SelfcareImportComponent } from './components/selfcare-import.component';
 import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
+import { AssistPanelComponent } from './components/assist-panel.component';
+import { PlannerRulesDialogComponent } from './components/planner-rules-dialog.component';
+import { AiChatLauncherComponent } from './components/ai-chat-launcher.component';
+import { AiChatSession } from './ai-chat-session.service';
+import { legendEntries } from './geometry/legend-content';
 import { PlannerStore } from './planner-store.service';
-import { Scene3dComponent, StallMove, StallOpenSide } from './three/scene3d.component';
+import { Scene3dComponent, StallMove, StallOpenSide, ViewCommand } from './three/scene3d.component';
 
 /** Sidebar sections. UI only: which group of panels is visible. */
-export type SidebarTab = 'stalls' | 'layouts' | 'hall' | 'rules';
+export type SidebarTab = 'stalls' | 'assist' | 'layouts' | 'hall' | 'rules';
 
 interface SidebarTabView {
   id: SidebarTab;
@@ -38,12 +46,12 @@ interface SidebarTabView {
   warn: boolean;
 }
 
-const TAB_ORDER: readonly SidebarTab[] = ['stalls', 'layouts', 'hall', 'rules'];
+const TAB_ORDER: readonly SidebarTab[] = ['stalls', 'assist', 'layouts', 'hall', 'rules'];
 
 /** Same breakpoint as the stacked layout in planner-page.component.css. */
 const COMPACT_QUERY = '(max-width: 900px)';
 
-/** The store's error messages start with an emoji; the error box draws its own icon instead. */
+/** The notification draws its own icon. */
 const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
 
 /**
@@ -58,11 +66,15 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
   selector: 'app-planner-page',
   templateUrl: './planner-page.component.html',
   styleUrl: './planner-page.component.css',
-  providers: [PlannerStore],
+  providers: [PlannerStore, AiChatSession],
   imports: [
+    SelfcareImportComponent,
     WorkingHallPanelComponent,
     CreateHallFormComponent,
     AddStallFormComponent,
+    AssistPanelComponent,
+    PlannerRulesDialogComponent,
+    AiChatLauncherComponent,
     EditStallFormComponent,
     ShopsListComponent,
     SavedLayoutsPanelComponent,
@@ -77,10 +89,13 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
 export class PlannerPageComponent implements OnInit {
   /** Public so the template can hand the draw-mode pointer events straight to the store. */
   readonly store = inject(PlannerStore);
+  private readonly notify = inject(NotifyService);
 
   readonly error = this.store.error;
   readonly stalls = this.store.stalls;
   readonly currentHall = this.store.currentHall;
+  /** The current hall's plan legend, in view mode (rows hidden in view mode left out). */
+  readonly planLegend = computed(() => legendEntries(this.currentHall()?.legends));
   readonly currentStalls = this.store.currentStalls;
   readonly selectedStall = this.store.selectedStall;
   readonly selectedStallId = this.store.selectedStallId;
@@ -100,6 +115,7 @@ export class PlannerPageComponent implements OnInit {
   readonly openSidesLabel = openSidesLabel;
 
   readonly activeTab = signal<SidebarTab>('stalls');
+  readonly saving = signal(false);
 
   /** The sidebar can be hidden so the 3D view gets the full width. UI only. */
   readonly sidebarOpen = signal(true);
@@ -109,8 +125,6 @@ export class PlannerPageComponent implements OnInit {
    * otherwise cover most of the 3D view.
    */
   readonly hallInfoOpen = signal(!window.matchMedia(COMPACT_QUERY).matches);
-
-  readonly errorText = computed(() => this.error().replace(LEADING_EMOJI, ''));
 
   /** Offline fallback in use: the server did not answer, or has no halls. */
   readonly offline = computed(() => {
@@ -132,16 +146,62 @@ export class PlannerPageComponent implements OnInit {
   private readonly injector = inject(Injector);
 
   readonly tabs = computed<SidebarTabView[]>(() => {
-    const issues = this.store.audit().reduce((n, e) => n + e.violations.length, 0);
+    const issues = this.issueCount();
+    // A badge reading "0" is noise on every tab of an empty hall: no badge says the same thing.
+    const badge = (n: number) => (n > 0 ? n : null);
+
     return [
-      { id: 'stalls', label: 'Stalls', icon: 'store', count: this.currentStalls().length, warn: false },
-      { id: 'layouts', label: 'Layouts', icon: 'save', count: this.store.savedLayouts().length, warn: false },
+      { id: 'stalls', label: 'Stalls', icon: 'store', count: badge(this.currentStalls().length), warn: false },
+      { id: 'assist', label: 'Assist', icon: 'sparkles', count: null, warn: false },
+      { id: 'layouts', label: 'Layouts', icon: 'save', count: badge(this.store.savedLayouts().length), warn: false },
       { id: 'hall', label: 'Hall', icon: 'building', count: null, warn: false },
-      { id: 'rules', label: 'Rules', icon: 'shield', count: this.ruleDriven() ? issues : null, warn: issues > 0 }
+      { id: 'rules', label: 'Rules', icon: 'shield', count: this.ruleDriven() ? badge(issues) : null, warn: issues > 0 }
     ];
   });
 
+  private readonly issueCount = computed(() =>
+    this.store.audit().reduce((n, e) => n + e.violations.length, 0)
+  );
+
+  /**
+   * The header totals. Cancelled stalls keep their number but free their area, so they count
+   * as shops and not as occupied floor.
+   */
+  readonly stats = computed(() => {
+    const hall = this.currentHall();
+    const used = this.store
+      .activeStalls()
+      .reduce((total, stall) => total + stall.width * stall.length, 0);
+    const floor = hall
+      ? hall.shape === 'CIRCLE'
+        ? Math.PI * hall.radius * hall.radius
+        : hall.width * hall.length
+      : 0;
+
+    return {
+      shops: this.currentStalls().length,
+      area: Math.round(used),
+      occupancy: floor > 0 ? Math.round((used / floor) * 100) : 0,
+      issues: this.ruleDriven() ? this.issueCount() : 0
+    };
+  });
+
+  /** Latest view-dock command. The counter makes pressing the same button twice take effect. */
+  readonly viewCommand = signal<ViewCommand | null>(null);
+
   constructor() {
+    // One shared toast surface; detailed placement diagnostics stay in the Rules panel.
+    effect(() => {
+      const message = this.error().replace(LEADING_EMOJI, '');
+      if (!message) return;
+      untracked(() => {
+        const parts = message.match(/^([^:]+):\s+([\s\S]+)$/);
+        const hasDetails = !!this.store.rejection() || this.store.serverViolations().length > 0;
+        this.notify.error(parts?.[1] ?? 'Not allowed', parts?.[2] ?? message,
+          hasDetails ? () => this.showFeedbackDetails() : undefined);
+      });
+    });
+
     // Selecting a stall (in the list or the 3D view) brings its editor into view: the Stalls
     // tab, scrolled to the top where the editor sits.
     effect(() => {
@@ -155,6 +215,18 @@ export class PlannerPageComponent implements OnInit {
       this.activeTab();
       this.sidebarBody()?.nativeElement.scrollTo({ top: 0 });
     });
+  }
+
+  /** Keep the current layout's save action available while editing any panel. */
+  async saveCurrentLayout(): Promise<void> {
+    if (this.store.busy() || !this.currentHall()) return;
+    this.saving.set(true);
+    try {
+      if (this.selectedSavedId() === null) await this.store.saveLayout();
+      else await this.store.updateLayout();
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   setTab(tab: SidebarTab): void {
@@ -209,8 +281,17 @@ export class PlannerPageComponent implements OnInit {
     void this.store.loadStallTypes();
   }
 
-  dismissError(): void {
-    this.store.dismissError();
+  private showFeedbackDetails(): void {
+    this.sidebarOpen.set(true);
+    this.activeTab.set('rules');
+    afterNextRender(() => {
+      document.getElementById('sidebar-tab-rules')?.focus();
+      this.sidebarBody()?.nativeElement.scrollTo({ top: 0 });
+    }, { injector: this.injector });
+  }
+
+  setView(kind: ViewCommand['kind']): void {
+    this.viewCommand.update(previous => ({ kind, seq: (previous?.seq ?? 0) + 1 }));
   }
 
   onHallInfoToggle(event: Event): void {

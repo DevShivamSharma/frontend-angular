@@ -1,0 +1,64 @@
+{
+  "screenshots": {
+    "vanilla": [
+      "loading",
+      "full",
+      "closeup-cc",
+      "closeup-hall",
+      "mobile"
+    ],
+    "angular": [
+      "loading",
+      "full",
+      "closeup-cc",
+      "closeup-hall",
+      "mobile"
+    ]
+  },
+  "interactions": {
+    "vanilla": {
+      "roomCards": 9,
+      "hallCards": 1,
+      "controls": "pass",
+      "logs": []
+    },
+    "angular": {
+      "roomCards": 9,
+      "hallCards": 1,
+      "controls": "pass",
+      "logs": []
+    },
+    "planner": {
+      "path": "/planner",
+      "oldContextLost": true,
+      "logs": [
+        {
+          "type": "warning",
+          "text": "Hall list unavailable, using the local fallback hall: Http failure response for http://localhost:8080/api/halls?standalone=true: 0 Unknown Error"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "type": "warning",
+          "text": "Layout list unavailable: Http failure response for http://localhost:8080/api/layouts: 0 Unknown Error"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "type": "warning",
+          "text": "Stall types unavailable, draw mode offers Custom only: Http failure response for http://localhost:8080/api/stall-types: 0 Unknown Error"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+        }
+      ]
+    },
+    "returnToHome": "pass"
+  },
+  "performance": {}
+}

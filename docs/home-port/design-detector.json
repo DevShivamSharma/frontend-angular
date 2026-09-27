@@ -1,0 +1,262 @@
+[
+  {
+    "antipattern": "low-contrast",
+    "name": "Low contrast text",
+    "description": "Text does not meet WCAG AA contrast requirements (4.5:1 for body, 3:1 for large text). Increase the contrast between text and background.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "3.7:1 (need 4.5:1) — text #887250 on #ede7dc"
+  },
+  {
+    "antipattern": "low-contrast",
+    "name": "Low contrast text",
+    "description": "Text does not meet WCAG AA contrast requirements (4.5:1 for body, 3:1 for large text). Increase the contrast between text and background.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "3.8:1 (need 4.5:1) — text #777567 on #ede7dc"
+  },
+  {
+    "antipattern": "low-contrast",
+    "name": "Low contrast text",
+    "description": "Text does not meet WCAG AA contrast requirements (4.5:1 for body, 3:1 for large text). Increase the contrast between text and background.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "3.6:1 (need 4.5:1) — text #8a7451 on #ede7dc"
+  },
+  {
+    "antipattern": "low-contrast",
+    "name": "Low contrast text",
+    "description": "Text does not meet WCAG AA contrast requirements (4.5:1 for body, 3:1 for large text). Increase the contrast between text and background.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "4.3:1 (need 4.5:1) — text #fffdf6 on #8d7551"
+  },
+  {
+    "antipattern": "low-contrast",
+    "name": "Low contrast text",
+    "description": "Text does not meet WCAG AA contrast requirements (4.5:1 for body, 3:1 for large text). Increase the contrast between text and background.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "2.4:1 (need 4.5:1) — text #a09580 on #ede7dc"
+  },
+  {
+    "antipattern": "low-contrast",
+    "name": "Low contrast text",
+    "description": "Text does not meet WCAG AA contrast requirements (4.5:1 for body, 3:1 for large text). Increase the contrast between text and background.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "1.1:1 (need 4.5:1) — text #f8f7f1 on #ffffff"
+  },
+  {
+    "antipattern": "low-contrast",
+    "name": "Low contrast text",
+    "description": "Text does not meet WCAG AA contrast requirements (4.5:1 for body, 3:1 for large text). Increase the contrast between text and background.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "3.4:1 (need 4.5:1) — text #78847d on #f1f0ec"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "<img> with no src attribute"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "<img> with no src attribute"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "9px functional text \"New Delhi, India\" (below 11px floor)"
+  },
+  {
+    "antipattern": "tiny-text",
+    "name": "Tiny body text",
+    "description": "Body text below 12px is hard to read, especially on high-DPI screens. Use at least 14px for body content, 16px is ideal.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "11px body text"
+  },
+  {
+    "antipattern": "wide-tracking",
+    "name": "Wide letter spacing on body text",
+    "description": "Letter spacing above 0.05em on body text disrupts natural character groupings and slows reading. Reserve wide tracking for short uppercase labels only.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "letter-spacing: 0.07em on body text"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "10px functional text \"Venue & surroundings\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "10px functional text \"Loading…\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "10px functional text \"Convention Centre rooms\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "10px functional text \"Loading…\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "10px functional text \"Exhibition halls\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "10px functional text \"Loading…\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "10px functional text \"BHARAT MANDAPAM\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "10px functional text \"View floor plan\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "9px functional text \"Supplied venue plan\" (below 11px floor)"
+  },
+  {
+    "antipattern": "undersized-ui-text",
+    "name": "Undersized functional text",
+    "description": "Interactive and content-bearing UI text (links, buttons, nav items, labels, table cells, meta rows, timecodes) below 11px is a legibility failure, not a style choice. WCAG sets no absolute pixel floor, but functional text under 11px is a defensible quality bar: it fails on high-DPI and small viewports and it degrades tap and read targets. The 11px floor holds even inside a footer; only non-interactive legal smallprint gets the softer 10px floor. Being ON the DESIGN.md size ramp does not exempt a value here: adding 8px to the ramp launders the token but not the legibility problem, and that is exactly the escape hatch this rule closes. Exempts sup/sub, visually-hidden (sr-only) text, and code/terminal contexts. Decorative letterspaced micro-labels are still functional and stay in scope.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\app\\home\\home-page.component.html",
+    "line": 0,
+    "snippet": "9px functional text \"Bharat Mandapam\" (below 10px floor)"
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\assets\\venue\\venue-explorer.css",
+    "line": 8,
+    "snippet": "border-left:2px solid #9a7659"
+  },
+  {
+    "antipattern": "border-accent-on-rounded",
+    "name": "Border accent on rounded element",
+    "description": "Thick accent border on a rounded card — the border clashes with the rounded corners. Remove the border or the border-radius.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\assets\\venue\\venue-explorer.css",
+    "line": 1,
+    "snippet": "border-bottom:4px solid"
+  },
+  {
+    "antipattern": "overused-font",
+    "name": "Overused font",
+    "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\assets\\venue\\venue-explorer.css",
+    "line": 1,
+    "snippet": "font-family:Arial"
+  },
+  {
+    "antipattern": "layout-transition",
+    "name": "Layout property animation",
+    "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "C:\\Users\\Shivam Sharma\\Downloads\\3d_stall_designer_postgres_project\\3d_stall_designer_postgres_project\\frontend-angular\\src\\assets\\venue\\venue-explorer.css",
+    "line": 27,
+    "snippet": "transition: width"
+  }
+]

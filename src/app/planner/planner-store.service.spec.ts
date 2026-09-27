@@ -141,9 +141,9 @@ describe('PlannerStore', () => {
       });
 
       expect(created).toBeTruthy();
-      // maxX = floor(40/2 - 8/2) = 16, and the scan starts at -maxZ/-maxX.
-      expect(created!.posX).toBe(-16);
-      expect(created!.posZ).toBe(-16);
+      // One metre of wall clearance also applies to the offline hall.
+      expect(created!.posX).toBe(-15);
+      expect(created!.posZ).toBe(-15);
       expect(created!.name).toBe('Shop 1');
       expect(store.selectedStallId()).toBe(created!.id);
     });
@@ -161,8 +161,8 @@ describe('PlannerStore', () => {
       store.addStall(form);
       const second = store.addStall(form);
 
-      expect(second!.posZ).toBe(-16);
-      expect(second!.posX).toBe(-8);
+      expect(second!.posZ).toBe(-15);
+      expect(second!.posX).toBe(-4); // 8 m stall + 3 m passage
       expect(second!.name).toBe('Shop 2');
     });
 
@@ -177,7 +177,7 @@ describe('PlannerStore', () => {
       });
 
       expect(created).toBeNull();
-      expect(store.error()).toContain('No free grid position');
+      expect(store.error()).toContain('No contiguous free area');
     });
 
     it('skips positions that overlap blocked areas', () => {
@@ -248,7 +248,7 @@ describe('PlannerStore', () => {
       const shop = addShop();
       store.moveStall(shop.id, 100, 0);
 
-      expect(store.selectedStall()!.posX).toBe(-16);
+      expect(store.selectedStall()!.posX).toBe(-15);
       expect(store.error()).toContain('outside the hall boundary');
     });
 
@@ -265,8 +265,8 @@ describe('PlannerStore', () => {
 
       store.moveStall(second.id, first.posX, first.posZ);
 
-      expect(store.stalls().find(s => s.id === second.id)!.posX).toBe(-8);
-      expect(store.error()).toContain('overlaps another shop');
+      expect(store.stalls().find(s => s.id === second.id)!.posX).toBe(-4);
+      expect(store.error()).toContain('Overlaps existing stall');
     });
 
     it('rejects a move into a blocked area and keeps the old position', () => {
@@ -301,10 +301,10 @@ describe('PlannerStore', () => {
 
       expect(store.selectedStall()!.posX).toBe(origX);
       expect(store.selectedStall()!.posZ).toBe(origZ);
-      expect(store.error()).toContain('outside the hall boundary');
+      expect(store.error()).toContain('wall, outside area or floor opening');
     });
 
-    it('allows a move onto a zone blocked area', () => {
+    it('allows a move onto a pillar but not onto a fire curtain, hidden or not', () => {
       store.halls.set([{
         id: 'zone-hall',
         name: 'Hall With Zone',
@@ -313,7 +313,17 @@ describe('PlannerStore', () => {
         length: 40,
         radius: 0,
         blockedAreas: [
-          { posX: 5, posZ: 5, width: 6, length: 6, kind: 'zone', color: '#8A2BE2' }
+          { posX: 5, posZ: 5, width: 1, length: 1, kind: 'zone', color: 'gray', title: 'Pillar' }
+        ],
+        zones: [
+          {
+            id: 'sc-zone-1',
+            kind: 'SMOKE_CURTAIN',
+            label: 'Fire curtains (No construction zone below)',
+            color: '#8a2be2',
+            hidden: true,
+            polygon: [{ x: -20, z: -10.5 }, { x: 20, z: -10.5 }, { x: 20, z: -10 }, { x: -20, z: -10 }]
+          }
         ]
       }]);
       store.setActiveHall('zone-hall');
@@ -327,11 +337,56 @@ describe('PlannerStore', () => {
         gateSide: 'FRONT'
       })!;
 
-      // Move onto the zone — should succeed because zones don't block
+      // A pavilion may stand around a pillar.
       store.moveStall(shop.id, 5, 5);
-
       expect(store.selectedStall()!.posX).toBe(5);
       expect(store.selectedStall()!.posZ).toBe(5);
+
+      // Under the (hidden) fire curtain: refused, the stall stays put.
+      store.moveStall(shop.id, 0, -10);
+      expect(store.selectedStall()!.posX).toBe(5);
+      expect(store.selectedStall()!.posZ).toBe(5);
+      expect(store.error()).toContain('smoke curtain');
+    });
+
+    it('lets a stall into a walled foyer that lies past the plan breadth', () => {
+      // 20 x 10 canvas. Main floor fills z -5..0 (behind a wall at 0..1); an outside strip
+      // follows, then a foyer walled on every side whose bottom wall reaches z = 8, 3 m past the
+      // breadth. The old rectangle check stopped every stall at z = 5.
+      store.halls.set([{
+        id: 'foyer-hall',
+        name: 'Foyer Hall',
+        shape: 'SQUARE',
+        width: 20,
+        length: 10,
+        radius: 0,
+        blockedAreas: [
+          { posX: 0, posZ: 0.5, width: 20, length: 1, kind: 'wall', color: '#742371' },
+          { posX: 0, posZ: 1.5, width: 20, length: 1, kind: 'outside', color: '#ffffff' },
+          { posX: 0, posZ: 2.5, width: 12, length: 1, kind: 'wall', color: '#742371' },
+          { posX: 0, posZ: 7.5, width: 12, length: 1, kind: 'wall', color: '#742371' },
+          { posX: -5.5, posZ: 5, width: 1, length: 6, kind: 'wall', color: '#742371' },
+          { posX: 5.5, posZ: 5, width: 1, length: 6, kind: 'wall', color: '#742371' },
+          { posX: -8, posZ: 3.5, width: 4, length: 3, kind: 'outside', color: '#ffffff' },
+          { posX: 8, posZ: 3.5, width: 4, length: 3, kind: 'outside', color: '#ffffff' }
+        ]
+      }]);
+      store.setActiveHall('foyer-hall');
+
+      const shop = store.addStall({
+        name: 'A',
+        width: 2,
+        length: 2,
+        height: 4,
+        color: '#3498db',
+        gateSide: 'RIGHT'
+      })!;
+
+      store.moveStall(shop.id, 0, 5);
+
+      expect(store.selectedStall()!.posX).toBe(0);
+      expect(store.selectedStall()!.posZ).toBe(5);
+      expect(store.error()).toBe('');
     });
   });
 
@@ -427,7 +482,8 @@ describe('PlannerStore', () => {
       store.updateStall(shop.id, { width: 100 });
       store.saveEdit();
 
-      expect(store.error()).toContain('invalid or overlap');
+      expect(store.error()).toContain('outside the hall boundary');
+      expect(store.selectedStall()!.width).toBe(8);
     });
   });
 
@@ -479,6 +535,7 @@ describe('PlannerStore', () => {
 
     it('openSide is add-only and idempotent (3D wall click)', () => {
       const shop = addShop();
+      store.placeStall(shop.id, 0, 0); // all four frontages have enough space here
 
       store.openSide(shop.id, 'LEFT');
       store.openSide(shop.id, 'LEFT');
@@ -489,6 +546,7 @@ describe('PlannerStore', () => {
 
     it('updateStall syncs gateSide to the first open side', () => {
       const shop = addShop();
+      store.placeStall(shop.id, 0, 0);
 
       store.updateStall(shop.id, { openSides: ['BACK', 'LEFT'] });
 
@@ -698,7 +756,7 @@ describe('PlannerStore', () => {
 
     it('a large stall cannot overwrite smaller ones', () => {
       draw({ x: -10, z: 0 }, { x: -5, z: 0.2 });
-      draw({ x: -7, z: 0 }, { x: -2, z: 0.2 });
+      draw({ x: -4, z: 0 }, { x: 1, z: 0.2 });
       expect(store.currentStalls().length).toBe(2);
 
       store.selectStallType(null); // Custom: the dragged rectangle
@@ -708,14 +766,15 @@ describe('PlannerStore', () => {
       expect(store.rejection()?.violations[0].message).toMatch(/^Overlaps 2 existing stalls/);
     });
 
-    it('rejects a 2 m gap for B2B and accepts it once touching', () => {
+    it('rejects a 2 m gap and touching stalls with the same open side', () => {
       draw({ x: -10, z: 0 }, { x: -5, z: 0.2 }); // x -10..-7
       draw({ x: -5, z: 0 }, { x: 0, z: 0.2 }); // x -5..-2: 2 m gap
       expect(store.currentStalls().length).toBe(1);
       expect(store.rejection()?.violations[0].code).toBe('PATHWAY_WIDTH');
 
-      draw({ x: -7, z: 0 }, { x: 0, z: 0.2 }); // touching: one island
-      expect(store.currentStalls().length).toBe(2);
+      draw({ x: -7, z: 0 }, { x: 0, z: 0.2 });
+      expect(store.currentStalls().length).toBe(1);
+      expect(store.rejection()?.violations[0].code).toBe('INVALID_TOUCHING');
     });
 
     it('snaps a dropped move back when it breaks a rule', () => {
@@ -756,6 +815,56 @@ describe('PlannerStore', () => {
       ]);
       expect(store.audit().length).toBe(1);
       expect(store.audit()[0].violations[0].code).toBe('PERIPHERAL_CLEARANCE');
+    });
+  });
+  describe('assisted layout', () => {
+    it('keeps the stalls of a plan that fit and rejects the ones that do not', () => {
+      const reviewed = store.reviewPlan([
+        { name: 'A', width: 4, length: 4, posX: -10, posZ: -10 },
+        { name: 'B', width: 4, length: 4, posX: -10, posZ: -10 }, // on top of A
+        { name: 'C', width: 4, length: 4, posX: 400, posZ: 0 } // outside the 40 x 40 hall
+      ]);
+
+      expect(reviewed.map(p => p.valid)).toEqual([true, false, false]);
+      expect(reviewed[1].violations.some(v => v.code === 'STALL_OVERLAP')).toBeTrue();
+      // Reviewing changes nothing: the plan is only drawn until it is applied.
+      expect(store.currentStalls()).toEqual([]);
+    });
+
+    it('creates only the stalls that fit when the plan is applied', () => {
+      store.reviewPlan([
+        { name: 'A', width: 4, length: 4, posX: -10, posZ: -10 },
+        { name: 'B', width: 4, length: 4, posX: -10, posZ: -10 }
+      ]);
+
+      expect(store.applyPlan()).toBe(1);
+      expect(store.currentStalls().length).toBe(1);
+      expect(store.currentStalls()[0].name).toBe('A');
+      expect(store.proposals()).toBeNull();
+    });
+  });
+
+  describe('rotate and duplicate', () => {
+    beforeEach(() => {
+      store.stalls.set([
+        { id: 's1', hallId: store.activeHallId(), name: 'A', width: 6, length: 2, height: 4, posX: 0, posZ: 0, color: '#3498db', gateSide: 'FRONT', openSides: ['FRONT'], stallNumber: null, status: 'AVAILABLE', stallTypeId: null }
+      ]);
+    });
+
+    it('swaps the sides of a stall and turns its opening with it', () => {
+      store.rotateStall('s1');
+      const stall = store.currentStalls()[0];
+      expect([stall.width, stall.length]).toEqual([2, 6]);
+      expect(stall.openSides).toEqual(['RIGHT']);
+      expect(stall.gateSide).toBe('RIGHT');
+    });
+
+    it('places a copy somewhere else, never on the original', () => {
+      store.duplicateStall('s1');
+      const [first, copy] = store.currentStalls();
+      expect(store.currentStalls().length).toBe(2);
+      expect(copy.width).toBe(first.width);
+      expect(copy.posX === first.posX && copy.posZ === first.posZ).toBeFalse();
     });
   });
 });

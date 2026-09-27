@@ -1,0 +1,1600 @@
+{
+  "hallId": 62,
+  "storedHallId": 1088,
+  "groups": [
+    {
+      "sourceGroup": 0,
+      "sourcePosition": {
+        "x": -280,
+        "y": 2000
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/stairs.svg",
+          "label": "Stairs/Elevators",
+          "imported": {
+            "kind": "stairs",
+            "label": "Stairs/Elevators",
+            "position": {
+              "x": -51.5,
+              "z": 43.55
+            },
+            "anchor": {
+              "x": -56,
+              "z": 42
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "stairs",
+            "slot": 0,
+            "label": "Stairs/Elevators",
+            "anchor": {
+              "x": -56,
+              "z": 42
+            },
+            "position": {
+              "x": -51.5,
+              "z": 43.55
+            }
+          },
+          "renderedCard": 0,
+          "renderedSlot": 0
+        },
+        {
+          "sourceImage": 1,
+          "url": "assets/images/emergency-exit.svg",
+          "label": "Emergency Exit",
+          "imported": {
+            "kind": "emergency-exit",
+            "label": "Emergency Exit",
+            "position": {
+              "x": -43.3875,
+              "z": 43.55
+            },
+            "anchor": {
+              "x": -56,
+              "z": 42
+            },
+            "slot": 1
+          },
+          "stored": {
+            "kind": "emergency-exit",
+            "slot": 1,
+            "label": "Emergency Exit",
+            "anchor": {
+              "x": -56,
+              "z": 42
+            },
+            "position": {
+              "x": -43.3875,
+              "z": 43.55
+            }
+          },
+          "renderedCard": 0,
+          "renderedSlot": 1
+        },
+        {
+          "sourceImage": 2,
+          "url": "assets/images/toilet-male.svg",
+          "label": "Toilet (Male)",
+          "imported": {
+            "kind": "toilet-male",
+            "label": "Toilet (Male)",
+            "position": {
+              "x": -36.00625,
+              "z": 43.55
+            },
+            "anchor": {
+              "x": -56,
+              "z": 42
+            },
+            "slot": 2
+          },
+          "stored": {
+            "kind": "toilet-male",
+            "slot": 2,
+            "label": "Toilet (Male)",
+            "anchor": {
+              "x": -56,
+              "z": 42
+            },
+            "position": {
+              "x": -36.00625,
+              "z": 43.55
+            }
+          },
+          "renderedCard": 0,
+          "renderedSlot": 2
+        },
+        {
+          "sourceImage": 3,
+          "url": "assets/images/toilet-female.svg",
+          "label": "Toilet (Female)",
+          "imported": {
+            "kind": "toilet-female",
+            "label": "Toilet (Female)",
+            "position": {
+              "x": -28.38125,
+              "z": 43.55
+            },
+            "anchor": {
+              "x": -56,
+              "z": 42
+            },
+            "slot": 3
+          },
+          "stored": {
+            "kind": "toilet-female",
+            "slot": 3,
+            "label": "Toilet (Female)",
+            "anchor": {
+              "x": -56,
+              "z": 42
+            },
+            "position": {
+              "x": -28.38125,
+              "z": 43.55
+            }
+          },
+          "renderedCard": 0,
+          "renderedSlot": 3
+        }
+      ]
+    },
+    {
+      "sourceGroup": 1,
+      "sourcePosition": {
+        "x": 1730,
+        "y": 650
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/stairs.svg",
+          "label": "Stairs/Elevators",
+          "imported": {
+            "kind": "stairs",
+            "label": "Stairs/Elevators",
+            "position": {
+              "x": 49,
+              "z": -23.95
+            },
+            "anchor": {
+              "x": 44.5,
+              "z": -25.5
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "stairs",
+            "slot": 0,
+            "label": "Stairs/Elevators",
+            "anchor": {
+              "x": 44.5,
+              "z": -25.5
+            },
+            "position": {
+              "x": 49,
+              "z": -23.95
+            }
+          },
+          "renderedCard": 1,
+          "renderedSlot": 0
+        },
+        {
+          "sourceImage": 1,
+          "url": "assets/images/emergency-exit.svg",
+          "label": "Emergency Exit",
+          "imported": {
+            "kind": "emergency-exit",
+            "label": "Emergency Exit",
+            "position": {
+              "x": 57.1125,
+              "z": -23.95
+            },
+            "anchor": {
+              "x": 44.5,
+              "z": -25.5
+            },
+            "slot": 1
+          },
+          "stored": {
+            "kind": "emergency-exit",
+            "slot": 1,
+            "label": "Emergency Exit",
+            "anchor": {
+              "x": 44.5,
+              "z": -25.5
+            },
+            "position": {
+              "x": 57.1125,
+              "z": -23.95
+            }
+          },
+          "renderedCard": 1,
+          "renderedSlot": 1
+        }
+      ]
+    },
+    {
+      "sourceGroup": 2,
+      "sourcePosition": {
+        "x": 1600,
+        "y": 300
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/emergency-exit.svg",
+          "label": "Emergency Exit",
+          "imported": {
+            "kind": "emergency-exit",
+            "label": "Emergency Exit",
+            "position": {
+              "x": 42.0125,
+              "z": -41.45
+            },
+            "anchor": {
+              "x": 38,
+              "z": -43
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "emergency-exit",
+            "slot": 0,
+            "label": "Emergency Exit",
+            "anchor": {
+              "x": 38,
+              "z": -43
+            },
+            "position": {
+              "x": 42.0125,
+              "z": -41.45
+            }
+          },
+          "renderedCard": 2,
+          "renderedSlot": 0
+        }
+      ]
+    },
+    {
+      "sourceGroup": 3,
+      "sourcePosition": {
+        "x": 1350,
+        "y": 40
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/stairs.svg",
+          "label": "Stairs/Elevators",
+          "imported": {
+            "kind": "stairs",
+            "label": "Stairs/Elevators",
+            "position": {
+              "x": 30,
+              "z": -54.45
+            },
+            "anchor": {
+              "x": 25.5,
+              "z": -56
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "stairs",
+            "slot": 0,
+            "label": "Stairs/Elevators",
+            "anchor": {
+              "x": 25.5,
+              "z": -56
+            },
+            "position": {
+              "x": 30,
+              "z": -54.45
+            }
+          },
+          "renderedCard": 3,
+          "renderedSlot": 0
+        },
+        {
+          "sourceImage": 1,
+          "url": "assets/images/emergency-exit.svg",
+          "label": "Emergency Exit",
+          "imported": {
+            "kind": "emergency-exit",
+            "label": "Emergency Exit",
+            "position": {
+              "x": 38.1125,
+              "z": -54.45
+            },
+            "anchor": {
+              "x": 25.5,
+              "z": -56
+            },
+            "slot": 1
+          },
+          "stored": {
+            "kind": "emergency-exit",
+            "slot": 1,
+            "label": "Emergency Exit",
+            "anchor": {
+              "x": 25.5,
+              "z": -56
+            },
+            "position": {
+              "x": 38.1125,
+              "z": -54.45
+            }
+          },
+          "renderedCard": 3,
+          "renderedSlot": 1
+        }
+      ]
+    },
+    {
+      "sourceGroup": 4,
+      "sourcePosition": {
+        "x": 1200,
+        "y": -50
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/drinking-water.svg",
+          "label": "Drinking Water",
+          "imported": {
+            "kind": "drinking-water",
+            "label": "Drinking Water",
+            "position": {
+              "x": 22.0125,
+              "z": -58.95
+            },
+            "anchor": {
+              "x": 18,
+              "z": -60.5
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "drinking-water",
+            "slot": 0,
+            "label": "Drinking Water",
+            "anchor": {
+              "x": 18,
+              "z": -60.5
+            },
+            "position": {
+              "x": 22.0125,
+              "z": -58.95
+            }
+          },
+          "renderedCard": 4,
+          "renderedSlot": 0
+        }
+      ]
+    },
+    {
+      "sourceGroup": 5,
+      "sourcePosition": {
+        "x": 720,
+        "y": -110
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/toilet-male.svg",
+          "label": "Toilet (Male)",
+          "imported": {
+            "kind": "toilet-male",
+            "label": "Toilet (Male)",
+            "position": {
+              "x": -2.23125,
+              "z": -61.95
+            },
+            "anchor": {
+              "x": -6,
+              "z": -63.5
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "toilet-male",
+            "slot": 0,
+            "label": "Toilet (Male)",
+            "anchor": {
+              "x": -6,
+              "z": -63.5
+            },
+            "position": {
+              "x": -2.23125,
+              "z": -61.95
+            }
+          },
+          "renderedCard": 5,
+          "renderedSlot": 0
+        }
+      ]
+    },
+    {
+      "sourceGroup": 6,
+      "sourcePosition": {
+        "x": 450,
+        "y": -50
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/toilet-female.svg",
+          "label": "Toilet (Female)",
+          "imported": {
+            "kind": "toilet-female",
+            "label": "Toilet (Female)",
+            "position": {
+              "x": -15.24375,
+              "z": -58.95
+            },
+            "anchor": {
+              "x": -19.5,
+              "z": -60.5
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "toilet-female",
+            "slot": 0,
+            "label": "Toilet (Female)",
+            "anchor": {
+              "x": -19.5,
+              "z": -60.5
+            },
+            "position": {
+              "x": -15.24375,
+              "z": -58.95
+            }
+          },
+          "renderedCard": 6,
+          "renderedSlot": 0
+        }
+      ]
+    },
+    {
+      "sourceGroup": 7,
+      "sourcePosition": {
+        "x": -120,
+        "y": 200
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/stairs.svg",
+          "label": "Stairs/Elevators",
+          "imported": {
+            "kind": "stairs",
+            "label": "Stairs/Elevators",
+            "position": {
+              "x": -43.5,
+              "z": -46.45
+            },
+            "anchor": {
+              "x": -48,
+              "z": -48
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "stairs",
+            "slot": 0,
+            "label": "Stairs/Elevators",
+            "anchor": {
+              "x": -48,
+              "z": -48
+            },
+            "position": {
+              "x": -43.5,
+              "z": -46.45
+            }
+          },
+          "renderedCard": 7,
+          "renderedSlot": 0
+        },
+        {
+          "sourceImage": 1,
+          "url": "assets/images/emergency-exit.svg",
+          "label": "Emergency Exit",
+          "imported": {
+            "kind": "emergency-exit",
+            "label": "Emergency Exit",
+            "position": {
+              "x": -35.3875,
+              "z": -46.45
+            },
+            "anchor": {
+              "x": -48,
+              "z": -48
+            },
+            "slot": 1
+          },
+          "stored": {
+            "kind": "emergency-exit",
+            "slot": 1,
+            "label": "Emergency Exit",
+            "anchor": {
+              "x": -48,
+              "z": -48
+            },
+            "position": {
+              "x": -35.3875,
+              "z": -46.45
+            }
+          },
+          "renderedCard": 7,
+          "renderedSlot": 1
+        }
+      ]
+    },
+    {
+      "sourceGroup": 8,
+      "sourcePosition": {
+        "x": -200,
+        "y": 900
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/stairs.svg",
+          "label": "Stairs/Elevators",
+          "imported": {
+            "kind": "stairs",
+            "label": "Stairs/Elevators",
+            "position": {
+              "x": -47.5,
+              "z": -11.45
+            },
+            "anchor": {
+              "x": -52,
+              "z": -13
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "stairs",
+            "slot": 0,
+            "label": "Stairs/Elevators",
+            "anchor": {
+              "x": -52,
+              "z": -13
+            },
+            "position": {
+              "x": -47.5,
+              "z": -11.45
+            }
+          },
+          "renderedCard": 8,
+          "renderedSlot": 0
+        }
+      ]
+    },
+    {
+      "sourceGroup": 9,
+      "sourcePosition": {
+        "x": -120,
+        "y": 680
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/emergency-exit.svg",
+          "label": "Emergency Exit",
+          "imported": {
+            "kind": "emergency-exit",
+            "label": "Emergency Exit",
+            "position": {
+              "x": -43.9875,
+              "z": -22.45
+            },
+            "anchor": {
+              "x": -48,
+              "z": -24
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "emergency-exit",
+            "slot": 0,
+            "label": "Emergency Exit",
+            "anchor": {
+              "x": -48,
+              "z": -24
+            },
+            "position": {
+              "x": -43.9875,
+              "z": -22.45
+            }
+          },
+          "renderedCard": 9,
+          "renderedSlot": 0
+        }
+      ]
+    },
+    {
+      "sourceGroup": 10,
+      "sourcePosition": {
+        "x": -100,
+        "y": 523
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/emergency-exit.svg",
+          "label": "Emergency Exit",
+          "imported": {
+            "kind": "emergency-exit",
+            "label": "Emergency Exit",
+            "position": {
+              "x": -42.9875,
+              "z": -30.3
+            },
+            "anchor": {
+              "x": -47,
+              "z": -31.85
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "emergency-exit",
+            "slot": 0,
+            "label": "Emergency Exit",
+            "anchor": {
+              "x": -47,
+              "z": -31.85
+            },
+            "position": {
+              "x": -42.9875,
+              "z": -30.3
+            }
+          },
+          "renderedCard": 10,
+          "renderedSlot": 0
+        }
+      ]
+    },
+    {
+      "sourceGroup": 11,
+      "sourcePosition": {
+        "x": 1370,
+        "y": 2000
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/emergency-exit.svg",
+          "label": "Emergency Exit",
+          "imported": {
+            "kind": "emergency-exit",
+            "label": "Emergency Exit",
+            "position": {
+              "x": 30.5125,
+              "z": 43.55
+            },
+            "anchor": {
+              "x": 26.5,
+              "z": 42
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "emergency-exit",
+            "slot": 0,
+            "label": "Emergency Exit",
+            "anchor": {
+              "x": 26.5,
+              "z": 42
+            },
+            "position": {
+              "x": 30.5125,
+              "z": 43.55
+            }
+          },
+          "renderedCard": 11,
+          "renderedSlot": 0
+        },
+        {
+          "sourceImage": 1,
+          "url": "assets/images/stairs.svg",
+          "label": "Stairs/Elevators",
+          "imported": {
+            "kind": "stairs",
+            "label": "Stairs/Elevators",
+            "position": {
+              "x": 38.625,
+              "z": 43.55
+            },
+            "anchor": {
+              "x": 26.5,
+              "z": 42
+            },
+            "slot": 1
+          },
+          "stored": {
+            "kind": "stairs",
+            "slot": 1,
+            "label": "Stairs/Elevators",
+            "anchor": {
+              "x": 26.5,
+              "z": 42
+            },
+            "position": {
+              "x": 38.625,
+              "z": 43.55
+            }
+          },
+          "renderedCard": 11,
+          "renderedSlot": 1
+        },
+        {
+          "sourceImage": 2,
+          "url": "assets/images/toilet-male.svg",
+          "label": "Toilet (Male)",
+          "imported": {
+            "kind": "toilet-male",
+            "label": "Toilet (Male)",
+            "position": {
+              "x": 46.49375,
+              "z": 43.55
+            },
+            "anchor": {
+              "x": 26.5,
+              "z": 42
+            },
+            "slot": 2
+          },
+          "stored": {
+            "kind": "toilet-male",
+            "slot": 2,
+            "label": "Toilet (Male)",
+            "anchor": {
+              "x": 26.5,
+              "z": 42
+            },
+            "position": {
+              "x": 46.49375,
+              "z": 43.55
+            }
+          },
+          "renderedCard": 11,
+          "renderedSlot": 2
+        },
+        {
+          "sourceImage": 3,
+          "url": "assets/images/toilet-female.svg",
+          "label": "Toilet (Female)",
+          "imported": {
+            "kind": "toilet-female",
+            "label": "Toilet (Female)",
+            "position": {
+              "x": 54.11875,
+              "z": 43.55
+            },
+            "anchor": {
+              "x": 26.5,
+              "z": 42
+            },
+            "slot": 3
+          },
+          "stored": {
+            "kind": "toilet-female",
+            "slot": 3,
+            "label": "Toilet (Female)",
+            "anchor": {
+              "x": 26.5,
+              "z": 42
+            },
+            "position": {
+              "x": 54.11875,
+              "z": 43.55
+            }
+          },
+          "renderedCard": 11,
+          "renderedSlot": 3
+        }
+      ]
+    },
+    {
+      "sourceGroup": 12,
+      "sourcePosition": {
+        "x": 800,
+        "y": 2180
+      },
+      "images": [
+        {
+          "sourceImage": 0,
+          "url": "assets/images/circulation.svg",
+          "label": "Circulation Area",
+          "imported": {
+            "kind": "circulation",
+            "label": "Circulation Area",
+            "position": {
+              "x": 2.5,
+              "z": 52.55
+            },
+            "anchor": {
+              "x": -2,
+              "z": 51
+            },
+            "slot": 0
+          },
+          "stored": {
+            "kind": "circulation",
+            "slot": 0,
+            "label": "Circulation Area",
+            "anchor": {
+              "x": -2,
+              "z": 51
+            },
+            "position": {
+              "x": 2.5,
+              "z": 52.55
+            }
+          },
+          "renderedCard": 12,
+          "renderedSlot": 0
+        }
+      ]
+    }
+  ],
+  "labels": [
+    {
+      "sourceIndex": 0,
+      "source": {
+        "text": "EE14-2",
+        "positionX": -15,
+        "positionY": 930
+      },
+      "stored": {
+        "text": "EE14-2",
+        "position": {
+          "x": -42.75,
+          "z": -11.5
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "EE14-2",
+        "ink": 2649,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 1,
+      "source": {
+        "text": "EE14-3",
+        "positionX": 15,
+        "positionY": 630
+      },
+      "stored": {
+        "text": "EE14-3",
+        "position": {
+          "x": -41.25,
+          "z": -26.5
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "EE14-3",
+        "ink": 2672,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 2,
+      "source": {
+        "text": "EE14-4",
+        "positionX": 240,
+        "positionY": 220
+      },
+      "stored": {
+        "text": "EE14-4",
+        "position": {
+          "x": -30,
+          "z": -47
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "EE14-4",
+        "ink": 2661,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 3,
+      "source": {
+        "text": "EE14-5",
+        "positionX": 1265,
+        "positionY": 98
+      },
+      "stored": {
+        "text": "EE14-5",
+        "position": {
+          "x": 21.25,
+          "z": -53.1
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "EE14-5",
+        "ink": 2682,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 4,
+      "source": {
+        "text": "EE14-6",
+        "positionX": 1520,
+        "positionY": 360
+      },
+      "stored": {
+        "text": "EE14-6",
+        "position": {
+          "x": 34,
+          "z": -40
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "EE14-6",
+        "ink": 2778,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 5,
+      "source": {
+        "text": "EE14-7",
+        "positionX": 1640,
+        "positionY": 660
+      },
+      "stored": {
+        "text": "EE14-7",
+        "position": {
+          "x": 40,
+          "z": -25
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "EE14-7",
+        "ink": 2508,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 6,
+      "source": {
+        "text": "EE14-9",
+        "positionX": 1580,
+        "positionY": 1830
+      },
+      "stored": {
+        "text": "EE14-9",
+        "position": {
+          "x": 37,
+          "z": 33.5
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "EE14-9",
+        "ink": 2772,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 7,
+      "source": {
+        "text": "T-14FC",
+        "positionX": 470,
+        "positionY": 60
+      },
+      "stored": {
+        "text": "T-14FC",
+        "position": {
+          "x": -18.5,
+          "z": -55
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 8,
+      "source": {
+        "text": "T-14FC",
+        "positionX": 740,
+        "positionY": -20
+      },
+      "stored": {
+        "text": "T-14FC",
+        "position": {
+          "x": -5,
+          "z": -59
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 9,
+      "source": {
+        "text": "T-14FC",
+        "positionX": 1180,
+        "positionY": 60
+      },
+      "stored": {
+        "text": "T-14FC",
+        "position": {
+          "x": 17,
+          "z": -55
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 10,
+      "source": {
+        "text": "T-14FA",
+        "positionX": 1320,
+        "positionY": 1925
+      },
+      "stored": {
+        "text": "T-14FA",
+        "position": {
+          "x": 24,
+          "z": 38.25
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "T-14FA",
+        "ink": 2430,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 11,
+      "source": {
+        "text": "EE14-1",
+        "positionX": 325,
+        "positionY": 1915
+      },
+      "stored": {
+        "text": "EE14-1",
+        "position": {
+          "x": -25.75,
+          "z": 37.75
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "EE14-1",
+        "ink": 2464,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 12,
+      "source": {
+        "text": "T-14FB",
+        "positionX": 325,
+        "positionY": 1940
+      },
+      "stored": {
+        "text": "T-14FB",
+        "position": {
+          "x": -25.75,
+          "z": 39
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "T-14FB",
+        "ink": 2523,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 13,
+      "source": {
+        "text": "FOYER-14F",
+        "positionX": 820,
+        "positionY": 1880
+      },
+      "stored": {
+        "text": "FOYER-14F",
+        "position": {
+          "x": -1,
+          "z": 36
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "FOYER-14F",
+        "ink": 4220,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 14,
+      "source": {
+        "text": "GF14-2",
+        "positionX": 1185,
+        "positionY": 2205
+      },
+      "stored": {
+        "text": "GF14-2",
+        "position": {
+          "x": 17.25,
+          "z": 52.25
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "GF14-2",
+        "ink": 2665,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    },
+    {
+      "sourceIndex": 15,
+      "source": {
+        "text": "GF14-1",
+        "positionX": 465,
+        "positionY": 2205
+      },
+      "stored": {
+        "text": "GF14-1",
+        "position": {
+          "x": -18.75,
+          "z": 52.25
+        }
+      },
+      "rendered": {
+        "name": "exit-label",
+        "text": "GF14-1",
+        "ink": 2480,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    }
+  ],
+  "rendered": {
+    "cards": [
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit",
+          "toilet-male",
+          "toilet-female"
+        ],
+        "ink": 71275,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit"
+        ],
+        "ink": 17497,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "drinking-water"
+        ],
+        "ink": 19002,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "toilet-male"
+        ],
+        "ink": 17146,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "toilet-female"
+        ],
+        "ink": 17906,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs",
+          "emergency-exit"
+        ],
+        "ink": 36212,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "stairs"
+        ],
+        "ink": 18938,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit"
+        ],
+        "ink": 17497,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit"
+        ],
+        "ink": 17497,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "emergency-exit",
+          "stairs",
+          "toilet-male",
+          "toilet-female"
+        ],
+        "ink": 71338,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "amenity-card",
+        "kinds": [
+          "circulation"
+        ],
+        "ink": 9701,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    ],
+    "labels": [
+      {
+        "name": "exit-label",
+        "text": "EE14-2",
+        "ink": 2649,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-3",
+        "ink": 2672,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-4",
+        "ink": 2661,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-5",
+        "ink": 2682,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-6",
+        "ink": 2778,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-7",
+        "ink": 2508,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-9",
+        "ink": 2772,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FC",
+        "ink": 2400,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FA",
+        "ink": 2430,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "EE14-1",
+        "ink": 2464,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "T-14FB",
+        "ink": 2523,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "FOYER-14F",
+        "ink": 4220,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "GF14-2",
+        "ink": 2665,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "exit-label",
+        "text": "GF14-1",
+        "ink": 2480,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "compass-rose",
+        "ink": 64645,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      },
+      {
+        "name": "compass-label",
+        "ink": 1730,
+        "visible": true,
+        "inFrame": true,
+        "uncovered": true,
+        "depthTest": false,
+        "order": 25
+      }
+    ]
+  }
+}

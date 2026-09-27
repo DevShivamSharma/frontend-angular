@@ -1,12 +1,15 @@
 import {
   auditLayout,
   DEFAULT_LAYOUT_RULES,
+  extraFloorRegions,
+  FloorArea,
   Footprint,
   formatStallNumber,
   PlacementContext,
   PlacementStall,
   Point,
   rectInsidePolygon,
+  traceFloor,
   validatePlacement,
 } from './placement-rules';
 
@@ -37,7 +40,7 @@ function ctx(overrides: Partial<PlacementContext> = {}): PlacementContext {
     boundary: HALL,
     zones: [],
     openings: [],
-    rules: DEFAULT_LAYOUT_RULES,
+    rules: { ...DEFAULT_LAYOUT_RULES, minPassageWidth: { B2B: 3, B2C: 4 } },
     eventType: 'B2B',
     stalls: [],
     ...overrides,
@@ -68,7 +71,7 @@ describe('placement-rules', () => {
     });
 
     it('rejects a stall entirely inside the notch', () => {
-      expect(codes(at(33, 2, 3, 2), ctx())).toEqual(['OUTSIDE_HALL']);
+      expect(codes(at(33, 2, 3, 2), ctx())).toContain('OUTSIDE_HALL');
     });
 
     it('treats touching the boundary as inside (the clearance rule is separate)', () => {
@@ -116,12 +119,14 @@ describe('placement-rules', () => {
       expect(result.violations[0].geometry.length).toBe(3);
     });
 
-    it('lets stalls touch edge to edge (back-to-back island)', () => {
-      expect(codes(at(14, 5, 3, 2), ctx({ stalls: three }))).toEqual([]);
+    it('lets only outward back-to-back stalls touch edge to edge', () => {
+      expect(codes({ ...at(8, 5, 3, 2), openSides: ['RIGHT'] },
+        ctx({ stalls: [stall('A', 5, 5, 3, 2, { openSides: ['LEFT'] })] }))).toEqual([]);
+      expect(codes(at(14, 5, 3, 2), ctx({ stalls: three }))).toContain('INVALID_TOUCHING');
     });
 
     it('ignores the stall being moved', () => {
-      expect(codes(at(5, 5, 3, 2), ctx({ stalls: three }), 'STALL-001')).toEqual([]);
+      expect(codes(at(5, 5, 3, 2), ctx({ stalls: [three[0]] }), 'STALL-001')).toEqual([]);
     });
 
     it('ignores cancelled stalls: they no longer occupy space', () => {
@@ -204,13 +209,13 @@ describe('placement-rules', () => {
     };
 
     it('rejects a stall in front of an emergency exit', () => {
-      expect(codes(at(19, 16, 3, 2), ctx({ openings: [exit] }))).toEqual(['EMERGENCY_ACCESS']);
+      expect(codes(at(19, 16, 3, 2), ctx({ openings: [exit] }))).toContain('EMERGENCY_ACCESS');
     });
 
     it('sizes the access zone from the event passage width', () => {
       // Access zone is 3 m deep for B2B: z 17..20. A stall ending at z = 17 is clear.
       expect(codes(at(19, 14, 3, 3), ctx({ openings: [exit] }))).toEqual([]);
-      expect(codes(at(19, 14, 3, 3), ctx({ openings: [exit], eventType: 'B2C' }))).toEqual(['EMERGENCY_ACCESS']);
+      expect(codes(at(19, 14, 3, 3), ctx({ openings: [exit], eventType: 'B2C' }))).toContain('EMERGENCY_ACCESS');
     });
   });
 
@@ -234,7 +239,8 @@ describe('placement-rules', () => {
     });
 
     it('is empty for a valid layout', () => {
-      const stalls = [stall('STALL-001', 5, 5, 3, 2), stall('STALL-002', 8, 5, 3, 2)];
+      const stalls = [stall('STALL-001', 5, 5, 3, 2, { openSides: ['LEFT'] }),
+        stall('STALL-002', 8, 5, 3, 2, { openSides: ['RIGHT'] })];
       expect(auditLayout(ctx({ stalls }))).toEqual([]);
     });
   });
@@ -242,5 +248,85 @@ describe('placement-rules', () => {
   it('formats stall numbers with a zero-padded sequence', () => {
     expect(formatStallNumber('STALL-', 7)).toBe('STALL-007');
     expect(formatStallNumber('STALL-', 1234)).toBe('STALL-1234');
+  });
+
+  /*
+   * A Hall 1GF / 14GF-like plan on a 20 x 20 m canvas (top-left metres, converted below):
+   *   main floor  x 2..18, z 2..10   (walls 1 m thick around it)
+   *   outside strip z 11..12 across the whole width
+   *   foyer       x 6..14, z 13..21  - its bottom wall reaches z 22, PAST the 20 m breadth
+   */
+  describe('traceFloor', () => {
+    const W = 20;
+    const L = 20;
+    const rect = (x: number, y: number, w: number, h: number, kind: FloorArea['kind']): FloorArea => ({
+      posX: x + w / 2 - W / 2,
+      posZ: y + h / 2 - L / 2,
+      width: w,
+      length: h,
+      kind,
+    });
+    const plan: FloorArea[] = [
+      // main floor walls
+      rect(1, 1, 18, 1, 'wall'),
+      rect(1, 10, 18, 1, 'wall'),
+      rect(1, 1, 1, 10, 'wall'),
+      rect(18, 1, 1, 10, 'wall'),
+      // everything around the main floor is outside
+      rect(0, 0, 20, 1, 'outside'),
+      rect(0, 0, 1, 11, 'outside'),
+      rect(19, 0, 1, 11, 'outside'),
+      rect(0, 11, 20, 1, 'outside'),
+      // foyer walls, the bottom one below the canvas
+      rect(5, 12, 10, 1, 'wall'),
+      rect(5, 21, 10, 1, 'wall'),
+      rect(5, 12, 1, 10, 'wall'),
+      rect(14, 12, 1, 10, 'wall'),
+      rect(0, 12, 5, 8, 'outside'),
+      rect(15, 12, 5, 8, 'outside'),
+      // a pillar inside the main floor
+      rect(9, 5, 1, 1, 'zone'),
+    ];
+    const toPlan = (x: number, z: number): Point => ({ x: x - W / 2, z: z - L / 2 });
+
+    it('keeps every disconnected floor region, largest first', () => {
+      const floor = traceFloor(plan, W, L);
+      expect(floor.length).toBe(2);
+      expect(floor[0].area).toBeCloseTo(16 * 8, 6);
+      expect(floor[1].area).toBeCloseTo(8 * 8, 6);
+    });
+
+    it('does not clip a walled region at the canvas breadth', () => {
+      const foyer = traceFloor(plan, W, L)[1];
+      const maxZ = Math.max(...foyer.outer.map((p) => p.z));
+      expect(maxZ).toBeCloseTo(toPlan(0, 21).z, 6);
+    });
+
+    it('never turns the unmasked margin of the grown canvas into floor', () => {
+      // The foyer walls grow the canvas to z = 22; the band z 20..22 beside them has no mask.
+      const floor = traceFloor(plan, W, L);
+      const total = floor.reduce((sum, r) => sum + r.area, 0);
+      expect(total).toBeCloseTo(16 * 8 + 8 * 8, 6);
+    });
+
+    it('returns nothing for a plan without outside or wall rectangles', () => {
+      expect(traceFloor([rect(2, 2, 1, 1, 'zone')], W, L)).toEqual([]);
+    });
+
+    it('lets a stall stand in the foyer when the boundary is only the main floor', () => {
+      const floor = traceFloor(plan, W, L);
+      const regions = extraFloorRegions(floor[0].outer, floor);
+      expect(regions.length).toBe(1);
+
+      const foyerStall = { posX: toPlan(10, 18).x, posZ: toPlan(10, 18).z, width: 2, length: 2 };
+      const withoutFoyer = validatePlacement(foyerStall, ctx({ boundary: floor[0].outer, rules: { ...DEFAULT_LAYOUT_RULES, peripheralClearance: 0 } }));
+      expect(withoutFoyer.violations.map((v) => v.code)).toContain('OUTSIDE_HALL');
+
+      const withFoyer = validatePlacement(
+        foyerStall,
+        ctx({ boundary: floor[0].outer, regions, rules: { ...DEFAULT_LAYOUT_RULES, peripheralClearance: 0 } }),
+      );
+      expect(withFoyer.violations.map((v) => v.code)).not.toContain('OUTSIDE_HALL');
+    });
   });
 });

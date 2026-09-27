@@ -1,0 +1,22 @@
+<div class="notification-live" aria-live="polite" aria-atomic="true">
+  @if (notify.notification(); as notification) {
+    <section class="app-notification" [class.is-danger]="notification.kind === 'error'"
+      [class.is-success]="notification.kind === 'success'" [attr.aria-label]="notification.title"
+      (mouseenter)="notify.pause()" (mouseleave)="resume($event)"
+      (focusin)="notify.pause()" (focusout)="resume($event)">
+      <div class="notification-header">
+        <app-icon [name]="notification.kind === 'error' ? 'alert' : 'check'" [size]="16" />
+        <span class="notification-title">{{ notification.title }}</span>
+        <button type="button" class="notification-close" aria-label="Dismiss notification" (click)="notify.dismiss()">
+          <app-icon name="x" [size]="14" />
+        </button>
+      </div>
+      @if (notification.message) {
+        <div class="notification-message">{{ notification.message }}</div>
+      }
+      @if (notification.viewDetails) {
+        <button type="button" class="notification-details" (click)="notify.viewDetails()">View details</button>
+      }
+    </section>
+  }
+</div>

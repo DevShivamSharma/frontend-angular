@@ -1,0 +1,15 @@
+<div class="detail-heading"><h2 id="detail-title">{{ title }}</h2><button id="close-detail" aria-label="Close details" (click)="close.emit()">×</button></div>
+<div class="detail-body">
+  <div class="kicker" id="detail-subtitle">{{ subtitle }}</div>
+  <p id="detail-description" [hidden]="galleryMode">{{ detail?.description }}</p>
+  <div id="detail-levels" [hidden]="galleryMode">
+    @if (id === 'cc') { @for (n of [1, 2, 3]; track n) { <button class="level-link" (click)="levelChange.emit(n)">Level {{ n }} · {{ levelNames[n] }}</button> } }
+  </div>
+  @if (visible && level) { <div id="room-browser" appRoomBrowser [level]="level" [selection]="selection" (levelChange)="levelChange.emit($event)"></div> }
+  @if (visible && hall) { <div id="room-browser" appHallBrowser [hall]="hall" [selection]="selection"></div> }
+  <dl id="detail-facts" [hidden]="galleryMode || !detail?.facts?.length">
+    @for (fact of detail?.facts || []; track $index) { <div><dt>{{ fact[0] }}</dt><dd>{{ fact[1] }}</dd></div> }
+  </dl>
+  <button class="plan-card" id="open-plan" [hidden]="galleryMode || id === 'cc'" (click)="detail && openPlan.emit(detail)"><img id="detail-plan" [attr.src]="detail?.plan || null" [alt]="detail ? detail.title + ' floor plan' : ''"><span>View floor plan <b>↗</b></span></button>
+  <p class="source" id="detail-source" [hidden]="galleryMode || id === 'cc'">Supplied venue plan</p>
+</div>

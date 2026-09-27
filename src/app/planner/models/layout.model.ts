@@ -39,6 +39,9 @@ export interface HallPayload {
   zones?: unknown[];
   openings?: unknown[];
   markers?: unknown[];
+  amenities?: unknown[];
+  compass?: Record<string, unknown>;
+  legends?: unknown[];
   rules?: Record<string, unknown>;
 }
 
@@ -57,6 +60,8 @@ export interface StallPayload {
   stallNumber?: string;
   status?: StallStatus;
   stallTypeId?: string;
+  rotation?: number;
+  parentStallNumber?: string;
 }
 
 /** Body sent to `POST /api/layout/save` and `PUT /api/layout/{id}`. */

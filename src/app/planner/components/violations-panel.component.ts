@@ -14,8 +14,8 @@ import { IconComponent } from './icon.component';
  *  - the audit of the existing layout: problems in stalls that predate the rules, reported
  *    only (they never block loading or saving unchanged stalls).
  *
- * `section` splits it for the sidebar layout: the two alert cards stay above the tabs so a
- * rejection is never hidden behind another tab; the rules summary lives in the Rules tab.
+ * Both sections live in the Rules tab. The shared notification links here for the full
+ * diagnostics and recovery actions without covering the canvas with duplicate alerts.
  */
 @Component({
   selector: 'app-violations-panel',
@@ -42,6 +42,7 @@ export class ViolationsPanelComponent {
     return ctx
       ? `${ctx.eventType}: ${ctx.rules.minPassageWidth[ctx.eventType]} m passages · ` +
           `${ctx.rules.peripheralClearance} m wall clearance · snap ${ctx.rules.snapStep} m`
+          + '. Corner stalls need separation. Elsewhere, only back-to-back stalls may touch. Keep every open side clear.'
       : '';
   });
 

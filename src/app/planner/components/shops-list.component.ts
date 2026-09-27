@@ -4,11 +4,14 @@ import { openSidesLabel } from './gate-sides';
 import { IconComponent } from './icon.component';
 import { PlannerStore } from '../planner-store.service';
 
+/** List order. Number is the stored identity, so it is the default. */
+export type ShopSort = 'number' | 'name' | 'size';
+
 /**
  * "Shops in Hall" section with the snap toggle. App.js:592.
  *
- * The search box only filters what is listed (by stall number or name); it never changes the
- * store, so the 3D view always shows every stall.
+ * The search box and the sort only change what is listed and in what order; neither touches
+ * the store, so the 3D view always shows every stall.
  */
 @Component({
   selector: 'app-shops-list',
@@ -26,13 +29,24 @@ export class ShopsListComponent {
   readonly openSidesLabel = openSidesLabel;
 
   readonly query = signal('');
+  readonly sort = signal<ShopSort>('number');
 
   readonly visibleStalls = computed(() => {
     const q = this.query().trim().toLowerCase();
-    const stalls = this.currentStalls();
-    if (!q) return stalls;
-    return stalls.filter(
-      s => (s.stallNumber ?? 'new').toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+    const sort = this.sort();
+    const stalls = q
+      ? this.currentStalls().filter(
+          s => (s.stallNumber ?? 'new').toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+        )
+      : this.currentStalls();
+
+    if (sort === 'number') return stalls;
+
+    // A copy: `currentStalls` is derived state and sorting in place would reorder the store's.
+    return [...stalls].sort((a, b) =>
+      sort === 'name'
+        ? a.name.localeCompare(b.name)
+        : b.width * b.length - a.width * a.length
     );
   });
 
@@ -42,6 +56,22 @@ export class ShopsListComponent {
 
   select(id: string | number): void {
     this.store.selectStall(id);
+  }
+
+  duplicate(id: string | number): void {
+    this.store.duplicateStall(id);
+  }
+
+  rotate(id: string | number): void {
+    this.store.rotateStall(id);
+  }
+
+  remove(id: string | number): void {
+    this.store.cancelStall(id);
+  }
+
+  setSort(value: string): void {
+    this.sort.set(value === 'name' || value === 'size' ? value : 'number');
   }
 
   onSnapChange(checked: boolean): void {

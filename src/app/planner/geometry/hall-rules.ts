@@ -1,15 +1,15 @@
 import { EventType, Hall } from '../models/hall.model';
 import { Stall } from '../models/stall.model';
-import { effectiveRules, PlacementContext, PlacementStall } from './placement-rules';
+import { hallFloor, floorOutlines, planSize } from './hall-plan';
+import { effectiveRules, footprintRect, PlacementContext, PlacementStall, Rect } from './placement-rules';
 
 /**
  * Bridges planner state (Hall, Stall) to the pure placement rules.
  *
- * A hall is rule-driven when it carries `rules`. Every other hall keeps the legacy
- * withinHall / overlaps / overlapsBlockedArea checks exactly as before.
+ * Every hall uses the same preview rules, including custom and offline halls.
  */
 export function isRuleDriven(hall: Hall | null | undefined): hall is Hall {
-  return !!hall && hall.rules != null;
+  return !!hall;
 }
 
 export function toPlacementStall(stall: Stall): PlacementStall {
@@ -20,7 +20,10 @@ export function toPlacementStall(stall: Stall): PlacementStall {
     posX: stall.posX,
     posZ: stall.posZ,
     width: stall.width,
-    length: stall.length
+    length: stall.length,
+    openSides: stall.openSides,
+    gateSide: stall.gateSide,
+    rotation: stall.rotation ?? 0
   };
 }
 
@@ -29,12 +32,29 @@ export function placementContextFor(
   stalls: ReadonlyArray<Stall>,
   eventType: EventType
 ): PlacementContext {
+  const floor = hallFloor(hall);
+  const outlines = floorOutlines(hall);
+  const { width, length } = planSize(hall);
+  const circle = !outlines.length && hall.shape === 'CIRCLE';
+  const rectangle = rectanglePolygon({ minX: -width / 2, maxX: width / 2, minZ: -length / 2, maxZ: length / 2 });
   return {
-    boundary: hall.boundary ?? null,
+    boundary: outlines[0] ?? (circle ? null : rectangle),
+    regions: outlines.slice(1),
+    ...(circle ? { circleRadius: hall.radius } : {}),
+    obstacles: [
+      ...floor.flatMap(r => r.holes),
+      ...(hall.blockedAreas ?? []).filter(a => a.kind === 'wall' || a.kind === 'outside')
+        .map(a => rectanglePolygon(footprintRect(a)))
+    ],
     zones: hall.zones ?? [],
     openings: hall.openings ?? [],
     rules: effectiveRules(hall.rules),
     eventType,
     stalls: stalls.map(toPlacementStall)
   };
+}
+
+function rectanglePolygon(r: Rect) {
+  return [{ x: r.minX, z: r.minZ }, { x: r.maxX, z: r.minZ },
+    { x: r.maxX, z: r.maxZ }, { x: r.minX, z: r.maxZ }];
 }

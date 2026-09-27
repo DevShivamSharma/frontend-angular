@@ -15,6 +15,7 @@ import {
 } from './models/layout.model';
 import { Stall } from './models/stall.model';
 import { num, normalizeOpenSides } from './geometry/planner-geometry';
+import { effectiveRules } from './geometry/placement-rules';
 
 /**
  * Build the save/update request body. Ported from `buildApiPayload()`
@@ -34,21 +35,7 @@ export function buildApiPayload(
 ): LayoutSaveRequest {
   if (!currentHall) throw new Error('No hall selected.');
 
-  const hall: HallPayload = {
-    ...(isBackendId(currentHall.id) ? { id: Number(currentHall.id) } : {}),
-    name: currentHall.name,
-    shape: currentHall.shape,
-    width: num(currentHall.width, 0),
-    length: num(currentHall.length, 0),
-    radius: num(currentHall.radius, 0),
-    ...(currentHall.blockedAreas?.length ? { blockedAreas: currentHall.blockedAreas } : {}),
-    // Rule-driven geometry travels with the hall so a saved layout keeps its shape and rules.
-    ...(currentHall.boundary?.length ? { boundary: currentHall.boundary } : {}),
-    ...(currentHall.zones?.length ? { zones: currentHall.zones } : {}),
-    ...(currentHall.openings?.length ? { openings: currentHall.openings } : {}),
-    ...(currentHall.markers?.length ? { markers: currentHall.markers } : {}),
-    ...(currentHall.rules ? { rules: currentHall.rules as Record<string, unknown> } : {})
-  };
+  const hall = buildHallPayload(currentHall);
 
   const stalls: StallPayload[] = currentStalls.map(s => {
     const openSides = normalizeOpenSides(s.openSides, s.gateSide);
@@ -67,7 +54,9 @@ export function buildApiPayload(
       // The backend keeps a number only if this layout issued it (BR-25).
       ...(s.stallNumber ? { stallNumber: s.stallNumber } : {}),
       ...(s.status && s.status !== 'AVAILABLE' ? { status: s.status } : {}),
-      ...(s.stallTypeId ? { stallTypeId: s.stallTypeId } : {})
+      ...(s.stallTypeId ? { stallTypeId: s.stallTypeId } : {}),
+      rotation: s.rotation ?? 0,
+      ...(s.parentStallNumber ? { parentStallNumber: s.parentStallNumber } : {})
     };
   });
 
@@ -76,6 +65,32 @@ export function buildApiPayload(
     ...(eventType ? { eventType } : {}),
     hall,
     stalls
+  };
+}
+
+/**
+ * The hall part of every write: the layout save/update body and PUT /api/halls/{id}. Everything
+ * the plan carries travels with it, so a saved hall keeps its shape, rules, labels, icons, north
+ * arrow and legend.
+ */
+export function buildHallPayload(currentHall: Hall): HallPayload {
+  return {
+    ...(isBackendId(currentHall.id) ? { id: Number(currentHall.id) } : {}),
+    name: currentHall.name,
+    shape: currentHall.shape,
+    width: num(currentHall.width, 0),
+    length: num(currentHall.length, 0),
+    radius: num(currentHall.radius, 0),
+    ...(currentHall.blockedAreas?.length ? { blockedAreas: currentHall.blockedAreas } : {}),
+    // Rule-driven geometry travels with the hall so a saved layout keeps its shape and rules.
+    ...(currentHall.boundary?.length ? { boundary: currentHall.boundary } : {}),
+    ...(currentHall.zones?.length ? { zones: currentHall.zones } : {}),
+    ...(currentHall.openings?.length ? { openings: currentHall.openings } : {}),
+    ...(currentHall.markers?.length ? { markers: currentHall.markers } : {}),
+    ...(currentHall.amenities?.length ? { amenities: currentHall.amenities } : {}),
+    ...(currentHall.compass ? { compass: currentHall.compass as unknown as Record<string, unknown> } : {}),
+    ...(currentHall.legends?.length ? { legends: currentHall.legends } : {}),
+    rules: effectiveRules(currentHall.rules) as unknown as Record<string, unknown>
   };
 }
 
@@ -108,6 +123,14 @@ export class LayoutApiService {
     return firstValueFrom(this.http.get<Hall[]>(`${this.api}/halls?standalone=true`));
   }
 
+  /**
+   * `PUT /api/halls/{id}` — store a hall's plan (outline rectangles, zones, labels, icons, north
+   * arrow, legend) on the master hall, e.g. after importing its SelfCare layout.
+   */
+  updateHall(hall: Hall): Promise<Hall> {
+    return firstValueFrom(this.http.put<Hall>(`${this.api}/halls/${hall.id}`, buildHallPayload(hall)));
+  }
+
   /** `GET /api/layouts` — tolerates both a bare array and `{ layouts: [] }`. */
   async list(): Promise<LayoutSummary[]> {
     const data = await firstValueFrom(
@@ -132,6 +155,15 @@ export class LayoutApiService {
   /** `PUT /api/layout/{id}` — returns the persisted stalls, with their stall numbers. */
   update(id: string | number, payload: LayoutSaveRequest): Promise<LayoutSaveResponse> {
     return firstValueFrom(this.http.put<LayoutSaveResponse>(`${this.api}/layout/${id}`, payload));
+  }
+
+  /** Atomic server split, addressed by the persisted parent number (not database row id). */
+  split(layoutId: string | number, parentNumber: string, children: StallPayload[],
+    idempotencyKey: string): Promise<LayoutSaveResponse> {
+    return firstValueFrom(this.http.post<LayoutSaveResponse>(
+      `${this.api}/layout/${encodeURIComponent(layoutId)}/stalls/${encodeURIComponent(parentNumber)}/split`,
+      { children, idempotencyKey }
+    ));
   }
 
   /** `GET /api/stall-types` — the stall sizes offered in draw mode (backend configuration). */

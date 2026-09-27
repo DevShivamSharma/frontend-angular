@@ -17,6 +17,7 @@
 /tmp
 /out-tsc
 /bazel-out
+/outputs
 *.tsbuildinfo
 
 # Node
@@ -39,6 +40,8 @@ testem.log
 __screenshots__/
 /karma-results
 /junit.xml
+/playwright-report/
+/test-results/
 
 # Logs
 logs/
@@ -59,6 +62,7 @@ firebase-debug.log
 .settings/
 *.sublime-workspace
 *.swp
+
 
 # Visual Studio Code
 .vscode/*

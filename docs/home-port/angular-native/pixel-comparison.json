@@ -1,0 +1,32 @@
+{
+  "loading": {
+    "meanAbsoluteChannelError": 0.0,
+    "pixelsDifferentPercent": 0.0,
+    "pixelsOver8Percent": 0.0,
+    "excluded": "none"
+  },
+  "full": {
+    "meanAbsoluteChannelError": 0.0,
+    "pixelsDifferentPercent": 0.0,
+    "pixelsOver8Percent": 0.0,
+    "excluded": "planner link rectangle only"
+  },
+  "closeup-cc": {
+    "meanAbsoluteChannelError": 0.009173696145124716,
+    "pixelsDifferentPercent": 0.7808746355685131,
+    "pixelsOver8Percent": 0.02845481049562682,
+    "excluded": "planner link rectangle only"
+  },
+  "closeup-hall": {
+    "meanAbsoluteChannelError": 0.002843148688046647,
+    "pixelsDifferentPercent": 0.5887657920310981,
+    "pixelsOver8Percent": 0.003576287657920311,
+    "excluded": "planner link rectangle only"
+  },
+  "mobile": {
+    "meanAbsoluteChannelError": 0.0,
+    "pixelsDifferentPercent": 0.0,
+    "pixelsOver8Percent": 0.0,
+    "excluded": "planner link rectangle only"
+  }
+}

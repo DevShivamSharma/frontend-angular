@@ -33,6 +33,9 @@ export interface Stall {
   status: StallStatus;
   /** Stall type it was drawn from ("stall-3x2"), or null for a custom size. */
   stallTypeId: string | null;
+  rotation?: number;
+  isSplitParent?: boolean;
+  parentStallNumber?: string | null;
 }
 
 /** Raw stall-shaped input from the backend or from an Excel row. */
@@ -51,4 +54,7 @@ export interface StallInput {
   stallNumber?: unknown;
   status?: unknown;
   stallTypeId?: unknown;
+  rotation?: unknown;
+  isSplitParent?: unknown;
+  parentStallNumber?: unknown;
 }

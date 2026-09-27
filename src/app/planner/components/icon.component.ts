@@ -20,6 +20,7 @@ export type IconName =
   | 'search'
   | 'shield'
   | 'layers'
+  | 'floor-plan'
   | 'x'
   | 'alert'
   | 'chevron-down'
@@ -28,7 +29,13 @@ export type IconName =
   | 'draw'
   | 'move'
   | 'panel-left-close'
-  | 'panel-left-open';
+  | 'panel-left-open'
+  | 'sparkles'
+  | 'view-reset'
+  | 'maximize'
+  | 'grid'
+  | 'copy'
+  | 'rotate';
 
 /**
  * Inline stroke icons, Lucide-style (24x24 grid, 2px stroke, currentColor).

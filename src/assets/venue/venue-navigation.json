@@ -1,0 +1,537 @@
+[
+  {
+    "id": "hall1",
+    "label": "Hall 1",
+    "hall": "1",
+    "position": [
+      151.53404007224137,
+      -232.66672449957912,
+      30.5
+    ],
+    "center": [
+      -125.7282739960619,
+      247.5656904861251,
+      25.5
+    ],
+    "source_object": "HALL_1"
+  },
+  {
+    "id": "hall2",
+    "label": "Hall 2",
+    "hall": "2",
+    "position": [
+      196.62368848100513,
+      -144.55845403254006,
+      30.5
+    ],
+    "center": [
+      -26.879449285007176,
+      242.56033622314015,
+      25.5
+    ],
+    "source_object": "HALL_2"
+  },
+  {
+    "id": "hall3",
+    "label": "Hall 3",
+    "hall": "3",
+    "position": [
+      234.054893739861,
+      -79.87513074802875,
+      30.5
+    ],
+    "center": [
+      47.853554509001306,
+      242.63504922990384,
+      25.5
+    ],
+    "source_object": "HALL_3"
+  },
+  {
+    "id": "hall4",
+    "label": "Hall 4",
+    "hall": "4",
+    "position": [
+      270.84934536970746,
+      -21.904438075354875,
+      30.5
+    ],
+    "center": [
+      116.45487285249361,
+      245.51463272382662,
+      25.5
+    ],
+    "source_object": "HALL_4"
+  },
+  {
+    "id": "hall5",
+    "label": "Hall 5",
+    "hall": "5",
+    "position": [
+      333.04699948726784,
+      34.049789972711835,
+      30.5
+    ],
+    "center": [
+      196.01148284877374,
+      271.40226722166847,
+      25.5
+    ],
+    "source_object": "HALL_5"
+  },
+  {
+    "id": "hall6",
+    "label": "Hall 6",
+    "hall": "6",
+    "position": [
+      244.09505008005831,
+      277.27698631666743,
+      30.5
+    ],
+    "center": [
+      362.1764390696064,
+      72.75402115086908,
+      25.5
+    ],
+    "source_object": "HALL_6"
+  },
+  {
+    "id": "hall14",
+    "label": "Hall 14",
+    "hall": "14",
+    "position": [
+      -223.6010732732886,
+      -4.908121577956152,
+      30.5
+    ],
+    "center": [
+      -116.05109460496533,
+      -191.1901489774819,
+      25.5
+    ],
+    "source_object": "HALL_14"
+  },
+  {
+    "id": "hall11",
+    "label": "Hall 11",
+    "hall": "11",
+    "position": [
+      -196.8500000053058,
+      92.79255000250107,
+      12.3
+    ],
+    "center": [
+      -18.06429441661831,
+      -216.87337573803006,
+      8.3
+    ],
+    "source_object": "HALL_11",
+    "floor_plan": "floorplans/halls8-11.png"
+  },
+  {
+    "id": "hall10",
+    "label": "Hall 10",
+    "hall": "10",
+    "position": [
+      -128.7690378821046,
+      115.7501669431829,
+      12.3
+    ],
+    "center": [
+      35.8580661248686,
+      -169.39234149581296,
+      8.3
+    ],
+    "source_object": "HALL_10",
+    "floor_plan": "floorplans/halls8-11.png"
+  },
+  {
+    "id": "hall9",
+    "label": "Hall 9",
+    "hall": "9",
+    "position": [
+      -98.71768085288659,
+      156.32964394211095,
+      12.3
+    ],
+    "center": [
+      86.02660259211488,
+      -163.65684138946506,
+      8.3
+    ],
+    "source_object": "HALL_9",
+    "floor_plan": "floorplans/halls8-11.png"
+  },
+  {
+    "id": "hall8",
+    "label": "Hall 8",
+    "hall": "8",
+    "position": [
+      -83.37585888841471,
+      182.90844728391608,
+      12.3
+    ],
+    "center": [
+      116.71543247013125,
+      -163.65983549855807,
+      8.3
+    ],
+    "source_object": "HALL_8",
+    "floor_plan": "floorplans/halls8-11.png"
+  },
+  {
+    "id": "hall12A",
+    "label": "Hall 12A",
+    "hall": "12A",
+    "position": [
+      -353.1580725442421,
+      31.08300974991903,
+      12.3
+    ],
+    "center": [
+      -149.66036019809425,
+      -321.38536724665414,
+      8.3
+    ],
+    "source_object": "HALL_12A",
+    "floor_plan": "floorplans/halls12-12a.png"
+  },
+  {
+    "id": "hall12",
+    "label": "Hall 12",
+    "hall": "12",
+    "position": [
+      -288.8774441992324,
+      65.69141746390824,
+      12.3
+    ],
+    "center": [
+      -87.54828576188098,
+      -283.020913985678,
+      8.3
+    ],
+    "source_object": "HALL_12",
+    "floor_plan": "floorplans/halls12-12a.png"
+  },
+  {
+    "id": "cc",
+    "label": "Convention Centre",
+    "position": [
+      -340.00000000916407,
+      -132.0000000035578,
+      54.4
+    ],
+    "center": [
+      -284.3153533016,
+      -228.448637292,
+      28.4
+    ]
+  },
+  {
+    "id": "fountain",
+    "label": "Musical Fountain",
+    "position": [
+      57.116623491599995,
+      -265.0711061638,
+      15
+    ],
+    "center": [
+      -201,
+      182,
+      0
+    ]
+  },
+  {
+    "id": "gate1",
+    "gate": "1",
+    "label": "Gate 1",
+    "center": [
+      586.189,
+      224.621,
+      3.7
+    ],
+    "position": [
+      487.6218853433652,
+      395.3436466279176,
+      7.4
+    ],
+    "camera": [
+      613.177,
+      173.704,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_1 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate3",
+    "gate": "3",
+    "label": "Gate 3",
+    "center": [
+      507.892,
+      243.911,
+      3.7
+    ],
+    "position": [
+      465.1789128237938,
+      317.8924637760018,
+      7.4
+    ],
+    "camera": [
+      531.779,
+      296.354,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_3 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate4",
+    "gate": "4",
+    "label": "Gate 4",
+    "center": [
+      274.059,
+      369.187,
+      3.7
+    ],
+    "position": [
+      456.7548190687745,
+      52.74858722219287,
+      7.4
+    ],
+    "camera": [
+      313.347,
+      411.346,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_4 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate5a",
+    "gate": "5A",
+    "label": "Gate 5A",
+    "center": [
+      232.952,
+      395.235,
+      3.7
+    ],
+    "position": [
+      458.7601168363927,
+      4.125000846003587,
+      7.4
+    ],
+    "camera": [
+      272.24,
+      437.394,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_5A sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate5b",
+    "gate": "5B",
+    "label": "Gate 5B",
+    "center": [
+      170.42,
+      422.182,
+      3.7
+    ],
+    "position": [
+      450.82985382138816,
+      -63.50311171842813,
+      7.4
+    ],
+    "camera": [
+      210.734,
+      463.361,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_5B sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate5c",
+    "gate": "5C",
+    "label": "Gate 5C",
+    "center": [
+      -122.533,
+      349.131,
+      3.7
+    ],
+    "position": [
+      241.0903517433931,
+      -280.68203378874614,
+      7.4
+    ],
+    "camera": [
+      -138.666,
+      404.454,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_5C sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate6",
+    "gate": "6",
+    "label": "Gate 6",
+    "center": [
+      -282,
+      151,
+      6.6
+    ],
+    "position": [
+      -10.230164026199986,
+      -319.7191638716,
+      13.2
+    ],
+    "camera": [
+      -353.04,
+      159.32,
+      31.168
+    ],
+    "radius": 19,
+    "source_object": "PHOTO_GATE_6 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": false,
+    "target": [
+      -282,
+      146,
+      6.6
+    ]
+  },
+  {
+    "id": "gate7",
+    "gate": "7",
+    "label": "Gate 7",
+    "center": [
+      -434.357,
+      -145.244,
+      3.7
+    ],
+    "position": [
+      -342.96352791451744,
+      -303.54271241052516,
+      7.4
+    ],
+    "camera": [
+      -447.532,
+      -89.143,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_7 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate8",
+    "gate": "8",
+    "label": "Gate 8",
+    "center": [
+      -470.644,
+      -211.775,
+      3.7
+    ],
+    "position": [
+      -418.7251094775826,
+      -301.7023505842577,
+      7.4
+    ],
+    "camera": [
+      -514.995,
+      -174.98,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_8 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate9",
+    "gate": "9",
+    "label": "Gate 9",
+    "center": [
+      -542.692,
+      -363.315,
+      3.7
+    ],
+    "position": [
+      -585.9856025637469,
+      -288.32768494737434,
+      7.4
+    ],
+    "camera": [
+      -593.753,
+      -390.029,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_9 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate10",
+    "gate": "10",
+    "label": "Gate 10",
+    "center": [
+      -314.239,
+      -522.333,
+      3.7
+    ],
+    "position": [
+      -609.4729969158412,
+      -10.97281860381139,
+      7.4
+    ],
+    "camera": [
+      -343.612,
+      -571.912,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_10 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  },
+  {
+    "id": "gate11",
+    "gate": "11",
+    "label": "Gate 11",
+    "center": [
+      317.0,
+      -68.0,
+      3.7
+    ],
+    "position": [
+      99.6102725416,
+      308.5300530046,
+      7.4
+    ],
+    "camera": [
+      364.883,
+      -100.064,
+      19.866
+    ],
+    "radius": 12,
+    "source_object": "PHOTO_GATE_11 sandstone lintel",
+    "source": "ITPO supplied venue map; entrance position registered to existing plan",
+    "assumed_geometry": true
+  }
+]

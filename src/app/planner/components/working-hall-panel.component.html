@@ -1,5 +1,5 @@
 <div class="hall-context">
-  <!-- The status sits beside the label, not in it, so it never becomes part of the select's name. -->
+  <!-- Keep loading/offline status separate from the picker label. -->
   <div class="hall-context-label">
     <label for="working-hall">Working hall</label>
     @if (hallsStatus() === 'loading') {
@@ -12,18 +12,24 @@
     }
   </div>
   <div class="hall-context-row">
-    <select
+    <button
+      #hallTrigger
+      type="button"
       id="working-hall"
-      class="control hall-select"
-      [value]="activeHallId()"
-      (change)="onHallChange($any($event.target).value)"
+      class="hall-trigger"
+      aria-label="Working hall"
+      aria-describedby="working-hall-value"
+      aria-haspopup="dialog"
+      aria-controls="working-hall-picker"
+      popovertarget="working-hall-picker"
+      [attr.aria-expanded]="pickerOpen()"
+      [title]="currentHall()?.name ?? 'Choose a hall'"
+      (keydown)="onTriggerKey($event)"
     >
-      @for (hall of halls(); track hall.id) {
-        <option [value]="hall.id" [selected]="isActive(hall.id)">
-          {{ hall.name }}{{ hall.shape === 'CIRCLE' ? ' · circular' : '' }}
-        </option>
-      }
-    </select>
+      <app-icon name="building" [size]="16" />
+      <span id="working-hall-value">{{ currentHall()?.name ?? 'Choose a hall' }}</span>
+      <app-icon class="hall-chevron" name="chevron-down" [size]="15" />
+    </button>
     <button
       type="button"
       class="icon-btn"
@@ -42,6 +48,33 @@
     >
       <app-icon name="file" [size]="16" />
     </button>
+  </div>
+
+  <div #hallPicker id="working-hall-picker" class="hall-picker-popover" popover="auto"
+    role="dialog" aria-label="Choose a working hall"
+    (beforetoggle)="onBeforePickerToggle($event)" (toggle)="onPickerToggle($event)"
+    [style.left.px]="pickerPosition().left" [style.top.px]="pickerPosition().top"
+    [style.width.px]="pickerPosition().width" [style.max-height.px]="pickerPosition().maxHeight">
+    <div class="hall-search">
+      <app-icon name="search" [size]="16" />
+      <input #hallSearch type="text" role="combobox" aria-label="Search halls" placeholder="Search halls…"
+        autocomplete="off" aria-autocomplete="list" aria-controls="working-hall-options"
+        [attr.aria-expanded]="pickerOpen()" [attr.aria-activedescendant]="activeOption()"
+        [value]="query()" (input)="filterHalls($any($event.target).value)" (keydown)="onSearchKey($event)" />
+    </div>
+    <div #hallOptions id="working-hall-options" class="hall-options" role="listbox" aria-label="Halls">
+      @for (hall of filteredHalls(); track hall.id; let i = $index) {
+        <button type="button" role="option" tabindex="-1" class="hall-option" [id]="'hall-option-' + i"
+          [attr.aria-selected]="isActive(hall.id)" [class.is-highlighted]="highlighted() === i"
+          (mouseenter)="highlighted.set(i)" (click)="chooseHall(hall.id)">
+          <span>{{ hall.name }}{{ hall.shape === 'CIRCLE' ? ' · circular' : '' }}</span>
+          @if (isActive(hall.id)) { <app-icon name="check" [size]="16" /> }
+        </button>
+      } @empty {
+        <div class="hall-empty" role="status">No halls found. Try another name.</div>
+      }
+    </div>
+    <div class="hall-picker-footer">{{ filteredHalls().length }} of {{ halls().length }} halls</div>
   </div>
 
   <input

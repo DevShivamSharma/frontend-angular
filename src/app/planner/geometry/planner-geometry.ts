@@ -130,7 +130,10 @@ export function overlaps(
  * prohibits placement (`kind === 'outside'` or `kind === 'wall'`).
  *
  * Uses the same axis-aligned overlap math and `1e-8` epsilon as `overlaps()`
- * so edge-touching is allowed. `'zone'` areas never block.
+ * so edge-touching is allowed. `'zone'` areas (pillars and other coloured
+ * rectangles) never block: real pavilions are built around pillars. The
+ * restrictions that do block — compulsory passages, no-construction areas,
+ * fire curtains, hidden or not — are `hall.zones`, checked by `blockedInPlan()`.
  *
  * Returns `false` (no block) when the areas array is null, undefined or empty,
  * so a hall without blockedAreas behaves exactly as today.
@@ -156,7 +159,7 @@ export function normalizeStall(
   s: StallInput,
   hallId: string | number,
   fallbackName = 'Shop'
-): any {
+): Stall {
   const openSides = normalizeOpenSides(s.openSides, s.gateSide);
 
   return {
@@ -173,7 +176,10 @@ export function normalizeStall(
     openSides,
     stallNumber: typeof s.stallNumber === 'string' && s.stallNumber.trim() ? s.stallNumber.trim() : null,
     status: validStatus(s.status),
-    stallTypeId: typeof s.stallTypeId === 'string' && s.stallTypeId ? s.stallTypeId : null
+    stallTypeId: typeof s.stallTypeId === 'string' && s.stallTypeId ? s.stallTypeId : null,
+    rotation: num(s.rotation, 0),
+    isSplitParent: s.isSplitParent === true,
+    ...(typeof s.parentStallNumber === 'string' ? { parentStallNumber: s.parentStallNumber } : {})
   };
 }
 

@@ -1,0 +1,290 @@
+{
+  "verified": true,
+  "savedCopiesUnchanged": 28,
+  "layoutsUnchanged": 28,
+  "stallsUnchanged": 2059,
+  "report": [
+    {
+      "id": "1014",
+      "name": "Hall 1GF",
+      "beforeIcons": 12,
+      "sourceIcons": 24,
+      "storedIcons": 24,
+      "labels": 16,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1015",
+      "name": "Hall 2GF",
+      "beforeIcons": 16,
+      "sourceIcons": 25,
+      "storedIcons": 25,
+      "labels": 13,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1016",
+      "name": "Hall 12",
+      "beforeIcons": 3,
+      "sourceIcons": 4,
+      "storedIcons": 4,
+      "labels": 4,
+      "compass": true,
+      "legends": 6,
+      "status": "exact match"
+    },
+    {
+      "id": "1017",
+      "name": "Hall 8-9-10",
+      "beforeIcons": 8,
+      "sourceIcons": 8,
+      "storedIcons": 8,
+      "labels": 10,
+      "compass": true,
+      "legends": 9,
+      "status": "exact match"
+    },
+    {
+      "id": "1018",
+      "name": "Convention Center",
+      "beforeIcons": 0,
+      "sourceIcons": 1,
+      "storedIcons": 1,
+      "labels": 0,
+      "compass": true,
+      "legends": 0,
+      "status": "exact match"
+    },
+    {
+      "id": "1078",
+      "name": "Hall 1FF",
+      "beforeIcons": 12,
+      "sourceIcons": 25,
+      "storedIcons": 25,
+      "labels": 14,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1079",
+      "name": "Hall 2FF",
+      "beforeIcons": 14,
+      "sourceIcons": 20,
+      "storedIcons": 20,
+      "labels": 10,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1080",
+      "name": "Hall 3GF",
+      "beforeIcons": 12,
+      "sourceIcons": 21,
+      "storedIcons": 21,
+      "labels": 10,
+      "compass": true,
+      "legends": 13,
+      "status": "exact match"
+    },
+    {
+      "id": "1081",
+      "name": "Hall 3FF",
+      "beforeIcons": 12,
+      "sourceIcons": 16,
+      "storedIcons": 16,
+      "labels": 9,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1082",
+      "name": "Hall 4GF",
+      "beforeIcons": 12,
+      "sourceIcons": 21,
+      "storedIcons": 21,
+      "labels": 10,
+      "compass": true,
+      "legends": 13,
+      "status": "exact match"
+    },
+    {
+      "id": "1083",
+      "name": "Hall 4FF",
+      "beforeIcons": 13,
+      "sourceIcons": 17,
+      "storedIcons": 17,
+      "labels": 10,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1084",
+      "name": "Hall 5GF",
+      "beforeIcons": 14,
+      "sourceIcons": 24,
+      "storedIcons": 24,
+      "labels": 14,
+      "compass": true,
+      "legends": 15,
+      "status": "exact match"
+    },
+    {
+      "id": "1085",
+      "name": "Hall 5FF",
+      "beforeIcons": 14,
+      "sourceIcons": 23,
+      "storedIcons": 23,
+      "labels": 12,
+      "compass": true,
+      "legends": 13,
+      "status": "exact match"
+    },
+    {
+      "id": "1086",
+      "name": "Hall 6",
+      "beforeIcons": 10,
+      "sourceIcons": 28,
+      "storedIcons": 28,
+      "labels": 19,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1087",
+      "name": "Hall 14GF",
+      "beforeIcons": 27,
+      "sourceIcons": 27,
+      "storedIcons": 27,
+      "labels": 17,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1088",
+      "name": "Hall 14FF",
+      "beforeIcons": 22,
+      "sourceIcons": 22,
+      "storedIcons": 22,
+      "labels": 16,
+      "compass": true,
+      "legends": 12,
+      "status": "exact match"
+    },
+    {
+      "id": "1089",
+      "name": "Hall 11",
+      "beforeIcons": 8,
+      "sourceIcons": 11,
+      "storedIcons": 11,
+      "labels": 9,
+      "compass": true,
+      "legends": 7,
+      "status": "exact match"
+    },
+    {
+      "id": "1090",
+      "name": "Hall 12A",
+      "beforeIcons": 5,
+      "sourceIcons": 10,
+      "storedIcons": 10,
+      "labels": 12,
+      "compass": true,
+      "legends": 7,
+      "status": "exact match"
+    },
+    {
+      "id": "1091",
+      "name": "PNG Nozzle",
+      "beforeIcons": 0,
+      "sourceIcons": 0,
+      "storedIcons": 0,
+      "labels": 0,
+      "compass": false,
+      "legends": 0,
+      "status": "no source annotations"
+    },
+    {
+      "id": "1092",
+      "name": "F&B Vending Point",
+      "beforeIcons": 0,
+      "sourceIcons": 0,
+      "storedIcons": 0,
+      "labels": 0,
+      "compass": false,
+      "legends": 0,
+      "status": "no source annotations"
+    },
+    {
+      "id": "1093",
+      "name": "F&B Outlet",
+      "beforeIcons": 0,
+      "sourceIcons": 0,
+      "storedIcons": 0,
+      "labels": 0,
+      "compass": false,
+      "legends": 0,
+      "status": "no source annotations"
+    },
+    {
+      "id": "1094",
+      "name": "Hall 1A & Hall 1B",
+      "beforeIcons": 2,
+      "sourceIcons": 8,
+      "storedIcons": 8,
+      "labels": 2,
+      "compass": true,
+      "legends": 0,
+      "status": "exact match"
+    },
+    {
+      "id": "1095",
+      "name": "Hall 2 & 3",
+      "beforeIcons": 0,
+      "sourceIcons": 4,
+      "storedIcons": 4,
+      "labels": 2,
+      "compass": true,
+      "legends": 0,
+      "status": "exact match"
+    },
+    {
+      "id": "1096",
+      "name": "HN1 to HN4",
+      "beforeIcons": 8,
+      "sourceIcons": 14,
+      "storedIcons": 14,
+      "labels": 4,
+      "compass": true,
+      "legends": 0,
+      "status": "exact match"
+    }
+  ],
+  "unmapped": [
+    {
+      "id": "1097",
+      "name": "Branding Sites"
+    },
+    {
+      "id": "1098",
+      "name": "Horse Shoe F&B Outlet"
+    },
+    {
+      "id": "1099",
+      "name": "Open Area for Aahar"
+    },
+    {
+      "id": "1100",
+      "name": "Hangar 7A"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+:host {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  width: 312px;
+  max-width: calc(100vw - 24px);
+  z-index: 1050;
+  pointer-events: none;
+  font-family: var(--font-sans);
+}
+
+.app-notification {
+  padding: 12px;
+  border: 1px solid var(--notification-border);
+  border-radius: var(--radius-lg);
+  background: var(--notification-surface);
+  color: var(--notification-text);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+}
+
+.is-danger {
+  --notification-border: var(--danger-border);
+  --notification-surface: var(--danger-surface);
+  --notification-text: var(--danger-text);
+}
+
+.is-success {
+  --notification-border: var(--success-border);
+  --notification-surface: var(--success-surface);
+  --notification-text: var(--success-text);
+}
+
+.notification-header { display: flex; align-items: center; gap: 8px; }
+.notification-title { flex: 1; min-width: 0; font-size: 13px; font-weight: 650; }
+.notification-message { margin-top: 6px; color: var(--text-secondary); }
+.notification-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+.notification-close:hover { background: var(--surface-card); color: var(--text-primary); }
+.notification-details {
+  margin-top: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notification-details:hover { background: var(--surface-card-hover); color: var(--text-primary); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

@@ -4,9 +4,11 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "node scripts/build.cjs",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:e2e": "playwright test",
+    "test:planner-rules": "playwright test e2e/planner-rules.spec.ts e2e/stall-editor.spec.ts e2e/placement-geometry.spec.ts e2e/backend-persistence.spec.ts"
   },
   "prettier": {
     "printWidth": 100,
@@ -28,9 +30,10 @@
     "@angular/forms": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
+    "polygon-clipping": "^0.15.7",
     "rxjs": "~7.8.0",
     "sweetalert2": "^11.26.25",
-    "three": "^0.164.1",
+    "three": "0.169.0",
     "tslib": "^2.3.0",
     "xlsx": "^0.18.5",
     "zone.js": "~0.15.0"
@@ -39,8 +42,9 @@
     "@angular/build": "^20.3.37",
     "@angular/cli": "^20.3.37",
     "@angular/compiler-cli": "^20.3.0",
+    "@playwright/test": "^1.63.0",
     "@types/jasmine": "~5.1.0",
-    "@types/three": "^0.164.0",
+    "@types/three": "0.169.0",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",

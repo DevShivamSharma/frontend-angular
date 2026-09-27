@@ -30,6 +30,8 @@
   --surface-card-hover: #f1f5f9;
   --surface-input: #ffffff;
   --surface-selected: #eff6ff;
+  /* The sunken track behind a segmented control (sidebar tabs, editor mode switch). */
+  --surface-track: #eceff4;
 
   /* Borders. */
   --border-subtle: #e4e7ec;
@@ -50,6 +52,14 @@
   --accent-ring: rgb(37 99 235 / 0.18);
   --success-solid: #15803d;
   --success-solid-hover: #166534;
+  /* Status pill surfaces. Both text colours clear 7:1 on their own surface. */
+  --success-surface: #ecfdf3;
+  --success-border: #a6f4c5;
+  --success-text: #14532d;
+  /* BOOKED kept the orange the status dot already used, darkened for text use. */
+  --booked-surface: #fff7ed;
+  --booked-border: #fdba74;
+  --booked-text: #7c2d12;
   --danger-solid: #dc2626;
   --danger-solid-hover: #b91c1c;
   --danger-surface: #fef2f2;
@@ -120,10 +130,6 @@ textarea {
 .swal2-popup {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-}
-
-.swal2-popup.swal2-toast {
-  box-shadow: var(--shadow-overlay);
 }
 
 /* ---- Section card ------------------------------------------------------- */
@@ -1099,8 +1105,22 @@ select.control {
   border-width: 1.5px;
 }
 
+/* A pill, not loose red text: it is a state of the hall above it, not a word in the label. */
 .hall-context-status.is-offline {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border);
   color: var(--warning-text);
+  font-size: 10px;
+}
+
+.hall-context-status.is-offline::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
 }
 
 .hall-context-row {
@@ -1142,11 +1162,17 @@ select.control {
   margin-bottom: var(--space-3);
 }
 
+/* A segmented track: the active tab is a raised card rather than an underline, which was the
+   only thing distinguishing it before and was easy to miss at a glance. */
 .sidebar-tabs {
   display: grid;
-  /* minmax(0, 1fr): columns may shrink below their content, so four tabs always fit. */
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 2px;
+  /* minmax(0, 1fr): columns may shrink below their content, so every tab always fits. */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  margin-bottom: var(--space-3);
+  background: var(--surface-track);
+  border-radius: var(--radius-md);
 }
 
 /* Icon above label; the count sits on the icon's corner. */
@@ -1158,17 +1184,16 @@ select.control {
   justify-content: center;
   gap: 3px;
   min-width: 0;
-  min-height: 52px;
+  min-height: 48px;
   padding: var(--space-1) 2px;
   background: transparent;
   border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: color var(--transition), border-color var(--transition), background var(--transition);
+  transition: color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 .sidebar-tab > span:not(.tab-count) {
@@ -1180,12 +1205,13 @@ select.control {
 
 .sidebar-tab:hover {
   color: var(--text-primary);
-  background: var(--surface-card);
+  background: rgb(255 255 255 / 0.6);
 }
 
 .sidebar-tab.is-active {
   color: var(--text-primary);
-  border-bottom-color: var(--accent);
+  background: var(--surface-card);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 0.12);
 }
 
 .sidebar-tab.is-active app-icon {
@@ -1194,8 +1220,8 @@ select.control {
 
 .tab-count {
   position: absolute;
-  top: 4px;
-  left: calc(50% + 6px);
+  top: 3px;
+  right: 5px;
   padding: 0 5px;
   min-width: 16px;
   border-radius: 999px;
@@ -1435,6 +1461,56 @@ select.control {
   color: var(--text-secondary);
 }
 
+/* The plan's own legend (SelfCare legends[]), under the hall facts. */
+.hud-plan-legend {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.hud-plan-legend-title {
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+  color: var(--text-primary, inherit);
+}
+
+.hud-plan-legend ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-secondary);
+}
+
+.hud-plan-legend li {
+  display: grid;
+  grid-template-columns: minmax(28px, auto) 1fr;
+  align-items: start;
+  gap: var(--space-2);
+  line-height: 1.35;
+}
+
+.plan-legend-swatch {
+  display: inline-block;
+  width: 22px;
+  height: 12px;
+  margin-top: 2px;
+  border-radius: 2px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+.plan-legend-code {
+  font-weight: 600;
+  color: var(--text-primary, inherit);
+  white-space: nowrap;
+}
+
+.plan-legend-code .is-underlined {
+  text-decoration: underline;
+}
+
 /* The translucent swatches above are meant for the hall floor. The legend is a panel, not the
    floor, so they are drawn as the solid colour each overlay actually shows on it (#f1f5f9). */
 .hud-legend .legend-swatch.is-passage {
@@ -1515,4 +1591,728 @@ select.control {
   .hud-selection .hud-title {
     font-size: 12px;
   }
+}
+
+/* =========================================================================
+ * Phase 12 - UI refresh.
+ *
+ * Same tokens and the same behaviour; what changed is where information sits.
+ * The sidebar used to spend its first 200 px on a notice and a rejection card
+ * before reaching the form, and nothing on the screen answered "how full is
+ * this hall?" without counting rows. Transient problems now use the shared notification
+ * over the canvas, and the header carries the totals.
+ * ====================================================================== */
+
+/* ---- Hall context card and the totals strip ----------------------------- */
+
+/* The picker, the offline state and the two Excel buttons read as one control. */
+.hall-card {
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.hall-card .hall-context {
+  margin-bottom: 0;
+}
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Rule problems: the one number worth colouring. */
+.stat.is-warning {
+  background: var(--danger-surface);
+  border-color: var(--danger-border);
+}
+
+.stat.is-warning .stat-value,
+.stat.is-warning .stat-label {
+  color: var(--danger-text);
+}
+
+/* ---- Compact offline banner -------------------------------------------- */
+
+/* Replaces the three-line notice box: same message, one line, same amber. */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  color: var(--warning-text);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner .btn-mini {
+  flex: none;
+  min-height: 24px;
+  background: var(--surface-card);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+
+.banner .btn-mini:hover:not(:disabled) {
+  background: #fff;
+  border-color: var(--warning-text);
+  color: var(--warning-text);
+}
+
+/* ---- Status pills ------------------------------------------------------- */
+
+/* An 8 px dot said "there is a status"; it did not say which one. */
+.status-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--success-border);
+  background: var(--success-surface);
+  color: var(--success-text);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status-pill[data-status='BOOKED'] {
+  background: var(--booked-surface);
+  border-color: var(--booked-border);
+  color: var(--booked-text);
+}
+
+.status-pill[data-status='CANCELLED'] {
+  background: var(--surface-card-hover);
+  border-color: var(--border-default);
+  color: var(--text-muted);
+}
+
+/* ---- Colour swatches ---------------------------------------------------- */
+
+.swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition);
+}
+
+.swatch:hover {
+  transform: scale(1.08);
+}
+
+.swatch.is-selected {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--surface-card) inset;
+}
+
+/* The native picker, kept for any colour the presets do not cover. */
+.swatch-custom {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.swatch-custom input {
+  position: absolute;
+  inset: -8px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.swatch-custom app-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* ---- Footprint preview -------------------------------------------------- */
+
+/* Width x length x colour, drawn once instead of read off three number fields. */
+.footprint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--surface-card-hover);
+  border-radius: var(--radius-md);
+}
+
+.footprint-chip {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  box-shadow: inset 0 -3px 0 rgb(8 25 60 / 0.28);
+}
+
+.footprint-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.footprint-meta {
+  display: block;
+  margin-top: 1px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Compass gate picker ------------------------------------------------ */
+
+/*
+ * The four sides used to be a 2x2 grid, so "which button is the left side" was
+ * a reading task. Laid out as a compass it is a pointing task: each button sits
+ * where its side is.
+ */
+.gate-compass {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  max-width: 236px;
+  margin: 0 auto var(--space-1);
+}
+
+.gate-compass .btn-gate {
+  min-height: 32px;
+  padding: 0 var(--space-1);
+  font-size: 10.5px;
+}
+
+.gate-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-hover);
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.gate-caption {
+  margin-bottom: var(--space-3);
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: center;
+}
+
+/* ---- Shop rows ---------------------------------------------------------- */
+
+/* The row is a container now: the select target is one button, the per-row
+   actions are their own buttons beside it rather than nested inside it. */
+.stall-row-shell {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-2);
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.stall-row-shell:hover {
+  background: var(--surface-card-hover);
+  border-color: var(--border-default);
+}
+
+.stall-row-shell.is-selected {
+  background: var(--surface-selected);
+  border-color: var(--accent);
+}
+
+.stall-row-shell.is-cancelled {
+  opacity: 0.6;
+}
+
+/* Inside the shell the row button carries no chrome of its own. */
+.stall-row-shell .stall-row {
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.stall-row-shell .stall-row:hover {
+  background: transparent;
+}
+
+/* Quiet until the row is hovered, focused or selected: three icons on every row
+   turned the list into a wall of buttons. Opacity rather than display, so the
+   buttons stay focusable and reveal themselves when tabbed to. */
+.stall-row-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.stall-row-shell:hover .stall-row-actions,
+.stall-row-shell:focus-within .stall-row-actions,
+.stall-row-shell.is-selected .stall-row-actions {
+  opacity: 1;
+}
+
+.stall-row-actions .icon-btn {
+  width: 26px;
+  height: 26px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.list-tools {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.list-tools .search-field {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.list-tools .sort-select {
+  flex: none;
+  width: 112px;
+  margin-bottom: 0;
+  min-height: 38px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ---- Editor toolbar: mode as a segmented control ------------------------ */
+
+/* Select and Draw are mutually exclusive, so they now look it. The track needs a visible
+   edge of its own: on the toolbar's near-white panel a flat fill reads as nothing. */
+.tool-track {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  background: #e5e9f0;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 2px rgb(16 24 40 / 0.07);
+}
+
+.tool-track .tool-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.tool-track .tool-btn:hover:not(.is-active) {
+  background: rgb(255 255 255 / 0.6);
+}
+
+.tool-track .tool-btn.is-active {
+  background: var(--surface-card);
+  border-color: transparent;
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 0.2);
+}
+
+.tool-track .tool-btn.is-active app-icon {
+  color: var(--accent);
+}
+
+/* Sizes read as chips, so they are not mistaken for more modes. */
+.toolbar-group .tool-btn.is-chip {
+  border-radius: 999px;
+  padding: 0 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The toolbar sits on the 3D view, so it needs to read as one panel rather than
+   a row of loose buttons. */
+.editor-toolbar {
+  padding: var(--space-2) var(--space-3);
+  gap: var(--space-3);
+}
+
+/* Not the segmented track, whose buttons sit tight against each other. */
+.editor-toolbar > .toolbar-group:not(.tool-track) {
+  gap: var(--space-2);
+}
+
+.passage-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.passage-control .control { width: 5rem; }
+
+.split-controls {
+  margin-block: var(--space-3);
+  padding-block: var(--space-3);
+  border-block: 1px solid var(--border-subtle);
+}
+
+.split-controls summary { cursor: pointer; font-weight: 600; }
+.split-controls summary:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 4px; }
+.split-preview { margin-top: var(--space-3); overflow-wrap: anywhere; }
+.split-preview ul { padding-left: 1.25rem; max-height: 12rem; overflow: auto; }
+.split-preview li { padding-block: var(--space-1); font-variant-numeric: tabular-nums; }
+
+/* ---- Stage: view dock and scale bar ------------------------------------- */
+
+/*
+ * Nothing on screen could bring the camera back: the scene frames a hall once,
+ * on load, and an orbit away from it was one-way. These three buttons call the
+ * same framing the scene already does for a new hall.
+ */
+.hud-dock {
+  position: absolute;
+  right: var(--space-3);
+  bottom: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1);
+  z-index: 2;
+}
+
+.hud-dock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.hud-dock-btn:hover {
+  background: var(--surface-card-hover);
+  color: var(--accent);
+}
+
+/* The grid has no labels, so a metre had no reference. */
+.hud-scale {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.scale-bar {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 9px;
+  margin-right: 6px;
+  border: 1px solid currentColor;
+  border-top: 0;
+  vertical-align: -2px;
+}
+
+.scale-bar::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 5px;
+  background: currentColor;
+}
+
+.hud-scale-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-default);
+}
+
+/* The legend moves out of the collapsible panel: these colours are only useful
+   while dragging, which is exactly when that panel is shut. */
+.hud-scale .hud-legend {
+  display: flex;
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+}
+
+/* ---- Placement feedback ------------------------------------------------ */
+
+/* Detailed diagnostics live in the Rules panel; transient messages use NotifyService. */
+.feedback {
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--surface-overlay);
+  margin-bottom: var(--space-3);
+  font-size: 11.5px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+
+.feedback.is-danger {
+  background: var(--danger-surface);
+  border: 1px solid var(--danger-border);
+}
+
+.feedback.is-warning {
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border);
+}
+
+.feedback-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.feedback-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--danger-text);
+}
+
+.feedback.is-warning .feedback-title {
+  color: var(--warning-text);
+}
+
+.feedback-header .icon-btn {
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+}
+
+.feedback-body {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.feedback-actions .btn-mini {
+  background: var(--surface-card);
+}
+
+.feedback-code {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+/* ---- Selection HUD actions ---------------------------------------------- */
+
+.hud-selection-actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--border-default);
+}
+
+.hud-selection-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ---- Assist panel ------------------------------------------------------- */
+
+.assist-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 92px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.assist-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.assist-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.assist-chip {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.assist-chip:hover:not(:disabled) {
+  background: var(--surface-card-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.plan-card {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.plan-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.plan-facts {
+  margin: 0 0 var(--space-3);
+  font-size: 11.5px;
+}
+
+.plan-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.plan-facts dt {
+  color: var(--text-muted);
+}
+
+.plan-facts dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  color: var(--warning-text);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.plan-note app-icon {
+  margin-top: 1px;
+}
+
+@media (max-width: 900px) {
+  .hud-dock {
+    bottom: 96px;
+  }
+
+  /* The metre bar still helps on a phone; the three rule colours do not fit. */
+  .hud-scale .hud-legend,
+  .hud-scale-divider {
+    display: none;
+  }
+}
+.geo-credit{
+  display: none!Important;
 }

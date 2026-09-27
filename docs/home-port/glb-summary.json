@@ -1,0 +1,23 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v5.2.40",
+    "version": "2.0",
+    "extras": {
+      "sourceFile": "IITF_2026_VENUE_REFINED.glb",
+      "sourceSHA256": "fb8658a40199cfe73974c41331e1ab2566540a8cf75eaf589f496ac68a667918",
+      "presentation": "architectural-neutral",
+      "geometryNote": "All source geometry and node metadata retained; conceptual thin edge luminaires added."
+    }
+  },
+  "extensionsUsed": [
+    "KHR_materials_emissive_strength"
+  ],
+  "extensionsRequired": [],
+  "nodes": 222,
+  "meshes": 221,
+  "materials": 122,
+  "textures": 6,
+  "images": 3,
+  "animations": 0,
+  "cameras": 0
+}

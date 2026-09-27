@@ -1,0 +1,217 @@
+{
+  "conditions": {
+    "browser": "Playwright bundled Chromium; Windows ANGLE D3D11",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "dpr": 1,
+    "gesture": "36 trusted mouse moves on the same sinusoidal orbit path, 70 ms waits; same destination flight",
+    "measurement": "WebGL draw instrumentation + requestAnimationFrame samples; trace off; native context settings",
+    "loadLimit": "No concurrent builds or other test browsers during final measurements; external machine load was not locked or recorded for baseline. One baseline run; not a controlled laboratory comparison."
+  },
+  "before": {
+    "run": "model-before",
+    "stats": {
+      "startTime": "2026-09-27T05:58:59.904Z",
+      "duration": 40095.331,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "gpu": {
+      "renderer": "ANGLE (Intel, Intel(R) Graphics (0x0000A7AC) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1440,
+        1000
+      ],
+      "dpr": 1
+    },
+    "idle": {
+      "seconds": 3.011,
+      "rafFps": 59.780803719694454,
+      "renderedFps": 0,
+      "drawCalls": 0,
+      "frameP95Ms": 16.799999999999272,
+      "inputCount": 0,
+      "inputDelayP95Ms": 0,
+      "inputDelayMaxMs": 0,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "orbit": {
+      "seconds": 6.205399999976158,
+      "rafFps": 39.80404164130419,
+      "renderedFps": 38.83714184434943,
+      "drawCalls": 227043,
+      "frameP95Ms": 33.400000000001455,
+      "inputCount": 40,
+      "inputDelayP95Ms": 50.60000002384186,
+      "inputDelayMaxMs": 54,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "destination": {
+      "seconds": 2.048199999988079,
+      "rafFps": 54.19392637469293,
+      "renderedFps": 34.66458353696574,
+      "drawCalls": 45137,
+      "frameP95Ms": 33.29999999999927,
+      "inputCount": 4,
+      "inputDelayP95Ms": 10.600000023841858,
+      "inputDelayMaxMs": 10.600000023841858,
+      "longTasks": 1,
+      "longTaskMaxMs": 64
+    },
+    "settled": {
+      "seconds": 2.519,
+      "rafFps": 59.944422389837236,
+      "renderedFps": 0,
+      "drawCalls": 0,
+      "frameP95Ms": 16.700000000000728,
+      "inputCount": 0,
+      "inputDelayP95Ms": 0,
+      "inputDelayMaxMs": 0,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "errors": []
+  },
+  "natural": {
+    "run": "model-natural-perf",
+    "stats": {
+      "startTime": "2026-09-27T06:32:13.188Z",
+      "duration": 44485.556,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "gpu": {
+      "renderer": "ANGLE (Intel, Intel(R) Graphics (0x0000A7AC) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1440,
+        1000
+      ],
+      "dpr": 1
+    },
+    "idle": {
+      "seconds": 3.0169000000357626,
+      "rafFps": 59.99535947424655,
+      "renderedFps": 0,
+      "drawCalls": 0,
+      "frameP95Ms": 16.799999999999272,
+      "inputCount": 0,
+      "inputDelayP95Ms": 0,
+      "inputDelayMaxMs": 0,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "orbit": {
+      "seconds": 5.232800000011921,
+      "rafFps": 52.93533098902479,
+      "renderedFps": 52.55312643314736,
+      "drawCalls": 228219,
+      "frameP95Ms": 33.399999999999636,
+      "inputCount": 40,
+      "inputDelayP95Ms": 21.100000023841858,
+      "inputDelayMaxMs": 24.900000035762787,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "destination": {
+      "seconds": 1.944399999976158,
+      "rafFps": 60.172803950542395,
+      "renderedFps": 42.68668998200871,
+      "drawCalls": 48594,
+      "frameP95Ms": 16.700000000000728,
+      "inputCount": 4,
+      "inputDelayP95Ms": 2.400000035762787,
+      "inputDelayMaxMs": 2.400000035762787,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "settled": {
+      "seconds": 2.521399999976158,
+      "rafFps": 59.887364163333004,
+      "renderedFps": 0,
+      "drawCalls": 0,
+      "frameP95Ms": 16.700000000000728,
+      "inputCount": 0,
+      "inputDelayP95Ms": 0,
+      "inputDelayMaxMs": 0,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "errors": []
+  },
+  "color": {
+    "run": "model-color-perf",
+    "stats": {
+      "startTime": "2026-09-27T06:33:19.608Z",
+      "duration": 40297.944,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "gpu": {
+      "renderer": "ANGLE (Intel, Intel(R) Graphics (0x0000A7AC) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1440,
+        1000
+      ],
+      "dpr": 1
+    },
+    "idle": {
+      "seconds": 3.022099999964237,
+      "rafFps": 60.22302372593685,
+      "renderedFps": 0,
+      "drawCalls": 0,
+      "frameP95Ms": 16.799999999999272,
+      "inputCount": 0,
+      "inputDelayP95Ms": 0,
+      "inputDelayMaxMs": 0,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "orbit": {
+      "seconds": 5.071899999976158,
+      "rafFps": 53.4316528325231,
+      "renderedFps": 53.037323291323666,
+      "drawCalls": 223238,
+      "frameP95Ms": 33.30000000000109,
+      "inputCount": 40,
+      "inputDelayP95Ms": 23.799999952316284,
+      "inputDelayMaxMs": 24.69999998807907,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "destination": {
+      "seconds": 1.8695,
+      "rafFps": 59.37416421503076,
+      "renderedFps": 43.86199518587858,
+      "drawCalls": 47660,
+      "frameP95Ms": 16.700000000000728,
+      "inputCount": 4,
+      "inputDelayP95Ms": 1.199999988079071,
+      "inputDelayMaxMs": 1.199999988079071,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "settled": {
+      "seconds": 2.5080999999642373,
+      "rafFps": 59.80622782270996,
+      "renderedFps": 0,
+      "drawCalls": 0,
+      "frameP95Ms": 16.700000000000728,
+      "inputCount": 0,
+      "inputDelayP95Ms": 0,
+      "inputDelayMaxMs": 0,
+      "longTasks": 0,
+      "longTaskMaxMs": 0
+    },
+    "errors": []
+  }
+}
