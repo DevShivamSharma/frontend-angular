@@ -280,7 +280,7 @@ export class Scene3dComponent implements AfterViewInit {
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.minDistance = 5;
-    // 250 lets a 133 m hall (Hall 8-9-10) be seen whole.
+    // Initial zoom range; framing expands it for large plans on narrow screens.
     this.controls.maxDistance = 250;
     this.controls.maxPolarAngle = Math.PI / 2.05;
 
@@ -348,7 +348,7 @@ export class Scene3dComponent implements AfterViewInit {
     }
     if (hall.openings?.length) this.markerGroup.add(buildOpeningMarkers(hall.openings));
     this.markerGroup.add(buildExitLabels(hall.markers ?? []));
-    this.amenityGroup.add(buildAmenityCards(hall.amenities ?? []));
+    this.amenityGroup.add(buildAmenityCards(hall));
     this.amenityGroup.add(buildCompass(hall.compass));
 
     // Frame every hall once, with its annotations: the default camera suits a ~40 m room, and
@@ -387,7 +387,7 @@ export class Scene3dComponent implements AfterViewInit {
   /** The hall's plan with its icon cards, captions and compass. */
   private planRect(hall: Hall): Rect {
     const plan = planBounds(hall);
-    const notes = annotationBounds(hall.amenities ?? [], hall.markers ?? [], hall.compass);
+    const notes = annotationBounds(hall);
     return notes
       ? {
           minX: Math.min(plan.minX, notes.minX),
@@ -427,7 +427,12 @@ export class Scene3dComponent implements AfterViewInit {
     const distance = perspective
       ? (Math.max(horizontal, vertical * 0.82 / tiltLength) + depth / 2 * 0.58 / tiltLength) / tiltLength
       : Math.max(horizontal, vertical);
-    return Math.min(this.controls.maxDistance, distance);
+    // A fixed 250 m cap clips perimeter cards on portrait screens. Leave enough zoom range
+    // for the measured plan and keep the far plane beyond it.
+    this.controls.maxDistance = Math.max(this.controls.maxDistance, distance * 1.1);
+    this.camera.far = Math.max(this.camera.far, this.controls.maxDistance + Math.max(width, depth));
+    this.camera.updateProjectionMatrix();
+    return distance;
   }
 
   /** Fit in the uncovered canvas: annotation meshes can be in-frustum but behind the HUD. */
