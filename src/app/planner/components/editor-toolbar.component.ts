@@ -36,6 +36,7 @@ export class EditorToolbarComponent {
   readonly draftOpenSide = this.store.draftOpenSide;
   readonly ruleDriven = this.store.ruleDriven;
   readonly showClearances = this.store.showClearances;
+  readonly showLabels = this.store.showLabels;
   readonly showFreeSpace = this.store.showFreeSpace;
 
   /** Passage width of each event type for the current hall, e.g. "B2B · 3 m". */
@@ -90,6 +91,10 @@ export class EditorToolbarComponent {
 
   toggleClearances(checked: boolean): void {
     this.store.setShowClearances(checked);
+  }
+
+  toggleLabels(checked: boolean): void {
+    this.store.setShowLabels(checked);
   }
 
   toggleFreeSpace(checked: boolean): void {

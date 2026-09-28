@@ -116,6 +116,7 @@ export class PlannerPageComponent implements OnInit {
   readonly mode = this.store.mode;
   readonly overlay = this.store.overlay;
   readonly showClearances = this.store.showClearances;
+  readonly showLabels = this.store.showLabels;
   readonly eventType = this.store.eventType;
   readonly focusTarget = this.store.focusTarget;
   readonly grid = this.store.grid;

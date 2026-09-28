@@ -115,8 +115,16 @@ ${stallSizeText(stall)}${stall.status === 'BOOKED' ? ' · BOOKED' : ''}`;
     this.openEl.style.borderRadius = '4px';
   }
 
-  /** Position both labels for the current camera. */
-  projectLabels(camera: THREE.PerspectiveCamera, width: number, height: number): void {
+  /**
+   * Position both labels for the current camera. With `visible` false they are hidden, except
+   * on the selected stall.
+   */
+  projectLabels(camera: THREE.PerspectiveCamera, width: number, height: number, visible = true): void {
+    if (!visible && !this.selected) {
+      this.nameEl.style.display = 'none';
+      this.openEl.style.display = 'none';
+      return;
+    }
     projectLabel(this.nameEl, this.nameAnchor, camera, width, height, 10);
     if (this.stall.status === 'CANCELLED') {
       // A cancelled stall has no walls, so no open side to label.

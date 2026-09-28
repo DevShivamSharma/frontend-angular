@@ -208,6 +208,8 @@ export class PlannerStore {
   readonly passageWidth = computed(() => this.placementContext()?.rules.minPassageWidth[this.eventType()] ?? 3);
   readonly showFreeSpace = signal(false);
   readonly showClearances = signal(true);
+  /** Name/size and OPEN tags over every stall. Off by default: dense plans become unreadable. */
+  readonly showLabels = signal(false);
   readonly draft = signal<StallDraft | null>(null);
   readonly rejection = signal<PlacementFeedback | null>(null);
   /** Violations the server returned for the last failed save/update. */
@@ -1250,6 +1252,10 @@ export class PlannerStore {
 
   setShowClearances(value: boolean): void {
     this.showClearances.set(value);
+  }
+
+  setShowLabels(value: boolean): void {
+    this.showLabels.set(value);
   }
 
   /** Pointer over the grid in draw mode, button up: preview the stall under the cursor. */
