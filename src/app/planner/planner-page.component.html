@@ -1,4 +1,8 @@
 <app-planner-rules-dialog #rulesGuide (closed)="rulesDismissed.set(true)" />
+<!-- The PDF plan import, its geometry and pdf.js load on first use (Working hall or Hall tab). -->
+@defer (when store.pdfImport() !== null) {
+  <app-pdf-import-dialog />
+}
 <div class="planner" [class.is-sidebar-collapsed]="!sidebarOpen()"
   [class.tour-active]="tourStep() !== null" [class.tour-position]="tourStep()?.id === 'position'"
   [style.--tour-card-height.px]="tourCardHeight()">

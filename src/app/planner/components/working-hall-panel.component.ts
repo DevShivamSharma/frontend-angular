@@ -190,6 +190,10 @@ export class WorkingHallPanelComponent {
     this.fileInput().nativeElement.click();
   }
 
+  openPdfImport(): void {
+    this.store.openPdfImport();
+  }
+
   downloadTemplate(): void {
     this.excel.downloadTemplate();
   }
@@ -202,7 +206,7 @@ export class WorkingHallPanelComponent {
 
     // A PDF hall plan goes to the PDF import, which reads CAD drawings.
     if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
-      this.store.pdfImportRequest.set(file);
+      this.store.openPdfImport(file);
       input.value = '';
       return;
     }

@@ -7,7 +7,7 @@ import {
   effect,
   ElementRef,
   inject,
-  input,
+  Injector,
   signal,
   untracked,
   viewChild,
@@ -76,9 +76,8 @@ const RULE_LABELS: Record<string, string> = {
   styleUrl: './pdf-import-dialog.component.css',
 })
 export class PdfImportDialogComponent {
-  /** Open as soon as it is created (it is created on the first request, see the card). */
-  readonly openOnStart = input(false);
   readonly store = inject(PlannerStore);
+  private readonly injector = inject(Injector);
   private readonly api = inject(LayoutApiService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -197,18 +196,20 @@ export class PdfImportDialogComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.releasePage());
-    afterNextRender(() => {
-      if (this.openOnStart()) this.open();
-    });
-    // A PDF picked elsewhere (the Excel button): open and read it here.
+    // Every "Import PDF plan" (and a PDF picked with the Excel button) arrives as a request.
+    // Opened after render, so the first request also works while this dialog is still loading.
     effect(() => {
-      const file = this.store.pdfImportRequest();
-      if (!file) return;
+      const request = this.store.pdfImport();
+      if (!request) return;
       untracked(() => {
-        this.store.pdfImportRequest.set(null);
-        this.restart();
-        this.open();
-        void this.read(file);
+        this.store.pdfImport.set(null);
+        afterNextRender(() => {
+          this.open();
+          if (request.file) {
+            this.restart();
+            void this.read(request.file);
+          }
+        }, { injector: this.injector });
       });
     });
   }

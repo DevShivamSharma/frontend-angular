@@ -28,6 +28,7 @@ import { IconComponent, IconName } from './components/icon.component';
 import { SavedLayoutsPanelComponent } from './components/saved-layouts-panel.component';
 import { SelfcareImportComponent } from './components/selfcare-import.component';
 import { PdfImportCardComponent } from './pdf-import/pdf-import-card.component';
+import { PdfImportDialogComponent } from './pdf-import/pdf-import-dialog.component';
 import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
@@ -77,6 +78,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
     PlannerTourComponent,
     SelfcareImportComponent,
     PdfImportCardComponent,
+    PdfImportDialogComponent,
     WorkingHallPanelComponent,
     CreateHallFormComponent,
     AddStallFormComponent,
@@ -275,11 +277,6 @@ export class PlannerPageComponent implements OnInit {
       if (this.selectedStallId() === null) return;
       this.activeTab.set('stalls');
       this.sidebarBody()?.nativeElement.scrollTo({ top: 0 });
-    });
-
-    // A PDF plan picked with the Excel button: show the Hall tab, where the PDF import opens.
-    effect(() => {
-      if (this.store.pdfImportRequest()) untracked(() => this.activeTab.set('hall'));
     });
 
     // Every tab opens at its top, not at the previous tab's scroll position.

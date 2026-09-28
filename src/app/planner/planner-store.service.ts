@@ -217,8 +217,8 @@ export class PlannerStore {
   readonly focusTarget = signal<FocusTarget | null>(null);
   /** The Assist tab's plan, checked but not applied. Drawn as outlines on the 3D view. */
   readonly proposals = signal<ProposedStall[] | null>(null);
-  /** A PDF plan picked somewhere other than the PDF import (e.g. the Excel button), to open there. */
-  readonly pdfImportRequest = signal<File | null>(null);
+  /** A request to open the PDF plan import, with the file when one was already picked. */
+  readonly pdfImport = signal<{ file: File | null } | null>(null);
   readonly splitOptions = signal<SplitOptions | null>(null);
   readonly splitPreview = computed(() => {
     const parent = this.selectedStall(), options = this.splitOptions(), ctx = this.placementContext();
@@ -908,6 +908,11 @@ export class PlannerStore {
     this.selectedSavedId.set(null);
     this.selectedStallId.set(null);
     this.layoutName.set(layoutName);
+  }
+
+  /** Open the PDF plan import dialog; with a file, it starts reading it straight away. */
+  openPdfImport(file: File | null = null): void {
+    this.pdfImport.set({ file });
   }
 
   // --- saved layout workflow ----------------------------------------------

@@ -1,16 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
 import { IconComponent } from '../components/icon.component';
 import { PlannerStore } from '../planner-store.service';
-import { PdfImportDialogComponent } from './pdf-import-dialog.component';
 
-/**
- * "CAD plan (PDF)" section of the Hall tab. The import dialog, its geometry and pdf.js load only
- * when first asked for, so the planner itself does not grow.
- */
+/** "CAD plan (PDF)" section of the Hall tab: opens the plan import (hosted by the planner page). */
 @Component({
   selector: 'app-pdf-import-card',
-  imports: [IconComponent, PdfImportDialogComponent],
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="card">
@@ -22,27 +18,13 @@ import { PdfImportDialogComponent } from './pdf-import-dialog.component';
         Read the stalls of an AutoCAD hall plan, L-shapes included. You review and place them
         before anything changes.
       </div>
-      <button type="button" class="btn-secondary is-block" (click)="open()">
+      <button type="button" class="btn-secondary is-block" (click)="store.openPdfImport()">
         <app-icon name="upload" [size]="14" />
         Import PDF plan
       </button>
     </section>
-    @defer (when requested()) {
-      <app-pdf-import-dialog #dialog [openOnStart]="clicked()" />
-    }
   `,
 })
 export class PdfImportCardComponent {
-  private readonly store = inject(PlannerStore);
-  protected readonly clicked = signal(false);
-  /** Load the dialog on the first click, or when a PDF was picked elsewhere (it opens itself). */
-  readonly requested = computed(() => this.clicked() || this.store.pdfImportRequest() !== null);
-  // By name, not by class: a class reference here would load the dialog eagerly.
-  private readonly dialog = viewChild<{ open(): void }>('dialog');
-
-  open(): void {
-    const dialog = this.dialog();
-    if (dialog) dialog.open();
-    else this.clicked.set(true);
-  }
+  readonly store = inject(PlannerStore);
 }
