@@ -200,6 +200,13 @@ export class WorkingHallPanelComponent {
     const file = input.files?.[0];
     if (!file) return;
 
+    // A PDF hall plan goes to the PDF import, which reads CAD drawings.
+    if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+      this.store.pdfImportRequest.set(file);
+      input.value = '';
+      return;
+    }
+
     try {
       const result = this.excel.parse(await file.arrayBuffer());
       this.store.applyExcelImport(result);

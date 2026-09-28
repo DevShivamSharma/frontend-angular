@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 
 import { IconComponent } from '../components/icon.component';
+import { PlannerStore } from '../planner-store.service';
 import { PdfImportDialogComponent } from './pdf-import-dialog.component';
 
 /**
@@ -27,18 +28,21 @@ import { PdfImportDialogComponent } from './pdf-import-dialog.component';
       </button>
     </section>
     @defer (when requested()) {
-      <app-pdf-import-dialog #dialog [openOnStart]="true" />
+      <app-pdf-import-dialog #dialog [openOnStart]="clicked()" />
     }
   `,
 })
 export class PdfImportCardComponent {
-  readonly requested = signal(false);
+  private readonly store = inject(PlannerStore);
+  protected readonly clicked = signal(false);
+  /** Load the dialog on the first click, or when a PDF was picked elsewhere (it opens itself). */
+  readonly requested = computed(() => this.clicked() || this.store.pdfImportRequest() !== null);
   // By name, not by class: a class reference here would load the dialog eagerly.
   private readonly dialog = viewChild<{ open(): void }>('dialog');
 
   open(): void {
     const dialog = this.dialog();
     if (dialog) dialog.open();
-    else this.requested.set(true);
+    else this.clicked.set(true);
   }
 }

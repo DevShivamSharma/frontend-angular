@@ -33,8 +33,8 @@
     <button
       type="button"
       class="icon-btn"
-      title="Import Excel"
-      aria-label="Import Excel"
+      title="Import Excel or PDF plan"
+      aria-label="Import Excel or PDF plan"
       (click)="openFilePicker()"
     >
       <app-icon name="upload" [size]="16" />
@@ -80,7 +80,7 @@
   <input
     #fileInput
     type="file"
-    accept=".xlsx,.xls"
+    accept=".xlsx,.xls,.pdf"
     hidden
     aria-hidden="true"
     tabindex="-1"

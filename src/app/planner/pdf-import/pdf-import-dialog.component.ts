@@ -4,10 +4,12 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 
@@ -198,13 +200,26 @@ export class PdfImportDialogComponent {
     afterNextRender(() => {
       if (this.openOnStart()) this.open();
     });
+    // A PDF picked elsewhere (the Excel button): open and read it here.
+    effect(() => {
+      const file = this.store.pdfImportRequest();
+      if (!file) return;
+      untracked(() => {
+        this.store.pdfImportRequest.set(null);
+        this.restart();
+        this.open();
+        void this.read(file);
+      });
+    });
   }
 
   // --- dialog ------------------------------------------------------------------------------------
 
   open(): void {
+    const dialog = this.dialog().nativeElement;
+    if (dialog.open) return;
     this.opener = document.activeElement as HTMLElement | null;
-    this.dialog().nativeElement.showModal();
+    dialog.showModal();
   }
 
   close(): void {

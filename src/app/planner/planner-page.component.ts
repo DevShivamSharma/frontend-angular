@@ -277,6 +277,11 @@ export class PlannerPageComponent implements OnInit {
       this.sidebarBody()?.nativeElement.scrollTo({ top: 0 });
     });
 
+    // A PDF plan picked with the Excel button: show the Hall tab, where the PDF import opens.
+    effect(() => {
+      if (this.store.pdfImportRequest()) untracked(() => this.activeTab.set('hall'));
+    });
+
     // Every tab opens at its top, not at the previous tab's scroll position.
     effect(() => {
       this.activeTab();
