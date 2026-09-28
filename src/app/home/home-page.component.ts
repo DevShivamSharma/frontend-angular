@@ -14,13 +14,16 @@ import { VenueAppearance } from './venue-appearance';
   imports: [RouterLink, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent],
   providers: [VenueDataService],
   templateUrl: './home-page.component.html',
-  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css'],
+  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css'],
   encapsulation: ViewEncapsulation.ShadowDom,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HomePageComponent implements AfterViewInit, OnDestroy {
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   readonly plan = viewChild.required(FloorPlanDialogComponent);
+  private readonly globeMarker = viewChild.required<ElementRef<HTMLButtonElement>>('globeMarker');
+  private readonly homeButton = viewChild.required<ElementRef<HTMLButtonElement>>('homeButton');
+  private markerPointer: { x: number; y: number } | null = null;
   private readonly zone = inject(NgZone);
   private readonly data = inject(VenueDataService);
   private viewer?: VenueViewer;
@@ -56,7 +59,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
           modeChanged: mode => this.zone.run(() => { this.globeActive.set(mode === 'globe'); if (mode === 'globe') this.closeDetails(); this.status.set(mode === 'globe' ? 'Earth · New Delhi' : 'Bharat Mandapam'); }),
           status: text => this.zone.run(() => this.status.set(text)),
           geographyReady: ready => this.zone.run(() => { this.geographyReady.set(ready); this.globeAvailable.set(ready); })
-        });
+        }, this.globeMarker().nativeElement);
         const info = await this.viewer.ready;
         if (!this.destroyed) this.zone.run(() => this.setInformation(info));
       });
@@ -84,6 +87,16 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     const open = this.group() !== group; this.group.set(open ? group : null);
     if (group === 'cc') { if (open) this.view('cc'); else this.closeDetails(); }
     else { this.closeDetails(); if (open && this.viewer?.isGlobe) this.view('overview', false); }
+  }
+  markerPointerDown(event: PointerEvent): void {
+    this.markerPointer = { x: event.clientX, y: event.clientY };
+  }
+  enterVenueFromMarker(event: MouseEvent): void {
+    const start = this.markerPointer;
+    this.markerPointer = null;
+    if (event.detail !== 0 && start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6) return;
+    this.overview();
+    this.homeButton().nativeElement.focus({ preventScroll: true });
   }
   overview(): void { this.group.set(null); this.view('overview', false); }
   private pick(id: string, level: number): void {

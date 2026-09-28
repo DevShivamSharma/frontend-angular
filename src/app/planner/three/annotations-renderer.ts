@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   CAPTION_FONT,
   cardLayout,
+  CardLayout,
   PlanCard,
   planCards,
   COMPASS_LABEL_FONT,
@@ -10,8 +11,10 @@ import {
   ICON_SIZE,
 } from '../geometry/plan-annotations';
 import { iconUrlFor } from '../geometry/selfcare-layout';
-import { Point, Rect } from '../geometry/placement-rules';
-import { HallAmenity, HallCompass, HallMarker } from '../models/hall.model';
+import { Rect } from '../geometry/placement-rules';
+import { annotationRect, placeAnnotationCards } from '../geometry/annotation-placement';
+import { floorOutlines, planSize } from '../geometry/hall-plan';
+import { Hall, HallAmenity, HallCompass, HallMarker } from '../models/hall.model';
 
 /**
  * The plan's annotations — icon cards (`helper_text`), gate / foyer captions (`exit_labels`) and
@@ -39,27 +42,61 @@ const FONT_FAMILY = 'Inter, system-ui, sans-serif';
 
 /**
  * Every icon, grouped into the cards SelfCare draws (see `planCards`): one row of icons on one
- * white card whose top-left corner is the card's anchor.
+ * white card, shifted only when its source position would overlap the floor or another label.
  */
-export function buildAmenityCards(amenities: readonly HallAmenity[]): THREE.Group {
+export function buildAmenityCards(hall: Hall): THREE.Group {
   const group = new THREE.Group();
   group.name = 'amenity-cards';
 
-  for (const card of planCards(amenities)) group.add(buildCard(card));
+  for (const card of layoutAnnotations(hall).cards) group.add(buildCard(card));
   return group;
 }
 
-type Card = PlanCard<HallAmenity>;
+interface DisplayCard extends PlanCard<HallAmenity> {
+  layout: CardLayout;
+  width: number;
+  height: number;
+}
 
-function buildCard(card: Card): THREE.Mesh {
+interface AnnotationLayout {
+  cards: DisplayCard[];
+  labels: Rect[];
+}
+
+const layoutCache = new WeakMap<Hall, AnnotationLayout>();
+
+/** Drawing and camera framing use the same measured, collision-cleared rectangles. */
+function layoutAnnotations(hall: Hall): AnnotationLayout {
+  const cached = layoutCache.get(hall);
+  if (cached) return cached;
+  const cards = planCards(hall.amenities ?? []).map((card) => {
+    const layout = cardLayout(
+      card.items.map((item) => item.label),
+      (text, font) => measure(text, `700 ${font * PX_PER_M}px ${FONT_FAMILY}`) / PX_PER_M,
+    );
+    return { ...card, layout, width: layout.width, height: layout.height };
+  });
+  const labels = fixedAnnotationRects(hall.markers ?? [], hall.compass);
+  let floors = floorOutlines(hall);
+  if (!floors.length) {
+    const { width, length } = planSize(hall);
+    floors = [hall.shape === 'CIRCLE'
+      ? Array.from({ length: 64 }, (_, i) => ({
+          x: Math.cos(i * Math.PI / 32) * width / 2,
+          z: Math.sin(i * Math.PI / 32) * length / 2,
+        }))
+      : [{ x: -width / 2, z: -length / 2 }, { x: width / 2, z: -length / 2 },
+         { x: width / 2, z: length / 2 }, { x: -width / 2, z: length / 2 }]];
+  }
+  const result = { cards: placeAnnotationCards(cards, floors, labels), labels };
+  layoutCache.set(hall, result);
+  return result;
+}
+
+function buildCard(card: DisplayCard): THREE.Mesh {
   const captions = card.items.map((i) => i.label.toUpperCase());
   const captionFont = `700 ${CAPTION_FONT * PX_PER_M}px ${FONT_FAMILY}`;
-  const layout = cardLayout(
-    captions,
-    (text, font) => measure(text, `700 ${font * PX_PER_M}px ${FONT_FAMILY}`) / PX_PER_M,
-  );
-
-  const anchor = card.anchor;
+  const { layout, anchor } = card;
 
   const canvas = document.createElement('canvas');
   canvas.width = Math.min(4096, Math.ceil(layout.width * PX_PER_M));
@@ -191,35 +228,57 @@ const COMPASS_ICON_URL = 'assets/images/direction.svg';
 // --- extents ----------------------------------------------------------------------------------
 
 /** Where the annotations reach, so the camera can frame them with the hall. */
-export function annotationBounds(
-  amenities: readonly HallAmenity[],
-  markers: readonly HallMarker[],
-  compass: HallCompass | null | undefined,
-): Rect | null {
-  const points: Point[] = [];
-  for (const card of planCards(amenities)) {
-    const layout = cardLayout(card.items.map((i) => i.label));
-    points.push(card.anchor, { x: card.anchor.x + layout.width, z: card.anchor.z + layout.height });
-  }
-  for (const m of markers)
-    if (Number.isFinite(m.position?.x) && Number.isFinite(m.position?.z)) points.push(m.position);
-  if (compass && Number.isFinite(compass.position?.x)) {
-    const h = (compass.size || 5) / 2;
-    points.push(
-      { x: compass.position.x - h, z: compass.position.z - h },
-      { x: compass.position.x + h, z: compass.position.z + h },
-    );
-  }
-  if (!points.length) return null;
+export function annotationBounds(hall: Hall): Rect | null {
+  const { cards, labels } = layoutAnnotations(hall);
+  const rects = [...cards.map((card) => annotationRect(card)), ...labels];
+  if (!rects.length) return null;
   return {
-    minX: Math.min(...points.map((p) => p.x)),
-    maxX: Math.max(...points.map((p) => p.x)),
-    minZ: Math.min(...points.map((p) => p.z)),
-    maxZ: Math.max(...points.map((p) => p.z)),
+    minX: Math.min(...rects.map((r) => r.minX)),
+    maxX: Math.max(...rects.map((r) => r.maxX)),
+    minZ: Math.min(...rects.map((r) => r.minZ)),
+    maxZ: Math.max(...rects.map((r) => r.maxZ)),
   };
 }
 
+function fixedAnnotationRects(
+  markers: readonly HallMarker[],
+  compass: HallCompass | null | undefined,
+): Rect[] {
+  const rects: Rect[] = [];
+  for (const marker of markers) {
+    const text = String(marker?.text ?? '').trim();
+    if (!text || !Number.isFinite(marker.position?.x) || !Number.isFinite(marker.position?.z))
+      continue;
+    rects.push(annotationRect({ anchor: marker.position, ...textSize(text, EXIT_LABEL_FONT, '600') }));
+  }
+  if (compass && Number.isFinite(compass.position?.x) && Number.isFinite(compass.position?.z)) {
+    const angle = compass.rotation * Math.PI / 180;
+    const half = (compass.size > 0 ? compass.size : 5) / 2 *
+      (Math.abs(Math.cos(angle)) + Math.abs(Math.sin(angle)));
+    rects.push({
+      minX: compass.position.x - half, maxX: compass.position.x + half,
+      minZ: compass.position.z - half, maxZ: compass.position.z + half,
+    });
+    rects.push(annotationRect({
+      anchor: {
+        x: compass.position.x + compass.labelOffset.x,
+        z: compass.position.z + compass.labelOffset.z,
+      },
+      ...textSize(compass.label || 'N', COMPASS_LABEL_FONT, '700'),
+    }));
+  }
+  return rects;
+}
+
 // --- helpers ----------------------------------------------------------------------------------
+
+function textSize(text: string, font: number, weight: string): { width: number; height: number } {
+  const css = `${weight} ${font * PX_PER_M}px ${FONT_FAMILY}`;
+  return {
+    width: Math.ceil(measure(text, css) + 0.2 * PX_PER_M) / PX_PER_M,
+    height: Math.ceil(font * 1.25 * PX_PER_M + 0.2 * PX_PER_M) / PX_PER_M,
+  };
+}
 
 function flatText(
   text: string,
@@ -229,8 +288,9 @@ function flatText(
   const css = `${weight} ${font * PX_PER_M}px ${FONT_FAMILY}`;
   const pad = 0.1 * PX_PER_M;
   const canvas = document.createElement('canvas');
-  canvas.width = Math.ceil(measure(text, css) + pad * 2);
-  canvas.height = Math.ceil(font * 1.25 * PX_PER_M + pad * 2);
+  const { width, height } = textSize(text, font, weight);
+  canvas.width = width * PX_PER_M;
+  canvas.height = height * PX_PER_M;
   const ctx = canvas.getContext('2d');
   if (ctx) {
     ctx.font = css;
@@ -238,8 +298,6 @@ function flatText(
     ctx.textBaseline = 'top';
     ctx.fillText(text, pad, pad);
   }
-  const width = canvas.width / PX_PER_M;
-  const height = canvas.height / PX_PER_M;
   return { mesh: flatPlane(canvasTexture(canvas), width, height), width, height };
 }
 

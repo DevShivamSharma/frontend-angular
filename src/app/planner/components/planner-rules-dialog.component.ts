@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, viewChild } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, output, viewChild } from '@angular/core';
 import { effectiveRules } from '../geometry/placement-rules';
 import { PlannerStore } from '../planner-store.service';
 import { IconComponent } from './icon.component';
@@ -12,6 +12,7 @@ import { IconComponent } from './icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PlannerRulesDialogComponent {
+  readonly closed = output<void>();
   readonly store = inject(PlannerStore);
   private readonly document = inject(DOCUMENT);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -58,5 +59,6 @@ export class PlannerRulesDialogComponent {
       ? this.returnFocus : this.document.getElementById('sidebar-tab-stalls');
     target?.focus({ preventScroll: true });
     this.returnFocus = null;
+    this.closed.emit();
   }
 }
