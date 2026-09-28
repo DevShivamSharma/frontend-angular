@@ -234,12 +234,6 @@ export class PlannerPageComponent implements OnInit {
   readonly viewCommand = signal<ViewCommand | null>(null);
 
   constructor() {
-    effect(() => {
-      const ready = this.hallsStatus() !== 'loading';
-      if (!ready || !this.rulesDismissed() || this.autoTourOffered) return;
-      this.autoTourOffered = true;
-      if (!this.tourPreference.hasSeen()) untracked(() => this.startTour());
-    });
     // Wait for real halls before resolving a venue deep link. Consume it once so later
     // hall changes and retries never pull the visitor away from their current work.
     effect(() => {
