@@ -29,6 +29,7 @@ import {
   validGate
 } from './geometry/planner-geometry';
 import { blockedInPlan, planBounds, withinPlan } from './geometry/hall-plan';
+import { normalizeFootprint, sidesOfEdges } from './geometry/stall-footprint';
 import {
   applySelfcareLayout,
   hallFromSelfcare,
@@ -207,6 +208,8 @@ export class PlannerStore {
   readonly passageWidth = computed(() => this.placementContext()?.rules.minPassageWidth[this.eventType()] ?? 3);
   readonly showFreeSpace = signal(false);
   readonly showClearances = signal(true);
+  /** Name/size and OPEN tags over every stall. Off by default: dense plans become unreadable. */
+  readonly showLabels = signal(false);
   readonly draft = signal<StallDraft | null>(null);
   readonly rejection = signal<PlacementFeedback | null>(null);
   /** Violations the server returned for the last failed save/update. */
@@ -216,6 +219,8 @@ export class PlannerStore {
   readonly focusTarget = signal<FocusTarget | null>(null);
   /** The Assist tab's plan, checked but not applied. Drawn as outlines on the 3D view. */
   readonly proposals = signal<ProposedStall[] | null>(null);
+  /** A request to open the PDF plan import, with the file when one was already picked. */
+  readonly pdfImport = signal<{ file: File | null } | null>(null);
   readonly splitOptions = signal<SplitOptions | null>(null);
   readonly splitPreview = computed(() => {
     const parent = this.selectedStall(), options = this.splitOptions(), ctx = this.placementContext();
@@ -437,6 +442,20 @@ export class PlannerStore {
     } else {
       this.updateStall(id, { openSides: [...current, side] });
     }
+  }
+
+  /**
+   * Open or close one edge of a custom (e.g. L-shaped) stall. The last open edge cannot be
+   * closed: every stall needs an entrance. The legacy side summary follows the edges.
+   */
+  toggleOpenEdge(id: string | number, edge: number): void {
+    const stall = this.stalls().find(s => String(s.id) === String(id));
+    if (!stall?.footprint?.length || edge < 0 || edge >= stall.footprint.length) return;
+    const current = stall.openEdges ?? [];
+    const next = current.includes(edge) ? current.filter(e => e !== edge) : [...current, edge].sort((a, b) => a - b);
+    if (!next.length) return;
+    const sides = sidesOfEdges(stall.footprint, next).filter((s): s is GateSide => ['FRONT', 'BACK', 'LEFT', 'RIGHT'].includes(s));
+    this.updateStall(id, { openEdges: next, ...(sides.length ? { openSides: sides, gateSide: sides[0] } : {}) });
   }
 
   /** Open one side (idempotent). Used by the 3D wall click. */
@@ -666,6 +685,10 @@ export class PlannerStore {
   rotateStall(id: string | number): void {
     const stall = this.stalls().find(s => String(s.id) === String(id));
     if (!stall) return;
+    if (stall.footprint?.length) {
+      this.rotateCustomStall(stall);
+      return;
+    }
 
     const current = stall.openSides?.length ? stall.openSides : [validGate(stall.gateSide)];
     const openSides = current.map(side => ROTATED_SIDE[side]);
@@ -702,12 +725,45 @@ export class PlannerStore {
   }
 
   /**
+   * A quarter turn of a custom (e.g. L-shaped) stall: its outline turns a quarter clockwise in
+   * place, as one shape, the open edges turn with it (same edges), and the bounding box swaps.
+   */
+  private rotateCustomStall(stall: Stall): void {
+    const turned = stall.footprint!.map(p => ({ x: -p.z, z: p.x }));
+    const n = normalizeFootprint(turned);
+    if (typeof n === 'string') return;
+    const openEdges = [...new Set((stall.openEdges ?? []).map(e => n.edgeMap.get(e)).filter((e): e is number => e !== undefined))].sort((a, b) => a - b);
+    const sides = sidesOfEdges(n.points, openEdges).filter((s): s is GateSide => ['FRONT', 'BACK', 'LEFT', 'RIGHT'].includes(s));
+    const candidate: Stall = {
+      ...stall,
+      footprint: n.points,
+      openEdges,
+      width: n.width,
+      length: n.length,
+      posX: stall.posX + n.offset.x,
+      posZ: stall.posZ + n.offset.z,
+      ...(sides.length ? { openSides: sides, gateSide: sides[0] } : {})
+    };
+    const violations = this.checkPlacement(candidate, stall.id);
+    if (violations.length) {
+      this.reject('Rotation rejected', candidate, violations, stall.id);
+      return;
+    }
+    const { footprint, width, length, posX, posZ, openSides, gateSide } = candidate;
+    this.updateStall(stall.id, { footprint, openEdges, width, length, posX, posZ, openSides, gateSide });
+  }
+
+  /**
    * Copy a stall into the first free position. The copy goes through `addStall`, so it is
    * placed and validated exactly like a new shop - it never lands on top of its original.
    */
   duplicateStall(id: string | number): void {
     const stall = this.stalls().find(s => String(s.id) === String(id));
     if (!stall) return;
+    if (stall.footprint?.length) {
+      this.showError('Custom-shaped stalls (e.g. L-shaped) cannot be duplicated automatically yet.');
+      return;
+    }
 
     this.addStall({
       name: stall.name,
@@ -834,6 +890,31 @@ export class PlannerStore {
     this.stalls.update(p => [...p.filter(s => String(s.hallId) !== String(hall.id)), ...valid]);
     this.selectedStallId.set(valid[0]?.id ?? null);
     this.layoutName.set(hall.name);
+  }
+
+  /**
+   * Put a reviewed PDF plan import into the editor as a new, unsaved layout on `hall` (a working
+   * copy made for the import, so the master hall and its current stalls stay as they are). The
+   * stalls are placed as reviewed; the usual audit reports any planner-rule issue, and saving
+   * goes through the normal validated save.
+   */
+  applyPdfImport(hall: Hall, stalls: ReadonlyArray<Stall>, layoutName: string): void {
+    this.clearFeedback();
+    this.proposals.set(null);
+    this.halls.update(list => [...list.filter(h => String(h.id) !== String(hall.id)), hall]);
+    this.activeHallId.set(hall.id);
+    this.stalls.update(p => [
+      ...p.filter(s => String(s.hallId) !== String(hall.id)),
+      ...stalls.map(s => ({ ...s, hallId: hall.id }))
+    ]);
+    this.selectedSavedId.set(null);
+    this.selectedStallId.set(null);
+    this.layoutName.set(layoutName);
+  }
+
+  /** Open the PDF plan import dialog; with a file, it starts reading it straight away. */
+  openPdfImport(file: File | null = null): void {
+    this.pdfImport.set({ file });
   }
 
   // --- saved layout workflow ----------------------------------------------
@@ -1171,6 +1252,10 @@ export class PlannerStore {
 
   setShowClearances(value: boolean): void {
     this.showClearances.set(value);
+  }
+
+  setShowLabels(value: boolean): void {
+    this.showLabels.set(value);
   }
 
   /** Pointer over the grid in draw mode, button up: preview the stall under the cursor. */

@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { isCustomStall, stallArea, stallSizeText } from '../geometry/footprint-view';
+import { sidesOfEdges } from '../geometry/stall-footprint';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -99,6 +101,29 @@ export class EditStallFormComponent {
     const stall = this.selectedStall();
     if (stall) this.store.updateStall(stall.id, { openSides: [input.value as GateSide] });
     input.value = this.selectedStall()?.openSides.length === 1 ? this.selectedStall()!.openSides[0] : '';
+  }
+
+  readonly isCustom = isCustomStall;
+  readonly area = stallArea;
+  readonly sizeText = stallSizeText;
+
+  /** Every edge of a custom outline: its length, which way it faces, and whether it is open. */
+  edgesOf(stall: Stall): Array<{ index: number; length: number; facing: string; open: boolean }> {
+    const poly = stall.footprint ?? [];
+    return poly.map((a, i) => {
+      const b = poly[(i + 1) % poly.length];
+      return {
+        index: i,
+        length: Math.round(Math.hypot(b.x - a.x, b.z - a.z) * 100) / 100,
+        facing: sidesOfEdges(poly, [i])[0]?.toLowerCase() ?? '',
+        open: (stall.openEdges ?? []).includes(i)
+      };
+    });
+  }
+
+  toggleEdge(index: number): void {
+    const stall = this.selectedStall();
+    if (stall) this.store.toggleOpenEdge(stall.id, index);
   }
 
   previewSplit(): void {

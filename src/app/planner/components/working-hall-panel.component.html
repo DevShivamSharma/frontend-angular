@@ -49,6 +49,10 @@
       <app-icon name="file" [size]="16" />
     </button>
   </div>
+  <button type="button" class="btn-secondary is-block hall-pdf-import" (click)="openPdfImport()">
+    <app-icon name="floor-plan" [size]="15" />
+    Import PDF plan
+  </button>
 
   <div #hallPicker id="working-hall-picker" class="hall-picker-popover" popover="auto"
     role="dialog" aria-label="Choose a working hall"

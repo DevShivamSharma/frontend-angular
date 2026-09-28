@@ -35,6 +35,9 @@ export function previewSplit(parent: Stall, options: SplitOptions, ctx: Placemen
     return { ...result, error: 'Choose 2–100 children and a split direction.' };
   }
   if (parent.status !== 'AVAILABLE') return { ...result, error: 'Only available stalls can be split.' };
+  if (parent.footprint?.length) {
+    return { ...result, error: 'Custom-shaped stalls (e.g. L-shaped) cannot be split; edit the outline instead.' };
+  }
   if (arrangement === 'BACK_TO_BACK' && count !== 2) {
     return { ...result, error: 'A back-to-back split creates exactly two stalls.' };
   }

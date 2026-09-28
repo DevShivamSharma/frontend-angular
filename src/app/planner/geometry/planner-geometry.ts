@@ -1,5 +1,7 @@
 import { BlockedArea, Hall, HallShape, HallSize } from '../models/hall.model';
 import { GateSide, Stall, StallInput, StallStatus } from '../models/stall.model';
+import { rotate } from './polygon-geometry';
+import { normalizeFootprint, normalizeOpenEdges, sidesOfEdges } from './stall-footprint';
 
 /**
  * Pure geometry/normalization helpers ported 1:1 from `frontend/src/App.js:10-114`.
@@ -160,27 +162,58 @@ export function normalizeStall(
   hallId: string | number,
   fallbackName = 'Shop'
 ): Stall {
-  const openSides = normalizeOpenSides(s.openSides, s.gateSide);
+  let openSides = normalizeOpenSides(s.openSides, s.gateSide);
+  const rotation = num(s.rotation, 0);
+  const custom = customFootprint(s.footprint, s.openEdges, rotation);
+  if (custom) {
+    const sides = sidesOfEdges(custom.footprint, custom.openEdges).filter(isGateSide);
+    if (sides.length) openSides = sides;
+  }
 
   return {
     id: (s.id as string | number | undefined) ?? `stall-${Date.now()}-${Math.random()}`,
     hallId,
     name: String(s.name ?? s.stallName ?? fallbackName).trim() || fallbackName,
-    width: num(s.width, 5),
-    length: num(s.length, 5),
+    width: custom ? custom.width : num(s.width, 5),
+    length: custom ? custom.length : num(s.length, 5),
     height: num(s.height, 4),
-    posX: num(s.posX, 0),
-    posZ: num(s.posZ, 0),
+    posX: num(s.posX, 0) + (custom?.shift.x ?? 0),
+    posZ: num(s.posZ, 0) + (custom?.shift.z ?? 0),
     color: (s.color as string) || '#3498db',
     gateSide: openSides[0],
     openSides,
     stallNumber: typeof s.stallNumber === 'string' && s.stallNumber.trim() ? s.stallNumber.trim() : null,
     status: validStatus(s.status),
     stallTypeId: typeof s.stallTypeId === 'string' && s.stallTypeId ? s.stallTypeId : null,
-    rotation: num(s.rotation, 0),
+    rotation,
     isSplitParent: s.isSplitParent === true,
-    ...(typeof s.parentStallNumber === 'string' ? { parentStallNumber: s.parentStallNumber } : {})
+    ...(typeof s.parentStallNumber === 'string' ? { parentStallNumber: s.parentStallNumber } : {}),
+    ...(custom ? { footprint: custom.footprint, openEdges: custom.openEdges } : {})
   };
+}
+
+/**
+ * A custom (e.g. L-shaped) stall's outline in canonical form, or null when the input carries
+ * none or an invalid one (the stall then stays an ordinary rectangle). `shift` moves the given
+ * position to the outline's bounding-box centre, which is what posX/posZ mean for every stall.
+ */
+function customFootprint(
+  raw: unknown,
+  rawEdges: unknown,
+  rotation: number
+): { footprint: { x: number; z: number }[]; openEdges: number[]; width: number; length: number; shift: { x: number; z: number } } | null {
+  if (raw == null) return null;
+  const n = normalizeFootprint(raw);
+  if (typeof n === 'string') return null;
+  const given = normalizeOpenEdges(rawEdges, (raw as unknown[]).length);
+  const openEdges = typeof given === 'string'
+    ? []
+    : [...new Set(given.map(e => n.edgeMap.get(e)).filter((e): e is number => e !== undefined))].sort((a, b) => a - b);
+  return { footprint: n.points, openEdges, width: n.width, length: n.length, shift: rotate(n.offset, rotation) };
+}
+
+function isGateSide(v: string): v is GateSide {
+  return v === 'FRONT' || v === 'BACK' || v === 'LEFT' || v === 'RIGHT';
 }
 
 /** Normalize a stall status, defaulting anything unknown to AVAILABLE. */

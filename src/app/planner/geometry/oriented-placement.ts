@@ -1,7 +1,7 @@
 import polygonClipping, { type MultiPolygon } from 'polygon-clipping';
 import { openingAccessRect, zoneClearanceFor } from './placement-rules';
 import type { Footprint, PlacementContext, Point, ValidationResult, Violation, ViolationCode } from './placement-rules';
-import { backToBack, closestPoints, segmentInsideFloor, contained, corridor, distance, edges, EPS, openSides, overlaps, ring, segmentDistance, sideIndexes, stallPolygon, sub } from './polygon-geometry';
+import { backToBack, closestPoints, segmentInsideFloor, contained, corridor, distance, edges, EPS, openEdgeList, overlaps, ring, segmentDistance, stallPolygon, sub } from './polygon-geometry';
 
 const { difference, union } = polygonClipping;
 
@@ -23,7 +23,12 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
     add('INVALID_DIMENSIONS', 'Stall dimensions and position must be finite; dimensions must be positive.', []);
     return { valid: false, violations };
   }
-  if (ctx.enforceGrid && [candidate.width, candidate.length].some(v => Math.abs(v / ctx.rules.snapStep - Math.round(v / ctx.rules.snapStep)) > EPS)) {
+  const onStep = (v: number) => Math.abs(v / ctx.rules.snapStep - Math.round(v / ctx.rules.snapStep)) <= EPS;
+  const lengths = candidate.footprint && candidate.footprint.length >= 3
+    // A custom outline: every edge, not only the bounding box, sits on the snap step.
+    ? edges(candidate.footprint).map(([a, b]) => Math.hypot(b.x - a.x, b.z - a.z))
+    : [candidate.width, candidate.length];
+  if (ctx.enforceGrid && !lengths.every(onStep)) {
     add('INVALID_DIMENSIONS', `Stall size must be a multiple of ${ctx.rules.snapStep} m.`, p);
   }
   const obstacles = ctx.obstacles ?? [];
@@ -68,8 +73,8 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
       }
     }
   }
-  for (const side of openSides(candidate)) {
-    const access = corridor(p, sideIndexes[side], passage);
+  for (const { index, label: side } of openEdgeList(candidate)) {
+    const access = corridor(p, index, passage);
     if (!inside(access)) add('OPEN_SIDE_PASSAGE', `${side} requires ${passage} m of usable floor in front of its entire edge.`, access, [], { side, requiredWidth: passage });
     for (const other of others) if (overlaps(access, stallPolygon(other))) {
       add('OPEN_SIDE_BLOCKED', `${side} passage is blocked by ${other.stallNumber ?? other.id}.`, access, [String(other.id)], { side, requiredWidth: passage });
@@ -79,8 +84,8 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
       if (overlaps(access, zone.polygon)) add('OPEN_SIDE_PASSAGE', `${side} passage intersects ${zone.label}.`, access, [], { side, requiredWidth: passage });
     }
   }
-  for (const other of others) for (const side of openSides(other)) {
-    const access = corridor(stallPolygon(other), sideIndexes[side], passage);
+  for (const other of others) for (const { index, label: side } of openEdgeList(other)) {
+    const access = corridor(stallPolygon(other), index, passage);
     if (overlaps(p, access)) add('OPEN_SIDE_BLOCKED',
       `Blocks the ${side} open side of ${other.stallNumber ?? other.id}; keep ${passage} m clear.`, access, [String(other.id)]);
   }

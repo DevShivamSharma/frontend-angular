@@ -87,6 +87,10 @@
         <input type="checkbox" [checked]="showClearances()" (change)="toggleClearances($any($event.target).checked)" />
         <span>Clearances</span>
       </label>
+      <label class="layer-toggle" [class.is-on]="showLabels()" title="Name and open-side tags on every stall (the selected stall always shows its own)">
+        <input type="checkbox" [checked]="showLabels()" (change)="toggleLabels($any($event.target).checked)" />
+        <span>Labels</span>
+      </label>
       <label class="layer-toggle" [class.is-on]="showFreeSpace()">
         <input type="checkbox" [checked]="showFreeSpace()" (change)="toggleFreeSpace($any($event.target).checked)" />
         <span>Free space for <strong>{{ freeSizeLabel() }}</strong></span>

@@ -1,4 +1,4 @@
-import type { StallStatus } from '../geometry/placement-rules';
+import type { Point, StallStatus } from '../geometry/placement-rules';
 
 /** Side of the stall that is left open for customer entry. */
 export type GateSide = 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT';
@@ -36,6 +36,14 @@ export interface Stall {
   rotation?: number;
   isSplitParent?: boolean;
   parentStallNumber?: string | null;
+  /**
+   * Custom (polygon, e.g. L-shaped) stall: its outline in local metres before rotation,
+   * clockwise and centred on its bounding box (geometry/stall-footprint.ts). `width`/`length`
+   * are that bounding box. Absent/null = the ordinary width x length rectangle.
+   */
+  footprint?: Point[] | null;
+  /** Open (customer-facing) edges of a custom stall: edge i runs footprint[i] -> footprint[i + 1]. */
+  openEdges?: number[] | null;
 }
 
 /** Raw stall-shaped input from the backend or from an Excel row. */
@@ -57,4 +65,6 @@ export interface StallInput {
   rotation?: unknown;
   isSplitParent?: unknown;
   parentStallNumber?: unknown;
+  footprint?: unknown;
+  openEdges?: unknown;
 }

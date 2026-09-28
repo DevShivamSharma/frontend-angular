@@ -2,6 +2,8 @@ import * as THREE from 'three';
 
 import { GateSide, Stall } from '../models/stall.model';
 import { num, validGate } from '../geometry/planner-geometry';
+import { interiorPoint, isCustomStall, stallSizeText } from '../geometry/footprint-view';
+import type { Point } from '../geometry/placement-rules';
 
 /**
  * Renders one stall. Ported from the React `Stall3D` component
@@ -68,7 +70,9 @@ export class StallObject {
       this.openSidesOf(stall).join(','),
       stall.color || '#3498db',
       stall.status,
-      selected
+      selected,
+      JSON.stringify(stall.footprint ?? null),
+      (stall.openEdges ?? []).join(',')
     ].join('|');
 
     if (signature !== this.signature) {
@@ -85,7 +89,7 @@ export class StallObject {
       ? `${number}
 CANCELLED`
       : `${identity}
-${num(stall.width, 5)} × ${num(stall.length, 5)} m${stall.status === 'BOOKED' ? ' · BOOKED' : ''}`;
+${stallSizeText(stall)}${stall.status === 'BOOKED' ? ' · BOOKED' : ''}`;
     this.nameEl.style.whiteSpace = 'pre';
     this.nameEl.style.textAlign = 'center';
     this.nameEl.style.background = cancelled
@@ -111,8 +115,16 @@ ${num(stall.width, 5)} × ${num(stall.length, 5)} m${stall.status === 'BOOKED' ?
     this.openEl.style.borderRadius = '4px';
   }
 
-  /** Position both labels for the current camera. */
-  projectLabels(camera: THREE.PerspectiveCamera, width: number, height: number): void {
+  /**
+   * Position both labels for the current camera. With `visible` false they are hidden, except
+   * on the selected stall.
+   */
+  projectLabels(camera: THREE.PerspectiveCamera, width: number, height: number, visible = true): void {
+    if (!visible && !this.selected) {
+      this.nameEl.style.display = 'none';
+      this.openEl.style.display = 'none';
+      return;
+    }
     projectLabel(this.nameEl, this.nameAnchor, camera, width, height, 10);
     if (this.stall.status === 'CANCELLED') {
       // A cancelled stall has no walls, so no open side to label.
@@ -141,6 +153,10 @@ ${num(stall.width, 5)} × ${num(stall.length, 5)} m${stall.status === 'BOOKED' ?
 
     if (this.stall.status === 'CANCELLED') {
       this.rebuildCancelled();
+      return;
+    }
+    if (isCustomStall(this.stall)) {
+      this.rebuildCustom();
       return;
     }
 
@@ -215,6 +231,26 @@ ${num(stall.width, 5)} × ${num(stall.length, 5)} m${stall.status === 'BOOKED' ?
    * a dashed outline, no walls, so it reads as "was here" and can be built over.
    */
   private rebuildCancelled(): void {
+    if (isCustomStall(this.stall)) {
+      const poly = this.stall.footprint!;
+      const floor = new THREE.Mesh(
+        new THREE.ShapeGeometry(shapeOf(poly)),
+        new THREE.MeshBasicMaterial({ color: '#94a3b8', transparent: true, opacity: 0.35, depthWrite: false })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0.03;
+      this.addPart(floor);
+      const dashed = new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints(poly.map(p => new THREE.Vector3(p.x, 0.05, p.z))),
+        new THREE.LineDashedMaterial({ color: this.selected ? '#2563eb' : '#475569', dashSize: 0.4, gapSize: 0.25 })
+      );
+      dashed.computeLineDistances();
+      this.body.add(dashed);
+      const c = interiorPoint(poly);
+      this.nameAnchor.position.set(c.x, 0.6, c.z);
+      this.openAnchor.position.set(c.x, 0.25, c.z);
+      return;
+    }
     const w = Math.max(0.2, num(this.stall.width, 5));
     const l = Math.max(0.2, num(this.stall.length, 5));
 
@@ -241,6 +277,75 @@ ${num(stall.width, 5)} × ${num(stall.length, 5)} m${stall.status === 'BOOKED' ?
 
     this.nameAnchor.position.set(0, 0.6, 0);
     this.openAnchor.position.set(0, 0.25, 0);
+  }
+
+  /**
+   * A custom (polygon, e.g. L-shaped) stall: the floor is the outline itself, so its notch stays
+   * empty and un-pickable; each closed edge gets a wall, each open edge a green marker outside it.
+   */
+  private rebuildCustom(): void {
+    const stall = this.stall;
+    const poly = stall.footprint!;
+    const open = new Set(stall.openEdges ?? []);
+    const h = Math.max(0.2, num(stall.height, 4));
+    const wall = 0.15;
+
+    const floor = new THREE.Mesh(
+      new THREE.ExtrudeGeometry(shapeOf(poly), { depth: 0.08, bevelEnabled: false }),
+      new THREE.MeshStandardMaterial({ color: '#e2e8f0' })
+    );
+    // Shape (x, y) with y = -z, laid flat: local (x, 0..0.08, z).
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    this.addPart(floor);
+
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: stall.color || '#3498db', roughness: 0.42, metalness: 0.05 });
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: '#22c55e', side: THREE.DoubleSide });
+    poly.forEach((a, i) => {
+      const b = poly[(i + 1) % poly.length];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const len = Math.hypot(dx, dz);
+      if (len < 1e-6) return;
+      // Clockwise outline: outward normal (dz, -dx) / len.
+      const n = { x: dz / len, z: -dx / len };
+      const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
+      if (open.has(i)) {
+        const marker = new THREE.Mesh(new THREE.PlaneGeometry(Math.max(0.5, len * 0.55), 0.22), markerMaterial);
+        marker.rotation.set(-Math.PI / 2, 0, Math.atan2(-dz, dx));
+        marker.position.set(mid.x + n.x * 0.16, 0.105, mid.z + n.z * 0.16);
+        this.addPart(marker);
+        return;
+      }
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(len + wall, h, wall), wallMaterial);
+      // Inside the outline, so the wall never pokes into a neighbour or the notch.
+      mesh.position.set(mid.x - (n.x * wall) / 2, h / 2, mid.z - (n.z * wall) / 2);
+      mesh.rotation.y = -Math.atan2(dz, dx);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData['edge'] = i;
+      this.addPart(mesh);
+    });
+
+    if (this.selected) {
+      const outline = new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints(poly.map(p => new THREE.Vector3(p.x, 0.12, p.z))),
+        new THREE.LineBasicMaterial({ color: '#2563eb' })
+      );
+      this.body.add(outline);
+    }
+
+    const c = interiorPoint(poly);
+    this.nameAnchor.position.set(c.x, h + 0.35, c.z);
+    const first = [...open][0];
+    if (first !== undefined) {
+      const a = poly[first];
+      const b = poly[(first + 1) % poly.length];
+      const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+      this.openAnchor.position.set((a.x + b.x) / 2 + ((b.z - a.z) / len) * 0.35, 0.25, (a.z + b.z) / 2 - ((b.x - a.x) / len) * 0.35);
+    } else {
+      this.openAnchor.position.set(c.x, 0.25, c.z);
+    }
   }
 
   /** Open sides of a stall, deriving from gateSide for legacy single-side data. */
@@ -282,6 +387,11 @@ ${num(stall.width, 5)} × ${num(stall.length, 5)} m${stall.status === 'BOOKED' ?
     this.body.add(mesh);
     this.pickTargets.push(mesh);
   }
+}
+
+/** Outline as a THREE.Shape in (x, -z), to be laid flat with rotation.x = -PI/2. */
+function shapeOf(poly: Point[]): THREE.Shape {
+  return new THREE.Shape(poly.map(p => new THREE.Vector2(p.x, -p.z)));
 }
 
 function createLabel(): HTMLDivElement {

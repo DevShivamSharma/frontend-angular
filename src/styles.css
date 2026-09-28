@@ -2316,3 +2316,10 @@ select.control {
 .geo-credit{
   display: none!Important;
 }
+
+/* Segmented toggle: a row of mutually exclusive buttons (PDF import view / filter). */
+.seg { display: inline-flex; border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; padding: 6px 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 12px; cursor: pointer; }
+.seg.small button { padding: 4px 8px; }
+.seg button.is-on { background: var(--accent-solid); color: #fff; }
+.seg button:disabled { opacity: .5; cursor: default; }

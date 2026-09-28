@@ -79,6 +79,8 @@ export class Scene3dComponent implements AfterViewInit {
   readonly mode = input<EditorMode>('select');
   readonly editorOverlay = input<EditorOverlay | null>(null);
   readonly showClearances = input(true);
+  /** Tags over every stall; the selected stall shows its own either way. */
+  readonly showLabels = input(true);
   readonly eventType = input<EventType>('B2B');
   readonly focusTarget = input<FocusTarget | null>(null);
   /** Reset / fit / top-down, from the view dock over the stage. */
@@ -740,8 +742,9 @@ export class Scene3dComponent implements AfterViewInit {
 
     this.renderer.render(this.scene, this.camera);
 
+    const showLabels = this.showLabels();
     for (const object of this.stallObjects.values()) {
-      object.projectLabels(this.camera, clientWidth, clientHeight);
+      object.projectLabels(this.camera, clientWidth, clientHeight, showLabels);
     }
   };
 

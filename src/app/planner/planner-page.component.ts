@@ -27,6 +27,8 @@ import { openSidesLabel } from './components/gate-sides';
 import { IconComponent, IconName } from './components/icon.component';
 import { SavedLayoutsPanelComponent } from './components/saved-layouts-panel.component';
 import { SelfcareImportComponent } from './components/selfcare-import.component';
+import { PdfImportCardComponent } from './pdf-import/pdf-import-card.component';
+import { PdfImportDialogComponent } from './pdf-import/pdf-import-dialog.component';
 import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
@@ -35,6 +37,7 @@ import { PlannerRulesDialogComponent } from './components/planner-rules-dialog.c
 import { AiChatLauncherComponent } from './components/ai-chat-launcher.component';
 import { AiChatSession } from './ai-chat-session.service';
 import { legendEntries } from './geometry/legend-content';
+import { stallArea } from './geometry/footprint-view';
 import { PlannerStore } from './planner-store.service';
 import { Scene3dComponent, StallMove, StallOpenSide, ViewCommand } from './three/scene3d.component';
 
@@ -74,6 +77,8 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
   imports: [
     PlannerTourComponent,
     SelfcareImportComponent,
+    PdfImportCardComponent,
+    PdfImportDialogComponent,
     WorkingHallPanelComponent,
     CreateHallFormComponent,
     AddStallFormComponent,
@@ -111,6 +116,7 @@ export class PlannerPageComponent implements OnInit {
   readonly mode = this.store.mode;
   readonly overlay = this.store.overlay;
   readonly showClearances = this.store.showClearances;
+  readonly showLabels = this.store.showLabels;
   readonly eventType = this.store.eventType;
   readonly focusTarget = this.store.focusTarget;
   readonly grid = this.store.grid;
@@ -215,7 +221,7 @@ export class PlannerPageComponent implements OnInit {
     const hall = this.currentHall();
     const used = this.store
       .activeStalls()
-      .reduce((total, stall) => total + stall.width * stall.length, 0);
+      .reduce((total, stall) => total + stallArea(stall), 0);
     const floor = hall
       ? hall.shape === 'CIRCLE'
         ? Math.PI * hall.radius * hall.radius
