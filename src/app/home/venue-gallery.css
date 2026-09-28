@@ -4,3 +4,5 @@
 
 .hall-floor-tabs button{font-size:11px;min-height:40px}.hall-floor-content{display:grid;gap:14px}.detail-body p.hall-shared-note{padding:10px 12px;background:#e7e5dc;border-left:2px solid #9a7659;margin:0;font-size:11px;line-height:1.55}.detail-body p.hall-category{font-size:10px;color:#777f78;border-top:1px solid #e8e8e1;padding-top:12px;margin:14px 0 0}.hall-card .room-gallery{aspect-ratio:3/2}
 
+
+.hall-planner-link{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin-top:14px;padding:11px 13px;background:#805c43;color:#fff;text-decoration:none;font-size:12px;font-weight:600;border-radius:3px}.hall-planner-link:hover{background:#654631}.hall-planner-link:focus-visible{outline:2px solid #343835;outline-offset:3px}.hall-planner-link svg{width:18px;height:18px}

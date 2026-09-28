@@ -12,7 +12,9 @@ import {
   untracked,
   viewChild
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { findVenueHall } from '../shared/hall-identity';
 import { NotifyService } from '../core/notify.service';
 
 import { AddStallFormComponent } from './components/add-stall-form.component';
@@ -90,6 +92,8 @@ export class PlannerPageComponent implements OnInit {
   /** Public so the template can hand the draw-mode pointer events straight to the store. */
   readonly store = inject(PlannerStore);
   private readonly notify = inject(NotifyService);
+  private readonly venueParams = toSignal(inject(ActivatedRoute).queryParamMap);
+  private appliedVenueRequest: string | undefined;
 
   readonly error = this.store.error;
   readonly stalls = this.store.stalls;
@@ -190,6 +194,26 @@ export class PlannerPageComponent implements OnInit {
   readonly viewCommand = signal<ViewCommand | null>(null);
 
   constructor() {
+    // Wait for real halls before resolving a venue deep link. Consume it once so later
+    // hall changes and retries never pull the visitor away from their current work.
+    effect(() => {
+      const params = this.venueParams(), number = params?.get('hall');
+      if (!number) { this.appliedVenueRequest = undefined; return; }
+      if (this.hallsStatus() !== 'ready') return;
+      const floor = params?.get('floor') ?? null;
+      const request = JSON.stringify([number, floor]);
+      if (this.appliedVenueRequest === request) return;
+      const hall = findVenueHall(this.store.halls(), number, floor);
+      this.appliedVenueRequest = request;
+      untracked(() => {
+        if (hall) this.store.setActiveHall(hall.id);
+        else {
+          this.activeTab.set('hall');
+          this.notify.error('Hall unavailable', 'This hall or floor is not available in the planner. Choose a hall from the Hall tab.');
+        }
+      });
+    });
+
     // One shared toast surface; detailed placement diagnostics stay in the Rules panel.
     effect(() => {
       const message = this.error().replace(LEADING_EMOJI, '');

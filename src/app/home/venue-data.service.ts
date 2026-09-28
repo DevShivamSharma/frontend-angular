@@ -1,4 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
+import { parseHallIdentity } from '../shared/hall-identity';
+export { parseHallIdentity } from '../shared/hall-identity';
 import { Destination, Hall, HallFloor, Room, VenueDetail, VenueInformation, venueAsset } from './venue.models';
 
 export const ROOMS_API = 'https://api.indiatradefair.com/cc/itpo/api/v1/rooms/usr/room/all';
@@ -23,10 +25,6 @@ export function normalizeRooms(payload: unknown): Room[] {
     const number = (value: unknown) => value !== null && value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null;
     return [{ id: String(room['id']), name: String(room['name']), level, area: number(room['area']), capacity: number(room['seatingCapacity']), photos: [...new Set((Array.isArray(room['roomDocs']) ? room['roomDocs'] : []).filter(photoUrl))] }];
   });
-}
-export function parseHallIdentity(value: unknown): { halls: string[]; floor: 'GF' | 'FF' | null } | null {
-  const match = /^hall[\s_-]*(\d+[a-z]?(?:\s*[-–]\s*\d+[a-z]?)*)\s*(GF|FF)?$/i.exec(String(value).trim());
-  return match ? { halls: match[1].toUpperCase().split(/\s*[-–]\s*/), floor: match[2]?.toUpperCase() as 'GF' | 'FF' || null } : null;
 }
 export function normalizeHalls(payloads: unknown[]): Hall[] {
   const records: Hall[] = [], seen = new Set<string>();

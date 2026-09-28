@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, Input, OnChanges, OnDestroy, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { VenueDataService } from './venue-data.service';
 import { PhotoGalleryComponent } from './photo-gallery.component';
 import { FLOOR_NAMES, Hall, HallFloor } from './venue.models';
-@Component({ selector: 'div[appHallBrowser]', standalone: true, imports: [PhotoGalleryComponent], templateUrl: './hall-browser.component.html', changeDetection: ChangeDetectionStrategy.OnPush, host: { '[attr.aria-busy]': 'pending()' } })
+@Component({ selector: 'div[appHallBrowser]', standalone: true, imports: [PhotoGalleryComponent, RouterLink], templateUrl: './hall-browser.component.html', changeDetection: ChangeDetectionStrategy.OnPush, host: { '[attr.aria-busy]': 'pending()' } })
 export class HallBrowserComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) hall = '';
   @Input() selection = 0;

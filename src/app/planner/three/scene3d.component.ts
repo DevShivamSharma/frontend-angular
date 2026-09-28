@@ -226,7 +226,9 @@ export class Scene3dComponent implements AfterViewInit {
     // still has the orbit controls switched off and the pointer captured - undo both, as
     // onPointerUp would, or the camera stays frozen.
     effect(() => {
-      if (this.mode() === 'draw' || this.drawPointerId === null) return;
+      const mode = this.mode();
+      if (this.ready) this.updateCursor();
+      if (mode === 'draw' || this.drawPointerId === null) return;
       if (this.ready) {
         this.controls.enabled = !this.dragging();
         const canvas = this.renderer.domElement;
@@ -297,6 +299,7 @@ export class Scene3dComponent implements AfterViewInit {
     this.syncClearances(this.hall(), this.showClearances(), this.eventType());
     this.syncOverlay(this.editorOverlay(), this.hall());
     this.controls.enabled = !this.dragging();
+    this.updateCursor();
 
     this.zone.runOutsideAngular(() => {
       this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -530,6 +533,7 @@ export class Scene3dComponent implements AfterViewInit {
       return;
     }
 
+    if (event.button !== 0) return;
     const hit = this.pickStall(event);
     this.pointerDownHit = hit !== null;
     if (!hit) return;
@@ -551,12 +555,15 @@ export class Scene3dComponent implements AfterViewInit {
       wasSelected: String(this.selectedStallId()) === String(hit.stall.id)
     };
 
+    this.hideTooltip();
+    this.updateCursor();
     this.selectStall.emit(hit.stall.id);
     this.dragState.emit(true);
     this.renderer.domElement.setPointerCapture?.(event.pointerId);
   };
 
   private readonly onPointerMove = (event: PointerEvent): void => {
+    this.updateCursor(event);
     if (this.mode() === 'draw') {
       const point = this.intersectDragPlane(event);
       if (!point) return;
@@ -601,13 +608,13 @@ export class Scene3dComponent implements AfterViewInit {
       return;
     }
 
-    if (!this.drag) return;
+    if (!this.drag || this.drag.pointerId !== event.pointerId) return;
 
     const { id, moved, pointerId, side, wasSelected } = this.drag;
     this.drag = null;
     this.dragState.emit(false);
 
-    if (!moved) {
+    if (!moved && event.type !== 'pointercancel') {
       // A click on a wall of an already-selected stall changes its open side
       // instead of re-selecting. First clicks and clicks on the floor,
       // markers or outline still only select.
@@ -619,7 +626,7 @@ export class Scene3dComponent implements AfterViewInit {
     }
 
     this.renderer.domElement.releasePointerCapture?.(pointerId);
-    void event;
+    this.updateCursor(event.type === 'pointercancel' ? undefined : event);
   };
 
   /** Clicking empty space clears the selection. React's `onPointerMissed`. */
@@ -630,8 +637,17 @@ export class Scene3dComponent implements AfterViewInit {
 
   private readonly onPointerLeave = (): void => {
     this.hideTooltip();
+    this.updateCursor();
     if (this.mode() === 'draw' && this.drawPointerId === null) this.draftLeave.emit();
   };
+
+  /** Three.js owns this canvas, so cursor styles must be applied directly to it. */
+  private updateCursor(event?: PointerEvent): void {
+    this.renderer.domElement.style.cursor = this.drag ? 'grabbing'
+      : this.mode() === 'draw' ? 'crosshair'
+      : event && this.pickSuggestion(event) ? 'pointer'
+      : event && this.pickStall(event) ? 'grab' : 'default';
+  }
 
   /**
    * The plan's hover text: a rectangle with a `title` (e.g. "Pillar") or a plan zone shows it
