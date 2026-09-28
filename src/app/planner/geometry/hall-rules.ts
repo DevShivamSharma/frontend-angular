@@ -23,7 +23,8 @@ export function toPlacementStall(stall: Stall): PlacementStall {
     length: stall.length,
     openSides: stall.openSides,
     gateSide: stall.gateSide,
-    rotation: stall.rotation ?? 0
+    rotation: stall.rotation ?? 0,
+    ...(stall.footprint?.length ? { footprint: stall.footprint, openEdges: stall.openEdges ?? [] } : {})
   };
 }
 

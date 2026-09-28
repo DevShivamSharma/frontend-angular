@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
+import { stallArea, stallSizeText } from '../geometry/footprint-view';
 import { openSidesLabel } from './gate-sides';
 import { IconComponent } from './icon.component';
 import { PlannerStore } from '../planner-store.service';
@@ -27,6 +28,7 @@ export class ShopsListComponent {
   readonly snap = this.store.snap;
 
   readonly openSidesLabel = openSidesLabel;
+  readonly sizeText = stallSizeText;
 
   readonly query = signal('');
   readonly sort = signal<ShopSort>('number');
@@ -46,7 +48,7 @@ export class ShopsListComponent {
     return [...stalls].sort((a, b) =>
       sort === 'name'
         ? a.name.localeCompare(b.name)
-        : b.width * b.length - a.width * a.length
+        : stallArea(b) - stallArea(a)
     );
   });
 

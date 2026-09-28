@@ -59,7 +59,7 @@
           <span class="stall-chip">{{ stall.stallNumber ?? 'NEW' }}</span>
           <span class="stall-row-body">
             <span class="stall-row-name">{{ stall.name || 'Shop' }}</span>
-            <span class="stall-row-meta">{{ stall.width }} × {{ stall.length }} m · Open {{ openSidesLabel(stall) }}</span>
+            <span class="stall-row-meta">{{ sizeText(stall) }} · Open {{ openSidesLabel(stall) }}</span>
           </span>
           <span class="status-pill" [attr.data-status]="stall.status">{{ stall.status }}</span>
         </button>

@@ -29,6 +29,7 @@ import {
   validGate
 } from './geometry/planner-geometry';
 import { blockedInPlan, planBounds, withinPlan } from './geometry/hall-plan';
+import { normalizeFootprint, sidesOfEdges } from './geometry/stall-footprint';
 import {
   applySelfcareLayout,
   hallFromSelfcare,
@@ -439,6 +440,20 @@ export class PlannerStore {
     }
   }
 
+  /**
+   * Open or close one edge of a custom (e.g. L-shaped) stall. The last open edge cannot be
+   * closed: every stall needs an entrance. The legacy side summary follows the edges.
+   */
+  toggleOpenEdge(id: string | number, edge: number): void {
+    const stall = this.stalls().find(s => String(s.id) === String(id));
+    if (!stall?.footprint?.length || edge < 0 || edge >= stall.footprint.length) return;
+    const current = stall.openEdges ?? [];
+    const next = current.includes(edge) ? current.filter(e => e !== edge) : [...current, edge].sort((a, b) => a - b);
+    if (!next.length) return;
+    const sides = sidesOfEdges(stall.footprint, next).filter((s): s is GateSide => ['FRONT', 'BACK', 'LEFT', 'RIGHT'].includes(s));
+    this.updateStall(id, { openEdges: next, ...(sides.length ? { openSides: sides, gateSide: sides[0] } : {}) });
+  }
+
   /** Open one side (idempotent). Used by the 3D wall click. */
   openSide(id: string | number, side: GateSide): void {
     const stall = this.stalls().find(s => String(s.id) === String(id));
@@ -666,6 +681,10 @@ export class PlannerStore {
   rotateStall(id: string | number): void {
     const stall = this.stalls().find(s => String(s.id) === String(id));
     if (!stall) return;
+    if (stall.footprint?.length) {
+      this.rotateCustomStall(stall);
+      return;
+    }
 
     const current = stall.openSides?.length ? stall.openSides : [validGate(stall.gateSide)];
     const openSides = current.map(side => ROTATED_SIDE[side]);
@@ -702,12 +721,45 @@ export class PlannerStore {
   }
 
   /**
+   * A quarter turn of a custom (e.g. L-shaped) stall: its outline turns a quarter clockwise in
+   * place, as one shape, the open edges turn with it (same edges), and the bounding box swaps.
+   */
+  private rotateCustomStall(stall: Stall): void {
+    const turned = stall.footprint!.map(p => ({ x: -p.z, z: p.x }));
+    const n = normalizeFootprint(turned);
+    if (typeof n === 'string') return;
+    const openEdges = [...new Set((stall.openEdges ?? []).map(e => n.edgeMap.get(e)).filter((e): e is number => e !== undefined))].sort((a, b) => a - b);
+    const sides = sidesOfEdges(n.points, openEdges).filter((s): s is GateSide => ['FRONT', 'BACK', 'LEFT', 'RIGHT'].includes(s));
+    const candidate: Stall = {
+      ...stall,
+      footprint: n.points,
+      openEdges,
+      width: n.width,
+      length: n.length,
+      posX: stall.posX + n.offset.x,
+      posZ: stall.posZ + n.offset.z,
+      ...(sides.length ? { openSides: sides, gateSide: sides[0] } : {})
+    };
+    const violations = this.checkPlacement(candidate, stall.id);
+    if (violations.length) {
+      this.reject('Rotation rejected', candidate, violations, stall.id);
+      return;
+    }
+    const { footprint, width, length, posX, posZ, openSides, gateSide } = candidate;
+    this.updateStall(stall.id, { footprint, openEdges, width, length, posX, posZ, openSides, gateSide });
+  }
+
+  /**
    * Copy a stall into the first free position. The copy goes through `addStall`, so it is
    * placed and validated exactly like a new shop - it never lands on top of its original.
    */
   duplicateStall(id: string | number): void {
     const stall = this.stalls().find(s => String(s.id) === String(id));
     if (!stall) return;
+    if (stall.footprint?.length) {
+      this.showError('Custom-shaped stalls (e.g. L-shaped) cannot be duplicated automatically yet.');
+      return;
+    }
 
     this.addStall({
       name: stall.name,

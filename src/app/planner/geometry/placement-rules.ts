@@ -141,6 +141,13 @@ export const STALL_STATUSES: readonly StallStatus[] = ['AVAILABLE', 'BOOKED', 'C
 export interface Footprint {
   /** Clockwise local rotation in the X-right / Z-down plan, as stored by the backend. */
   rotation?: number;
+  /**
+   * Custom (polygon, e.g. L-shaped) stall: outline in local metres before rotation, clockwise,
+   * centred on its bounding box (stall-footprint.ts). null/absent = the width x length rectangle.
+   */
+  footprint?: Point[] | null;
+  /** Open edges of a custom stall (edge i = footprint[i] -> footprint[i + 1]). */
+  openEdges?: number[] | null;
   posX: number;
   posZ: number;
   width: number;
@@ -234,7 +241,8 @@ export function validatePlacement(
     return { valid: false, violations: [{ code: 'INVALID_PASSAGE_WIDTH', ruleRef: 'Passage',
       message: 'Choose a passage width between 3 and 5 m.', geometry: [], relatedStallIds: [] }] };
   }
-  if (!openSidesOf(candidate).length) {
+  const custom = !!candidate.footprint && candidate.footprint.length >= 3;
+  if (custom ? !(candidate.openEdges ?? []).length : !openSidesOf(candidate).length) {
     return { valid: false, violations: [{ code: 'INVALID_OPEN_SIDES', ruleRef: 'Open sides',
       message: 'A stall must have at least one valid open side.', geometry: [], relatedStallIds: [] }] };
   }
@@ -249,7 +257,9 @@ export function validatePlacement(
     });
     return { valid: false, violations };
   }
-  if ((candidate.rotation ?? 0) % 360 !== 0 || ctx.stalls.some(s => (s.rotation ?? 0) % 360 !== 0)) {
+  // Rotated or custom-shaped stalls (on either side of a pair) are checked on their real polygons.
+  const polygonal = (s: Footprint) => (s.rotation ?? 0) % 360 !== 0 || (!!s.footprint && s.footprint.length >= 3);
+  if (polygonal(candidate) || ctx.stalls.some(polygonal)) {
     return validateOrientedPlacement(candidate, { ...ctx, enforceGrid: true }, ignoreId);
   }
 
@@ -587,6 +597,13 @@ function validDimensions(f: Footprint, snapStep: number): boolean {
   if (![width, length, f.posX, f.posZ, f.rotation ?? 0].every(Number.isFinite)) return false;
   if (width <= EPS || length <= EPS) return false;
   if (!(snapStep > 0)) return true;
+  if (f.footprint && f.footprint.length >= 3) {
+    // A custom outline: every edge sits on the snap step, not only the bounding box.
+    return f.footprint.every((a, i) => {
+      const b = f.footprint![(i + 1) % f.footprint!.length];
+      return isMultiple(Math.hypot(b.x - a.x, b.z - a.z), snapStep);
+    });
+  }
   return isMultiple(width, snapStep) && isMultiple(length, snapStep);
 }
 

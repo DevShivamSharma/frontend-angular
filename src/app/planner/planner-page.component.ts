@@ -35,6 +35,7 @@ import { PlannerRulesDialogComponent } from './components/planner-rules-dialog.c
 import { AiChatLauncherComponent } from './components/ai-chat-launcher.component';
 import { AiChatSession } from './ai-chat-session.service';
 import { legendEntries } from './geometry/legend-content';
+import { stallArea } from './geometry/footprint-view';
 import { PlannerStore } from './planner-store.service';
 import { Scene3dComponent, StallMove, StallOpenSide, ViewCommand } from './three/scene3d.component';
 
@@ -215,7 +216,7 @@ export class PlannerPageComponent implements OnInit {
     const hall = this.currentHall();
     const used = this.store
       .activeStalls()
-      .reduce((total, stall) => total + stall.width * stall.length, 0);
+      .reduce((total, stall) => total + stallArea(stall), 0);
     const floor = hall
       ? hall.shape === 'CIRCLE'
         ? Math.PI * hall.radius * hall.radius

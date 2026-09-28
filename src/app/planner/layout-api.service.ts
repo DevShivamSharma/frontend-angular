@@ -55,6 +55,8 @@ export function buildApiPayload(
       ...(s.stallNumber ? { stallNumber: s.stallNumber } : {}),
       ...(s.status && s.status !== 'AVAILABLE' ? { status: s.status } : {}),
       ...(s.stallTypeId ? { stallTypeId: s.stallTypeId } : {}),
+      // Custom (e.g. L-shaped) stall: its outline and open edges; rectangles send neither.
+      ...(s.footprint?.length ? { footprint: s.footprint, openEdges: s.openEdges ?? [] } : {}),
       rotation: s.rotation ?? 0,
       ...(s.parentStallNumber ? { parentStallNumber: s.parentStallNumber } : {})
     };

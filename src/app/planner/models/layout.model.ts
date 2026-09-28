@@ -62,6 +62,9 @@ export interface StallPayload {
   stallTypeId?: string;
   rotation?: number;
   parentStallNumber?: string;
+  /** Custom (e.g. L-shaped) stall outline, local metres; omitted for rectangles. */
+  footprint?: Array<{ x: number; z: number }>;
+  openEdges?: number[];
 }
 
 /** Body sent to `POST /api/layout/save` and `PUT /api/layout/{id}`. */
