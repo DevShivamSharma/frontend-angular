@@ -246,3 +246,25 @@
     bottom: var(--space-2);
   }
 }
+
+.planner-tour-help { min-height: 44px; }
+.sidebar-header > .planner-tour-help { width: 100%; margin-bottom: var(--space-3); }
+.stage-top > .planner-tour-help { flex: none; }
+
+/* Reserve actual measured card height on phones. Controls and canvas stay above the tour. */
+@media (max-width: 900px) {
+  .planner.tour-active {
+    height: max(180px, calc(100dvh - var(--tour-card-height, 244px)));
+    min-height: 0;
+  }
+  .tour-active .sidebar { flex: 1; max-height: none; min-height: 0; }
+  .tour-active .sidebar-header { flex-shrink: 0; }
+  .tour-active .stat-strip, .tour-active .sidebar-tabs { display: none; }
+  .tour-active .stage { display: none; }
+  .tour-active.tour-position .sidebar { display: none; }
+  .tour-active.tour-position .stage { display: block; height: 100%; }
+  .tour-active .sidebar-body { padding-bottom: var(--space-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .planner.tour-active .sidebar { transition: none; }
+}

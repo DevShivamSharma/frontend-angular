@@ -12,7 +12,7 @@
     formControlName="name"
   />
 
-  <div class="row">
+  <div class="row" data-tour="stall-size">
     <label class="number-field">
       Width (m)
       <input class="control" type="number" min="0.5" inputmode="decimal" formControlName="width" />
@@ -80,7 +80,7 @@
   </div>
   <div class="gate-caption">{{ gateLabel() }} faces the aisle</div>
 
-  <button type="button" class="btn-success" (click)="addStall()">
+  <button type="button" class="btn-success" data-tour="add-stall" (click)="addStall()">
     <app-icon name="plus" [size]="16" />
     Add Shop (then drag on grid)
   </button>

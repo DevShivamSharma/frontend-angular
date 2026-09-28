@@ -17,6 +17,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { findVenueHall } from '../shared/hall-identity';
 import { NotifyService } from '../core/notify.service';
 
+import { PlannerTourComponent, PlannerTourStep } from './components/planner-tour.component';
+import { PlannerTourState } from './components/planner-tour-state.service';
 import { AddStallFormComponent } from './components/add-stall-form.component';
 import { CreateHallFormComponent } from './components/create-hall-form.component';
 import { EditStallFormComponent } from './components/edit-stall-form.component';
@@ -70,6 +72,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
   styleUrl: './planner-page.component.css',
   providers: [PlannerStore, AiChatSession],
   imports: [
+    PlannerTourComponent,
     SelfcareImportComponent,
     WorkingHallPanelComponent,
     CreateHallFormComponent,
@@ -120,6 +123,43 @@ export class PlannerPageComponent implements OnInit {
 
   readonly activeTab = signal<SidebarTab>('stalls');
   readonly saving = signal(false);
+  private readonly tourPreference = inject(PlannerTourState);
+  private autoTourOffered = false;
+  private tourReturnState: { sidebar: boolean; tab: SidebarTab; info: boolean } | null = null;
+  readonly rulesDismissed = signal(false);
+  readonly tourIndex = signal<number | null>(null);
+  readonly tourCardHeight = signal(244);
+  readonly tourSteps = computed<PlannerTourStep[]>(() => [
+    {
+      id: 'hall', title: 'Choose a hall', targets: ['#working-hall'],
+      message: 'Choose the hall or floor you want to work on. Search by name to find it quickly.'
+    },
+    {
+      id: 'stall', title: 'Select or add a stall', targets: ['[data-tour="add-stall"]'],
+      message: 'Select a stall on the grid, or enter a name and size, then click Add Shop to place a new stall.'
+    },
+    {
+      id: 'position', title: 'Drag to position your stall', targets: ['[data-tour="position"]'],
+      message: 'In Select mode, drag a stall to move it on the grid. On mobile, touch and drag. Keep passages and wall clearances free.'
+    },
+    {
+      id: 'details', title: 'Review stall details',
+      targets: ['[data-tour="stall-details"]', '[data-tour="stall-size"]'],
+      message: this.selectedStall()
+        ? 'Review the selected stall name, size and status. Check its position and open sides, then click Apply Shop Changes.'
+        : 'Check the stall size here. Add or select a stall to edit its details, position and open sides.'
+    },
+    {
+      id: 'save', title: 'Save your layout', targets: ['[data-tour="save-layout"]'],
+      message: this.offline()
+        ? 'You are using an offline sample. Connect to the server before saving your layout.'
+        : 'When your layout is ready, click Save layout or Save changes. Resolve any issues in the Rules tab. Use Help to replay this tour.'
+    }
+  ]);
+  readonly tourStep = computed(() => {
+    const index = this.tourIndex();
+    return index === null ? null : this.tourSteps()[index];
+  });
 
   /** The sidebar can be hidden so the 3D view gets the full width. UI only. */
   readonly sidebarOpen = signal(true);
@@ -194,6 +234,12 @@ export class PlannerPageComponent implements OnInit {
   readonly viewCommand = signal<ViewCommand | null>(null);
 
   constructor() {
+    effect(() => {
+      const ready = this.hallsStatus() !== 'loading';
+      if (!ready || !this.rulesDismissed() || this.autoTourOffered) return;
+      this.autoTourOffered = true;
+      if (!this.tourPreference.hasSeen()) untracked(() => this.startTour());
+    });
     // Wait for real halls before resolving a venue deep link. Consume it once so later
     // hall changes and retries never pull the visitor away from their current work.
     effect(() => {
@@ -251,6 +297,38 @@ export class PlannerPageComponent implements OnInit {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  startTour(): void {
+    if (this.tourIndex() !== null) return;
+    this.autoTourOffered = true;
+    this.tourReturnState = {
+      sidebar: this.sidebarOpen(), tab: this.activeTab(), info: this.hallInfoOpen()
+    };
+    this.moveTour(0);
+  }
+
+  moveTour(index: number): void {
+    if (index < 0 || index >= this.tourSteps().length) return;
+    this.sidebarOpen.set(true);
+    this.activeTab.set('stalls');
+    this.hallInfoOpen.set(false);
+    this.tourIndex.set(index);
+  }
+
+  endTour(outcome: 'completed' | 'skipped'): void {
+    this.tourPreference.remember(outcome);
+    this.tourIndex.set(null);
+    if (this.tourReturnState) {
+      this.sidebarOpen.set(this.tourReturnState.sidebar);
+      this.activeTab.set(this.tourReturnState.tab);
+      this.hallInfoOpen.set(this.tourReturnState.info);
+      this.tourReturnState = null;
+    }
+    afterNextRender(() => {
+      const selector = this.sidebarOpen() ? '.sidebar .planner-tour-help' : '.stage-top .planner-tour-help';
+      document.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true });
+    }, { injector: this.injector });
   }
 
   setTab(tab: SidebarTab): void {

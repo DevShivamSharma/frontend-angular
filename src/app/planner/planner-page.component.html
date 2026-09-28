@@ -1,5 +1,7 @@
-<app-planner-rules-dialog #rulesGuide />
-<div class="planner" [class.is-sidebar-collapsed]="!sidebarOpen()">
+<app-planner-rules-dialog #rulesGuide (closed)="rulesDismissed.set(true)" />
+<div class="planner" [class.is-sidebar-collapsed]="!sidebarOpen()"
+  [class.tour-active]="tourStep() !== null" [class.tour-position]="tourStep()?.id === 'position'"
+  [style.--tour-card-height.px]="tourCardHeight()">
   <!-- `inert` while hidden: its controls leave the tab order and the accessibility tree. -->
   <aside class="sidebar" id="planner-sidebar" aria-label="Planner controls" [inert]="!sidebarOpen()">
     <header class="sidebar-header">
@@ -33,6 +35,7 @@
       <button
         type="button"
         class="btn-primary planner-save"
+        data-tour="save-layout"
         [disabled]="store.busy() || !currentHall()"
         [title]="selectedSavedId() === null ? 'Save this layout' : 'Save changes to the open layout'"
         (click)="saveCurrentLayout()"
@@ -40,6 +43,9 @@
         <app-icon name="save" [size]="16" />
         {{ saving() ? 'Saving…' : selectedSavedId() === null ? 'Save layout' : 'Save changes' }}
       </button>
+
+      @if (sidebarOpen() && !tourStep()) { <button type="button" class="btn-secondary planner-tour-help" (click)="startTour()"
+        [disabled]="hallsStatus() === 'loading'" lang="en">Help / Restart tour</button> }
 
       <!-- The hall picker and its two Excel buttons read as one control, not three loose ones. -->
       <div class="hall-card">
@@ -162,7 +168,7 @@
 
   <main class="stage" aria-label="3D hall view">
     <app-ai-chat-launcher />
-    <app-scene3d
+    <app-scene3d data-tour="position"
       [hall]="currentHall()"
       [stalls]="stalls()"
       [selectedStallId]="selectedStallId()"
@@ -215,6 +221,9 @@
         {{ saving() ? 'Saving…' : selectedSavedId() === null ? 'Save layout' : 'Save changes' }}
       </button>
       }
+
+      @if (!sidebarOpen() && !tourStep()) { <button type="button" class="btn-secondary planner-tour-help" (click)="startTour()"
+        [disabled]="hallsStatus() === 'loading'" lang="en">Help / Restart tour</button> }
 
       <div class="hud hud-left">
         <div class="hud-title">{{ currentHall()?.name }}</div>
@@ -379,3 +388,10 @@
     </div>
   </main>
 </div>
+
+@if (tourStep(); as step) {
+  <app-planner-tour [step]="step" [index]="tourIndex()!" [total]="tourSteps().length"
+    (next)="moveTour(tourIndex()! + 1)" (back)="moveTour(tourIndex()! - 1)"
+    (skip)="endTour('skipped')" (finish)="endTour('completed')"
+    (cardHeight)="tourCardHeight.set($event)" />
+}

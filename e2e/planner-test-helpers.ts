@@ -23,6 +23,7 @@ export async function setupPlanner(page: Page, stalls: unknown[] = [], hall: any
       ? { hall, layout: { id: 123, name: hall.name, eventType: 'B2B' }, stalls } : [];
     await route.fulfill({ json });
   });
+  await page.addInitScript(() => localStorage.setItem('stall-planner.guided-tour.v1', 'completed'));
   await page.goto('/planner');
   await page.waitForFunction(() => (window as any).ng?.getComponent(document.querySelector('app-planner-page'))?.store.hallsStatus() === 'ready');
   if (dismiss) await dismissPlottingRules(page);

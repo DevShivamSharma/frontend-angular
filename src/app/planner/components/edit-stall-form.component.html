@@ -11,7 +11,7 @@
     </div>
     <div class="panel-hint">Drag the shop on the grid to move it, or type exact values below.</div>
 
-    <div class="stall-identity">
+    <div class="stall-identity" data-tour="stall-details">
       <span class="stall-number">{{ stall.stallNumber ?? 'NEW — numbered on save' }}</span>
       <span class="status-badge" [attr.data-status]="stall.status">{{ stall.status }}</span>
       <span class="stall-identity-meta">{{ stall.width }} × {{ stall.length }} m · {{ stall.width * stall.length }} m²</span>
