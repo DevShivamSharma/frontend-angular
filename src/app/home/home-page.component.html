@@ -1,4 +1,12 @@
-<div id="viewport" aria-label="Interactive model of Bharat Mandapam" [inert]="!loading.ready()"><canvas #canvas></canvas></div>
+<div id="viewport" aria-label="Interactive model of Bharat Mandapam" [inert]="!loading.ready()"><canvas #canvas></canvas>
+  <button #globeMarker class="venue-marker" type="button" hidden
+    aria-label="Enter Bharat Mandapam" aria-describedby="venue-marker-tooltip"
+    (pointerdown)="markerPointerDown($event)" (click)="enterVenueFromMarker($event)">
+    <span class="venue-marker-icon"><img src="assets/images/bharat-mandapam-marker.png"
+      width="557" height="190" alt="" draggable="false" /></span>
+    <span class="venue-marker-tooltip" id="venue-marker-tooltip" role="tooltip">Bharat Mandapam</span>
+  </button>
+</div>
 <section appVenueLoading [state]="loading" (retry)="retry()"></section>
 <div class="identity" [inert]="!loading.ready()"><span>BHARAT MANDAPAM</span><small>NEW DELHI</small></div>
 <div id="navigation" class="navigation" [class.collapsed]="collapsed()" [inert]="!loading.ready()">
@@ -14,7 +22,7 @@
 </nav>
 <aside appVenueDetails [id]="detailId()" [detail]="details()[detailId()]" [visible]="detailsVisible()" [selection]="selection()" (close)="closeDetails()" (levelChange)="selectLevel($event)" (openPlan)="plan().open($event)"></aside>
 </div>
-<div class="map-tools" [inert]="!loading.ready()" aria-label="View controls"><button id="home-view" (click)="overview()" aria-label="Return to venue" title="Return to venue"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg></button><button id="globe-view" (click)="globe()" [class.active]="globeActive()" [disabled]="!globeAvailable()" aria-label="Explore globe" title="Explore globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button><button id="light-mode" (click)="toggleLight()" [class.active]="daylight()" [attr.aria-label]="daylight() ? 'Switch to evening' : 'Switch to daylight'" [title]="daylight() ? 'Switch to evening' : 'Switch to daylight'"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/></svg></button><div class="tool-gap"></div><button id="zoom-in" (click)="zoom(.74)" aria-label="Zoom in">+</button><button id="zoom-out" (click)="zoom(1.35)" aria-label="Zoom out">−</button></div>
+<div class="map-tools" [inert]="!loading.ready()" aria-label="View controls"><button #homeButton id="home-view" (click)="overview()" aria-label="Return to venue" title="Return to venue"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg></button><button id="globe-view" (click)="globe()" [class.active]="globeActive()" [disabled]="!globeAvailable()" aria-label="Explore globe" title="Explore globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button><button id="light-mode" (click)="toggleLight()" [class.active]="daylight()" [attr.aria-label]="daylight() ? 'Switch to evening' : 'Switch to daylight'" [title]="daylight() ? 'Switch to evening' : 'Switch to daylight'"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/></svg></button><div class="tool-gap"></div><button id="zoom-in" (click)="zoom(.74)" aria-label="Zoom in">+</button><button id="zoom-out" (click)="zoom(1.35)" aria-label="Zoom out">−</button></div>
 <footer [inert]="!loading.ready()"><span id="status" aria-live="polite">{{ status() }}</span><span class="interaction-hint">Drag to orbit · Right drag to pan · Scroll to zoom</span></footer>
 <div id="geo-credit" [hidden]="!geographyReady()" [inert]="!loading.ready()"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> · <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/" target="_blank" rel="noopener">Earth: NASA</a></div>
 <app-floor-plan-dialog />

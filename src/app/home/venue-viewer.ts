@@ -15,7 +15,7 @@ interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.V
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; }
 export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; readonly isGlobe:boolean; dispose:()=>void; }
 /** Demand-rendered venue with identical shading during movement and at rest. */
-export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents): VenueViewer {
+export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement): VenueViewer {
     const lifetime = new AbortController();
     const { signal } = lifetime;
     const cleanups: (() => void)[] = [];
@@ -198,7 +198,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         camera.position.sub(controls.target).setLength(initialFit).add(controls.target);
         controls.update();
         try {
-            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange:events.modeChanged,onInvalidate:invalidate,
+            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,markerElement,onModeChange:events.modeChanged,onInvalidate:invalidate,
                 onLocalMapReady: () => {
                     localMapReady = true;
                     if (root) revealMappedRoads(root);

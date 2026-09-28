@@ -2,6 +2,7 @@
  * Sources and limitations: geography/ATTRIBUTION.md, work/venue/globe-notes.md.
  */
 import * as T from 'three';
+import { createVenueGlobeMarker } from './venue-globe-marker';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { VenueAppearance } from './venue-appearance';
@@ -12,9 +13,9 @@ interface Pose { position: T.Vector3; target: T.Vector3; }
 interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
 type Kind = 'road' | 'building' | 'water' | 'park';
 interface Geography { features: { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][] }[]; }
-interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onLocalMapReady?: () => void; }
+interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onLocalMapReady?: () => void; markerElement?: HTMLElement; }
 
-export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onLocalMapReady}: GlobeOptions) {
+export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onLocalMapReady,markerElement}: GlobeOptions) {
   const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background instanceof T.Color ? scene.background.clone() : new T.Color('#e5e7e5');
   const naturalBackground = localBackground.clone();
   const skyBackground = new T.Color('#17232c'), background = localBackground.clone();
@@ -112,10 +113,8 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     if (bins.road.length) onLocalMapReady?.();
     onInvalidate();
   }).catch(error=>{if(!signal.aborted)console.warn('Delhi context unavailable',error);});
-  // A geographic destination marker, never a replacement for roof labels.
-  const marker=new T.Group();marker.position.set(0,38000,0);marker.visible=false;group.add(marker);
-  const pin=new T.Mesh(new T.SphereGeometry(20000,24,16),new T.MeshBasicMaterial({color:0xe0af62}));marker.add(pin);
-  const ring=new T.Mesh(new T.TorusGeometry(46000,3400,8,64),new T.MeshBasicMaterial({color:0xf3dab3,transparent:true,opacity:.7}));ring.rotation.x=-Math.PI/2;marker.add(ring);
+  const updateMarker = markerElement
+    ? createVenueGlobeMarker(markerElement, camera, renderer.domElement, center, R, signal) : undefined;
   let mode:Mode='venue',transition:Flight|null=null,armedAt=performance.now()+1800,lastLocal:Pose|null=null;
   // Automatic departure/return must still run when controls settle before the cooldown ends.
   let armTimer: number | undefined;
@@ -162,15 +161,6 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     if(mode==='venue'&&!transition){localLimits();camera.position.copy(position);controls.target.copy(target);controls.update();armNavigation(1500);onInvalidate();return;}
     localLimits();startFlight('venue',position,target);
   }
-  let pointerDown:[number,number]|null=null;
-  renderer.domElement.addEventListener('pointerdown',event=>{pointerDown=[event.clientX,event.clientY];},{signal});
-  renderer.domElement.addEventListener('pointerup',event=>{
-    if(mode!=='globe'||transition||!pointerDown||Math.hypot(event.clientX-pointerDown[0],event.clientY-pointerDown[1])>5)return;
-    const rect=renderer.domElement.getBoundingClientRect(),mouse=new T.Vector2((event.clientX-rect.left)/rect.width*2-1,1-(event.clientY-rect.top)/rect.height*2),ray=new T.Raycaster();ray.setFromCamera(mouse,camera);
-    const markerHit=ray.intersectObject(marker,true)[0];if(!markerHit)return;
-    const earthHit=ray.intersectObject(earth,false)[0];
-    if(!earthHit||markerHit.distance<earthHit.distance)goVenue();
-  },{signal});
   function update(){
     const now=performance.now();
     if(transition){
@@ -192,7 +182,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     groundGroup.visible=altitude<80000;
     const groundOpacity=1-T.MathUtils.smoothstep(altitude,9000,45000);groundMaterial.opacity=groundOpacity;
     Object.values(contextMaterials).forEach(m=>m.opacity=groundOpacity);
-    marker.visible=altitude>180000;const markerScale=Math.max(.6,Math.min(12,altitude/R*2));marker.scale.setScalar(markerScale);
+    updateMarker?.(mode === 'globe' && !transition && altitude > 180000);
     background.copy(localBackground).lerp(skyBackground,planetMix);
     const near=altitude>15000?Math.max(5,altitude/1800):Math.max(1,Math.min(32,distance/55));
     const far=altitude>4800?R*18:12000;
