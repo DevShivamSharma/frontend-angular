@@ -27,6 +27,7 @@ import { openSidesLabel } from './components/gate-sides';
 import { IconComponent, IconName } from './components/icon.component';
 import { SavedLayoutsPanelComponent } from './components/saved-layouts-panel.component';
 import { SelfcareImportComponent } from './components/selfcare-import.component';
+import { PdfImportCardComponent } from './pdf-import/pdf-import-card.component';
 import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
@@ -75,6 +76,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
   imports: [
     PlannerTourComponent,
     SelfcareImportComponent,
+    PdfImportCardComponent,
     WorkingHallPanelComponent,
     CreateHallFormComponent,
     AddStallFormComponent,

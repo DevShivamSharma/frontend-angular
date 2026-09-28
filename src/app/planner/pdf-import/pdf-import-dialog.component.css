@@ -1,0 +1,53 @@
+.pdf-dialog { width: min(1400px, calc(100vw - 24px)); height: min(900px, calc(100dvh - 24px)); padding: 0; border: 0; border-radius: 14px; color: var(--text-primary); background: var(--surface-card); box-shadow: var(--shadow-overlay); overflow: hidden; }
+.pdf-dialog[open] { display: flex; flex-direction: column; }
+.pdf-dialog::backdrop { background: rgb(16 24 40 / 0.5); }
+.pdf-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); color: var(--accent); }
+.pdf-heading { flex: 1; min-width: 0; color: var(--text-primary); }
+h2 { margin: 0; font-size: 17px; font-weight: 650; }
+.pdf-heading span { display: block; font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+h3 { margin: 0 0 6px; font-size: 12px; font-weight: 650; text-transform: uppercase; color: var(--text-secondary); }
+.t-error { color: var(--danger-text); }
+.t-warn { color: var(--warning-text); font-size: 12px; margin: 4px 0; }
+.pdf-reading { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.pdf-review { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+.pdf-canvas { display: flex; flex-direction: column; min-height: 0; padding: 10px; gap: 8px; }
+.pdf-canvas app-pdf-plan-view { flex: 1; }
+.canvas-bar, .list-head, .bulk, .align { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.canvas-bar { justify-content: space-between; }
+.pdf-side { min-height: 0; overflow-y: auto; border-left: 1px solid var(--border-subtle); padding: 12px 14px; display: flex; flex-direction: column; gap: 14px; }
+.facts { margin: 4px 0; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+.note { margin: 4px 0; font-size: 12px; line-height: 1.45; color: var(--text-muted); }
+.groups { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid var(--border-default); border-radius: 99px; font-size: 12px; cursor: pointer; }
+.chip small { color: var(--text-muted); }
+.control.mini { width: auto; padding: 3px 6px; font-size: 12px; }
+.pad { display: inline-flex; gap: 2px; }
+.bulk span { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.list-head { justify-content: space-between; }
+.rows { list-style: none; margin: 6px 0 0; padding: 0; max-height: 260px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: 8px; }
+.rows li { display: flex; align-items: center; gap: 6px; padding: 0 8px; border-bottom: 1px solid var(--border-subtle); }
+.rows li:last-child { border-bottom: 0; }
+.rows li.is-selected { background: var(--surface-selected); }
+.rows .empty { padding: 10px; font-size: 12px; color: var(--text-muted); }
+.row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 7px 0; border: 0; background: none; font: inherit; font-size: 12.5px; color: inherit; text-align: left; cursor: pointer; }
+.row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-meta { color: var(--text-muted); font-size: 11.5px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.c-high { background: #15803d; } .c-medium { background: #d97706; } .c-low { background: #dc2626; }
+.sev { min-width: 16px; padding: 0 5px; border-radius: 99px; font-size: 10.5px; font-weight: 650; text-align: center; }
+.s-error { background: var(--danger-surface); color: var(--danger-text); }
+.s-warning { background: var(--warning-surface); color: var(--warning-text); }
+.s-info { background: var(--surface-track); color: var(--text-secondary); }
+.s-rule { background: #fee2e2; color: #991b1b; }
+.issue { margin: 4px 0; padding: 6px 8px; border-radius: 6px; font-size: 12px; line-height: 1.4; }
+.detail .control { margin-bottom: 6px; }
+.pdf-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 16px; border-top: 1px solid var(--border-subtle); }
+.rules { font-size: 12.5px; line-height: 1.45; color: var(--text-secondary); }
+.actions { display: flex; gap: 8px; flex: none; }
+.actions button { width: auto; margin: 0; white-space: nowrap; }
+@media (max-width: 900px) {
+  .pdf-review { grid-template-columns: 1fr; grid-template-rows: minmax(280px, 45%) 1fr; }
+  .pdf-side { border-left: 0; border-top: 1px solid var(--border-subtle); }
+  .pdf-footer { flex-direction: column; align-items: stretch; }
+  .actions { flex-direction: column-reverse; }
+}

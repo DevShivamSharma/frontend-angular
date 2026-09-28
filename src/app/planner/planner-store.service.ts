@@ -888,6 +888,26 @@ export class PlannerStore {
     this.layoutName.set(hall.name);
   }
 
+  /**
+   * Put a reviewed PDF plan import into the editor as a new, unsaved layout on `hall` (a working
+   * copy made for the import, so the master hall and its current stalls stay as they are). The
+   * stalls are placed as reviewed; the usual audit reports any planner-rule issue, and saving
+   * goes through the normal validated save.
+   */
+  applyPdfImport(hall: Hall, stalls: ReadonlyArray<Stall>, layoutName: string): void {
+    this.clearFeedback();
+    this.proposals.set(null);
+    this.halls.update(list => [...list.filter(h => String(h.id) !== String(hall.id)), hall]);
+    this.activeHallId.set(hall.id);
+    this.stalls.update(p => [
+      ...p.filter(s => String(s.hallId) !== String(hall.id)),
+      ...stalls.map(s => ({ ...s, hallId: hall.id }))
+    ]);
+    this.selectedSavedId.set(null);
+    this.selectedStallId.set(null);
+    this.layoutName.set(layoutName);
+  }
+
   // --- saved layout workflow ----------------------------------------------
 
   /**

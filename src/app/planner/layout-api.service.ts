@@ -16,6 +16,7 @@ import {
 import { Stall } from './models/stall.model';
 import { num, normalizeOpenSides } from './geometry/planner-geometry';
 import { effectiveRules } from './geometry/placement-rules';
+import type { PdfImportResult } from './pdf-import/pdf-import.model';
 
 /**
  * Build the save/update request body. Ported from `buildApiPayload()`
@@ -171,6 +172,16 @@ export class LayoutApiService {
   /** `GET /api/stall-types` — the stall sizes offered in draw mode (backend configuration). */
   listStallTypes(): Promise<StallType[]> {
     return firstValueFrom(this.http.get<StallType[]>(`${this.api}/stall-types`));
+  }
+
+  /**
+   * `POST /api/layout/pdf-import` — the stalls the server finds in a CAD hall plan (PDF), for
+   * review. Read-only on the server: nothing is stored.
+   */
+  importPdf(file: Blob, fileName: string): Promise<PdfImportResult> {
+    const form = new FormData();
+    form.append('file', file, fileName);
+    return firstValueFrom(this.http.post<PdfImportResult>(`${this.api}/layout/pdf-import`, form));
   }
 
   /** `POST /api/layout/{id}/validate` — the server's rule audit of the saved layout. */
