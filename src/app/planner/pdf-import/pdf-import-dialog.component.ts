@@ -8,9 +8,10 @@ import {
   ElementRef,
   inject,
   Injector,
+  output,
   signal,
   untracked,
-  viewChild,
+  viewChild
 } from '@angular/core';
 
 import { extractErrorMessage } from '../../core/http-error.util';
@@ -76,6 +77,8 @@ const RULE_LABELS: Record<string, string> = {
   styleUrl: './pdf-import-dialog.component.css',
 })
 export class PdfImportDialogComponent {
+  /** The dialog closed, imported or not (the drafting PDFPLOT command waits for it). */
+  readonly closed = output<void>();
   readonly store = inject(PlannerStore);
   private readonly injector = inject(Injector);
   private readonly api = inject(LayoutApiService);
@@ -229,6 +232,7 @@ export class PdfImportDialogComponent {
 
   onClosed(): void {
     this.opener?.focus?.();
+    this.closed.emit();
   }
 
   restart(): void {

@@ -45,7 +45,7 @@ export class SetupShellComponent {
   readonly steps: Step[] = [
     { n: 1, title: 'Select hall', hint: 'Choose or import a hall', path: '/planner/halls' },
     { n: 2, title: 'Plotting rules', hint: 'Rules stalls must follow', path: '/planner/rules' },
-    { n: 3, title: 'Plan stalls', hint: 'Open the stall editor', path: '/planner/editor' }
+    { n: 3, title: 'Plan stalls', hint: 'Draw stalls on the hall', path: '/planner/draft' }
   ];
 
   readonly current = computed(() => (this.url().startsWith('/planner/rules') ? 2 : 1));

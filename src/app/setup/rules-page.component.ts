@@ -116,8 +116,13 @@ export class RulesPageComponent implements OnInit {
     return relative(new Date(rule.updatedAt));
   }
 
-  /** Step 3: the stall editor, opened on the chosen hall. */
+  /** Step 3: the drafting workspace, opened on the chosen hall. */
   startCreating(): void {
+    void this.router.navigate(['/planner/draft'], { queryParams: { hallId: this.hallId() } });
+  }
+
+  /** The 3D planner on the same hall, for those who prefer placing stalls there. */
+  open3d(): void {
     void this.router.navigate(['/planner/editor'], { queryParams: { hallId: this.hallId() } });
   }
 }

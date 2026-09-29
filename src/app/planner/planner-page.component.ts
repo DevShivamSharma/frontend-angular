@@ -262,6 +262,16 @@ export class PlannerPageComponent implements OnInit {
       });
     });
 
+    // Opened from the drafting workspace on a saved layout (`?layoutId=`).
+    effect(() => {
+      const layoutId = this.venueParams()?.get('layoutId');
+      if (!layoutId || this.hallsStatus() === 'loading') return;
+      const request = 'layout:' + layoutId;
+      if (this.appliedVenueRequest === request) return;
+      this.appliedVenueRequest = request;
+      untracked(() => void this.store.openLayout(layoutId));
+    });
+
     // One dialog to start with: the rule picker when there are rules to choose from, otherwise
     // the plotting guide (it stays one click away in the Rules tab). A layout opened later keeps
     // its own saved rules.
@@ -269,7 +279,7 @@ export class PlannerPageComponent implements OnInit {
       const status = this.store.plannerRulesStatus();
       if (this.landingDialogShown || status === 'loading') return;
       this.landingDialogShown = true;
-      const pick = status === 'ready' && this.store.plannerRules().length > 0;
+      const pick = status === 'ready' && this.store.plannerRules().length > 0 && !this.venueParams()?.get('layoutId');
       untracked(() => afterNextRender(() => (pick ? this.rulePicker() : this.rulesGuide()).open(), { injector: this.injector }));
     });
 

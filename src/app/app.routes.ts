@@ -17,6 +17,13 @@ export const routes: Routes = [
     title: 'Stall planner',
     loadComponent: () => import('./planner/planner-page.component').then(m => m.PlannerPageComponent)
   },
+  // Step 3 for architects: the AutoCAD-like 2D drafting workspace. The 3D editor above stays as
+  // its preview. Opened with `?hallId=` or `?layoutId=`.
+  {
+    path: 'planner/draft',
+    title: 'Drafting · Stall planner',
+    loadComponent: () => import('./planner/drafting/drafting-page.component').then(m => m.DraftingPageComponent)
+  },
   {
     path: 'planner',
     loadComponent: () => import('./setup/setup-shell.component').then(m => m.SetupShellComponent),
