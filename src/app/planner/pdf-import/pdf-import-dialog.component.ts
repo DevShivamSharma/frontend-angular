@@ -27,6 +27,7 @@ import {
   centredAlignment,
   cellCentres,
   checkRules,
+  defaultTarget,
   FloorMask,
   importHall,
   matchGroups,
@@ -64,7 +65,8 @@ const RULE_LABELS: Record<string, string> = {
 
 /**
  * Import a CAD hall plan (PDF): upload -> the server detects the stalls -> align them to a planner
- * hall -> review over the drawing -> confirm into the editor as a new, unsaved layout.
+ * hall (by default the one being worked on) -> review over the drawing -> confirm into the editor
+ * as a new, unsaved layout on that hall.
  *
  * Nothing is guessed silently: every conflict and uncertain item from the drawing is listed, the
  * planner's own rules are checked and reported (never relaxed), and the user decides what goes in.
@@ -108,7 +110,7 @@ export class PdfImportDialogComponent {
   private opener: HTMLElement | null = null;
 
   readonly NEW_HALL = NEW_HALL;
-  readonly halls = computed(() => this.store.halls().filter(h => !String(h.id).startsWith('pdf-hall-')));
+  readonly halls = this.store.halls;
   readonly targetHall = computed<Hall | null>(() => this.halls().find(h => String(h.id) === this.targetId()) ?? null);
   readonly workHall = computed<Hall | null>(() => {
     const r = this.result();
@@ -296,9 +298,11 @@ export class PdfImportDialogComponent {
     this.check.set(null);
     this.filter.set('review');
     this.mode.set('drawing');
-    // Default target: the planner hall whose name carries the drawing's hall numbers.
-    const match = this.halls().find(h => matchGroups(h.name, r.groups).length);
-    const groups = match ? matchGroups(match.name, r.groups) : r.groups.slice(0, 1).map(g => g.group);
+    // Default target: the hall the drawing belongs to (by its hall numbers); the selected hall
+    // when it matches as well as any other, or when no hall matches.
+    const match = defaultTarget(this.halls(), this.store.currentHall() ?? null, r.groups);
+    const matched = match ? matchGroups(match.name, r.groups) : [];
+    const groups = matched.length ? matched : r.groups.slice(0, 1).map(g => g.group);
     this.targetId.set(match ? String(match.id) : NEW_HALL);
     this.groups.set(groups);
     this.nudgeGroup.set(groups[0] ?? '');

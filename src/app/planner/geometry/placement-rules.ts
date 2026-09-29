@@ -13,8 +13,8 @@
  */
 
 /** Tolerance for "touching is allowed" comparisons. Distances come out of sqrt, hence not 1e-8. */
-import { validateOrientedPlacement, usableFloor } from './oriented-placement';
-import { closestPoints, segmentInsideFloor, stallPolygon } from './polygon-geometry';
+import { validateOrientedPlacement } from './oriented-placement';
+import { stallPolygon } from './polygon-geometry';
 
 export const PLACEMENT_EPSILON = 1e-6;
 
@@ -317,12 +317,10 @@ export function validatePlacement(
     }
   }
 
-  // Other stalls: overlap, and the minimum passage between separate stalls (ITPO D1).
+  // Other stalls: overlap only. Stalls may share walls or stand any distance apart on their
+  // closed sides; the passage is required in front of open sides alone (checked below).
   const overlapped: PlacementStall[] = [];
   const overlapAreas: ViolationGeometry[] = [];
-  const candidateCorner = isCornerStall(candidate, ctx);
-  const neighbours = ctx.stalls.filter(s => s.status !== 'CANCELLED' && String(s.id) !== ignoreId);
-  const nearest = Math.min(...neighbours.map(s => rectDistance(rect, footprintRect(s))));
 
   for (const other of ctx.stalls) {
     if (ignoreId !== null && String(other.id) === String(ignoreId)) continue;
@@ -333,36 +331,6 @@ export function validatePlacement(
     if (rectsOverlap(rect, otherRect)) {
       overlapped.push(other);
       overlapAreas.push({ type: 'rect', rect: rectIntersection(rect, otherRect) });
-      continue;
-    }
-
-    const gap = rectDistance(rect, otherRect);
-    const otherCorner = isCornerStall(other, ctx);
-    const corner = candidateCorner || otherCorner;
-    const nearestToOtherCorner = otherCorner && gap <= Math.min(...neighbours
-      .filter(s => s.id !== other.id).map(s => rectDistance(otherRect, footprintRect(s)))) + EPS;
-    if (gap > EPS && ((candidateCorner && gap <= nearest + EPS) || nearestToOtherCorner) && ctx.circleRadius === undefined) {
-      const [from, to] = closestPoints(stallPolygon(candidate), stallPolygon(other));
-      if (!segmentInsideFloor(from, to, usableFloor(ctx))) violations.push({
-        code: 'CORNER_PASSAGE', ruleRef: 'Usable passage',
-        message: 'The gap to the nearest stall crosses outside the usable hall; exterior space is not passage.',
-        geometry: [{ type: 'rect', rect: gapRect(rect, otherRect) }], relatedStallIds: [String(other.id)]
-      });
-    }
-    const touching = gap <= EPS;
-    const allowedTouch = touching && !corner && backToBack(candidate, other);
-    if (gap < passage - EPS && !allowedTouch) {
-      violations.push({
-        code: corner ? 'CORNER_PASSAGE' : touching ? 'INVALID_TOUCHING' : 'PATHWAY_WIDTH',
-        ruleRef: 'Stall passage',
-        message: touching && !corner
-          ? `Touching stalls must be back-to-back with opposite outward open sides next to ${stallLabel(other)}.`
-          : (corner ? 'Corner stalls need a clear passage. ' : '') +
-          `Required ${fmt(passage)} m passage (${ctx.eventType}) is blocked: ` +
-          `only ${fmt(gap)} m left next to ${stallLabel(other)}.`,
-        geometry: [{ type: 'rect', rect: gapRect(rect, otherRect) }],
-        relatedStallIds: [String(other.id)],
-      });
     }
   }
 
@@ -550,19 +518,6 @@ export function isCornerStall(stall: Footprint, ctx: PlacementContext): boolean 
     return Math.abs(cross) > EPS && segmentRectDistance(a, b, r) <= distance + EPS &&
       segmentRectDistance(b, c, r) <= distance + EPS;
   }) ?? false);
-}
-
-function backToBack(a: Footprint, b: Footprint): boolean {
-  const ar = footprintRect(a), br = footprintRect(b);
-  const as = openSidesOf(a), bs = openSidesOf(b);
-  // A single outward frontage leaves the shared boundary closed. Point-only contact is invalid.
-  if (as.length !== 1 || bs.length !== 1) return false;
-  const xOverlap = Math.min(ar.maxX, br.maxX) - Math.max(ar.minX, br.minX) > EPS;
-  const zOverlap = Math.min(ar.maxZ, br.maxZ) - Math.max(ar.minZ, br.minZ) > EPS;
-  return (xOverlap && Math.abs(ar.maxZ - br.minZ) <= EPS && as[0] === 'BACK' && bs[0] === 'FRONT') ||
-    (xOverlap && Math.abs(br.maxZ - ar.minZ) <= EPS && as[0] === 'FRONT' && bs[0] === 'BACK') ||
-    (zOverlap && Math.abs(ar.maxX - br.minX) <= EPS && as[0] === 'LEFT' && bs[0] === 'RIGHT') ||
-    (zOverlap && Math.abs(br.maxX - ar.minX) <= EPS && as[0] === 'RIGHT' && bs[0] === 'LEFT');
 }
 
 function rectInsideCircle(r: Rect, radius: number): boolean {

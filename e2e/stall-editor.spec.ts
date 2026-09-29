@@ -46,28 +46,33 @@ async function edit(page: Page, label: string, value: string) {
 }
 
 for (const width of [3, 5]) {
-  test(`UI: ${width} m corner passage accepts exact gap and rejects less`, async ({ page }) => {
-    await setup(page, [stall(1, -22, -22), stall(2, -10, -22)]);
+  test(`UI: ${width} m open-side passage accepts exact depth and rejects less`, async ({ page }) => {
+    // T-2 stands in front of the open FRONT side of T-1.
+    await setup(page, [stall(1, -22, -22), stall(2, -22, -10)]);
     const passage = page.getByRole('spinbutton', { name: 'Passage width (m)' });
     await passage.fill(String(width));
     await passage.press('Tab');
-    await edit(page, 'Position X (m)', String(-18 + width));
-    expect((await state(page)).stalls[1].posX).toBe(-18 + width);
-    await edit(page, 'Position X (m)', String(-18 + width - 0.1));
-    expect((await state(page)).stalls[1].posX).toBe(-18 + width);
-    expect((await state(page)).rejection.violations.some((v: any) => v.code === 'CORNER_PASSAGE')).toBe(true);
-    await expect(page.locator('app-violations-panel[section=alerts]')).toContainText('Corner stalls need a clear passage');
+    await edit(page, 'Position Z (m)', String(-18 + width));
+    expect((await state(page)).stalls[1].posZ).toBe(-18 + width);
+    await edit(page, 'Position Z (m)', String(-18 + width - 0.1));
+    expect((await state(page)).stalls[1].posZ).toBe(-18 + width);
+    expect((await state(page)).rejection.violations.some((v: any) => v.code === 'OPEN_SIDE_BLOCKED')).toBe(true);
+    await expect(page.locator('app-violations-panel[section=alerts]')).toContainText('Blocks the FRONT open side');
+    // Closed sides may share a wall.
+    await edit(page, 'Position Z (m)', '-22');
+    await edit(page, 'Position X (m)', '-18');
+    expect((await state(page)).stalls[1]).toMatchObject({ posX: -18, posZ: -22 });
   });
 }
 
-test('UI: irregular notch corner rejects insufficient gap and exterior frontage', async ({ page }, info) => {
+test('UI: irregular notch corner rejects a blocked open side and exterior frontage', async ({ page }, info) => {
   const boundary = [{ x: -25, z: -25 }, { x: 5, z: -25 }, { x: 5, z: -5 },
     { x: 25, z: -5 }, { x: 25, z: 25 }, { x: -25, z: 25 }];
   await setup(page, [stall(1, 2, -7, 'LEFT'), stall(2, -5, -7, 'LEFT')], { ...hall, boundary } as typeof hall);
   expect((await state(page)).audit).toEqual([]);
   await edit(page, 'Position X (m)', '-4.9');
   expect((await state(page)).stalls[1].posX).toBe(-5);
-  expect((await state(page)).rejection.violations.some((v: any) => v.code === 'CORNER_PASSAGE')).toBe(true);
+  expect((await state(page)).rejection.violations.some((v: any) => v.code === 'OPEN_SIDE_BLOCKED')).toBe(true);
   await page.locator('.stall-chip').filter({ hasText: 'T-1' }).click();
   await page.getByLabel('Face one direction').selectOption('RIGHT');
   expect((await state(page)).stalls[0].openSides).toEqual(['LEFT']);
@@ -76,21 +81,22 @@ test('UI: irregular notch corner rejects insufficient gap and exterior frontage'
 });
 
 test('UI: back-to-back touching, invalid open side, rotation and resize', async ({ page }, info) => {
-  await setup(page, [stall(1, 0, 0, 'BACK'), stall(2, 0, 7)]);
+  // T-3 and T-4 stand either side of T-2, so a quarter turn points its open side at one of them.
+  await setup(page, [stall(1, 0, 0, 'BACK'), stall(3, 4, 7), stall(4, -4, 7), stall(2, 0, 7)]);
   await edit(page, 'Position Z (m)', '4');
-  expect((await state(page)).stalls[1].posZ).toBe(4);
+  expect((await state(page)).stalls[3].posZ).toBe(4);
   expect((await state(page)).audit).toEqual([]);
   await page.getByLabel('Face one direction').selectOption('BACK');
   await expect(page.getByLabel('Face one direction')).toHaveValue('FRONT');
-  expect((await state(page)).stalls[1].openSides).toEqual(['FRONT']);
-  await expect(page.locator('app-violations-panel[section=alerts]')).toContainText('opposite outward open sides');
+  expect((await state(page)).stalls[3].openSides).toEqual(['FRONT']);
+  await expect(page.locator('app-violations-panel[section=alerts]')).toContainText('BACK open side needs 3 m of clear passage');
   await page.getByRole('button', { name: 'Rotate T-2', exact: true }).click();
-  expect((await state(page)).stalls[1].openSides).toEqual(['FRONT']);
+  expect((await state(page)).stalls[3].openSides).toEqual(['FRONT']);
   expect((await state(page)).rejection.title).toBe('Rotation rejected');
   await edit(page, 'Rotation (°)', '45');
-  expect((await state(page)).stalls[1].rotation ?? 0).toBe(0);
+  expect((await state(page)).stalls[3].rotation ?? 0).toBe(0);
   await edit(page, 'Length (m)', '6');
-  expect((await state(page)).stalls[1].length).toBe(4);
+  expect((await state(page)).stalls[3].length).toBe(4);
   expect((await state(page)).rejection.violations.some((v: any) => v.code === 'STALL_OVERLAP')).toBe(true);
   await page.screenshot({ path: info.outputPath('invalid-resize-desktop.png'), fullPage: true });
 });
@@ -105,7 +111,8 @@ test('UI: real canvas drag shows a live violation and rolls back invalid drop', 
   const points = await page.evaluate(() => {
     const c = (window as any).ng.getComponent(document.querySelector('app-scene3d'));
     const r = c.renderer.domElement.getBoundingClientRect();
-    return [10, 5].map(x => {
+    // Dropped at x = 3 the stall would overlap T-1 (closed sides may touch, never overlap).
+    return [10, 3].map(x => {
       const p = c.camera.position.clone().set(x, 0.15, 0).project(c.camera);
       return { x: r.left + (p.x + 1) * r.width / 2, y: r.top + (1 - p.y) * r.height / 2 };
     });
@@ -120,7 +127,8 @@ test('UI: real canvas drag shows a live violation and rolls back invalid drop', 
 });
 
 test('UI: draw orientation, invalid setting, changed setting audits existing layout', async ({ page }) => {
-  await setup(page, [stall(1, 0, 0), stall(2, 7, 0)]);
+  // T-2 stands 3 m in front of T-1's open side: enough for 3 m, not for 5 m.
+  await setup(page, [stall(1, 0, 0), stall(2, 0, 7)]);
   await page.getByRole('button', { name: 'Draw stall', exact: true }).click();
   await page.locator('app-editor-toolbar').getByLabel('Open side').selectOption('LEFT');
   expect(await page.evaluate(() => (window as any).ng.getComponent(document.querySelector('app-planner-page')).store.draftOpenSide())).toBe('LEFT');

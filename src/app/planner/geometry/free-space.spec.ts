@@ -31,7 +31,7 @@ describe('FreeSpaceMap', () => {
 
   it('scattered free cells do not make room for a large stall', () => {
     // A row of 2 x 2 stalls with 1 m gaps everywhere: lots of empty area in total, none of it
-    // contiguous enough for a 10 x 10 stall (and every 1 m gap also breaks the 3 m passage rule).
+    // contiguous enough for a 10 x 10 stall.
     const stalls: PlacementStall[] = [];
     for (let z = 0; z < 12; z += 3) {
       for (let x = 0; x < 20; x += 3) stalls.push(stall(`S${x}-${z}`, x, z, 2, 2));
@@ -44,7 +44,7 @@ describe('FreeSpaceMap', () => {
 
   it('finds the nearest contiguous spot that passes every rule', () => {
     const map = new FreeSpaceMap(grid, ctx([stall('A', 0, 0, 3, 2)]));
-    // A corner stall cannot share an edge, and its FRONT access must stay free.
+    // The FRONT access of stall A must stay free.
     const spot = map.nearestPlacement(3, 2, { x: 1.5, z: 1 });
     expect(spot).not.toBeNull();
     expect(validatePlacement(spot!, ctx([stall('A', 0, 0, 3, 2)])).valid).toBeTrue();

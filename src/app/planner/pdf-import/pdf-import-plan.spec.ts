@@ -12,6 +12,7 @@ import {
   cellCentres,
   centredAlignment,
   checkRules,
+  defaultTarget,
   FloorMask,
   frameOffsets,
   importHall,
@@ -83,6 +84,21 @@ describe('PDF import plan', () => {
     expect(matchGroups('Hall 08', groups)).toEqual(['8']);
   });
 
+  it('defaults to the hall the drawing belongs to, not just the selected one', () => {
+    const groups = [group('11', 0, 0), group('10', 0, 0), group('9', 0, 0), group('8', 0, 0)];
+    const hall = (id: number, name: string): Hall => ({ ...plainHall(40, 40), id, name });
+    const h1 = hall(1, 'Hall 1FF'), h11 = hall(11, 'Hall 11'), h8 = hall(8, 'Hall 8-9-10');
+    const h8copy = hall(88, 'Hall 8-9-10 (PDF import)');
+    const halls = [h1, h11, h8, h8copy];
+    // Hall 1FF is selected but the drawing is of halls 8-11: the best-matching hall wins.
+    expect(defaultTarget(halls, h1, groups)).toBe(h8);
+    // A selected hall that matches as well as any other is kept.
+    expect(defaultTarget(halls, h8copy, groups)).toBe(h8copy);
+    // No hall matches: the selected hall is kept.
+    expect(defaultTarget(halls, h1, [group('20', 0, 0)])).toBe(h1);
+    expect(defaultTarget(halls, null, [group('20', 0, 0)])).toBeNull();
+  });
+
   it('keeps the drawing halls where the page has them, on the half-metre grid', () => {
     const r = result([], [group('10', 100, 50), group('9', 162.6, 40)]);
     // (162.6 - 100) / 5 = 12.52 m -> 12.5 m; (40 - 50) / 5 = -2 m.
@@ -144,17 +160,17 @@ describe('PDF import plan', () => {
     expect(a.offsets['9'].z).toBe(a.offsets['10'].z);
   });
 
-  it('imports into a copy of the hall: same rules, only a 0.5 m size step when the drawing needs it', () => {
+  it('imports into the chosen hall itself: same id, name and rules, only a 0.5 m size step when the drawing needs it', () => {
     const master = plainHall(40, 40, { snapStep: 1, peripheralClearance: 2 });
     const snapshot = JSON.stringify(master);
     const r = result([box('10', 0, 0)], [group('10', 0, 0, true)]);
-    const copy = importHall(master, r, ['10'], 123);
-    expect(copy.id).toBe('pdf-hall-123');
-    expect(copy.name).toBe('Hall 8-9-10 (PDF import)');
-    expect(copy.rules).toEqual({ snapStep: 0.5, peripheralClearance: 2 });
+    const half = importHall(master, r, ['10'], 123);
+    expect(half.id).toBe(master.id);
+    expect(half.name).toBe('Hall 8-9-10');
+    expect(half.rules).toEqual({ snapStep: 0.5, peripheralClearance: 2 });
     expect(JSON.stringify(master)).toBe(snapshot);
     const whole = importHall(master, result([box('10', 0, 0)], [group('10', 0, 0)]), ['10'], 123);
-    expect(whole.rules).toEqual(master.rules);
+    expect(whole).toBe(master);
   });
 
   it('sizes a new hall to the drawing with room to spare', () => {
@@ -165,9 +181,9 @@ describe('PDF import plan', () => {
 
   it('reports planner-rule conflicts and finds a subset that passes together', () => {
     const hall = plainHall(40, 40, { snapStep: 1, peripheralClearance: 1 });
-    // Two stalls side by side, both open at the front: touching, not back-to-back.
+    // Two stalls open at the front, the second standing in the passage in front of the first.
     const a = box('10', 10, 10);
-    const b = box('10', 14, 10);
+    const b = box('10', 10, 14);
     // A third one far away.
     const c = box('10', 25, 25);
     const align = { rotation: 0 as const, offsets: { '10': { x: -20, z: -20 } } };
@@ -194,21 +210,33 @@ describe('PDF import plan', () => {
       store = TestBed.inject(PlannerStore);
     });
 
-    it('opens a new unsaved layout on the working hall and leaves the other halls alone', () => {
-      const master = store.halls()[0];
-      const before = store.stalls().length;
+    it('opens a new unsaved layout on the selected hall and adds no hall', () => {
+      const master = store.currentHall()!;
+      const halls = store.halls().map(h => h.id);
+      const elsewhere = store.stalls().filter(s => String(s.hallId) !== String(master.id)).length;
       const r = result([stall('11', L_SHAPE, [3, 4], { area: 30 }), box('11', 10, 0)], [group('11', 0, 0)]);
       const hall = importHall(master, r, ['11'], 99);
       const align = centredAlignment(r, ['11'], hall);
       const stalls = r.stalls.map(s => toPlannerStall(s, placeOutline(s, align), hall.id)!);
       store.applyPdfImport(hall, stalls, 'Hall · plan');
-      expect(store.currentHall()?.id).toBe('pdf-hall-99');
+      expect(store.currentHall()?.id).toBe(master.id);
+      expect(store.currentHall()?.name).toBe(master.name);
+      expect(store.halls().map(h => h.id)).toEqual(halls);
       expect(store.currentStalls().length).toBe(2);
       expect(store.currentStalls().some(s => s.footprint?.length === 6)).toBe(true);
       expect(store.selectedSavedId()).toBeNull();
       expect(store.layoutName()).toBe('Hall · plan');
-      expect(store.halls().find(h => h.id === master.id)).toEqual(master);
-      expect(store.stalls().length).toBe(before + 2);
+      expect(store.stalls().length).toBe(elsewhere + 2);
+    });
+
+    it('adds a hall only when a new hall sized to the drawing is chosen', () => {
+      const before = store.halls().length;
+      const r = result([box('11', 0, 0)], [group('11', 0, 0)]);
+      const hall = importHall(null, r, ['11'], 99);
+      const align = centredAlignment(r, ['11'], hall);
+      store.applyPdfImport(hall, r.stalls.map(s => toPlannerStall(s, placeOutline(s, align), hall.id)!), 'Hall · plan');
+      expect(store.halls().length).toBe(before + 1);
+      expect(store.currentHall()?.id).toBe('pdf-hall-99');
     });
   });
 });
