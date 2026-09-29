@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 
@@ -10,9 +11,10 @@ import type { Hall, HallLegend } from '../planner/models/hall.model';
 import type { Hall as ItpoHall } from '../home/venue.models';
 import { parseHallIdentity } from '../shared/hall-identity';
 import { AMENITY_GROUPS, AMENITY_KINDS, amenityIcon, amenityInfo } from './amenity-kinds';
-import { CanvasAmenity, PlanCanvasComponent } from './plan-canvas.component';
+import { boundsOf, draftFromArea, openingsFor, outlineProblem, polygonArea } from './custom-hall';
+import { CanvasAmenity, CanvasTool, PlanCanvasComponent } from './plan-canvas.component';
 import { SetupApiService } from './setup-api.service';
-import type { HallDraft, HallImportResult, ImportedAmenity } from './setup.models';
+import type { HallDraft, HallImportResult, ImportedAmenity, RoomOutline } from './setup.models';
 
 type Phase = 'pick' | 'uploading' | 'analysing' | 'review' | 'saving';
 
@@ -39,6 +41,10 @@ interface WorkState {
 
 const MAX_DXF_MB = 80;
 const MAX_PDF_MB = 25;
+const MAX_IMAGE_MB = 25;
+const IMAGE_TYPES = ['png', 'jpg', 'jpeg', 'webp'];
+/** A picture has no scale: it starts this wide, until a measured length or the area sets it. */
+const IMAGE_START_WIDTH_M = 100;
 
 /**
  * Step 1b: import a hall from its floor plan. Upload -> the server reads the plan -> the user
@@ -46,7 +52,7 @@ const MAX_PDF_MB = 25;
  */
 @Component({
   selector: 'app-hall-import-page',
-  imports: [RouterLink, PlanCanvasComponent],
+  imports: [RouterLink, DecimalPipe, PlanCanvasComponent],
   templateUrl: './hall-import-page.component.html',
   styleUrl: './hall-import-page.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -64,7 +70,32 @@ export class HallImportPageComponent implements OnInit {
   readonly error = signal('');
 
   readonly result = signal<HallImportResult | null>(null);
+  /** Halls made from an area the user picked or drew, after the server's suggestions. */
+  readonly extraDrafts = signal<HallDraft[]>([]);
+  readonly drafts = computed(() => [...(this.result()?.candidates ?? []), ...this.extraDrafts()]);
   readonly candidate = signal(0);
+  /** Outlines the user edited, by draft id. */
+  readonly outlineEdits = signal<Record<string, Point[]>>({});
+
+  // --- tools on the plan ---------------------------------------------------------------------
+  private readonly canvas = viewChild(PlanCanvasComponent);
+  readonly tool = signal<CanvasTool>('none');
+  /** The length marked with the measure tool, in plan metres, while its real length is asked. */
+  readonly measuredLength = signal<number | null>(null);
+  readonly realLength = signal<number | null>(null);
+  /** Real metres per plan metre, from a measured length; null until the user sets one. */
+  readonly calibration = signal<number | null>(null);
+  private customs = 0;
+  /** A picture of the plan (image upload), shown behind it in the overview's metres. */
+  readonly picture = signal<{ href: string; width: number; height: number } | null>(null);
+  /** The picture in the frame the canvas shows: the overview's, or the current hall's. */
+  readonly underlay = computed(() => {
+    const p = this.picture();
+    const d = this.draft();
+    if (!p || !d) return null;
+    const o = this.onOverview() ? { x: 0, z: 0 } : d.origin;
+    return { href: p.href, x: -p.width / 2 - o.x, z: -p.height / 2 - o.z, width: p.width, height: p.height };
+  });
   /** Halls of a multi-hall plan already saved: draft id -> saved hall id. */
   readonly savedIds = signal<Record<string, string | number>>({});
   private readonly work = new Map<string, WorkState>();
@@ -76,7 +107,7 @@ export class HallImportPageComponent implements OnInit {
   });
   /** The next hall of the plan still to save, after the current one (wrapping round). */
   readonly nextUnsaved = computed(() => {
-    const list = this.result()?.candidates ?? [];
+    const list = this.drafts();
     for (let k = 1; k <= list.length; k++) {
       const i = (this.candidate() + k) % list.length;
       if (i !== this.candidate() && this.savedIds()[list[i].id] === undefined) return i;
@@ -110,21 +141,42 @@ export class HallImportPageComponent implements OnInit {
   readonly iconOf = amenityIcon;
   readonly labelOf = (kind: string) => amenityInfo(kind).label;
 
-  readonly draft = computed<HallDraft | null>(() => this.result()?.candidates[this.candidate()] ?? null);
-  readonly needsScale = computed(() => this.result()?.scale.known === false);
-  /** Metres per plan metre: 1, or the scale that gives the outline the hall's real area. */
-  readonly factor = computed(() => {
+  readonly draft = computed<HallDraft | null>(() => this.drafts()[this.candidate()] ?? null);
+  /** The outline the hall will have: the user's edit, else the draft's own. */
+  readonly boundary = computed<Point[]>(() => {
     const d = this.draft();
+    return d ? (this.outlineEdits()[d.id] ?? d.boundary) : [];
+  });
+  readonly outlineEdited = computed(() => {
+    const d = this.draft();
+    return !!d && this.outlineEdits()[d.id] !== undefined;
+  });
+  readonly outlineError = computed(() => (this.boundary().length ? outlineProblem(this.boundary()) : null));
+  /** Doors follow the outline and the facilities kept, so edits never leave a door off the wall. */
+  readonly openings = computed(() => openingsFor(this.amenities().filter(a => a.included), this.boundary()));
+  readonly needsScale = computed(() => this.result()?.scale.known === false);
+  /** Real metres per plan metre: a measured length wins, else the hall's area (PDF without scale), else 1. */
+  readonly factor = computed(() => {
+    const measured = this.calibration();
+    if (measured) return measured;
     const area = this.realArea();
-    return this.needsScale() && d && area && area > 0 && d.areaM2 > 0 ? Math.sqrt(area / d.areaM2) : 1;
+    const planArea = polygonArea(this.boundary());
+    return this.needsScale() && area && area > 0 && planArea > 0 ? Math.sqrt(area / planArea) : 1;
   });
   readonly size = computed(() => {
-    const d = this.draft();
-    if (!d) return '';
+    const b = this.boundary();
+    if (b.length < 3) return '';
+    const box = boundsOf(b);
     const k = this.factor();
     const fmt = (n: number) => (Math.round(n * 10) / 10).toLocaleString('en-IN');
-    return `${fmt(d.width * k)} × ${fmt(d.length * k)} m · ${Math.round(d.areaM2 * k * k).toLocaleString('en-IN')} m²`;
+    return `${fmt((box.maxX - box.minX) * k)} × ${fmt((box.maxZ - box.minZ) * k)} m · ${Math.round(polygonArea(b) * k * k).toLocaleString('en-IN')} m²`;
   });
+  /** What the plan canvas shows: the whole plan while picking or drawing an area, else the hall. */
+  readonly onOverview = computed(() => this.tool() === 'pick' || this.tool() === 'draw');
+  readonly canvasDraft = computed(() => (this.onOverview() ? this.result()?.overview : this.draft()) ?? null);
+  readonly canvasAmenities = computed<CanvasAmenity[]>(() =>
+    this.onOverview() ? (this.result()?.overview.amenities ?? []) : this.visibleAmenities()
+  );
   readonly visibleAmenities = computed<CanvasAmenity[]>(() => this.amenities().filter(a => a.included));
   readonly groups = computed(() =>
     AMENITY_GROUPS.map(group => ({
@@ -139,13 +191,16 @@ export class HallImportPageComponent implements OnInit {
   });
   readonly nameError = computed(() => (this.name().trim() ? '' : 'Give the hall a name.'));
   readonly areaError = computed(() => {
-    if (!this.needsScale()) return '';
+    if (!this.needsScale() || this.calibration()) return '';
     const area = this.realArea();
     return area && area >= 50 && area <= 500_000 ? '' : 'Enter the hall’s floor area in m², e.g. 6950.';
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.upload?.unsubscribe());
+    inject(DestroyRef).onDestroy(() => {
+      this.upload?.unsubscribe();
+      this.dropPicture();
+    });
     // Keep the ITPO area in step with the hall name, unless the user typed an area themselves.
     effect(() => {
       if (!this.needsScale()) return;
@@ -191,14 +246,19 @@ export class HallImportPageComponent implements OnInit {
   start(file: File): void {
     this.error.set('');
     const ext = /\.([a-z0-9]+)$/i.exec(file.name)?.[1]?.toLowerCase();
+    if (ext && IMAGE_TYPES.includes(ext)) {
+      void this.startPicture(file);
+      return;
+    }
     if (ext === 'dwg') {
       this.error.set('DWG files can’t be read yet. In AutoCAD choose Save As → DXF (ASCII), then upload the DXF.');
       return;
     }
     if (ext !== 'dxf' && ext !== 'pdf') {
-      this.error.set('Choose a DXF or PDF floor plan.');
+      this.error.set('Choose a DXF, PDF or image (PNG, JPG) floor plan.');
       return;
     }
+    this.dropPicture();
     const limit = ext === 'pdf' ? MAX_PDF_MB : MAX_DXF_MB;
     if (file.size > limit * 1024 * 1024) {
       this.error.set(`This ${ext.toUpperCase()} is ${(file.size / 1048576).toFixed(0)} MB; the limit is ${limit} MB. Export only this hall's floor and try again.`);
@@ -221,6 +281,78 @@ export class HallImportPageComponent implements OnInit {
     });
   }
 
+  /**
+   * A picture of a plan (photo, scan, screenshot) has no lines to read: it is shown behind the
+   * plan so the user can trace the hall, set the scale from a known length and place the
+   * facilities. It never leaves the browser.
+   */
+  private async startPicture(file: File): Promise<void> {
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      this.error.set(`This image is ${(file.size / 1048576).toFixed(0)} MB; the limit is ${MAX_IMAGE_MB} MB.`);
+      return;
+    }
+    const href = URL.createObjectURL(file);
+    const image = new Image();
+    image.src = href;
+    try {
+      await image.decode();
+    } catch {
+      URL.revokeObjectURL(href);
+      this.error.set('This image could not be opened. Try a PNG or JPG.');
+      return;
+    }
+    this.upload?.unsubscribe();
+    this.dropPicture();
+    this.file.set(file);
+    const width = IMAGE_START_WIDTH_M;
+    const height = round((width * image.naturalHeight) / image.naturalWidth);
+    this.picture.set({ href, width, height });
+    const whole: HallDraft = {
+      id: 'picture',
+      outlineLabel: 'The whole picture — trace the hall with Draw outline or Edit outline',
+      name: file.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim().slice(0, 60) || 'New hall',
+      width,
+      length: height,
+      areaM2: Math.round(width * height),
+      boundary: [
+        { x: -width / 2, z: -height / 2 },
+        { x: width / 2, z: -height / 2 },
+        { x: width / 2, z: height / 2 },
+        { x: -width / 2, z: height / 2 }
+      ],
+      amenities: [],
+      markers: [],
+      openings: [],
+      zones: [],
+      blockedAreas: [],
+      legends: [],
+      compass: null,
+      linework: [],
+      origin: { x: 0, z: 0 }
+    };
+    this.review({
+      fileName: file.name,
+      format: 'image',
+      scale: { metresPerUnit: width / image.naturalWidth, known: false, source: 'A picture has no scale' },
+      multiHall: false,
+      candidates: [whole],
+      overview: { ...whole, id: 'overview' },
+      rooms: [],
+      warnings: [
+        'This is a picture, so nothing could be read from it automatically. Trace the hall with Draw outline, set the scale by measuring a length you know, and add toilets, lifts and gates with “Add on plan”.'
+      ],
+      stats: { layers: 0, shapes: 0, texts: 0, symbols: 0 }
+    });
+    // Tracing is the first thing to do with a picture.
+    this.tool.set('draw');
+  }
+
+  private dropPicture(): void {
+    const p = this.picture();
+    if (p) URL.revokeObjectURL(p.href);
+    this.picture.set(null);
+  }
+
   cancelUpload(): void {
     this.upload?.unsubscribe();
     this.phase.set('pick');
@@ -232,6 +364,10 @@ export class HallImportPageComponent implements OnInit {
     this.result.set(result);
     this.work.clear();
     this.savedIds.set({});
+    this.extraDrafts.set([]);
+    this.outlineEdits.set({});
+    this.calibration.set(null);
+    this.tool.set('none');
     this.candidate.set(-1);
     this.useCandidate(0);
     this.phase.set('review');
@@ -242,7 +378,7 @@ export class HallImportPageComponent implements OnInit {
    * keep their edits while you switch between them.
    */
   useCandidate(index: number): void {
-    const list = this.result()?.candidates ?? [];
+    const list = this.drafts();
     const d = list[index];
     if (!d) return;
     const current = list[this.candidate()];
@@ -275,11 +411,12 @@ export class HallImportPageComponent implements OnInit {
     this.submitted.set(false);
     this.selectedId.set(null);
     this.placing.set(null);
+    this.tool.set('none');
   }
 
   /** The name shown on a hall's tab: the edited one for halls already visited. */
   tabName(index: number): string {
-    const d = this.result()?.candidates[index];
+    const d = this.drafts()[index];
     if (!d) return '';
     if (index === this.candidate()) return this.name() || d.name;
     return this.work.get(d.id)?.name ?? d.name;
@@ -326,6 +463,78 @@ export class HallImportPageComponent implements OnInit {
     this.selectedId.set(null);
   }
 
+  // --- tools -------------------------------------------------------------------------------
+
+  setTool(tool: CanvasTool): void {
+    this.placing.set(null);
+    this.measuredLength.set(null);
+    this.realLength.set(null);
+    this.tool.set(this.tool() === tool ? 'none' : tool);
+  }
+
+  changeOutline(points: Point[]): void {
+    const d = this.draft();
+    if (d) this.outlineEdits.update(edits => ({ ...edits, [d.id]: points }));
+  }
+
+  resetOutline(): void {
+    const d = this.draft();
+    if (!d) return;
+    this.outlineEdits.update(({ [d.id]: _, ...rest }) => rest);
+  }
+
+  onMeasured(m: { distance: number }): void {
+    this.measuredLength.set(m.distance > 0.01 ? m.distance : null);
+    this.realLength.set(null);
+  }
+
+  applyMeasurement(): void {
+    const plan = this.measuredLength();
+    const real = this.realLength();
+    if (!plan || !real || real <= 0) return;
+    // Relative to the scale in use, so measuring again refines rather than restarts.
+    this.calibration.set((real / plan) * (this.calibration() ?? 1));
+    this.measuredLength.set(null);
+    this.tool.set('none');
+    this.notify.success('Scale set', `Everything is now sized so that line is ${real} m.`);
+  }
+
+  clearCalibration(): void {
+    this.calibration.set(null);
+  }
+
+  pickRoom(room: RoomOutline): void {
+    this.addCustom(room.polygon, `Area picked on the plan · ${room.areaM2.toLocaleString('en-IN')} m²`);
+  }
+
+  drawnOutline(points: Point[]): void {
+    const problem = outlineProblem(points);
+    if (problem) {
+      this.notify.error('That outline cannot be used', problem);
+      return;
+    }
+    this.addCustom(points, `Outline you drew · ${Math.round(polygonArea(points)).toLocaleString('en-IN')} m²`);
+  }
+
+  finishDrawing(): void {
+    this.canvas()?.finishDrawing();
+  }
+
+  undoPoint(): void {
+    this.canvas()?.undoPoint();
+  }
+
+  /** A hall from an area of the plan (overview frame), added after the suggestions and opened. */
+  private addCustom(polygon: Point[], label: string): void {
+    const overview = this.result()?.overview;
+    if (!overview) return;
+    const draft = draftFromArea(overview, polygon, `custom-${++this.customs}`, label);
+    this.extraDrafts.update(list => [...list, draft]);
+    this.tool.set('none');
+    this.useCandidate(this.drafts().length - 1);
+    this.notify.success('Hall outline set', `${draft.outlineLabel}. Check its facilities, then save.`);
+  }
+
   place(position: Point): void {
     const kind = this.placing();
     if (!kind) return;
@@ -344,6 +553,7 @@ export class HallImportPageComponent implements OnInit {
     this.result.set(null);
     this.work.clear();
     this.savedIds.set({});
+    this.extraDrafts.set([]);
     this.phase.set('pick');
   }
 
@@ -354,10 +564,10 @@ export class HallImportPageComponent implements OnInit {
 
   /** Multi-hall: stop here with the halls saved so far; the rest are not imported. */
   async finish(): Promise<void> {
-    const pending = (this.result()?.candidates.length ?? 0) - this.savedCount();
+    const pending = this.drafts().length - this.savedCount();
     if (pending > 0) {
       const confirmed = await this.notify.confirm({
-        title: `Finish with ${this.savedCount()} of ${this.result()!.candidates.length} halls?`,
+        title: `Finish with ${this.savedCount()} of ${this.drafts().length} halls?`,
         text: `${pending} hall${pending === 1 ? ' is' : 's are'} not saved yet and will not be imported.`,
         confirmText: 'Finish'
       });
@@ -374,7 +584,7 @@ export class HallImportPageComponent implements OnInit {
   async save(): Promise<void> {
     this.submitted.set(true);
     const d = this.draft();
-    if (!d || this.nameError() || this.areaError()) return;
+    if (!d || this.nameError() || this.areaError() || this.outlineError()) return;
     if (this.currentSaved()) return;
     this.phase.set('saving');
     try {
@@ -402,24 +612,35 @@ export class HallImportPageComponent implements OnInit {
     }
   }
 
+  /**
+   * The hall as saved: the (possibly edited) outline, re-centred on its own middle so width and
+   * length describe it, with everything else moved and scaled with it.
+   */
   private buildHall(d: HallDraft): Hall {
     const k = this.factor();
-    const s = (p: Point): Point => ({ x: round(p.x * k), z: round(p.z * k) });
+    const outline = this.boundary();
+    const box = boundsOf(outline);
+    const cx = (box.minX + box.maxX) / 2;
+    const cz = (box.minZ + box.maxZ) / 2;
+    const s = (p: Point): Point => ({ x: round((p.x - cx) * k), z: round((p.z - cz) * k) });
     return {
       id: 'import',
       name: this.name().trim(),
       shape: 'SQUARE',
-      width: round(d.width * k),
-      length: round(d.length * k),
+      width: round((box.maxX - box.minX) * k),
+      length: round((box.maxZ - box.minZ) * k),
       radius: 0,
-      boundary: d.boundary.map(s),
+      boundary: outline.map(s),
       amenities: this.amenities()
         .filter(a => a.included && a.label.trim())
         .map(a => ({ kind: a.kind, label: a.label.trim(), position: s(a.position) })),
-      openings: this.includeOpenings() ? d.openings.map(o => ({ ...o, position: s(o.position) })) : [],
+      openings: this.includeOpenings() ? this.openings().map(o => ({ ...o, position: s(o.position) })) : [],
       zones: this.includeZones() ? d.zones.map(z => ({ ...z, polygon: z.polygon.map(s) })) : [],
       blockedAreas: this.includePillars()
-        ? d.blockedAreas.map(b => ({ ...b, posX: round(b.posX * k), posZ: round(b.posZ * k), width: round(b.width * k), length: round(b.length * k) }))
+        ? d.blockedAreas.map(b => {
+            const c = s({ x: b.posX, z: b.posZ });
+            return { ...b, posX: c.x, posZ: c.z, width: round(b.width * k), length: round(b.length * k) };
+          })
         : [],
       markers: this.includeMarkers() ? d.markers.map(m => ({ ...m, position: s(m.position) })) : [],
       legends: this.legends()

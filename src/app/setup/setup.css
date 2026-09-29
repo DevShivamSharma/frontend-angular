@@ -383,6 +383,71 @@ app-setup-shell .su-hall-tabs-progress {
   color: var(--ink-2);
 }
 
+/* --- plan tools (import review) ------------------------------------------------------- */
+app-setup-shell .su-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+app-setup-shell .su-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+app-setup-shell .su-tool svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+app-setup-shell .su-tool:hover:not(:disabled) {
+  border-color: #cbbde3;
+}
+app-setup-shell .su-tool.on {
+  border-color: var(--itpo-pink);
+  background: var(--itpo-pink-soft);
+  color: var(--itpo-pink-hover);
+}
+app-setup-shell .su-tool:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+app-setup-shell .su-tool:focus-visible,
+app-setup-shell .link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+app-setup-shell .measure-form .su-input {
+  width: 110px;
+  min-height: 32px;
+  padding: 4px 8px;
+}
+app-setup-shell .measure-form button:first-of-type {
+  margin-left: auto;
+}
+app-setup-shell .link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--itpo-pink-hover);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* --- sticky action bar ---------------------------------------------------------------- */
 app-setup-shell .su-actionbar {
   position: sticky;

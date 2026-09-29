@@ -6,15 +6,32 @@
   role="application"
   aria-roledescription="floor plan"
   [attr.aria-label]="
-    'Floor plan of ' + draft().name + '. ' + (placing() ? 'Click the plan to place the new item.' : 'Select an icon, then use the arrow keys to move it. Plus and minus zoom.')
+    'Floor plan of ' +
+    draft().name +
+    '. ' +
+    (tool() === 'edit'
+      ? 'Drag a corner to move it. Select a corner and press Delete to remove it.'
+      : tool() === 'measure'
+        ? 'Click the two ends of a length you know.'
+        : tool() === 'draw'
+          ? 'Click the corners of the hall. Enter finishes, Backspace removes the last point.'
+          : tool() === 'pick'
+            ? 'Click the area that is the hall.'
+            : placing()
+              ? 'Click the plan to place the new item.'
+              : 'Select an icon, then use the arrow keys to move it. Plus and minus zoom.')
   "
   (pointerdown)="onBackgroundDown($event)"
   (pointermove)="onPointerMove($event)"
   (pointerup)="onPointerUp($event)"
   (pointercancel)="onPointerUp($event)"
+  (pointerleave)="cursor.set(null)"
   (keydown)="onKey($event)"
 >
   <path class="outline-fill" [attr.d]="outline()" />
+  @if (underlay(); as u) {
+    <image class="underlay" [attr.href]="u.href" [attr.x]="u.x" [attr.y]="u.z" [attr.width]="u.width" [attr.height]="u.height" preserveAspectRatio="none" />
+  }
   <path class="linework" [attr.d]="linework()" />
   @if (showZones()) {
     @for (z of zones(); track z.id) {
@@ -26,8 +43,13 @@
       <rect class="pillar" [attr.x]="p.posX - p.width / 2" [attr.y]="p.posZ - p.length / 2" [attr.width]="p.width" [attr.height]="p.length" />
     }
   }
-  <path class="outline" [attr.d]="outline()" />
-  @if (showOpenings()) {
+  @if (tool() === 'pick') {
+    @for (r of roomPaths(); track r.room.id) {
+      <path class="room" [class.hot]="hoverRoom() === r.room.id" [attr.d]="r.d"><title>{{ r.room.label }}</title></path>
+    }
+  }
+  <path class="outline" [class.editing]="tool() === 'edit'" [attr.d]="outline()" />
+  @if (showOpenings() && tool() === 'none') {
     @for (o of openings(); track o.id) {
       <line
         class="opening"
@@ -69,6 +91,40 @@
       />
     </g>
   }
+
+  @if (tool() === 'edit') {
+    @for (m of midpoints(); track $index) {
+      <g class="midpoint" (pointerdown)="onMidpointDown($event, m.edge)">
+        <title>Add a corner here</title>
+        <circle [attr.cx]="m.x" [attr.cy]="m.z" [attr.r]="unit() * 7" />
+        <path [attr.d]="'M' + (m.x - unit() * 3.5) + ' ' + m.z + 'h' + unit() * 7 + 'M' + m.x + ' ' + (m.z - unit() * 3.5) + 'v' + unit() * 7" [attr.stroke-width]="unit() * 1.6" />
+      </g>
+    }
+    @for (p of boundary(); track $index; let i = $index) {
+      <circle
+        class="corner"
+        [class.selected]="selectedCorner() === i"
+        [attr.cx]="p.x"
+        [attr.cy]="p.z"
+        [attr.r]="unit() * 7"
+        [attr.stroke-width]="unit() * 2.5"
+        (pointerdown)="onCornerDown($event, i)"
+      >
+        <title>Corner {{ i + 1 }}: drag to move, Delete to remove</title>
+      </circle>
+    }
+  }
+
+  @if ((tool() === 'measure' || tool() === 'draw') && pendingPath()) {
+    <path class="pending" [class.closed]="tool() === 'draw'" [attr.d]="pendingPath()" [attr.stroke-width]="unit() * 2.5" />
+    @for (p of pending(); track $index; let first = $first) {
+      <circle class="pending-point" [class.first]="first && tool() === 'draw'" [attr.cx]="p.x" [attr.cy]="p.z" [attr.r]="unit() * (first && tool() === 'draw' ? 7 : 5)" [attr.stroke-width]="unit() * 2" />
+    }
+  }
+  @if ((tool() === 'measure' || tool() === 'draw') && cursor(); as c) {
+    <circle class="cursor" [attr.cx]="c.x" [attr.cy]="c.z" [attr.r]="unit() * 4" [attr.stroke-width]="unit() * 1.5" />
+  }
+
   <defs>
     <marker id="opening-head" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3" markerHeight="3" orient="auto">
       <path d="M0 0L10 5L0 10Z" fill="#f28c00" />
@@ -83,7 +139,7 @@
   <button type="button" class="su-icon-btn" (click)="zoom(1.33)" aria-label="Zoom out">
     <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
   </button>
-  <button type="button" class="su-icon-btn" (click)="fit()" aria-label="Fit the hall">
+  <button type="button" class="su-icon-btn" (click)="fit()" aria-label="Fit the plan">
     <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
   </button>
 </div>

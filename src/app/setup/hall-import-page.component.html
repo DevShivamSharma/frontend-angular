@@ -15,12 +15,12 @@
       (dragleave)="dragging.set(false)"
       (drop)="onDrop($event)"
     >
-      <input class="su-visually-hidden" type="file" accept=".dxf,.pdf,.dwg" (change)="onPick($event)" aria-describedby="drop-help" />
+      <input class="su-visually-hidden" type="file" accept=".dxf,.pdf,.dwg,.png,.jpg,.jpeg,.webp" (change)="onPick($event)" aria-describedby="drop-help" />
       <span class="drop-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
       </span>
       <span class="drop-title">Drop the floor plan here, or <u>browse</u></span>
-      <span id="drop-help" class="drop-help">DXF up to 80 MB · vector PDF up to 25 MB</span>
+      <span id="drop-help" class="drop-help">DXF up to 80 MB · PDF or image up to 25 MB</span>
     </label>
 
     @if (error()) {
@@ -29,7 +29,8 @@
 
     <ul class="tips">
       <li><strong>Best results: DXF.</strong> Layers and symbol names tell us exactly what is a wall, a lift or an exit.</li>
-      <li><strong>PDF:</strong> use one exported from CAD, not a scan. If it doesn't state its scale, you'll enter the hall's real width.</li>
+      <li><strong>PDF:</strong> use one exported from CAD, not a scan. If it doesn't state its scale, you'll enter the hall's area or measure a known length.</li>
+      <li><strong>Image (PNG, JPG), scan or photo:</strong> shown behind the plan so you can trace the hall, set the scale from a known length and place the facilities yourself.</li>
       <li><strong>DWG:</strong> not supported yet. In AutoCAD choose <em>Save As → DXF</em>.</li>
     </ul>
   }
@@ -76,7 +77,7 @@
 
       @if (multi()) {
         <nav class="su-hall-tabs" aria-label="Halls on this plan">
-          @for (c of result()!.candidates; track c.id; let i = $index) {
+          @for (c of drafts(); track c.id; let i = $index) {
             <button
               type="button"
               class="su-hall-tab"
@@ -93,12 +94,31 @@
               </span>
             </button>
           }
-          <span class="su-hall-tabs-progress" aria-live="polite">{{ savedCount() }} of {{ result()!.candidates.length }} saved</span>
+          <span class="su-hall-tabs-progress" aria-live="polite">{{ savedCount() }} of {{ drafts().length }} saved</span>
         </nav>
       }
 
       <div class="review">
         <section class="canvas-wrap" aria-label="Plan preview">
+          <div class="su-tools" role="toolbar" aria-label="Plan tools">
+            <button type="button" class="su-tool" [class.on]="tool() === 'edit'" [attr.aria-pressed]="tool() === 'edit'" (click)="setTool('edit')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l6-3 10 4-2 10-9 2-5-6z" /><circle cx="4" cy="7" r="1.6" /><circle cx="10" cy="4" r="1.6" /><circle cx="20" cy="8" r="1.6" /></svg>
+              Edit outline
+            </button>
+            <button type="button" class="su-tool" [class.on]="tool() === 'pick'" [attr.aria-pressed]="tool() === 'pick'" (click)="setTool('pick')" [disabled]="!result()!.rooms.length">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z" /><path d="M9 9l6 3-3 1-1 3z" /></svg>
+              Pick area on plan
+            </button>
+            <button type="button" class="su-tool" [class.on]="tool() === 'draw'" [attr.aria-pressed]="tool() === 'draw'" (click)="setTool('draw')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18l4-12 8 2 4 8-8 3z" /><path d="M4 18l0 0" /></svg>
+              Draw outline
+            </button>
+            <button type="button" class="su-tool" [class.on]="tool() === 'measure'" [attr.aria-pressed]="tool() === 'measure'" (click)="setTool('measure')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17L17 3l4 4L7 21z" /><path d="M7 13l2 2M10 10l2 2M13 7l2 2" /></svg>
+              Set scale
+            </button>
+          </div>
+
           @if (placing(); as kind) {
             <p class="placing-banner" role="status">
               <img [src]="iconOf(kind)" alt="" width="22" height="22" />
@@ -106,20 +126,81 @@
               <button type="button" class="su-btn su-btn-sm su-btn-secondary" (click)="placing.set(null)">Cancel</button>
             </p>
           }
-          <app-plan-canvas
-            [draft]="d"
-            [amenities]="visibleAmenities()"
-            [showZones]="includeZones()"
-            [showPillars]="includePillars()"
-            [showOpenings]="includeOpenings()"
-            [showMarkers]="includeMarkers()"
-            [selectedId]="selectedId()"
-            [highlightId]="highlightId()"
-            [placing]="placing()"
-            (selectItem)="select($event)"
-            (moveItem)="moveAmenity($event)"
-            (place)="place($event)"
-          />
+          @switch (tool()) {
+            @case ('edit') {
+              <p class="placing-banner" role="status">
+                <span>Drag a corner to move it · click a <b>+</b> to add a corner · select a corner and press Delete to remove it.</span>
+                @if (outlineEdited()) {
+                  <button type="button" class="su-btn su-btn-sm su-btn-secondary" (click)="resetOutline()">Reset outline</button>
+                }
+                <button type="button" class="su-btn su-btn-sm su-btn-primary" (click)="setTool('none')">Done</button>
+              </p>
+            }
+            @case ('pick') {
+              <p class="placing-banner" role="status">
+                Click the area of the plan that is the hall. The whole plan is shown.
+                <button type="button" class="su-btn su-btn-sm su-btn-secondary" (click)="setTool('none')">Cancel</button>
+              </p>
+            }
+            @case ('draw') {
+              <p class="placing-banner" role="status">
+                Click the hall's corners; clicks snap to the drawing's lines (hold Alt to stop). Click the first corner to finish.
+                <button type="button" class="su-btn su-btn-sm su-btn-secondary" (click)="undoPoint()">Undo point</button>
+                <button type="button" class="su-btn su-btn-sm su-btn-secondary" (click)="setTool('none')">Cancel</button>
+                <button type="button" class="su-btn su-btn-sm su-btn-primary" (click)="finishDrawing()">Finish</button>
+              </p>
+            }
+            @case ('measure') {
+              @if (measuredLength(); as plan) {
+                <form class="placing-banner measure-form" (submit)="$event.preventDefault(); applyMeasurement()">
+                  <span>That line measures <b>{{ plan * factor() | number: '1.0-2' }} m</b> on the plan. Its real length:</span>
+                  <input
+                    class="su-input"
+                    type="number"
+                    inputmode="decimal"
+                    min="0.1"
+                    step="any"
+                    aria-label="Real length in metres"
+                    [value]="realLength() ?? ''"
+                    (input)="realLength.set($any($event.target).valueAsNumber || null)"
+                  />
+                  <span>m</span>
+                  <button type="button" class="su-btn su-btn-sm su-btn-secondary" (click)="setTool('none')">Cancel</button>
+                  <button type="submit" class="su-btn su-btn-sm su-btn-primary" [disabled]="!realLength()">Apply</button>
+                </form>
+              } @else {
+                <p class="placing-banner" role="status">
+                  Click the two ends of a length you know, e.g. a wall with its dimension written on the plan.
+                  <button type="button" class="su-btn su-btn-sm su-btn-secondary" (click)="setTool('none')">Cancel</button>
+                </p>
+              }
+            }
+          }
+          @if (canvasDraft(); as view) {
+            <app-plan-canvas
+              [draft]="view"
+              [outlineOverride]="onOverview() ? [] : boundary()"
+              [amenities]="canvasAmenities()"
+              [openingList]="onOverview() ? null : openings()"
+              [underlay]="underlay()"
+              [showZones]="includeZones()"
+              [showPillars]="includePillars()"
+              [showOpenings]="includeOpenings()"
+              [showMarkers]="includeMarkers()"
+              [selectedId]="selectedId()"
+              [highlightId]="highlightId()"
+              [placing]="placing()"
+              [tool]="tool()"
+              [rooms]="result()!.rooms"
+              (selectItem)="select($event)"
+              (moveItem)="moveAmenity($event)"
+              (place)="place($event)"
+              (outlineChange)="changeOutline($event)"
+              (measured)="onMeasured($event)"
+              (drawn)="drawnOutline($event)"
+              (roomPicked)="pickRoom($event)"
+            />
+          }
           <p class="legend-key">
             <span><i class="k-outline"></i>Hall outline</span>
             <span><i class="k-door"></i>Door or gate</span>
@@ -150,10 +231,10 @@
               }
             </label>
 
-            @if (!multi() && result()!.candidates.length > 1) {
+            @if (!multi() && drafts().length > 1) {
               <fieldset class="outlines">
                 <legend class="su-label">Hall outline</legend>
-                @for (c of result()!.candidates; track c.id; let i = $index) {
+                @for (c of drafts(); track c.id; let i = $index) {
                   <label class="outline-option" [class.on]="candidate() === i">
                     <input type="radio" name="outline" [checked]="candidate() === i" (change)="useCandidate(i)" />
                     <span>
@@ -184,7 +265,7 @@
                   @if (areaSource() === 'itpo') {
                     Filled in from ITPO's hall records. Change it if this plan's hall is different.
                   } @else {
-                    This PDF has no scale. Type the hall's area and we'll size everything from it.
+                    This plan has no scale. Type the hall's area, or use Set scale, and we'll size everything from it.
                   }
                 </span>
                 @if (submitted() && areaError()) {
@@ -192,7 +273,19 @@
                 }
               </label>
             }
-            <p class="size"><span>Size</span> {{ needsScale() && !realArea() ? 'Enter the area to see the size' : size() }}</p>
+            <p class="size"><span>Size</span> {{ needsScale() && !realArea() && !calibration() ? 'Enter the area or set the scale to see the size' : size() }}</p>
+            <p class="su-help scale-line">
+              @if (calibration()) {
+                Scale set by your measurement.
+                <button type="button" class="link" (click)="clearCalibration()">Undo</button>
+              } @else {
+                {{ result()!.scale.source }}. Wrong size?
+                <button type="button" class="link" (click)="setTool('measure')">Set the scale</button>
+              }
+            </p>
+            @if (outlineError(); as problem) {
+              <p class="su-error" role="alert">{{ problem }}</p>
+            }
           </section>
 
           <section class="box" aria-labelledby="fac-h">
@@ -257,7 +350,7 @@
             <h3 id="feat-h">Plan features</h3>
             <label class="toggle">
               <input type="checkbox" [checked]="includeOpenings()" (change)="includeOpenings.set($any($event.target).checked)" />
-              <span><strong>Doors and gates · {{ d.openings.length }}</strong><small>Stalls keep the area in front of each door clear.</small></span>
+              <span><strong>Doors and gates · {{ openings().length }}</strong><small>Stalls keep the area in front of each door clear.</small></span>
             </label>
             <label class="toggle">
               <input type="checkbox" [checked]="includeZones()" (change)="includeZones.set($any($event.target).checked)" />
@@ -290,9 +383,9 @@
 
       <div class="su-actionbar">
         <p class="su-actionbar-summary">
-          @if (multi()) { Hall {{ candidate() + 1 }} of {{ result()!.candidates.length }} · }
+          @if (multi()) { Hall {{ candidate() + 1 }} of {{ drafts().length }} · }
           <strong>{{ name() || 'Unnamed hall' }}</strong> · {{ includedCount() }} facilities
-          @if (includeOpenings()) { · {{ d.openings.length }} doors }
+          @if (includeOpenings()) { · {{ openings().length }} doors }
         </p>
         <div class="su-actionbar-actions">
           @if (multi() && savedCount() > 0) {

@@ -96,6 +96,7 @@ app-plan-canvas {
 }
 .placing-banner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin: 0;
@@ -106,7 +107,7 @@ app-plan-canvas {
   font-size: 14px;
   font-weight: 500;
 }
-.placing-banner button {
+.placing-banner > button:first-of-type {
   margin-left: auto;
 }
 .side {
