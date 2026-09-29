@@ -11,5 +11,10 @@ import { PlannerPageComponent } from './planner/planner-page.component';
 export const routes: Routes = [
   { path: '', component: HomePageComponent },
   { path: 'planner', component: PlannerPageComponent },
+  // The architect's 2D drafting workspace on the same planner state.
+  {
+    path: 'draft',
+    loadComponent: () => import('./planner/drafting/drafting-page.component').then(m => m.DraftingPageComponent)
+  },
   { path: '**', redirectTo: '' }
 ];

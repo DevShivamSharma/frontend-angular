@@ -48,6 +48,10 @@
         {{ saving() ? 'Saving…' : selectedSavedId() === null ? 'Save layout' : 'Save changes' }}
       </button>
 
+      <a class="btn-secondary planner-draft-link" routerLink="/draft" title="Draw stalls in the 2D drafting workspace (CAD commands)">
+        <app-icon name="draw" [size]="16" /> Open 2D drafting
+      </a>
+
       @if (sidebarOpen() && !tourStep()) { <button type="button" class="btn-secondary planner-tour-help" (click)="startTour()"
         [disabled]="hallsStatus() === 'loading'" lang="en">Help / Restart tour</button> }
 
