@@ -1,11 +1,11 @@
 import { Injectable, OnDestroy, signal } from '@angular/core';
-import Swal, { SweetAlertOptions } from 'sweetalert2';
 
 /** Options for {@link NotifyService.confirm}. */
 export interface ConfirmOptions {
   title: string;
   text?: string;
   confirmText?: string;
+  cancelText?: string;
   /** Styles the confirm button as destructive (delete, discard). */
   danger?: boolean;
 }
@@ -15,7 +15,14 @@ export interface Notification {
   title: string;
   message?: string;
   viewDetails?: () => void;
+  /** How long it stays, ms; drives the countdown bar. */
+  duration: number;
 }
+
+/** What the app dialog (core/app-dialog.component.ts) shows, if anything. */
+export type DialogState =
+  | { kind: 'confirm'; options: ConfirmOptions; resolve: (confirmed: boolean) => void }
+  | { kind: 'loading'; title: string };
 
 /**
  * Success/error toasts, confirmation dialogs and the blocking loader.
@@ -23,25 +30,20 @@ export interface Notification {
  * Replaces the native `window.alert` / `window.confirm` calls carried over from the
  * React app (decision FD-008 is superseded by FD-013).
  *
- * This is the ONLY file that imports SweetAlert2. The store and components depend on
- * this service, so the library can be swapped without touching them - and specs can
- * replace the whole thing with a plain fake.
- *
- * Toasts use the app's compact notification component. SweetAlert2 is only used for
- * confirmation dialogs and blocking loaders.
+ * The store and every screen depend on this service only. Toasts render in
+ * `NotificationComponent`, dialogs in `AppDialogComponent`; both are mounted once in the app
+ * shell, so every confirmation in the app looks and behaves the same, and specs can replace
+ * the whole thing with a plain fake.
  */
 @Injectable({ providedIn: 'root' })
 export class NotifyService implements OnDestroy {
   readonly notification = signal<Notification | null>(null);
+  /** True while the pointer or focus is on the toast; the countdown bar stops with the timer. */
+  readonly paused = signal(false);
+  readonly dialog = signal<DialogState | null>(null);
   private timer: ReturnType<typeof setTimeout> | null = null;
   private remaining = 0;
   private dismissAt = 0;
-  /** Colours come from the design tokens in `styles.css`, so the popups match the app. */
-  private readonly base: SweetAlertOptions = {
-    theme: 'light',
-    background: 'var(--surface-card)',
-    color: 'var(--text-primary)'
-  };
 
   /** Non-blocking toast, top right, auto-dismissed. */
   success(title: string, text?: string): void {
@@ -56,8 +58,9 @@ export class NotifyService implements OnDestroy {
   private toast(icon: 'success' | 'error', title: string, text?: string, viewDetails?: () => void): void {
     this.dismiss();
     this.hideLoading();
-    this.notification.set({ kind: icon, title, message: text, viewDetails });
     this.remaining = icon === 'success' ? 4000 : 6000;
+    this.paused.set(false);
+    this.notification.set({ kind: icon, title, message: text, viewDetails, duration: this.remaining });
     this.resume();
   }
 
@@ -72,10 +75,12 @@ export class NotifyService implements OnDestroy {
     clearTimeout(this.timer);
     this.timer = null;
     this.remaining = Math.max(0, this.dismissAt - Date.now());
+    this.paused.set(true);
   }
 
   resume(): void {
     if (!this.notification() || this.timer !== null) return;
+    this.paused.set(false);
     this.dismissAt = Date.now() + this.remaining;
     this.timer = setTimeout(() => this.dismiss(), this.remaining);
   }
@@ -88,38 +93,29 @@ export class NotifyService implements OnDestroy {
 
   ngOnDestroy(): void {
     this.dismiss();
+    this.answer(false);
   }
 
-  /** Resolves `true` only when the user explicitly confirms. Escape / backdrop = `false`. */
-  async confirm(options: ConfirmOptions): Promise<boolean> {
+  /** Resolves `true` only when the user explicitly confirms. Escape / backdrop / Cancel = `false`. */
+  confirm(options: ConfirmOptions): Promise<boolean> {
     this.dismiss();
-    const result = await Swal.fire({
-      ...this.base,
-      icon: options.danger ? 'warning' : 'question',
-      title: options.title,
-      text: options.text,
-      showCancelButton: true,
-      focusCancel: true,
-      reverseButtons: true,
-      confirmButtonText: options.confirmText ?? 'Confirm',
-      confirmButtonColor: options.danger ? 'var(--danger-solid)' : 'var(--accent-solid)',
-      cancelButtonColor: 'var(--text-secondary)'
-    });
+    this.answer(false); // a dialog already open counts as cancelled
+    return new Promise<boolean>(resolve => this.dialog.set({ kind: 'confirm', options, resolve }));
+  }
 
-    return result.isConfirmed;
+  /** The user's answer to the open confirmation (called by the dialog component). */
+  answer(confirmed: boolean): void {
+    const open = this.dialog();
+    if (open?.kind !== 'confirm') return;
+    this.dialog.set(null);
+    open.resolve(confirmed);
   }
 
   /** Blocking loader for a request in flight. Cannot be dismissed by the user. */
   showLoading(title: string): void {
     this.dismiss();
-    void Swal.fire({
-      ...this.base,
-      title,
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      showConfirmButton: false,
-      didOpen: () => Swal.showLoading()
-    });
+    this.answer(false);
+    this.dialog.set({ kind: 'loading', title });
   }
 
   /**
@@ -127,8 +123,6 @@ export class NotifyService implements OnDestroy {
    * it, that popup is left alone, which makes this safe to call from a `finally` block.
    */
   hideLoading(): void {
-    if (Swal.isLoading()) {
-      Swal.close();
-    }
+    if (this.dialog()?.kind === 'loading') this.dialog.set(null);
   }
 }

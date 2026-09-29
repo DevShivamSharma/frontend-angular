@@ -1,0 +1,99 @@
+:host {
+  position: relative;
+  display: block;
+  min-height: 420px;
+  border-radius: 16px;
+  background: #fbfaff;
+  box-shadow: inset 0 0 0 1px var(--line);
+  overflow: hidden;
+}
+.plan {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.plan:active {
+  cursor: grabbing;
+}
+:host(.placing) .plan {
+  cursor: crosshair;
+}
+.plan:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px rgb(234 10 81 / 0.45);
+}
+
+.outline-fill {
+  fill: #fff;
+}
+.linework {
+  fill: none;
+  stroke: #9aa0ad;
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+.outline {
+  fill: none;
+  stroke: var(--itpo-pink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.zone {
+  fill-opacity: 0.35;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.pillar {
+  fill: #6b7080;
+}
+.opening {
+  stroke: #f28c00;
+  stroke-linecap: round;
+}
+.marker {
+  fill: #372a6b;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.amenity {
+  cursor: move;
+}
+:host(.placing) .amenity {
+  cursor: crosshair;
+}
+.halo {
+  fill: #fff;
+  stroke: transparent;
+}
+.amenity:hover .halo,
+.amenity.hot .halo {
+  stroke: #6d28d9;
+}
+.amenity.selected .halo {
+  stroke: var(--itpo-pink);
+  fill: var(--itpo-pink-soft);
+}
+
+.zoom {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.95);
+  box-shadow: var(--shadow-soft);
+}

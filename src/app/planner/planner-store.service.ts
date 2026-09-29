@@ -39,6 +39,7 @@ import {
 import { buildApiPayload, LayoutApiService } from './layout-api.service';
 import { EventType, Hall, HallShape, StallType } from './models/hall.model';
 import { LayoutSummary, ServerViolation } from './models/layout.model';
+import type { PlannerRule } from './models/rule.model';
 import { GateSide, Stall, StallInput } from './models/stall.model';
 
 /** Values collected by the Create Hall form. */
@@ -204,6 +205,22 @@ export class PlannerStore {
   /** null = Custom (the dragged rectangle is the stall). */
   readonly selectedStallTypeId = signal<string | null>(null);
   readonly eventType = signal<EventType>('B2B');
+  /** The shared library of plotting rules, and which of them apply to this layout. */
+  readonly plannerRules = signal<PlannerRule[]>([]);
+  readonly plannerRulesStatus = signal<'loading' | 'ready' | 'error'>('loading');
+  readonly appliedRuleIds = signal<number[]>([]);
+  /** The applied rules in library order; ids of rules deleted since are left out. */
+  readonly appliedRules = computed(() => {
+    const ids = new Set(this.appliedRuleIds());
+    return this.plannerRules().filter(r => ids.has(r.id));
+  });
+  /**
+   * What a save sends: the applied rules that still exist - or, when the library could not be
+   * loaded, the ids as they were, so an offline update never drops a layout's rules.
+   */
+  private readonly ruleIdsToSave = computed(() =>
+    this.plannerRulesStatus() === 'ready' ? this.appliedRules().map(r => r.id) : this.appliedRuleIds()
+  );
   readonly draftOpenSide = signal<GateSide>('FRONT');
   readonly passageWidth = computed(() => this.placementContext()?.rules.minPassageWidth[this.eventType()] ?? 3);
   readonly showFreeSpace = signal(false);
@@ -1035,7 +1052,8 @@ export class PlannerStore {
         this.currentHall(),
         this.currentStalls(),
         this.layoutName(),
-        this.eventType()
+        this.eventType(),
+        this.ruleIdsToSave()
       );
       const saved = await this.api.save(payload);
       this.selectedSavedId.set(saved.layout?.id ?? saved.id ?? null);
@@ -1072,6 +1090,7 @@ export class PlannerStore {
       this.selectedSavedId.set(id);
       this.layoutName.set(d.layout?.name || d.name || h.name || '');
       this.eventType.set(d.layout?.eventType === 'B2C' ? 'B2C' : 'B2B');
+      this.appliedRuleIds.set(Array.isArray(d.layout?.ruleIds) ? d.layout!.ruleIds.filter(id => Number.isSafeInteger(id)) : []);
     } catch (e) {
       this.showError(`❌ Open Error: ${extractErrorMessage(e)}`);
     } finally {
@@ -1123,7 +1142,8 @@ export class PlannerStore {
         this.currentHall(),
         this.currentStalls(),
         this.layoutName(),
-        this.eventType()
+        this.eventType(),
+        this.ruleIdsToSave()
       );
       const updated = await this.api.update(savedId, payload);
       this.applyPersistedStalls(updated?.stalls);
@@ -1137,6 +1157,25 @@ export class PlannerStore {
       this.notify.hideLoading();
     }
   }
+  // --- plotting rules (the shared library) ---------------------------------------
+
+  /** Loads the rule library. Offline, the planner works without it. */
+  async loadPlannerRules(): Promise<void> {
+    this.plannerRulesStatus.set('loading');
+    try {
+      this.plannerRules.set(await this.api.listPlannerRules());
+      this.plannerRulesStatus.set('ready');
+    } catch (e) {
+      console.warn('Plotting rules unavailable:', extractErrorMessage(e));
+      this.plannerRulesStatus.set('error');
+    }
+  }
+
+  /** The rules chosen for this layout's design; saved with the layout. */
+  applyRules(ids: ReadonlyArray<number>): void {
+    this.appliedRuleIds.set([...new Set(ids)]);
+  }
+
   // --- rule-driven editor ----------------------------------------------------
 
   /** Stall types come from the backend configuration; offline, draw mode offers Custom only. */

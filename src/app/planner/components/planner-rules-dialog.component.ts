@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, output, viewChild } from '@angular/core';
 import { effectiveRules } from '../geometry/placement-rules';
 import { PlannerStore } from '../planner-store.service';
 import { IconComponent } from './icon.component';
@@ -19,11 +19,6 @@ export class PlannerRulesDialogComponent {
   private returnFocus: HTMLElement | null = null;
   readonly rules = computed(() => effectiveRules(this.store.currentHall()?.rules));
   readonly passage = this.store.passageWidth;
-
-  constructor() {
-    // Each visit gets the guide, without reopening it on hall/settings changes.
-    afterNextRender(() => this.open());
-  }
 
   open(): void {
     const dialog = this.dialog().nativeElement;

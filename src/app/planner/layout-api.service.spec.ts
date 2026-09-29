@@ -66,6 +66,12 @@ describe('buildApiPayload', () => {
     expect(Object.keys(payload.stalls[0])).not.toContain('pos_x');
   });
 
+  it('sends the chosen plotting rules, and nothing when none are chosen', () => {
+    expect(buildApiPayload(savedHall, [], 'x', 'B2B', [3, 1, 3]).ruleIds).toEqual([3, 1, 3]);
+    expect('ruleIds' in buildApiPayload(savedHall, [], 'x', 'B2B', [])).toBeFalse();
+    expect('ruleIds' in buildApiPayload(savedHall, [], 'x')).toBeFalse();
+  });
+
   it('falls back to the hall name when the layout name is blank', () => {
     expect(buildApiPayload(savedHall, [], '   ').layoutName).toBe('Saved Hall');
     expect(buildApiPayload(savedHall, [], ' Trimmed ').layoutName).toBe('Trimmed');

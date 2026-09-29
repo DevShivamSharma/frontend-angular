@@ -1,0 +1,241 @@
+.search {
+  position: relative;
+  width: min(300px, 100%);
+}
+.search svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.search .su-input {
+  padding-left: 38px;
+}
+
+.notice {
+  margin: 0 0 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.card-skeleton {
+  height: 292px;
+}
+
+.import-card,
+.hall-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 292px;
+  padding: 18px 18px 16px;
+  border-radius: 18px;
+  color: #2a1414;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+/* Peach -> coral, with the admin panel's faint diagonal sheen. */
+.hall-card {
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / 0) 55%, rgb(255 255 255 / 0.14) 55%, rgb(255 255 255 / 0) 75%),
+    linear-gradient(135deg, var(--itpo-peach) 0%, var(--itpo-coral) 100%);
+  box-shadow: 0 6px 18px rgb(255 120 100 / 0.22);
+}
+.hall-card:hover,
+.import-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgb(255 120 100 / 0.3);
+}
+.hall-card:has(input:focus-visible) {
+  box-shadow: var(--focus), 0 6px 18px rgb(255 120 100 / 0.22);
+}
+.hall-card.selected {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--itpo-pink), 0 14px 30px rgb(234 10 81 / 0.28);
+}
+
+.import-card {
+  background: linear-gradient(140deg, var(--itpo-indigo) 0%, #6d1ee0 100%);
+  color: #fff;
+  box-shadow: 0 8px 22px rgb(80 30 190 / 0.3);
+}
+.import-card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus), 0 8px 22px rgb(80 30 190 / 0.3);
+}
+.import-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.16);
+}
+.import-icon svg,
+.round-arrow svg,
+.check svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.import-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+.import-sub {
+  max-width: 30ch;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+.round-arrow {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-top: auto;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--itpo-indigo);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-kicker {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.check {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.9);
+  color: transparent;
+}
+.check svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 3;
+}
+.hall-card.selected .check {
+  background: #fff;
+  color: var(--itpo-pink);
+}
+
+.hall-name {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.thumb {
+  display: block;
+  height: 118px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.55);
+}
+.meta {
+  display: flex;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.facilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+.facilities .su-chip {
+  background: rgb(255 255 255 / 0.78);
+  color: #4a1f1f;
+}
+.no-facilities {
+  font-size: 12.5px;
+  color: #5a2a24;
+}
+
+.first-run {
+  margin-top: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hall-card,
+  .import-card {
+    transition: none;
+  }
+  .hall-card:hover,
+  .import-card:hover {
+    transform: none;
+  }
+}
+
+.card-wrap {
+  position: relative;
+  display: grid;
+}
+.card-wrap.busy {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.delete-hall {
+  /* Top row, just left of the selection check (30px circle at the card's top-right). */
+  position: absolute;
+  top: 16px;
+  right: 56px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.8);
+  color: #7a2a24;
+  cursor: pointer;
+}
+.delete-hall:hover {
+  background: #fff;
+  color: var(--danger);
+}
+.delete-hall:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.delete-hall svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hall-card .card-kicker {
+  padding-right: 76px;
+}

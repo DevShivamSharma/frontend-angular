@@ -1,0 +1,89 @@
+<svg
+  #svg
+  class="plan"
+  [attr.viewBox]="viewBox()"
+  tabindex="0"
+  role="application"
+  aria-roledescription="floor plan"
+  [attr.aria-label]="
+    'Floor plan of ' + draft().name + '. ' + (placing() ? 'Click the plan to place the new item.' : 'Select an icon, then use the arrow keys to move it. Plus and minus zoom.')
+  "
+  (pointerdown)="onBackgroundDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+  (keydown)="onKey($event)"
+>
+  <path class="outline-fill" [attr.d]="outline()" />
+  <path class="linework" [attr.d]="linework()" />
+  @if (showZones()) {
+    @for (z of zones(); track z.id) {
+      <path class="zone" [attr.d]="z.d" [attr.fill]="z.color" [attr.stroke]="z.color" />
+    }
+  }
+  @if (showPillars()) {
+    @for (p of draft().blockedAreas; track $index) {
+      <rect class="pillar" [attr.x]="p.posX - p.width / 2" [attr.y]="p.posZ - p.length / 2" [attr.width]="p.width" [attr.height]="p.length" />
+    }
+  }
+  <path class="outline" [attr.d]="outline()" />
+  @if (showOpenings()) {
+    @for (o of openings(); track o.id) {
+      <line
+        class="opening"
+        [attr.x1]="o.x - o.dx * unit() * 4"
+        [attr.y1]="o.z - o.dz * unit() * 4"
+        [attr.x2]="o.x + o.dx * unit() * 16"
+        [attr.y2]="o.z + o.dz * unit() * 16"
+        [attr.stroke-width]="unit() * 4"
+        marker-end="url(#opening-head)"
+      />
+    }
+  }
+  @if (showMarkers()) {
+    @for (m of draft().markers; track $index) {
+      <text class="marker" [attr.x]="m.position.x" [attr.y]="m.position.z" [attr.font-size]="unit() * 11">{{ m.text }}</text>
+    }
+  }
+  @for (a of amenities(); track a.id) {
+    <g
+      class="amenity"
+      [class.selected]="a.id === selectedId()"
+      [class.hot]="a.id === highlightId()"
+      (pointerdown)="onIconDown($event, a.id)"
+    >
+      <title>{{ a.label }}</title>
+      <circle
+        class="halo"
+        [attr.cx]="a.position.x"
+        [attr.cy]="a.position.z"
+        [attr.r]="iconSize() * 0.78"
+        [attr.stroke-width]="unit() * 3"
+      />
+      <image
+        [attr.href]="iconOf(a.kind)"
+        [attr.x]="a.position.x - iconSize() / 2"
+        [attr.y]="a.position.z - iconSize() / 2"
+        [attr.width]="iconSize()"
+        [attr.height]="iconSize()"
+      />
+    </g>
+  }
+  <defs>
+    <marker id="opening-head" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3" markerHeight="3" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#f28c00" />
+    </marker>
+  </defs>
+</svg>
+
+<div class="zoom" role="group" aria-label="Zoom">
+  <button type="button" class="su-icon-btn" (click)="zoom(0.75)" aria-label="Zoom in">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+  </button>
+  <button type="button" class="su-icon-btn" (click)="zoom(1.33)" aria-label="Zoom out">
+    <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
+  </button>
+  <button type="button" class="su-icon-btn" (click)="fit()" aria-label="Fit the hall">
+    <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+  </button>
+</div>

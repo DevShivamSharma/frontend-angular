@@ -119,18 +119,25 @@ textarea {
   color: inherit;
 }
 
-/* ---- SweetAlert2 popups (core/notify.service.ts) ------------------------ */
+/* ---- Accent for the stall-planner setup screens --------------------------- */
 
-/* The popups mount on <body>, outside the planner page where --font-sans is applied,
-   so without this they fall back to the browser's serif default. */
-.swal2-container {
-  font-family: var(--font-sans);
+/* Toasts and the app dialog are mounted outside the setup shell, so the shell puts this class
+   on <body> while it is shown (setup-shell.component.ts). */
+body.theme-itpo {
+  --accent: #ea0a51;
+  --accent-solid: #ea0a51;
+  --accent-solid-hover: #c9003f;
+  --accent-ring: rgb(234 10 81 / 0.22);
+  --surface-selected: #ffe4ec;
 }
 
-.swal2-popup {
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-}
+/* Rules tab: the plotting rules chosen for this layout. */
+.applied-rules .panel-title { display: flex; align-items: center; }
+.applied-count { margin-left: auto; padding: 1px 8px; border-radius: 99px; background: var(--surface-selected); color: var(--accent); font-size: 12px; letter-spacing: 0; }
+.applied-list { display: grid; gap: 8px; margin: 0 0 12px; padding-left: 20px; max-height: 260px; overflow-y: auto; font-size: 13px; line-height: 1.5; color: var(--text-primary); }
+.applied-list li { white-space: pre-wrap; overflow-wrap: anywhere; }
+.applied-list li::marker { color: var(--accent); font-weight: 600; }
+.applied-empty { margin: 0 0 12px; font-size: 13px; color: var(--text-muted); }
 
 /* ---- Section card ------------------------------------------------------- */
 

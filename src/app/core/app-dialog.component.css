@@ -1,0 +1,178 @@
+/*
+ * Icon tile left, title and text beside it, actions along the bottom. Colours are the design
+ * tokens, so the setup screens get the ITPO accent (body.theme-itpo) and the editor its own.
+ */
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  box-shadow: 0 24px 64px rgb(16 24 40 / 0.28);
+}
+.dialog.is-loading {
+  width: auto;
+  min-width: 260px;
+  max-width: min(380px, calc(100vw - 32px));
+}
+.dialog[open] {
+  animation: dialog-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.dialog::backdrop {
+  background: rgb(15 18 30 / 0.45);
+  backdrop-filter: blur(3px);
+  animation: fade-in 180ms ease;
+}
+
+.dialog-card {
+  padding: 24px 24px 20px;
+}
+
+.ad-head {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.ad-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--surface-selected);
+  color: var(--accent-solid);
+}
+.ad-icon--danger {
+  background: var(--danger-surface);
+  color: var(--danger-solid);
+}
+.ad-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ad-copy {
+  min-width: 0;
+  padding-top: 3px;
+}
+h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.ad-copy p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.ad-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+.ad-btn {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--accent-solid);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.ad-btn:hover {
+  background: var(--accent-solid-hover);
+}
+.ad-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.ad-btn--danger {
+  background: var(--danger-solid);
+}
+.ad-btn--danger:hover {
+  background: var(--danger-solid-hover);
+}
+.ad-btn--danger:focus-visible {
+  box-shadow: 0 0 0 3px rgb(220 38 38 / 0.25);
+}
+.ad-btn--secondary {
+  background: #fff;
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+.ad-btn--secondary:hover {
+  background: var(--surface-card-hover);
+}
+
+/* The blocking loader: one compact line, spinner then text. */
+.ad-busy {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+}
+.ad-busy p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.ad-spinner {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--surface-selected);
+  border-top-color: var(--accent-solid);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .ad-actions .ad-btn {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open],
+  .dialog::backdrop {
+    animation: none;
+  }
+  .ad-spinner {
+    animation-duration: 2.4s;
+  }
+}

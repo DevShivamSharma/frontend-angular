@@ -1,0 +1,124 @@
+<div class="su-head">
+  <div>
+    <h2>Which hall are you planning?</h2>
+    <p>Choose a hall to plan its stalls, or import a new one from its floor plan. Imported halls keep their toilets, lifts, gates and legend.</p>
+  </div>
+  @if (status() === 'ready' && halls().length) {
+    <label class="search">
+      <span class="su-visually-hidden">Search halls</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      <input
+        class="su-input"
+        type="search"
+        placeholder="Search halls"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+      />
+    </label>
+  }
+</div>
+
+@if (notice()) {
+  <p class="su-note su-note-info notice" role="status">{{ notice() }}</p>
+}
+
+@switch (status()) {
+  @case ('loading') {
+    <div class="grid" aria-busy="true" aria-label="Loading halls">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="su-skeleton card-skeleton"></div>
+      }
+    </div>
+  }
+  @case ('error') {
+    <div class="su-empty" role="alert">
+      <img src="assets/images/something-went-wrong.svg" alt="" width="120" height="120" />
+      <h3>We couldn't load the halls</h3>
+      <p>{{ error() || 'The server did not answer.' }} Check your connection and try again.</p>
+      <button type="button" class="su-btn su-btn-primary" (click)="load()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    <div class="grid" role="radiogroup" aria-label="Halls">
+      <a class="import-card" routerLink="/planner/halls/import">
+        <span class="import-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
+        </span>
+        <span class="card-kicker">New hall</span>
+        <span class="import-title">Import a floor plan</span>
+        <span class="import-sub">Upload a DXF or PDF. We'll find the outline, toilets, lifts, gates and legend for you to check.</span>
+        <span class="round-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></span>
+      </a>
+
+      @for (card of filtered(); track card.id) {
+        <div class="card-wrap" [class.busy]="deleting() === card.id">
+        <label class="hall-card" [class.selected]="state.hallId() === card.id">
+          <input
+            class="su-visually-hidden"
+            type="radio"
+            name="hall"
+            [value]="card.id"
+            [checked]="state.hallId() === card.id"
+            (change)="select(card)"
+          />
+          <span class="card-top">
+            <span class="card-kicker">{{ card.floor === 'FF' ? 'First floor' : card.floor === 'GF' ? 'Ground floor' : 'Exhibition hall' }}</span>
+            <span class="check" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+            </span>
+          </span>
+          <span class="hall-name">{{ card.hall.name }}</span>
+          <span class="thumb"><app-hall-thumbnail [hall]="card.hall" /></span>
+          <span class="meta">
+            <span>{{ card.area }}</span>
+            <span aria-hidden="true">·</span>
+            <span>{{ card.size }}</span>
+          </span>
+          <span class="facilities">
+            @for (f of card.facilities; track f) {
+              <span class="su-chip">{{ f }}</span>
+            } @empty {
+              <span class="no-facilities">No facilities marked yet</span>
+            }
+          </span>
+        </label>
+        <button
+          type="button"
+          class="delete-hall"
+          (click)="remove(card)"
+          [disabled]="deleting() !== null"
+          [attr.aria-label]="'Delete ' + card.hall.name"
+          [title]="'Delete ' + card.hall.name"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg>
+        </button>
+        </div>
+      }
+    </div>
+
+    @if (!halls().length) {
+      <div class="su-empty first-run">
+        <h3>No halls yet</h3>
+        <p>Import your first hall from its floor plan. You'll review what was found before anything is saved.</p>
+      </div>
+    } @else if (!filtered().length) {
+      <p class="su-note su-note-info" role="status">No hall matches "{{ query() }}".</p>
+    }
+
+    <div class="su-actionbar">
+      <p class="su-actionbar-summary" aria-live="polite">
+        @if (selected(); as card) {
+          Selected: <strong>{{ card.hall.name }}</strong> · {{ card.area }}
+        } @else {
+          Select a hall to continue.
+        }
+      </p>
+      <div class="su-actionbar-actions">
+        <button type="button" class="su-btn su-btn-primary" [disabled]="!selected()" (click)="next()">
+          Next: plotting rules
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+        </button>
+      </div>
+    </div>
+  }
+}

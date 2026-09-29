@@ -22,9 +22,6 @@
               "zone.js"
             ],
             "tsConfig": "tsconfig.app.json",
-            "allowedCommonJsDependencies": [
-              "sweetalert2"
-            ],
             "assets": [
               {
                 "glob": "**/*",
@@ -42,7 +39,8 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "src/app/setup/setup.css"
             ]
           },
           "configurations": {

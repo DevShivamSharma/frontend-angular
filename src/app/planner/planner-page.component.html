@@ -1,4 +1,5 @@
 <app-planner-rules-dialog #rulesGuide (closed)="rulesDismissed.set(true)" />
+<app-rule-picker-dialog (closed)="rulesDismissed.set(true)" />
 <!-- The PDF plan import, its geometry and pdf.js load on first use (Working hall or Hall tab). -->
 @defer (when store.pdfImport() !== null) {
   <app-pdf-import-dialog />
@@ -163,6 +164,25 @@
         [hidden]="activeTab() !== 'rules'"
       >
         <app-violations-panel section="alerts" />
+        <section class="card applied-rules" aria-labelledby="applied-rules-title">
+          <h3 class="panel-title" id="applied-rules-title">
+            <span class="icon-slot"><app-icon name="shield" [size]="14" /></span>
+            Rules for this layout
+            <span class="applied-count">{{ appliedRules().length }}</span>
+          </h3>
+          @if (appliedRules().length) {
+            <ol class="applied-list">
+              @for (rule of appliedRules(); track rule.id) {
+                <li>{{ rule.description }}</li>
+              }
+            </ol>
+          } @else {
+            <p class="applied-empty">No plotting rules chosen for this layout.</p>
+          }
+          <button type="button" class="btn-secondary is-block" (click)="chooseRules()">
+            <app-icon name="pencil" [size]="16" /> {{ appliedRules().length ? 'Change rules' : 'Choose rules' }}
+          </button>
+        </section>
         <button type="button" class="btn-secondary is-block" (click)="rulesGuide.open()">
           <app-icon name="file" [size]="16" /> Read plotting rules
         </button>

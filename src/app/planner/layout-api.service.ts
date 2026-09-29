@@ -17,6 +17,7 @@ import { Stall } from './models/stall.model';
 import { num, normalizeOpenSides } from './geometry/planner-geometry';
 import { effectiveRules } from './geometry/placement-rules';
 import type { PdfImportResult } from './pdf-import/pdf-import.model';
+import type { PlannerRule } from './models/rule.model';
 
 /**
  * Build the save/update request body. Ported from `buildApiPayload()`
@@ -32,7 +33,9 @@ export function buildApiPayload(
   currentHall: Hall | null | undefined,
   currentStalls: ReadonlyArray<Stall>,
   layoutName: string,
-  eventType?: EventType
+  eventType?: EventType,
+  /** Plotting rules chosen for the layout. */
+  ruleIds?: ReadonlyArray<number>
 ): LayoutSaveRequest {
   if (!currentHall) throw new Error('No hall selected.');
 
@@ -66,6 +69,7 @@ export function buildApiPayload(
   return {
     layoutName: layoutName.trim() || currentHall.name,
     ...(eventType ? { eventType } : {}),
+    ...(ruleIds?.length ? { ruleIds: [...ruleIds] } : {}),
     hall,
     stalls
   };
@@ -167,6 +171,11 @@ export class LayoutApiService {
       `${this.api}/layout/${encodeURIComponent(layoutId)}/stalls/${encodeURIComponent(parentNumber)}/split`,
       { children, idempotencyKey }
     ));
+  }
+
+  /** `GET /api/planner-rules` — the shared library of plotting rules, oldest first. */
+  listPlannerRules(): Promise<PlannerRule[]> {
+    return firstValueFrom(this.http.get<PlannerRule[]>(`${this.api}/planner-rules`));
   }
 
   /** `GET /api/stall-types` — the stall sizes offered in draw mode (backend configuration). */

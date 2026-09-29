@@ -34,6 +34,7 @@ import { ViolationsPanelComponent } from './components/violations-panel.componen
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
 import { AssistPanelComponent } from './components/assist-panel.component';
 import { PlannerRulesDialogComponent } from './components/planner-rules-dialog.component';
+import { RulePickerDialogComponent } from './components/rule-picker-dialog.component';
 import { AiChatLauncherComponent } from './components/ai-chat-launcher.component';
 import { AiChatSession } from './ai-chat-session.service';
 import { legendEntries } from './geometry/legend-content';
@@ -84,6 +85,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
     AddStallFormComponent,
     AssistPanelComponent,
     PlannerRulesDialogComponent,
+    RulePickerDialogComponent,
     AiChatLauncherComponent,
     EditStallFormComponent,
     ShopsListComponent,
@@ -133,6 +135,11 @@ export class PlannerPageComponent implements OnInit {
   private autoTourOffered = false;
   private tourReturnState: { sidebar: boolean; tab: SidebarTab; info: boolean } | null = null;
   readonly rulesDismissed = signal(false);
+  private readonly rulesGuide = viewChild.required(PlannerRulesDialogComponent);
+  private readonly rulePicker = viewChild.required(RulePickerDialogComponent);
+  /** The one dialog a visit opens with: set once the rule library has answered. */
+  private landingDialogShown = false;
+  readonly appliedRules = this.store.appliedRules;
   readonly tourIndex = signal<number | null>(null);
   readonly tourCardHeight = signal(244);
   readonly tourSteps = computed<PlannerTourStep[]>(() => [
@@ -240,6 +247,32 @@ export class PlannerPageComponent implements OnInit {
   readonly viewCommand = signal<ViewCommand | null>(null);
 
   constructor() {
+    // Opened from the setup steps with the chosen hall's id (`?hallId=`): select it once the
+    // real halls are in, exactly like a venue deep link.
+    effect(() => {
+      const hallId = this.venueParams()?.get('hallId');
+      if (!hallId || this.hallsStatus() !== 'ready') return;
+      const request = 'id:' + hallId;
+      if (this.appliedVenueRequest === request) return;
+      this.appliedVenueRequest = request;
+      const hall = this.store.halls().find(h => String(h.id) === hallId);
+      untracked(() => {
+        if (hall) this.store.setActiveHall(hall.id);
+        else this.notify.error('Hall unavailable', 'The chosen hall could not be loaded. Choose a hall from the Hall tab.');
+      });
+    });
+
+    // One dialog to start with: the rule picker when there are rules to choose from, otherwise
+    // the plotting guide (it stays one click away in the Rules tab). A layout opened later keeps
+    // its own saved rules.
+    effect(() => {
+      const status = this.store.plannerRulesStatus();
+      if (this.landingDialogShown || status === 'loading') return;
+      this.landingDialogShown = true;
+      const pick = status === 'ready' && this.store.plannerRules().length > 0;
+      untracked(() => afterNextRender(() => (pick ? this.rulePicker() : this.rulesGuide()).open(), { injector: this.injector }));
+    });
+
     // Wait for real halls before resolving a venue deep link. Consume it once so later
     // hall changes and retries never pull the visitor away from their current work.
     effect(() => {
@@ -371,7 +404,15 @@ export class PlannerPageComponent implements OnInit {
   }
 
   /** Retry from the offline notice: everything the planner fetches on mount. */
+  /** Opens the rule picker (Rules tab, "Choose rules"). */
+  chooseRules(): void {
+    this.rulePicker().open();
+  }
+
   loadFromServer(): void {
+    // The rule library decides what the visit opens with (see the constructor).
+    void this.store.loadPlannerRules();
+
     // Real halls first, so the planner opens on an actual ITPO hall rather than the
     // offline fallback. Independent of the layout list, so they run concurrently.
     void this.store.loadHalls();

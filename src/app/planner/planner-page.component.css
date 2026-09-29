@@ -268,3 +268,4 @@
 @media (prefers-reduced-motion: reduce) {
   .planner.tour-active .sidebar { transition: none; }
 }
+

@@ -1,0 +1,276 @@
+/*
+ * ITPO admin look (maroon sidebar, pink active step, lavender panel, peach cards). The tokens
+ * are declared on the shell and inherited by every setup step, so the rest of the app keeps
+ * its own theme.
+ */
+:host {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: #f7f5fb;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 14px 0;
+  background: var(--itpo-maroon);
+  color: #fff;
+  overflow: hidden;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 18px;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+}
+.brand img {
+  flex: none;
+  border-radius: 50%;
+  background: #fff;
+}
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.brand-text strong {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.brand-text small {
+  font-size: 11.5px;
+  opacity: 0.8;
+}
+
+.section-label {
+  margin: 14px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.62);
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #fff;
+  text-decoration: none;
+  transition: background 150ms ease;
+}
+a.step:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+a.step:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.step.active {
+  background: var(--itpo-pink);
+  box-shadow: 0 6px 16px rgb(234 10 81 / 0.35);
+}
+.step.active:hover {
+  background: var(--itpo-pink-hover);
+}
+.step.disabled {
+  color: rgb(255 255 255 / 0.5);
+  cursor: not-allowed;
+}
+
+.step-n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 13px;
+  font-weight: 700;
+}
+.step.active .step-n {
+  background: #fff;
+  color: var(--itpo-pink);
+  border-color: #fff;
+}
+.step.done .step-n {
+  background: rgb(255 255 255 / 0.16);
+  border-color: transparent;
+}
+
+.step-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.step-text span {
+  font-size: 14px;
+  font-weight: 600;
+}
+.step-text small {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 8px 0;
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.85);
+  text-decoration: none;
+}
+.back-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+.back-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 6px;
+}
+.back-link svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.sidebar-art {
+  margin-top: auto;
+  width: 100%;
+  opacity: 0.12;
+  filter: brightness(3);
+  pointer-events: none;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 32px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.crumb {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.crumb span {
+  margin: 0 4px;
+}
+.page-title {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.panel {
+  position: relative;
+  flex: 1;
+  margin: 20px 28px 28px;
+  border-radius: 24px;
+  background: linear-gradient(160deg, var(--itpo-lavender) 0%, var(--itpo-lavender-deep) 100%);
+  overflow: hidden;
+}
+.panel-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.panel-art path {
+  fill: none;
+  stroke: #b48cf2;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.45;
+}
+.panel-body {
+  position: relative;
+  padding: 28px 32px 32px;
+}
+
+@media (max-width: 900px) {
+  :host {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: static;
+    height: auto;
+    padding-bottom: 10px;
+  }
+  .brand {
+    padding-bottom: 10px;
+  }
+  .section-label,
+  .sidebar-art,
+  .back-link {
+    display: none;
+  }
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .step {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 4px;
+    text-align: center;
+  }
+  .step-text small {
+    display: none;
+  }
+  .step-text span {
+    font-size: 12px;
+  }
+  .topbar {
+    padding: 12px 16px;
+  }
+  .panel {
+    margin: 12px;
+    border-radius: 18px;
+  }
+  .panel-body {
+    padding: 18px 16px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    transition: none;
+  }
+}

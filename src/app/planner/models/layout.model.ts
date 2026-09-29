@@ -12,7 +12,7 @@ export interface LayoutSummary {
 
 /** Response of `GET /api/layout/{id}` as consumed by `openLayout` (`App.js:575`). */
 export interface LayoutDetail {
-  layout?: { id?: number | string; name?: string; eventType?: EventType };
+  layout?: { id?: number | string; name?: string; eventType?: EventType; ruleIds?: number[] };
   name?: string;
   hall?: Hall;
   stalls?: StallInput[];
@@ -71,6 +71,8 @@ export interface StallPayload {
 export interface LayoutSaveRequest {
   layoutName: string;
   eventType?: EventType;
+  /** Plotting rules chosen for this layout; omitted when none. */
+  ruleIds?: number[];
   hall: HallPayload;
   stalls: StallPayload[];
 }
