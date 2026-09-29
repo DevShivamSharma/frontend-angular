@@ -40,5 +40,11 @@ export const routes: Routes = [
       }
     ]
   },
+  // The architect's 2D drafting workspace, on the same planner state as the editor.
+  {
+    path: 'draft',
+    title: 'Drafting · Stall planner',
+    loadComponent: () => import('./planner/drafting/drafting-page.component').then(m => m.DraftingPageComponent)
+  },
   { path: '**', redirectTo: '' }
 ];

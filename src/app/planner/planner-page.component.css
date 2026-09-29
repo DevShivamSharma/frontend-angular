@@ -269,3 +269,4 @@
   .planner.tour-active .sidebar { transition: none; }
 }
 
+.sidebar-header > .planner-draft-link { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-bottom: var(--space-3); text-decoration: none; box-sizing: border-box; }
