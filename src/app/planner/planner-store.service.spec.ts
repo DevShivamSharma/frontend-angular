@@ -162,7 +162,7 @@ describe('PlannerStore', () => {
       const second = store.addStall(form);
 
       expect(second!.posZ).toBe(-15);
-      expect(second!.posX).toBe(-4); // 8 m stall + 3 m passage
+      expect(second!.posX).toBe(-7); // next to the first 8 m stall, sharing a wall
       expect(second!.name).toBe('Shop 2');
     });
 
@@ -265,7 +265,7 @@ describe('PlannerStore', () => {
 
       store.moveStall(second.id, first.posX, first.posZ);
 
-      expect(store.stalls().find(s => s.id === second.id)!.posX).toBe(-4);
+      expect(store.stalls().find(s => s.id === second.id)!.posX).toBe(-7);
       expect(store.error()).toContain('Overlaps existing stall');
     });
 
@@ -766,15 +766,15 @@ describe('PlannerStore', () => {
       expect(store.rejection()?.violations[0].message).toMatch(/^Overlaps 2 existing stalls/);
     });
 
-    it('rejects a 2 m gap and touching stalls with the same open side', () => {
+    it('accepts a 2 m gap and a shared wall between closed sides', () => {
       draw({ x: -10, z: 0 }, { x: -5, z: 0.2 }); // x -10..-7
       draw({ x: -5, z: 0 }, { x: 0, z: 0.2 }); // x -5..-2: 2 m gap
-      expect(store.currentStalls().length).toBe(1);
-      expect(store.rejection()?.violations[0].code).toBe('PATHWAY_WIDTH');
+      expect(store.currentStalls().length).toBe(2);
+      expect(store.rejection()).toBeNull();
 
-      draw({ x: -7, z: 0 }, { x: 0, z: 0.2 });
-      expect(store.currentStalls().length).toBe(1);
-      expect(store.rejection()?.violations[0].code).toBe('INVALID_TOUCHING');
+      draw({ x: -2, z: 0 }, { x: 5, z: 0.2 }); // x -2..1: shares a wall
+      expect(store.currentStalls().length).toBe(3);
+      expect(store.rejection()).toBeNull();
     });
 
     it('snaps a dropped move back when it breaks a rule', () => {

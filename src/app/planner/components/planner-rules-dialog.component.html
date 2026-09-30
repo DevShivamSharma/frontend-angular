@@ -20,9 +20,9 @@
     </p>
     <ul class="essential-rules">
       <li data-rule="floor-grid"><strong>Stay on the usable floor.</strong> Keep the whole stall inside the hall, clear of walls, outside areas and floor holes. Width and length must be positive multiples of the size step.</li>
-      <li data-rule="passage-openings"><strong>Leave room for people.</strong> Keep {{ passage() }} m between separate stalls and in front of the full width of every open side. At least one side must stay open; never block another stall’s access.</li>
+      <li data-rule="passage-openings"><strong>Leave room for people.</strong> Keep {{ passage() }} m clear in front of the full width of every open side. At least one side must stay open; never block another stall’s access.</li>
       <li data-rule="walls-zones"><strong>Respect the marked clearances.</strong> Keep {{ rules().peripheralClearance }} m from external walls. Keep restricted zones and entry, exit, service and emergency access clear. Hidden restrictions still apply.</li>
-      <li data-rule="touching-corners"><strong>Touch only back-to-back.</strong> Each stall needs exactly one opening facing outward in opposite directions, with a shared closed edge. Point contact is invalid. Corner stalls always need a passage.</li>
+      <li data-rule="touching-corners"><strong>Shared walls are allowed.</strong> Stalls may touch or stand close together on their closed sides, also at hall corners; no passage is needed there. Stalls must never overlap.</li>
       <li data-rule="editing"><strong>Check every change.</strong> Add, draw, move, resize, rotate, duplicate and assisted placement are validated. Invalid drops return to their previous position; invalid edits are rejected.</li>
       <li data-rule="save-audit"><strong>Resolve issues before saving.</strong> Use the Rules tab to locate problems. Existing invalid layouts stay visible for repair. Save and Update are blocked until placement issues are resolved; the server can also reject a write.</li>
     </ul>
@@ -32,13 +32,13 @@
         <summary>Hall settings, snapping & access <app-icon name="chevron-down" [size]="16" /></summary>
         <p>B2B and B2C passages can each be set from 3–5 m; a missing setting defaults to 3 m. Changing settings rechecks the layout without rearranging stalls. Invalid saved passage values must be corrected.</p>
         <p>All sizes and positions are in metres. X/Z describe the stall centre; openings rotate with the stall. Move snapping aligns edges, so half-metre centres can be valid. Turning snap off does not disable size or clearance checks. Draw stays grid-based; Add rounds sizes to the configured step.</p>
-        <p>Circular and irregular outlines, holes and separate floor regions matter. A stall cannot bridge outside space. Corners come from adjacent actual edges within one passage width; a smooth circular wall is not a corner. Exterior gaps do not count as usable passage.</p>
+        <p>Circular and irregular outlines, holes and separate floor regions matter. A stall cannot bridge outside space. Exterior space does not count as usable passage in front of an open side.</p>
         <p>Passage, no-construction, emergency/entry access, facility, restricted foyer, partition and smoke-curtain zones prohibit stalls. Facility, partition and smoke-curtain buffers default to 1 m; hall or individual-zone settings can override them. Door access uses its configured depth, otherwise the event passage width. Walkable passage zones can serve an open side; physical restrictions cannot.</p>
       </details>
       <details data-rule="status-split">
         <summary>Stall status, numbering & splitting <app-icon name="chevron-down" [size]="16" /></summary>
         <p>New stalls are AVAILABLE. AVAILABLE and BOOKED stalls occupy space; CANCELLED stalls do not. Removing a saved stall cancels it and keeps its number; an unsaved stall is removed. Save or Update to keep these changes. New and duplicate stalls receive permanent numbers from the server.</p>
-        <p>Split only AVAILABLE stalls into 2–100 equal children along local X or Z. Passage gaps come from the parent’s area, and child sizes must fit the grid. A back-to-back split has exactly two children and must pass the same corner and opening checks.</p>
+        <p>Split only AVAILABLE stalls into 2–100 equal children along local X or Z. Passage gaps come from the parent’s area, and child sizes must fit the grid. A back-to-back split has exactly two children and must pass the same opening checks.</p>
         <p>Preview numbers such as parent-A and parent-B are provisional. Confirm requires a saved parent and layout matching the saved geometry/settings; Update first if needed. Children appear only after server confirmation. An unavailable split keeps the parent; an editor change during a request requires a fresh review or reload.</p>
       </details>
       <details data-rule="assist-import">

@@ -23,7 +23,7 @@ import {
  *  2. A summed-area table over the blocked cells answers "how many blocked cells lie inside
  *     this rectangle?" in O(1), so every candidate window is checked for being entirely free.
  *  3. Windows that pass are then checked with the full rule set (validatePlacement), which also
- *     covers what a raster cannot - the passage width between separate stalls.
+ *     covers what a raster cannot - the passage in front of open sides.
  *
  * Step 1 is deliberately conservative (it only blocks cells that no stall could ever use), so
  * it can only speed things up; the answer always comes from step 3.

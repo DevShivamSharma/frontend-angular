@@ -17,12 +17,17 @@ const at = (x: number, z: number, side: 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT' = 'F
 const codes = (f: Footprint, c: PlacementContext) => validatePlacement(f, c).violations.map(v => v.code);
 
 for (const width of [3, 5]) {
-  test(`geometry: ${width} m exact passage accepted; 0.01 m too narrow rejected`, () => {
+  test(`geometry: ${width} m exact open-side passage accepted; 0.01 m too narrow rejected`, () => {
     const ctx = context(width);
     ctx.stalls = [{ ...at(1, 1), id: 'corner' }];
+    // Closed sides: any gap or a shared wall, also at a hall corner.
     expect(validatePlacement(at(5 + width, 1), ctx).valid).toBe(true);
-    expect(codes(at(5 + width - 0.01, 1), ctx)).toContain('CORNER_PASSAGE');
-    expect(codes(at(5, 1, 'RIGHT'), ctx)).toContain('CORNER_PASSAGE');
+    expect(validatePlacement(at(5 + width - 0.01, 1), ctx).valid).toBe(true);
+    expect(validatePlacement(at(5, 1, 'RIGHT'), ctx).valid).toBe(true);
+    // In front of the open side the whole passage stays clear.
+    expect(validatePlacement(at(1, 5 + width), ctx).valid).toBe(true);
+    expect(codes(at(1, 5 + width - 0.01), ctx)).toContain('OPEN_SIDE_BLOCKED');
+    expect(codes(at(5, 1, 'LEFT'), ctx)).toContain('OPEN_SIDE_BLOCKED');
   });
   test(`geometry: open frontage needs ${width} m inside actual floor`, () => {
     const ctx = context(width);
@@ -31,13 +36,13 @@ for (const width of [3, 5]) {
   });
 }
 
-test('geometry: only outward back-to-back touching is accepted, symmetrically', () => {
+test('geometry: shared walls are accepted on closed sides only, symmetrically', () => {
   const ctx = context();
   ctx.stalls = [{ ...at(10, 10, 'BACK'), id: 'a' }];
   expect(validatePlacement(at(10, 14, 'FRONT'), ctx).valid).toBe(true);
-  expect(codes(at(10, 14, 'BACK'), ctx)).toContain('INVALID_TOUCHING');
-  expect(codes(at(10, 14, 'LEFT'), ctx)).toContain('INVALID_TOUCHING');
-  expect(codes(at(14, 14), ctx)).toContain('INVALID_TOUCHING');
+  expect(codes(at(10, 14, 'BACK'), ctx)).toContain('OPEN_SIDE_BLOCKED');
+  expect(validatePlacement(at(10, 14, 'LEFT'), ctx).valid).toBe(true);
+  expect(validatePlacement(at(14, 14), ctx).valid).toBe(true);
   ctx.stalls = [{ ...at(10, 14), id: 'b' }];
   expect(validatePlacement(at(10, 10, 'BACK'), ctx).valid).toBe(true);
   expect(codes(at(10, 10), ctx)).toContain('OPEN_SIDE_BLOCKED');
@@ -50,7 +55,8 @@ test('geometry: notch corners use the polygon, not its bounding box', () => {
   const corner = at(25, 16, 'LEFT');
   expect(isCornerStall(corner, ctx)).toBe(true);
   ctx.stalls = [{ ...corner, id: 'notch' }];
-  expect(codes(at(21, 16, 'LEFT'), ctx)).toContain('CORNER_PASSAGE');
+  // Stands in the passage in front of the notch stall's open LEFT side.
+  expect(codes(at(21, 16, 'LEFT'), ctx)).toContain('OPEN_SIDE_BLOCKED');
   expect(codes(at(31, 14), ctx)).toContain('OUTSIDE_HALL');
   expect(codes(at(26, 11, 'RIGHT'), { ...ctx, stalls: [] })).toContain('OPEN_SIDE_BLOCKED');
 });
@@ -120,13 +126,13 @@ test('geometry: rotated nearest placement does not reject free floor inside its 
   expect(spot).toMatchObject({ posX: 20, posZ: 20, width: 10, length: 2, rotation: 90 });
 });
 
-test('geometry: a corner gap across an exterior notch is not usable passage', () => {
+test('geometry: closed sides either side of an exterior notch need no passage between them', () => {
   const ctx = context();
   ctx.boundary = [{ x: 0, z: 0 }, { x: 15, z: 0 }, { x: 15, z: 30 }, { x: 25, z: 30 },
     { x: 25, z: 0 }, { x: 40, z: 0 }, { x: 40, z: 40 }, { x: 0, z: 40 }];
   ctx.stalls = [{ ...at(26, 1), id: 'across-notch' }];
-  expect(codes(at(10, 1), ctx)).toContain('CORNER_PASSAGE');
+  expect(validatePlacement(at(10, 1), ctx).valid).toBe(true);
   ctx.stalls = [{ ...at(10, 1), id: 'existing-corner' }];
   expect(isCornerStall(at(26, 8), ctx)).toBe(false);
-  expect(codes(at(26, 8), ctx)).toContain('CORNER_PASSAGE');
+  expect(validatePlacement(at(26, 8), ctx).valid).toBe(true);
 });

@@ -15,16 +15,13 @@ the local NestJS controller, DTOs and placement implementation on 2026-09-26.
   Missing values default to 3 m. Explicit saved values are preserved and invalid values reported.
 - All halls, including custom/offline halls, use placement validation. The current wall clearance,
   snap settings, openings and restricted zones remain active.
-- A corner means two adjacent non-collinear edges of the actual usable hall outline are each
-  within the selected passage width of the stall. Traced floor holes and disconnected floor regions
-  are included. A smooth circular wall alone does not introduce synthetic corners.
-- Corner pairs require separation. Other pairs can touch only along a positive-length closed
-  edge with one outward open side each, facing in opposite directions. Point contact is invalid.
+- The passage is required in front of open sides only. Stalls may share walls or stand any
+  distance apart on their closed sides, also at hall corners; a pair only must not overlap.
 - Every open frontage needs a full-width, full-depth clear corridor inside its floor region.
   Walls, outside masks, holes and physical restricted zones cannot count as passage. Marked
-  passage/entrance/exit areas can serve as walking space, but cannot hold a stall.
+  passage/entrance/exit areas can serve as walking space, but cannot hold a stall. No stall may
+  stand in the corridor of its own or another stall's open side.
 - Measurements use rectangle edges (polygons when rotated), with a 1e-6 m numerical tolerance.
-  The gap from a corner stall to its nearest neighbour must not cross exterior space.
 - Loaded invalid layouts remain visible for repair; saving is blocked until the preview audit passes.
 
 ## Existing layout endpoints
@@ -82,7 +79,7 @@ The prefix is an opaque identifier, never dimensions. Suffixes are A…Z, AA, AB
 The backend's lineage key is `parentStallNumber`; no new parent-id or split-index field is required.
 
 Frontend preview supports 2–100 equal children across local X or Z, reserving passage area inside
-the parent. A back-to-back split supports exactly two children and is rejected at a corner.
+the parent. A back-to-back split supports exactly two children.
 Uneven dimensions on the snap grid are explained before confirmation. Preview numbers are explicitly
 provisional and shown on the canvas and in the properties panel. Nothing is inserted locally until
 the server confirms the split. The endpoint runs against saved state, so confirmation first reads
@@ -98,7 +95,7 @@ Save/update/split may return HTTP 400/409 with `message` and `violations`:
 {
   "message": "Placement rejected",
   "violations": [{
-    "code": "CORNER_PASSAGE", "message": "Required 5 m clear passage.",
+    "code": "OPEN_SIDE_BLOCKED", "message": "FRONT passage is blocked by 12.",
     "stallIndex": 1, "stallNumber": "5-10-B", "ruleRef": "Placement",
     "geometry": [], "relatedStallIds": ["12"]
   }]

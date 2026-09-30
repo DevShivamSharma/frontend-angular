@@ -28,6 +28,7 @@ import {
   centredAlignment,
   cellCentres,
   checkRules,
+  defaultTarget,
   FloorMask,
   importHall,
   matchGroups,
@@ -65,7 +66,8 @@ const RULE_LABELS: Record<string, string> = {
 
 /**
  * Import a CAD hall plan (PDF): upload -> the server detects the stalls -> align them to a planner
- * hall -> review over the drawing -> confirm into the editor as a new, unsaved layout.
+ * hall (by default the one being worked on) -> review over the drawing -> confirm into the editor
+ * as a new, unsaved layout on that hall.
  *
  * Nothing is guessed silently: every conflict and uncertain item from the drawing is listed, the
  * planner's own rules are checked and reported (never relaxed), and the user decides what goes in.

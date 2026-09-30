@@ -69,7 +69,7 @@
     </div>
     } @else {
     <span class="field-label" id="edit-stall-gate-label">Open Sides</span>
-    <div class="panel-hint">Keep {{ passageWidth() }} m clear in front of every open side. Touching stalls need opposite outward openings.</div>
+    <div class="panel-hint">Keep {{ passageWidth() }} m clear in front of every open side. Closed sides may share a wall with other stalls.</div>
     <label class="field-label" for="edit-facing">Face one direction</label>
     <select id="edit-facing" class="control" [value]="stall.openSides.length === 1 ? stall.openSides[0] : ''"
       (change)="setFacing($any($event.target))">

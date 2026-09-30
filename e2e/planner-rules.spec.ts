@@ -356,7 +356,7 @@ test('geometry supplement: positive step multiples, zone override and physical v
   }
 });
 
-test('geometry supplement: split limits, statuses, two-child back-to-back, rotated children and corner rejection', () => {
+test('geometry supplement: split limits, statuses, two-child back-to-back, rotated children and blocked corner frontage', () => {
   const ctx = placementContextFor(testHall as any, [], 'B2B');
   const parent = testStall(1, { width: 11 }) as any;
   for (const count of [1, 101, 2.5]) expect(previewSplit(parent, { count, axis: 'X', arrangement: 'PASSAGE' }, ctx).error).toBeTruthy();
@@ -367,5 +367,6 @@ test('geometry supplement: split limits, statuses, two-child back-to-back, rotat
   expect(rotated.violations).toEqual([]); expect(rotated.children[0].posX).toBeCloseTo(0);
   expect(Math.abs(rotated.children[0].posZ - rotated.children[1].posZ)).toBeCloseTo(7);
   const corner = previewSplit({ ...parent, width: 8, posX: -20, posZ: -22 }, { count: 2, axis: 'X', arrangement: 'BACK_TO_BACK' }, ctx);
-  expect(corner.violations.map(v => v.code)).toContain('CORNER_PASSAGE');
+  // At the corner the LEFT child's open side has no 3 m of floor in front of it.
+  expect(corner.violations.map(v => v.code)).toContain('OPEN_SIDE_BLOCKED');
 });

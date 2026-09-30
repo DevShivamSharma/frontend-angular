@@ -166,10 +166,10 @@
                   @if (s.labels.texts.length) { <br />Text inside: {{ s.labels.texts.join(' · ') }} }
                 </p>
                 @for (i of s.issues; track $index) {
-                  <p class="issue" [class]="'issue s-' + i.severity">{{ i.message }}</p>
+                  <p class="finding" [class]="'finding s-' + i.severity">{{ i.message }}</p>
                 }
                 @for (v of selectedRuleViolations(); track $index) {
-                  <p class="issue s-rule">Planner rule: {{ v.message }}</p>
+                  <p class="finding s-rule">Planner rule: {{ v.message }}</p>
                 }
               </section>
             }
@@ -178,7 +178,7 @@
               <section>
                 <h3>Labels without an outline ({{ r.unresolved.length }})</h3>
                 @for (u of r.unresolved; track $index) {
-                  <p class="issue s-warning"><b>{{ u.texts.join(' / ') }}</b> — {{ u.reason }}</p>
+                  <p class="finding s-warning"><b>{{ u.texts.join(' / ') }}</b> — {{ u.reason }}</p>
                 }
               </section>
             }

@@ -35,6 +35,22 @@ export function matchGroups(hallName: string, groups: ReadonlyArray<PdfGroup>): 
   return groups.map(g => g.group).filter(g => numbers.has(g));
 }
 
+/**
+ * The planner hall an import goes into by default: the hall whose name carries the most of the
+ * drawing's hall numbers, so a Hall 8-11 drawing lands in "Hall 8-9-10" even while another hall
+ * is selected. On a tie the selected hall wins; when no hall matches, the selected hall is kept.
+ */
+export function defaultTarget(
+  halls: ReadonlyArray<Hall>,
+  current: Hall | null,
+  groups: ReadonlyArray<PdfGroup>,
+): Hall | null {
+  const score = (h: Hall) => matchGroups(h.name, groups).length;
+  let best = current;
+  for (const h of halls) if (score(h) > (best ? score(best) : 0)) best = h;
+  return best;
+}
+
 export const round05 = (v: number): number => Math.round(v * 2) / 2;
 
 /** Each group's grid origin in the frame of `groups[0]`, metres, on the half-metre grid. */
@@ -304,10 +320,11 @@ export function toPlannerStall(stall: PdfStall, outline: Point[], hallId: string
 // --- the hall the import goes into ---------------------------------------------------------------
 
 /**
- * The working hall for an import: a copy of the chosen planner hall (same floor, zones, walls and
- * rules), or, when the drawing's hall has no planner hall, a plain rectangle around the drawing
- * with 2 m to spare on every side. Only the size step changes, and only when the drawing uses
- * half metres: every other rule stays as the hall has it. The master hall is never modified.
+ * The hall an import goes into: the chosen planner hall itself (same id, name, floor, zones,
+ * walls and rules), so the import stays in that hall and no hall is added. Only when "new hall"
+ * is chosen it is a plain rectangle around the drawing with 2 m to spare on every side. Only the
+ * size step changes, and only when the drawing uses half metres: every other rule stays as the
+ * hall has it. `target` itself is not modified: a changed size step comes back on a copy.
  */
 export function importHall(
   target: Hall | null,
@@ -318,12 +335,7 @@ export function importHall(
   const half = needsHalfMetres(result, groups);
   const id = `pdf-hall-${stamp}`;
   if (target) {
-    return {
-      ...target,
-      id,
-      name: `${target.name} (PDF import)`,
-      rules: half ? { ...(target.rules ?? {}), snapStep: 0.5 } : target.rules ?? null,
-    };
+    return half ? { ...target, rules: { ...(target.rules ?? {}), snapStep: 0.5 } } : target;
   }
   const frame = frameOffsets(result, groups);
   const pts = result.stalls

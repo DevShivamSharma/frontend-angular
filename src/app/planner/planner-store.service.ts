@@ -910,15 +910,17 @@ export class PlannerStore {
   }
 
   /**
-   * Put a reviewed PDF plan import into the editor as a new, unsaved layout on `hall` (a working
-   * copy made for the import, so the master hall and its current stalls stay as they are). The
-   * stalls are placed as reviewed; the usual audit reports any planner-rule issue, and saving
-   * goes through the normal validated save.
+   * Put a reviewed PDF plan import into the editor as a new, unsaved layout on `hall`: the hall
+   * chosen in the import (it keeps its place in the list; no hall is added), or a new hall sized
+   * to the drawing when that was chosen. The import replaces the stalls shown on that hall, like
+   * opening a layout does. The stalls are placed as reviewed; the usual audit reports any
+   * planner-rule issue, and saving goes through the normal validated save.
    */
   applyPdfImport(hall: Hall, stalls: ReadonlyArray<Stall>, layoutName: string): void {
     this.clearFeedback();
     this.proposals.set(null);
-    this.halls.update(list => [...list.filter(h => String(h.id) !== String(hall.id)), hall]);
+    const existing = this.halls().some(h => String(h.id) === String(hall.id));
+    this.halls.update(list => (existing ? list.map(h => (String(h.id) === String(hall.id) ? hall : h)) : [...list, hall]));
     this.activeHallId.set(hall.id);
     this.stalls.update(p => [
       ...p.filter(s => String(s.hallId) !== String(hall.id)),

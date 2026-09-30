@@ -1,7 +1,7 @@
 import polygonClipping, { type MultiPolygon } from 'polygon-clipping';
 import { openingAccessRect, zoneClearanceFor } from './placement-rules';
 import type { Footprint, PlacementContext, Point, ValidationResult, Violation, ViolationCode } from './placement-rules';
-import { backToBack, closestPoints, segmentInsideFloor, contained, corridor, distance, edges, EPS, openEdgeList, overlaps, ring, segmentDistance, stallPolygon, sub } from './polygon-geometry';
+import { contained, corridor, distance, edges, EPS, openEdgeList, overlaps, ring, stallPolygon } from './polygon-geometry';
 
 const { difference, union } = polygonClipping;
 
@@ -38,18 +38,10 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
     : contained(poly, floor)) && obstacles.every(o => !overlaps(poly, o));
   if (!inside(p)) add('OUTSIDE_HALL', 'Stall is outside the usable hall boundary.', p);
 
-  // Corners come from actual usable floor rings, including cut-outs, never an AABB.
   const rings: Point[][] = ctx.circleRadius != null ? obstacles : floor.flatMap(poly => poly.map(r => r.slice(0, -1).map(([x, z]) => ({ x, z }))));
-  const isCorner = (poly: Point[]) => rings.some(r => r.some((v, i) => {
-    const prev = r[(i + r.length - 1) % r.length], next = r[(i + 1) % r.length];
-    const a = sub(v, prev), b = sub(next, v);
-    if (Math.abs(a.x * b.z - a.z * b.x) <= EPS * Math.hypot(a.x, a.z) * Math.hypot(b.x, b.z)) return false;
-    const near = (x: Point, y: Point) => Math.min(...edges(poly).map(([s, t]) => segmentDistance(x, y, s, t))) <= passage + EPS;
-    return near(prev, v) && near(v, next);
-  }));
-  const corner = isCorner(p);
   const others = ctx.stalls.filter(s => String(s.id) !== ignoreId && s.status !== 'CANCELLED');
-  const nearest = Math.min(...others.map(other => distance(p, stallPolygon(other))));
+  // Stalls may share walls or stand any distance apart on their closed sides: a pair only must
+  // not overlap. The passage is required in front of open sides alone (checked below).
   for (const other of others) {
     const q = stallPolygon(other), ids = [String(other.id)];
     if (overlaps(p, q)) {
