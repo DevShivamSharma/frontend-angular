@@ -1,5 +1,13 @@
 # Geographic context sources
 
+## Color mode satellite background
+
+`satellite/satellite-inner.jpg` and `satellite/satellite-outer.jpg` are the original bundled **Esri World Imagery** mosaics restored byte-for-byte from frontend commit `7a7c98c79a53099c704fe95da6f271097b4d4e66`. Credit: **Esri, Maxar, Earthstar Geographics, and the GIS User Community**. These are historical images, not live tiles. The full imagery credit is visible in the Color venue view.
+
+The original builder used 10 × 10 zoom-16 tiles and 6 × 6 zoom-13 tiles around 28.6180° N, 77.2443° E. `scripts/restore-venue-satellite.cjs` restores the JPEGs and their original four-landmark fit. The current model retains those layout coordinates: Convention Centre at approximately (-340, 132) and Hall 1 at (152, 233) in scene X/Z metres. Photo registration therefore retains the fitted rotation/scale instead of using the OSM context's approximate geographic origin. The manifest preserves the original fit and its 2.2–6.9 metre residuals; these are historical fit measurements, not a new survey of the detailed model. Source service: https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer
+
+Images load on the first Color switch and are reused. Natural retains the OSM map; Color also falls back to OSM if a satellite asset fails. Both images must load before switching the background. A later Color switch retries a failed load. Imagery shares the local map's altitude fade during globe navigation and is disposed with the viewer.
+
 ## Earth
 
 `earth-day.jpg` is NASA Earth Observatory's **Blue Marble: Next Generation, July 2004**, downloaded at the publisher's 2048 × 1024 rendition. Credit: **NASA Earth Observatory**. The image is historical satellite-derived global surface imagery, not live imagery.

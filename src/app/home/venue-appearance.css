@@ -1,4 +1,6 @@
 .appearance-control{position:absolute;right:14px;top:66px;z-index:2;max-width:235px;text-align:right}
+#geo-credit{max-width:calc(100vw - 78px);line-height:12px;text-align:right}
+@media(max-width:700px){#geo-credit{bottom:26px}}
 .appearance-switch{display:inline-flex;gap:3px;padding:4px;background:#f3f0ea;box-shadow:0 2px 8px #172c2926}
 .appearance-switch button{min-height:36px;padding:7px 12px;background:transparent;font-size:11px;font-weight:600;color:#414b44}
 .appearance-switch button[aria-pressed=true]{background:#353c36;color:#fff}

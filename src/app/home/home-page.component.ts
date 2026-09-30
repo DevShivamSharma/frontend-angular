@@ -47,6 +47,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly globeActive = signal(false);
   readonly globeAvailable = signal(true);
   readonly geographyReady = signal(false);
+  readonly satelliteReady = signal(false);
   ngAfterViewInit(): void {
     this.zone.runOutsideAngular(() => {
       void this.loading.run('rooms', () => this.data.loadRooms());
@@ -58,7 +59,8 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
           selected: (id, level) => this.zone.run(() => this.pick(id, level)),
           modeChanged: mode => this.zone.run(() => { this.globeActive.set(mode === 'globe'); if (mode === 'globe') this.closeDetails(); this.status.set(mode === 'globe' ? 'Earth · New Delhi' : 'Bharat Mandapam'); }),
           status: text => this.zone.run(() => this.status.set(text)),
-          geographyReady: ready => this.zone.run(() => { this.geographyReady.set(ready); this.globeAvailable.set(ready); })
+          geographyReady: ready => this.zone.run(() => { this.geographyReady.set(ready); this.globeAvailable.set(ready); }),
+          satelliteReady: () => this.zone.run(() => this.satelliteReady.set(true))
         }, this.globeMarker().nativeElement);
         const info = await this.viewer.ready;
         if (!this.destroyed) this.zone.run(() => this.setInformation(info));

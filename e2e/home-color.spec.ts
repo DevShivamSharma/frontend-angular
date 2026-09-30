@@ -5,7 +5,7 @@ test.use({trace:'off', launchOptions:{args:process.platform==='win32'?['--use-an
 test('appearance: lazy palette, stable camera, selection, cached toggles and idle rendering', async ({page},info) => {
   test.setTimeout(150_000);
   const requests: string[] = [], errors: string[] = [];
-  page.on('request',r=>{if(/\.glb(?:\?|$)/.test(r.url()))requests.push(r.url());});
+  page.on('request',r=>{if(/\.glb(?:\?|$)|\/satellite\//.test(r.url()))requests.push(r.url());});
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
     const p={draws:0,canvas:null as HTMLCanvasElement|null};(window as any).__colorProbe=p;
@@ -23,10 +23,12 @@ test('appearance: lazy palette, stable camera, selection, cached toggles and idl
   const natural=page.getByRole('button',{name:'Natural',exact:true}),color=page.getByRole('button',{name:'Color',exact:true});
   await expect(natural).toHaveAttribute('aria-pressed','true');
   expect(requests.filter(u=>u.includes('colour-materials'))).toHaveLength(0);
+  expect(requests.filter(u=>u.includes('/satellite/'))).toHaveLength(0);
   await page.waitForTimeout(3000);
   const pixels=()=>page.evaluate(()=>(window as any).__colorProbe.canvas.toDataURL());
   const before=await pixels();
   await color.click();await expect(color).toHaveAttribute('aria-pressed','true',{timeout:60_000});
+  await expect(page.locator('#satellite-credit')).toBeVisible();
   await page.waitForTimeout(2000);
   const colored=await pixels();expect(colored).not.toBe(before);
   const changedBackground = await page.evaluate(async images => {
@@ -60,6 +62,8 @@ test('appearance: lazy palette, stable camera, selection, cached toggles and idl
   await color.click();await expect(color).toHaveAttribute('aria-pressed','true');
   expect(requests.filter(u=>u.includes('ARCHITECTURAL'))).toHaveLength(1);
   expect(requests.filter(u=>u.includes('colour-materials'))).toHaveLength(1);
+  expect(requests.filter(u=>u.includes('satellite-inner.jpg'))).toHaveLength(1);
+  expect(requests.filter(u=>u.includes('satellite-outer.jpg'))).toHaveLength(1);
   expect(errors).toEqual([]);
 });
 

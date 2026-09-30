@@ -15,6 +15,7 @@
 /** Tolerance for "touching is allowed" comparisons. Distances come out of sqrt, hence not 1e-8. */
 import { validateOrientedPlacement } from './oriented-placement';
 import { stallPolygon } from './polygon-geometry';
+import { BasicRuleSettings, ruleEnabled } from './basic-rules';
 
 export const PLACEMENT_EPSILON = 1e-6;
 
@@ -98,6 +99,8 @@ export interface HallOpening {
 
 /** Every physical rule the validator applies, in metres. Stored per hall. */
 export interface LayoutRules {
+  /** Per-layout placement checks; unspecified switches default to on. */
+  enabledRules?: BasicRuleSettings | null;
   /** Configurable 3–5 m per event; a missing setting defaults to 3 m. */
   minPassageWidth: Record<EventType, number>;
   /** ITPO D5: free passage along all external walls. */
@@ -247,7 +250,7 @@ export function validatePlacement(
       message: 'A stall must have at least one valid open side.', geometry: [], relatedStallIds: [] }] };
   }
 
-  if (!validDimensions(candidate, ctx.rules.snapStep)) {
+  if (!validDimensions(candidate, ruleEnabled(ctx.rules, 'sizeStep') ? ctx.rules.snapStep : 0)) {
     violations.push({
       code: 'INVALID_DIMENSIONS',
       ruleRef: 'Grid',
@@ -264,12 +267,18 @@ export function validatePlacement(
   }
 
   const rect = footprintRect(candidate);
-  if (ctx.circleRadius !== undefined && !rectInsideCircle(rect, ctx.circleRadius - ctx.rules.peripheralClearance)) {
+  if (ctx.circleRadius !== undefined && ruleEnabled(ctx.rules, 'hallBoundary') && !rectInsideCircle(rect, ctx.circleRadius)) {
     violations.push({ code: 'OUTSIDE_HALL', ruleRef: 'Hall boundary',
-      message: 'Stall must stay inside the circular hall and its wall clearance.',
+      message: 'Stall must stay inside the circular hall.',
       geometry: [{ type: 'rect', rect }], relatedStallIds: [] });
   }
-  for (const obstacle of ctx.obstacles ?? []) {
+  if (ctx.circleRadius !== undefined && ruleEnabled(ctx.rules, 'peripheralClearance') &&
+      !rectInsideCircle(rect, ctx.circleRadius - ctx.rules.peripheralClearance)) {
+    violations.push({ code: 'PERIPHERAL_CLEARANCE', ruleRef: 'ITPO D5',
+      message: `Keep ${fmt(ctx.rules.peripheralClearance)} m clear along the circular wall.`,
+      geometry: [{ type: 'rect', rect }], relatedStallIds: [] });
+  }
+  for (const obstacle of ruleEnabled(ctx.rules, 'hallBoundary') ? ctx.obstacles ?? [] : []) {
     if (rectOverlapsPolygon(rect, obstacle)) violations.push({ code: 'RESTRICTED_ZONE', ruleRef: 'Hall floor',
       message: 'Stall overlaps a wall, outside area or floor opening.',
       geometry: [{ type: 'polygon', points: obstacle }], relatedStallIds: [] });
@@ -282,7 +291,7 @@ export function validatePlacement(
   );
   if (outlines.length) {
     const home = outlines.find((o) => rectInsidePolygon(rect, o));
-    if (!home) {
+    if (!home && ruleEnabled(ctx.rules, 'hallBoundary')) {
       violations.push({
         code: 'OUTSIDE_HALL',
         ruleRef: 'Hall boundary',
@@ -290,7 +299,7 @@ export function validatePlacement(
         geometry: [{ type: 'rect', rect }],
         relatedStallIds: [],
       });
-    } else {
+    } else if (home && ruleEnabled(ctx.rules, 'peripheralClearance')) {
       const clearance = ctx.rules.peripheralClearance;
       const bands: ViolationGeometry[] = [];
       let nearest = Infinity;
@@ -328,20 +337,20 @@ export function validatePlacement(
 
     const otherRect = footprintRect(other);
 
-    if (rectsOverlap(rect, otherRect)) {
+    if (ruleEnabled(ctx.rules, 'stallOverlap') && rectsOverlap(rect, otherRect)) {
       overlapped.push(other);
       overlapAreas.push({ type: 'rect', rect: rectIntersection(rect, otherRect) });
     }
   }
 
   // Check the candidate's full open frontage, then protect existing stalls' frontage too.
-  for (const side of openSidesOf(candidate)) {
+  for (const side of ruleEnabled(ctx.rules, 'openSideAccess') ? openSidesOf(candidate) : []) {
     const access = openSideAccessRect(candidate, side, passage);
     const home = outlines.find(o => rectInsidePolygon(rect, o));
     const outside = (outlines.length > 0 && (!home || !rectInsidePolygon(access, home))) ||
       (ctx.circleRadius !== undefined && !rectInsideCircle(access, ctx.circleRadius));
     const blocked = (ctx.obstacles ?? []).some(o => rectOverlapsPolygon(access, o)) ||
-      ctx.zones.some(z => ['NO_CONSTRUCTION', 'PARTITION', 'SMOKE_CURTAIN', 'FACILITY_ACCESS'].includes(z.kind) &&
+      ctx.zones.some(z => ruleEnabled(ctx.rules, z.kind) && ['NO_CONSTRUCTION', 'PARTITION', 'SMOKE_CURTAIN', 'FACILITY_ACCESS'].includes(z.kind) &&
         rectOverlapsPolygon(access, z.polygon));
     const others = ctx.stalls.filter(s => s.status !== 'CANCELLED' && String(s.id) !== ignoreId &&
       rectsOverlap(access, footprintRect(s)));
@@ -353,7 +362,7 @@ export function validatePlacement(
   }
   for (const other of ctx.stalls) {
     if (other.status === 'CANCELLED' || String(other.id) === ignoreId) continue;
-    for (const side of openSidesOf(other)) {
+    for (const side of ruleEnabled(ctx.rules, 'openSideAccess') ? openSidesOf(other) : []) {
       const access = openSideAccessRect(other, side, passage);
       if (rectsOverlap(rect, access)) violations.push({ code: 'OPEN_SIDE_BLOCKED', ruleRef: 'Open-side access',
         message: `Blocks the ${side} open side of ${stallLabel(other)}; keep ${fmt(passage)} m clear.`,
@@ -376,6 +385,7 @@ export function validatePlacement(
 
   // Restricted zones, with their configured clearance (ITPO D3, D4, D6, D7, D11, D12).
   for (const zone of ctx.zones) {
+    if (!ruleEnabled(ctx.rules, zone.kind)) continue;
     if (!zone.polygon || zone.polygon.length < 3) continue;
 
     const clearance = zoneClearanceFor(zone, ctx.rules);
@@ -460,6 +470,7 @@ export function openingAccessRect(
   rules: LayoutRules,
   eventType: EventType,
 ): Rect | null {
+  if (!ruleEnabled(rules, opening.kind === 'EMERGENCY' ? 'EMERGENCY_EXIT_ACCESS' : 'ENTRY_EXIT_ACCESS')) return null;
   const width = Number(opening.width);
   if (!Number.isFinite(width) || width <= 0) return null;
 

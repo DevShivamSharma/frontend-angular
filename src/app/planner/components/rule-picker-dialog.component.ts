@@ -4,6 +4,8 @@ import { RouterLink } from '@angular/router';
 
 import { PlannerStore } from '../planner-store.service';
 import { IconComponent } from './icon.component';
+import { BasicRulesComponent } from './basic-rules.component';
+import { BasicRuleSettings } from '../geometry/basic-rules';
 
 /**
  * "Which rules apply to this layout?" Shows the shared library of plotting rules when a design
@@ -12,7 +14,7 @@ import { IconComponent } from './icon.component';
  */
 @Component({
   selector: 'app-rule-picker-dialog',
-  imports: [IconComponent, RouterLink],
+  imports: [IconComponent, RouterLink, BasicRulesComponent],
   templateUrl: './rule-picker-dialog.component.html',
   styleUrl: './rule-picker-dialog.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -26,6 +28,7 @@ export class RulePickerDialogComponent {
 
   /** Ticked while the dialog is open; applied only on confirm. */
   readonly picked = signal<Set<number>>(new Set());
+  readonly basicSettings = signal<BasicRuleSettings>({});
   readonly query = signal('');
 
   readonly rules = this.store.plannerRules;
@@ -39,6 +42,7 @@ export class RulePickerDialogComponent {
     const dialog = this.dialog().nativeElement;
     if (dialog.open) return;
     this.picked.set(new Set(this.store.appliedRuleIds()));
+    this.basicSettings.set({ ...this.store.basicRuleSettings() });
     this.query.set('');
     const active = this.document.activeElement;
     this.returnFocus = active instanceof HTMLElement && active !== this.document.body ? active : null;
@@ -58,9 +62,12 @@ export class RulePickerDialogComponent {
     this.picked.set(this.allPicked() ? new Set() : new Set(this.rules().map(r => r.id)));
   }
 
-  /** Library order, so the rules read the same everywhere. */
+  /** Keep saved plotting selections even when the library is temporarily unavailable. */
   apply(): void {
-    this.store.applyRules(this.rules().filter(r => this.picked().has(r.id)).map(r => r.id));
+    this.store.setBasicRules(this.basicSettings());
+    this.store.applyRules(this.store.plannerRulesStatus() === 'ready'
+      ? this.rules().filter(r => this.picked().has(r.id)).map(r => r.id)
+      : [...this.picked()]);
     this.dialog().nativeElement.close();
   }
 

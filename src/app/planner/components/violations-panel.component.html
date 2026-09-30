@@ -68,6 +68,10 @@
 @if (section() === 'rules') {
   @if (ruleDriven()) {
     <section class="card">
+      <app-basic-rules [settings]="store.basicRuleSettings()" (changed)="store.setBasicRules($event)" />
+      <p class="panel-hint gap-top">Changes apply immediately. Save the layout to keep them.</p>
+    </section>
+    <section class="card">
       <h3 class="panel-title">
         <app-icon class="icon-slot" name="shield" />
         Placement Rules

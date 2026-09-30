@@ -2,6 +2,9 @@
 .picker { width: min(620px, calc(100vw - 32px)); max-height: min(760px, calc(100dvh - 40px)); box-sizing: border-box; padding: 0; border: 0; border-radius: 16px; color: var(--text-primary); background: var(--surface-card); box-shadow: 0 24px 80px rgb(16 24 40 / 0.24); overflow: hidden; }
 .picker[open] { display: flex; flex-direction: column; animation: picker-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 .picker::backdrop { background: rgb(16 24 40 / 0.48); }
+.picker-body { min-height: 0; overflow-y: auto; }
+.picker-basic { padding: 12px 24px 20px; }
+.plotting-heading { margin: 0; padding: 16px 24px 12px; border-top: 1px solid var(--border-subtle); font-size: 15px; }
 .picker-header { position: relative; flex: none; padding: 24px 24px 12px; }
 .picker-heading { display: flex; gap: 14px; padding-right: 32px; }
 .picker-icon { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--surface-selected); color: var(--accent); }

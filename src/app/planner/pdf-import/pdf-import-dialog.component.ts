@@ -18,6 +18,8 @@ import {
 import { extractErrorMessage } from '../../core/http-error.util';
 import { NotifyService } from '../../core/notify.service';
 import { IconComponent } from '../components/icon.component';
+import { BasicRulesComponent } from '../components/basic-rules.component';
+import { BasicRuleSettings } from '../geometry/basic-rules';
 import { LayoutApiService } from '../layout-api.service';
 import type { Hall } from '../models/hall.model';
 import type { Stall } from '../models/stall.model';
@@ -70,11 +72,11 @@ const RULE_LABELS: Record<string, string> = {
  * as a new, unsaved layout on that hall.
  *
  * Nothing is guessed silently: every conflict and uncertain item from the drawing is listed, the
- * planner's own rules are checked and reported (never relaxed), and the user decides what goes in.
+ * selected placement rules are checked and reported, and the user decides what goes in.
  */
 @Component({
   selector: 'app-pdf-import-dialog',
-  imports: [IconComponent, PdfImportPickComponent, PdfPlanViewComponent],
+  imports: [IconComponent, PdfImportPickComponent, PdfPlanViewComponent, BasicRulesComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pdf-import-dialog.component.html',
   styleUrl: './pdf-import-dialog.component.css',
@@ -113,6 +115,9 @@ export class PdfImportDialogComponent {
   readonly nudgeGroup = signal('');
   readonly check = signal<RuleCheck | null>(null);
   readonly checking = signal(false);
+  /** Local to the import until confirm; each target retains its own draft settings. */
+  readonly basicOverrides = signal<Record<string, BasicRuleSettings>>({});
+  readonly basicSettings = computed(() => this.basicOverrides()[this.targetId()] ?? this.targetHall()?.rules?.enabledRules ?? {});
   /**
    * Drafting workspace: import the drawing as it is, rules broken or not. Off by default and
    * chosen per import; the stalls that break a rule stay listed and block saving until fixed.
@@ -138,11 +143,13 @@ export class PdfImportDialogComponent {
     if (this.existingHallsOnly()) {
       // The added hall itself (same id, same name): the stalls land on it, not on a copy.
       if (!target) return null;
-      return needsHalfMetres(r, this.groups())
+      const hall = needsHalfMetres(r, this.groups())
         ? { ...target, rules: { ...(target.rules ?? {}), snapStep: 0.5 } }
         : target;
+      return { ...hall, rules: { ...hall.rules, enabledRules: this.basicSettings() } };
     }
-    return importHall(target, r, this.groups(), this.stamp);
+    const hall = importHall(target, r, this.groups(), this.stamp);
+    return { ...hall, rules: { ...hall.rules, enabledRules: this.basicSettings() } };
   });
   /** Why nothing can be plotted: the drawing's hall is not added yet. */
   readonly missingHall = computed(() => {
@@ -281,6 +288,7 @@ export class PdfImportDialogComponent {
 
   restart(): void {
     this.readToken++;
+    this.basicOverrides.set({});
     this.ignoreRules.set(false);
     this.releasePage();
     this.result.set(null);
@@ -459,14 +467,20 @@ export class PdfImportDialogComponent {
 
   // --- rules and confirm -----------------------------------------------------------------------------
 
+  setBasicRules(settings: BasicRuleSettings): void {
+    this.basicOverrides.update(all => ({ ...all, [this.targetId()]: settings }));
+    this.check.set(null);
+    this.ignoreRules.set(false);
+  }
+
   runCheck(): void {
-    const hall = this.workHall();
-    if (!hall) return;
+    if (!this.workHall() || this.checking()) return;
     this.checking.set(true);
     // Let the spinner paint: checking a full hall takes about a second.
     setTimeout(() => {
       try {
-        this.check.set(checkRules(hall, this.plannerStalls(), this.store.eventType()));
+        const hall = this.workHall();
+        if (hall) this.check.set(checkRules(hall, this.plannerStalls(), this.store.eventType()));
         this.mode.set('hall');
       } finally {
         this.checking.set(false);

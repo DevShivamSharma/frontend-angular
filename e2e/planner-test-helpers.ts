@@ -24,7 +24,8 @@ export async function setupPlanner(page: Page, stalls: unknown[] = [], hall: any
     await route.fulfill({ json });
   });
   await page.addInitScript(() => localStorage.setItem('stall-planner.guided-tour.v1', 'completed'));
-  await page.goto('/planner');
+  await page.goto('/planner/editor');
+  await page.locator('app-planner-page').waitFor({ state: 'attached' });
   await page.waitForFunction(() => (window as any).ng?.getComponent(document.querySelector('app-planner-page'))?.store.hallsStatus() === 'ready');
   if (dismiss) await dismissPlottingRules(page);
   await page.evaluate(({ stalls, name }) => {

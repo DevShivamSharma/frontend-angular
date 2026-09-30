@@ -115,10 +115,15 @@ describe('DraftingEngine', () => {
     });
 
     it('refuses a whole row when any stall in it would break a rule (no half rows)', async () => {
-      // No gap: the stalls would touch side by side.
-      await type('SR', '10,10', '@9<0', '');
+      // The third stall of the row would run past the hall's right wall (x = 60).
+      await type('SR', '52,10', '@9<0', '');
       expect(store.currentStalls().length).toBe(0);
-      expect(logged('Not done: stall 1 of 3')).toBeTrue();
+      expect(logged('Not done: stall 3 of 3')).toBeTrue();
+    });
+
+    it('draws a row of stalls sharing walls: closed sides need no passage', async () => {
+      await type('SR', '10,10', '@9<0', '');
+      expect(rows().map(r => r[0])).toEqual([-18.5, -15.5, -12.5]);
     });
 
     it('refuses a move into the wall and asks for another point', async () => {

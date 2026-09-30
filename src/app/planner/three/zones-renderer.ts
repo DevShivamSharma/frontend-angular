@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ruleEnabled } from '../geometry/basic-rules';
 
 import {
   EventType,
@@ -65,7 +66,7 @@ export function buildRestrictedZones(zones: HallZone[], rules: LayoutRules, draw
     group.add(fill);
     group.add(outline(zone.polygon, color, 0.15));
 
-    const clearance = drawClearance ? zoneClearanceFor(zone, rules) : 0;
+    const clearance = drawClearance && ruleEnabled(rules, zone.kind) ? zoneClearanceFor(zone, rules) : 0;
     if (clearance > 0) {
       group.add(dashedRect(inflate(bounds(zone.polygon), clearance), color, 0.15));
     }
@@ -106,7 +107,7 @@ export function buildClearances(
     side: THREE.DoubleSide
   });
 
-  const band = rules.peripheralClearance;
+  const band = ruleEnabled(rules, 'peripheralClearance') ? rules.peripheralClearance : 0;
   if (boundary && boundary.length >= 3 && band > 0) {
     forEachEdge(boundary, (a, b) => {
       const dx = b.x - a.x;

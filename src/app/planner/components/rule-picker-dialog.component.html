@@ -6,7 +6,7 @@
       <div>
         <h2 id="rule-picker-title">Which rules apply to this layout?</h2>
         <p id="rule-picker-intro">
-          Tick the plotting rules to follow while designing {{ store.currentHall()?.name || 'this hall' }}. They are saved with the layout.
+          Choose basic checks and plotting rules for {{ store.currentHall()?.name || 'this hall' }}. Save the layout to keep your choices.
         </p>
       </div>
     </div>
@@ -15,6 +15,11 @@
     </button>
   </header>
 
+  <div class="picker-body">
+    <div class="picker-basic">
+      <app-basic-rules [settings]="basicSettings()" (changed)="basicSettings.set($event)" />
+    </div>
+    <h3 class="plotting-heading">Plotting rules</h3>
   @if (rules().length) {
     <div class="picker-tools">
       @if (rules().length > 6) {
@@ -49,16 +54,15 @@
     </div>
   }
 
+  </div>
   <footer class="picker-footer">
-    <span>{{ picked().size }} of {{ rules().length }} selected</span>
+    <span>{{ picked().size }} plotting rules selected</span>
     <div class="picker-actions">
-      <button type="button" class="btn-secondary" (click)="close()">{{ rules().length ? 'Skip for now' : 'Close' }}</button>
-      @if (rules().length) {
+      <button type="button" class="btn-secondary" (click)="close()">Cancel</button>
         <button type="button" class="btn-primary" (click)="apply()">
-          {{ picked().size ? 'Apply ' + picked().size + (picked().size === 1 ? ' rule' : ' rules') : 'Apply no rules' }}
+          Apply rules
           <app-icon name="arrow-right" [size]="16" />
         </button>
-      }
     </div>
   </footer>
 </dialog>

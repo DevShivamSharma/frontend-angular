@@ -4,6 +4,7 @@ import { extractErrorMessage, extractViolations } from '../core/http-error.util'
 import { NotifyService } from '../core/notify.service';
 import { ExcelImportResult } from './excel/excel-layout.service';
 import { FreeSpaceMap } from './geometry/free-space';
+import { BasicRuleSettings, ruleEnabled } from './geometry/basic-rules';
 import { previewSplit, SplitOptions } from './geometry/stall-split';
 import { GridSystem } from './geometry/grid-system';
 import { isRuleDriven, placementContextFor } from './geometry/hall-rules';
@@ -209,6 +210,7 @@ export class PlannerStore {
   readonly plannerRules = signal<PlannerRule[]>([]);
   readonly plannerRulesStatus = signal<'loading' | 'ready' | 'error'>('loading');
   readonly appliedRuleIds = signal<number[]>([]);
+  readonly basicRuleSettings = computed(() => this.currentHall()?.rules?.enabledRules ?? {});
   /** The applied rules in library order; ids of rules deleted since are left out. */
   readonly appliedRules = computed(() => {
     const ids = new Set(this.appliedRuleIds());
@@ -324,7 +326,7 @@ export class PlannerStore {
       freeSpace: this.freeSpace(),
       highlight: this.highlight(),
       passageWidth:
-        ctx && (draft || this.dragging()) ? ctx.rules.minPassageWidth[ctx.eventType] : null,
+        ctx && ruleEnabled(ctx.rules, 'openSideAccess') && (draft || this.dragging()) ? ctx.rules.minPassageWidth[ctx.eventType] : null,
       proposals: this.splitPreview()?.children.map(s => ({ footprint: s, label: `${s.stallNumber} (preview)`,
         valid: !this.splitPreview()?.violations.length })) ?? this.proposals()
     };
@@ -657,8 +659,8 @@ export class PlannerStore {
     const ctx = this.placementContext();
     if (!grid || !ctx) return null;
 
-    const width = grid.snapSize(num(form.width, 5));
-    const length = grid.snapSize(num(form.length, 5));
+    const width = ruleEnabled(ctx.rules, 'sizeStep') ? grid.snapSize(num(form.width, 5)) : num(form.width, 5);
+    const length = ruleEnabled(ctx.rules, 'sizeStep') ? grid.snapSize(num(form.length, 5)) : num(form.length, 5);
     const spot = new FreeSpaceMap(grid, ctx).nearestPlacement(width, length, {
       x: grid.originX,
       z: grid.originZ
@@ -1176,6 +1178,15 @@ export class PlannerStore {
   /** The rules chosen for this layout's design; saved with the layout. */
   applyRules(ids: ReadonlyArray<number>): void {
     this.appliedRuleIds.set([...new Set(ids)]);
+  }
+
+  setBasicRules(settings: BasicRuleSettings): void {
+    const hall = this.currentHall();
+    if (!hall) return;
+    this.halls.update(list => list.map(h => h === hall
+      ? { ...h, rules: { ...effectiveRules(h.rules), enabledRules: { ...settings } } } : h));
+    this.clearFeedback();
+    this.proposals.set(null);
   }
 
   // --- rule-driven editor ----------------------------------------------------

@@ -1,5 +1,15 @@
 # Muted map around the venue
 
+## Satellite restored in Color mode — 30 September 2026
+
+Color now loads the original two Esri satellite JPEGs from commit `7a7c98c` on demand. The original four-landmark registration is retained because the detailed model keeps the layout's building centres; the OSM context's approximate geographic origin is not used to position these photos. Natural keeps the existing map. Both JPEGs load before the map is replaced, failed loads retain the map, and a later Color switch retries. Credits appear with the photos. No external tile requests, API keys or dependencies were added.
+
+Verification: TypeScript and the production build passed; the build retains the existing planner PDF CSS-budget and polygon-clipping CommonJS warnings. All three `e2e/home-color.spec.ts` tests passed in `satellite-verified`, and both `e2e/home-satellite.spec.ts` tests passed in `satellite-final`. These cover exact Natural restoration, cached toggles, late loading, image failure/retry, globe return and mobile. Desktop/mobile screenshots were visually inspected. Both source JPEGs were also checked byte-for-byte against Git.
+
+The broader `home-controls.spec.ts` run stopped at its existing `app-planner-page` assertion: `/planner` currently opens the hall-selection setup page. Its preceding Natural controls/globe checks passed; that suite is not reported as fully passing. The initial sandboxed browser attempt could not load the existing rooms/halls APIs; the focused passing runs used normal network access.
+
+Preview: `test-results/satellite-final/artifacts/home-satellite-satellite-a-b498c-d-survives-globe-navigation/satellite-desktop.png` and `satellite-mobile.png`. Production output: `dist/satellite-restored`.
+
 The home viewer now exposes the existing local OpenStreetMap context around the authored campus. Roads are pale grey, parks muted green, water blue-grey and neighbouring buildings flat footprints. Details fade into the ground between 1.8 and 3.5 km from the existing geographic origin. The fade depends on position, never on movement or an idle timer.
 
 ## Changes

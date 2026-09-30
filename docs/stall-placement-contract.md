@@ -1,8 +1,8 @@
 # Stall placement and split integration
 
 The frontend owns live preview and feedback. The backend is authoritative for writes and numbering.
-No backend source is changed by this frontend implementation. This contract was checked against
-the local NestJS controller, DTOs and placement implementation on 2026-09-26.
+The frontend and backend placement validators share the basic-rule switch contract below.
+This contract was checked against the local placement implementation on 2026-09-30.
 
 ## Coordinates and preview rules
 
@@ -13,16 +13,39 @@ the local NestJS controller, DTOs and placement implementation on 2026-09-26.
 - `openSides` is authoritative; `gateSide` mirrors its first element for legacy clients.
 - `hall.rules.minPassageWidth.B2B/B2C` stores the chosen width per event, between 3 and 5 m.
   Missing values default to 3 m. Explicit saved values are preserved and invalid values reported.
-- All halls, including custom/offline halls, use placement validation. The current wall clearance,
-  snap settings, openings and restricted zones remain active.
-- The passage is required in front of open sides only. Stalls may share walls or stand any
-  distance apart on their closed sides, also at hall corners; a pair only must not overlap.
-- Every open frontage needs a full-width, full-depth clear corridor inside its floor region.
+- All halls, including custom/offline halls, use placement validation with the enabled basic checks.
+  Position snapping remains a separate setting.
+- With overlap and open-side passage checks enabled, passage is required in front of open sides only.
+  Stalls may share walls or stand any distance apart on their closed sides, also at hall corners;
+  a pair only must not overlap.
+- With the applicable checks enabled, every open frontage needs a full-width, full-depth clear
+  corridor inside its floor region.
   Walls, outside masks, holes and physical restricted zones cannot count as passage. Marked
   passage/entrance/exit areas can serve as walking space, but cannot hold a stall. No stall may
   stand in the corridor of its own or another stall's open side.
 - Measurements use rectangle edges (polygons when rotated), with a 1e-6 m numerical tolerance.
 - Loaded invalid layouts remain visible for repair; saving is blocked until the preview audit passes.
+
+## Basic-rule switches
+
+`hall.rules.enabledRules` stores optional boolean switches. Missing settings or keys mean on,
+so existing layouts keep their previous validation behavior. The 13 IDs are defined in
+`src/app/planner/geometry/basic-rules.ts` and mirrored in
+`../backend-nest/src/layouts/placement/basic-rules.ts`: `hallBoundary`, `stallOverlap`,
+`sizeStep`, `peripheralClearance`, `openSideAccess`, `PASSAGE`, `NO_CONSTRUCTION`,
+`ENTRY_EXIT_ACCESS`, `EMERGENCY_EXIT_ACCESS`, `FACILITY_ACCESS`, `FOYER`, `PARTITION`
+and `SMOKE_CURTAIN`.
+
+The shared `basic-rules.component` supplies the controls in the Rules sidebar, rule picker
+and PDF import dialog. Sidebar changes apply immediately to the current hall. The rule picker
+stages changes until Apply; Cancel discards them. PDF import keeps draft settings per target
+hall, invalidates an existing placement check when they change, and commits them with the import.
+
+Frontend preview/audit and backend save/audit honor these settings. The backend hall-geometry
+parser rejects unknown IDs, non-boolean switch values and a non-object `enabledRules` value.
+Disabling checks does not bypass structural validity: geometry must remain valid and finite,
+dimensions must remain positive, and stalls must have valid open sides. Size-step validation
+and position snapping are separate controls.
 
 ## Existing layout endpoints
 

@@ -4,6 +4,8 @@ import { Footprint, footprintRect, Violation } from '../geometry/placement-rules
 import { ServerViolation } from '../models/layout.model';
 import { PlannerStore } from '../planner-store.service';
 import { IconComponent } from './icon.component';
+import { BasicRulesComponent } from './basic-rules.component';
+import { ruleEnabled } from '../geometry/basic-rules';
 
 /**
  * "Placement rules" section: WHAT is wrong and WHERE, without reading logs.
@@ -20,11 +22,11 @@ import { IconComponent } from './icon.component';
 @Component({
   selector: 'app-violations-panel',
   templateUrl: './violations-panel.component.html',
-  imports: [IconComponent],
+  imports: [IconComponent, BasicRulesComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ViolationsPanelComponent {
-  private readonly store = inject(PlannerStore);
+  readonly store = inject(PlannerStore);
 
   readonly section = input<'alerts' | 'rules'>('alerts');
 
@@ -39,11 +41,12 @@ export class ViolationsPanelComponent {
 
   readonly rules = computed(() => {
     const ctx = this.store.placementContext();
-    return ctx
-      ? `${ctx.eventType}: ${ctx.rules.minPassageWidth[ctx.eventType]} m passages · ` +
-          `${ctx.rules.peripheralClearance} m wall clearance · snap ${ctx.rules.snapStep} m`
-          + '. Stalls may share walls on closed sides. Keep every open side clear.'
-      : '';
+    if (!ctx) return '';
+    return [
+      ruleEnabled(ctx.rules, 'openSideAccess') ? `${ctx.eventType}: ${ctx.rules.minPassageWidth[ctx.eventType]} m passages` : 'Open-side passage off',
+      ruleEnabled(ctx.rules, 'peripheralClearance') ? `${ctx.rules.peripheralClearance} m wall clearance` : 'Wall clearance off',
+      ruleEnabled(ctx.rules, 'sizeStep') ? `${ctx.rules.snapStep} m size step` : 'Size step off'
+    ].join(' · ');
   });
 
   readonly auditCount = computed(() => this.audit().reduce((n, e) => n + e.violations.length, 0));

@@ -6,6 +6,7 @@ import { createVenueGlobeMarker } from './venue-globe-marker';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { VenueAppearance } from './venue-appearance';
+import { createVenueSatellite } from './venue-satellite';
 
 
 type Mode = 'venue' | 'globe';
@@ -13,9 +14,9 @@ interface Pose { position: T.Vector3; target: T.Vector3; }
 interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
 type Kind = 'road' | 'building' | 'water' | 'park';
 interface Geography { features: { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][] }[]; }
-interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onLocalMapReady?: () => void; markerElement?: HTMLElement; }
+interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onLocalMapReady?: () => void; onSatelliteReady?: () => void; markerElement?: HTMLElement; }
 
-export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onLocalMapReady,markerElement}: GlobeOptions) {
+export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onLocalMapReady,onSatelliteReady,markerElement}: GlobeOptions) {
   const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background instanceof T.Color ? scene.background.clone() : new T.Color('#e5e7e5');
   const naturalBackground = localBackground.clone();
   const skyBackground = new T.Color('#17232c'), background = localBackground.clone();
@@ -27,6 +28,15 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   // Put the local map at campus grade instead of seven metres below it. Only
   // this flat context moves; Earth and all geographic X/Z coordinates are kept.
   groundGroup.position.y = 6.6;
+  const mapFeatures = new T.Group();
+  groundGroup.add(mapFeatures);
+  const satellite = createVenueSatellite(asset, renderer, signal);
+  groundGroup.add(satellite.group);
+  let appearanceMode: VenueAppearance = 'natural', satelliteReady = false;
+  function showContext() {
+    satellite.group.visible = appearanceMode === 'color' && satelliteReady;
+    mapFeatures.visible = !satellite.group.visible;
+  }
   const lat=28.6185*Math.PI/180,lon=77.2440*Math.PI/180;
   const east=new T.Vector3(-Math.sin(lon),0,-Math.cos(lon));
   const up=new T.Vector3(Math.cos(lat)*Math.cos(lon),Math.sin(lat),-Math.cos(lat)*Math.sin(lon));
@@ -53,6 +63,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   const mapGround = new T.Color('#858b80');
   const groundMaterial = new T.MeshBasicMaterial({color:mapGround,transparent:true,toneMapped:false});
   const ground=new T.Mesh(new T.CircleGeometry(14000,128),groundMaterial);ground.rotation.x=-Math.PI/2;ground.position.y=-7;groundGroup.add(ground);
+  ground.renderOrder = -3;
   function mapMaterial(color: string) {
     const material = new T.MeshBasicMaterial({color,transparent:true,toneMapped:false});
     material.onBeforeCompile = shader => {
@@ -77,6 +88,16 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     color: { ground: '#b5bc99', road: '#e2dbc5', building: '#b9af99', water: '#5b9fac', park: '#719f57' }
   };
   function setAppearance(appearance: VenueAppearance) {
+    appearanceMode = appearance;
+    showContext();
+    if (appearance === 'color' && !satelliteReady) void satellite.load().then(loaded => {
+      if (!loaded || signal.aborted) return;
+      satelliteReady = true;
+      showContext();
+      onSatelliteReady?.();
+      onLocalMapReady?.();
+      onInvalidate();
+    });
     const palette = mapPalettes[appearance];
     // Reuse all map geometry and the shader's shared fade colour. Updating this
     // once per explicit switch also covers geography/Earth textures arriving late.
@@ -108,7 +129,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     }
     for(const [kind,geometries]of Object.entries(bins))if(geometries.length){
       const combined=mergeGeometries(geometries,false);geometries.forEach(g=>g.dispose());if(!combined)continue;
-      const mesh=new T.Mesh(combined,contextMaterials[kind as Kind]);mesh.name='OSM Delhi '+kind;groundGroup.add(mesh);
+      const mesh=new T.Mesh(combined,contextMaterials[kind as Kind]);mesh.name='OSM Delhi '+kind;mapFeatures.add(mesh);
     }
     if (bins.road.length) onLocalMapReady?.();
     onInvalidate();
@@ -182,6 +203,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     groundGroup.visible=altitude<80000;
     const groundOpacity=1-T.MathUtils.smoothstep(altitude,9000,45000);groundMaterial.opacity=groundOpacity;
     Object.values(contextMaterials).forEach(m=>m.opacity=groundOpacity);
+    satellite.setOpacity(groundOpacity);
     updateMarker?.(mode === 'globe' && !transition && altitude > 180000);
     background.copy(localBackground).lerp(skyBackground,planetMix);
     const near=altitude>15000?Math.max(5,altitude/1800):Math.max(1,Math.min(32,distance/55));

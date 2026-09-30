@@ -73,7 +73,7 @@
             <section>
               <h3>Place into</h3>
               @if (missingHall(); as m) {
-                <p class="issue s-error" role="alert">{{ m }}</p>
+                <p class="finding s-error" role="alert">{{ m }}</p>
               } @else {
                 <select class="control" [value]="targetId()" (change)="setTarget($any($event.target).value)" aria-label="Planner hall">
                   @for (h of hallChoices(); track h.id) {
@@ -124,6 +124,11 @@
               @if (halfMetres()) {
                 <p class="note">Some stalls use half metres: the imported layout’s hall uses a 0.5 m size step. Other hall rules stay as they are.</p>
               }
+            </section>
+
+            <section>
+              <app-basic-rules [settings]="basicSettings()" (changed)="setBasicRules($event)" />
+              <p class="note">These choices apply to this import and its layout. Changing a rule clears the check results; check again before importing.</p>
             </section>
 
             <section class="list-section">

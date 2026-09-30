@@ -1,4 +1,5 @@
 import { GridSystem } from './grid-system';
+import { ruleEnabled } from './basic-rules';
 import {
   Footprint,
   forEachEdge,
@@ -139,10 +140,10 @@ export class FreeSpaceMap {
     const { cols, rows, cell } = this;
     const w = cols + 1;
     const sat = new Int32Array(w * (rows + 1));
-    const peripheral = this.ctx.rules.peripheralClearance;
+    const peripheral = ruleEnabled(this.ctx.rules, 'peripheralClearance') ? this.ctx.rules.peripheralClearance : 0;
     const halfDiagonal = (cell * Math.SQRT2) / 2;
     // A rotated stall's bounding box contains usable floor: leave it to exact validation.
-    const stalls = this.ctx.stalls.filter(s => s.status !== 'CANCELLED' && !(s.rotation ?? 0)).map(s => ({
+    const stalls = this.ctx.stalls.filter(s => ruleEnabled(this.ctx.rules, 'stallOverlap') && s.status !== 'CANCELLED' && !(s.rotation ?? 0)).map(s => ({
       minX: s.posX - s.width / 2,
       maxX: s.posX + s.width / 2,
       minZ: s.posZ - s.length / 2,
@@ -166,7 +167,7 @@ export class FreeSpaceMap {
   private isBlocked(rect: Rect, stalls: Rect[], peripheral: number, halfDiagonal: number): boolean {
     const outlines = [this.ctx.boundary, ...(this.ctx.regions ?? [])].filter(o => o && o.length >= 3);
     const boundary = outlines.find(o => rectOverlapsPolygon(rect, o!));
-    if (outlines.length && !boundary) return true;
+    if (ruleEnabled(this.ctx.rules, 'hallBoundary') && outlines.length && !boundary) return true;
     if (boundary && boundary.length >= 3) {
       // Wholly inside the peripheral band: every point of the cell is closer than the clearance.
       const cx = (rect.minX + rect.maxX) / 2;
@@ -180,6 +181,7 @@ export class FreeSpaceMap {
     }
 
     for (const zone of this.ctx.zones) {
+      if (!ruleEnabled(this.ctx.rules, zone.kind)) continue;
       if (zone.polygon?.length >= 3 && rectInsidePolygon(rect, zone.polygon)) return true;
     }
 

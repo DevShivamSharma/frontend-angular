@@ -12,7 +12,7 @@ import { createVenueAppearance, VenueAppearance } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
-interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; }
+interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; }
 export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; readonly isGlobe:boolean; dispose:()=>void; }
 /** Demand-rendered venue with identical shading during movement and at rest. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement): VenueViewer {
@@ -198,7 +198,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         camera.position.sub(controls.target).setLength(initialFit).add(controls.target);
         controls.update();
         try {
-            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,markerElement,onModeChange:events.modeChanged,onInvalidate:invalidate,
+            globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,markerElement,onModeChange:events.modeChanged,onInvalidate:invalidate,onSatelliteReady:events.satelliteReady,
                 onLocalMapReady: () => {
                     localMapReady = true;
                     if (root) revealMappedRoads(root);

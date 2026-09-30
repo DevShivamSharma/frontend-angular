@@ -1,4 +1,5 @@
 import polygonClipping, { type MultiPolygon } from 'polygon-clipping';
+import { ruleEnabled } from './basic-rules';
 import { openingAccessRect, zoneClearanceFor } from './placement-rules';
 import type { Footprint, PlacementContext, Point, ValidationResult, Violation, ViolationCode } from './placement-rules';
 import { contained, corridor, distance, edges, EPS, openEdgeList, overlaps, ring, stallPolygon } from './polygon-geometry';
@@ -28,7 +29,7 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
     // A custom outline: every edge, not only the bounding box, sits on the snap step.
     ? edges(candidate.footprint).map(([a, b]) => Math.hypot(b.x - a.x, b.z - a.z))
     : [candidate.width, candidate.length];
-  if (ctx.enforceGrid && !lengths.every(onStep)) {
+  if (ctx.enforceGrid && ruleEnabled(ctx.rules, 'sizeStep') && !lengths.every(onStep)) {
     add('INVALID_DIMENSIONS', `Stall size must be a multiple of ${ctx.rules.snapStep} m.`, p);
   }
   const obstacles = ctx.obstacles ?? [];
@@ -36,47 +37,27 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
   const inside = (poly: Point[]) => (ctx.circleRadius != null
     ? poly.every(v => Math.hypot(v.x, v.z) <= ctx.circleRadius! + EPS)
     : contained(poly, floor)) && obstacles.every(o => !overlaps(poly, o));
-  if (!inside(p)) add('OUTSIDE_HALL', 'Stall is outside the usable hall boundary.', p);
+  if (ruleEnabled(ctx.rules, 'hallBoundary') && !inside(p)) add('OUTSIDE_HALL', 'Stall is outside the usable hall boundary.', p);
 
   const rings: Point[][] = ctx.circleRadius != null ? obstacles : floor.flatMap(poly => poly.map(r => r.slice(0, -1).map(([x, z]) => ({ x, z }))));
   const others = ctx.stalls.filter(s => String(s.id) !== ignoreId && s.status !== 'CANCELLED');
   // Stalls may share walls or stand any distance apart on their closed sides: a pair only must
   // not overlap. The passage is required in front of open sides alone (checked below).
-  for (const other of others) {
-    const q = stallPolygon(other), ids = [String(other.id)];
-    if (overlaps(p, q)) {
-      add('STALL_OVERLAP', `Overlaps stall ${other.stallNumber || 'an unsaved stall'}.`, p, ids);
-      continue;
-    }
-    const gap = distance(p, q);
-    const otherCorner = isCorner(q);
-    const nearestToOtherCorner = otherCorner && gap <= Math.min(...others
-      .filter(s => s.id !== other.id).map(s => distance(q, stallPolygon(s)))) + EPS;
-    if (gap > EPS && ((corner && gap <= nearest + EPS) || nearestToOtherCorner) && ctx.circleRadius == null) {
-      const [from, to] = closestPoints(p, q);
-      if (!segmentInsideFloor(from, to, floor)) add('CORNER_PASSAGE', 'The gap to the nearest stall crosses outside the usable hall; exterior space is not passage.', [from, to], ids, { requiredWidth: passage, actualWidth: 0 });
-    }
-    if (gap < passage - EPS) {
-      const cornerPair = corner || otherCorner;
-      if (cornerPair || gap > EPS || !backToBack(candidate, other)) {
-        add(cornerPair ? 'CORNER_PASSAGE' : gap <= EPS ? 'INVALID_BACK_TO_BACK' : 'PATHWAY_WIDTH',
-          `Required ${passage} m clear passage; ${Math.round(gap * 1e6) / 1e6} m available next to ${other.stallNumber || 'an unsaved stall'}.`, p, ids,
-          { requiredWidth: passage, actualWidth: gap });
-      }
-    }
+  for (const other of ruleEnabled(ctx.rules, 'stallOverlap') ? others : []) {
+    if (overlaps(p, stallPolygon(other))) add('STALL_OVERLAP', `Overlaps stall ${other.stallNumber || 'an unsaved stall'}.`, p, [String(other.id)]);
   }
-  for (const { index, label: side } of openEdgeList(candidate)) {
+  for (const { index, label: side } of ruleEnabled(ctx.rules, 'openSideAccess') ? openEdgeList(candidate) : []) {
     const access = corridor(p, index, passage);
     if (!inside(access)) add('OPEN_SIDE_PASSAGE', `${side} requires ${passage} m of usable floor in front of its entire edge.`, access, [], { side, requiredWidth: passage });
     for (const other of others) if (overlaps(access, stallPolygon(other))) {
       add('OPEN_SIDE_BLOCKED', `${side} passage is blocked by ${other.stallNumber || 'an unsaved stall'}.`, access, [String(other.id)], { side, requiredWidth: passage });
     }
     // Passage zones are walkable; physical restricted zones are not usable passage.
-    for (const zone of ctx.zones.filter(z => ['PARTITION', 'SMOKE_CURTAIN', 'NO_CONSTRUCTION', 'FACILITY_ACCESS'].includes(z.kind))) {
+    for (const zone of ctx.zones.filter(z => ruleEnabled(ctx.rules, z.kind) && ['PARTITION', 'SMOKE_CURTAIN', 'NO_CONSTRUCTION', 'FACILITY_ACCESS'].includes(z.kind))) {
       if (overlaps(access, zone.polygon)) add('OPEN_SIDE_PASSAGE', `${side} passage intersects ${zone.label}.`, access, [], { side, requiredWidth: passage });
     }
   }
-  for (const other of others) for (const { index, label: side } of openEdgeList(other)) {
+  for (const other of ruleEnabled(ctx.rules, 'openSideAccess') ? others : []) for (const { index, label: side } of openEdgeList(other)) {
     const access = corridor(stallPolygon(other), index, passage);
     if (overlaps(p, access)) add('OPEN_SIDE_BLOCKED',
       `Blocks the ${side} open side of ${other.stallNumber || 'an unsaved stall'}; keep ${passage} m clear.`, access, [String(other.id)]);
@@ -84,8 +65,9 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
   const wallGap = ctx.circleRadius != null
     ? ctx.circleRadius - Math.max(...p.map(v => Math.hypot(v.x, v.z)))
     : rings.length ? Math.min(...rings.map(r => distance(p, r))) : Infinity;
-  if (wallGap < ctx.rules.peripheralClearance - EPS) add('PERIPHERAL_CLEARANCE', `Required ${ctx.rules.peripheralClearance} m peripheral clearance; ${wallGap} m available.`, p);
+  if (ruleEnabled(ctx.rules, 'peripheralClearance') && wallGap < ctx.rules.peripheralClearance - EPS) add('PERIPHERAL_CLEARANCE', `Required ${ctx.rules.peripheralClearance} m peripheral clearance; ${wallGap} m available.`, p);
   for (const zone of ctx.zones) {
+    if (!ruleEnabled(ctx.rules, zone.kind)) continue;
     if (overlaps(p, zone.polygon) || distance(p, zone.polygon) < zoneClearanceFor(zone, ctx.rules) - EPS)
       add('RESTRICTED_ZONE', `Stall intersects or is too close to ${zone.label}.`, zone.polygon);
   }
