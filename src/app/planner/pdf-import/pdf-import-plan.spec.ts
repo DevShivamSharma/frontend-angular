@@ -81,6 +81,11 @@ describe('PDF import plan', () => {
     expect(matchGroups('Hall 8-9-10', groups)).toEqual(['10', '9', '8']);
     expect(matchGroups('Hall 12', groups)).toEqual([]);
     expect(matchGroups('Hall 08', groups)).toEqual(['8']);
+    const lettered = [group('12', 0, 0), group('12A', 0, 0), group('5', 0, 0)];
+    expect(matchGroups('Hall 12', lettered)).toEqual(['12']);
+    expect(matchGroups('Hall 12A', lettered)).toEqual(['12A']);
+    expect(matchGroups('Hall 12-12A', lettered)).toEqual(['12', '12A']);
+    expect(matchGroups('Hall 5G', lettered)).toEqual(['5']);
   });
 
   it('keeps the drawing halls where the page has them, on the half-metre grid', () => {

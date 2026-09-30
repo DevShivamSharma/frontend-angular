@@ -594,18 +594,20 @@ export class CadCanvasComponent {
 
   private drawPreview(ctx: CanvasRenderingContext2D, preview: Preview): void {
     ctx.setLineDash([6, 4]);
-    for (const f of preview.stalls ?? []) {
+    (preview.stalls ?? []).forEach((f, i) => {
+      const bad = !!preview.invalid?.[i];
       const poly = stallPolygon(f);
       this.path(ctx, poly);
-      ctx.fillStyle = 'rgba(127,219,255,0.08)';
+      // Red: this stall breaks a rule and will not be placed.
+      ctx.fillStyle = bad ? 'rgba(255,107,94,0.22)' : 'rgba(127,219,255,0.08)';
       ctx.fill();
-      ctx.strokeStyle = C.ghost;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = bad ? C.bad : C.ghost;
+      ctx.lineWidth = bad ? 1.5 : 1;
       ctx.stroke();
       ctx.setLineDash([]);
       this.drawOpenSides(ctx, f, poly);
       ctx.setLineDash([6, 4]);
-    }
+    });
     for (const [a, b] of preview.lines ?? []) this.line(ctx, a, b, C.ghost, 1);
     if (preview.rect) {
       const r = preview.rect;
@@ -623,7 +625,12 @@ export class CadCanvasComponent {
     for (const [a, b] of preview.edges ?? []) this.line(ctx, a, b, C.snap, 4);
     if (preview.stalls?.length && this.scale > 4) {
       const box = boundsOfAll(preview.stalls)!;
-      this.text(ctx, `${preview.stalls.length} ${preview.stalls.length === 1 ? 'stall' : 'stalls'}`, { x: box.maxX, z: box.minZ }, C.ghost, 11, -8, 'left');
+      const bad = preview.invalid?.filter(Boolean).length ?? 0;
+      const n = preview.stalls.length;
+      const label = bad
+        ? `${bad === n ? 'Breaks a rule' : `${bad} of ${n} break a rule`}: not placed`
+        : `${n} ${n === 1 ? 'stall' : 'stalls'}`;
+      this.text(ctx, label, { x: box.maxX, z: box.minZ }, bad ? C.bad : C.ghost, 11, -8, 'left');
     }
   }
 

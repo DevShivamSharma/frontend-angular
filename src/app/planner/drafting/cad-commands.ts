@@ -4,7 +4,7 @@
  */
 
 export type CommandName =
-  | 'STALL' | 'STALLROW' | 'ISLAND' | 'ARRAY' | 'SPLIT' | 'MERGE' | 'RENUMBER' | 'OPENSIDE'
+  | 'RECTANG' | 'PLINE' | 'STALL' | 'STALLROW' | 'ISLAND' | 'ARRAY' | 'SPLIT' | 'MERGE' | 'RENUMBER' | 'OPENSIDE'
   | 'MOVE' | 'COPY' | 'ROTATE' | 'MIRROR' | 'ERASE' | 'MATCHPROP' | 'PROPERTIES'
   | 'UNDO' | 'REDO' | 'DIST' | 'AREA' | 'ID' | 'ZOOM' | 'PAN' | 'SELECTALL'
   | 'CHECK' | 'ASSIST' | 'PDFPLOT' | 'QSAVE' | 'EXPORT' | 'HELP';
@@ -19,6 +19,8 @@ export interface CommandInfo {
 }
 
 export const COMMANDS: readonly CommandInfo[] = [
+  { name: 'RECTANG', aliases: ['REC', 'RECTANGLE'], help: 'Draw a stall corner to corner, any size (or type its dimensions)', edits: true },
+  { name: 'PLINE', aliases: ['PL'], help: 'Draw a stall of any shape point by point; C closes it', edits: true },
   { name: 'STALL', aliases: ['STL'], help: 'Place stalls of the current size, one per click', edits: true },
   { name: 'STALLROW', aliases: ['SR'], help: 'Draw an aisle edge; it fills with stalls that open onto it', edits: true },
   { name: 'ISLAND', aliases: ['ISL'], help: 'Box an island: stalls back to back with aisles all round', edits: true },

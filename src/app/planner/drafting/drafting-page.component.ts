@@ -33,6 +33,10 @@ interface RibbonGroup {
 
 const RIBBON: Record<RibbonTab, RibbonGroup[]> = {
   home: [
+    { title: 'Draw', buttons: [
+      { command: 'RECTANG', label: 'Rectangle', icon: 'maximize' },
+      { command: 'PLINE', label: 'Shape', icon: 'pencil' }
+    ] },
     { title: 'Stalls', buttons: [
       { command: 'STALL', label: 'Stall', icon: 'store' },
       { command: 'STALLROW', label: 'Row', icon: 'draw' },
@@ -381,10 +385,11 @@ export class DraftingPageComponent implements OnInit {
     if (name) this.engine.updateStalls(this.ids(), s => ({ ...s, name }), 'Rename');
   }
 
-  setDimension(which: 'width' | 'length', value: string): void {
-    const v = parseNumber(value);
-    if (v === null || v <= 0 || v > 200) return;
-    this.engine.updateStalls(this.ids(), s => ({ ...s, [which]: v }), 'Size');
+  setDimension(which: 'width' | 'length', input: HTMLInputElement): void {
+    const v = parseNumber(input.value);
+    const ok = v !== null && v > 0 && v <= 200 && this.engine.updateStalls(this.ids(), s => ({ ...s, [which]: v }), 'Size');
+    // Refused: show the stall's real value again.
+    if (!ok && this.single()) input.value = String(this.single()![which]);
   }
 
   /** Corner X/Y: the bottom-left corner in CAD coordinates, as STALL inserts it. */
@@ -393,22 +398,31 @@ export class DraftingPageComponent implements OnInit {
     return { x: trim(c.x, 3), y: trim(c.y, 3) };
   }
 
-  setCorner(axis: 'x' | 'y', value: string): void {
+  setCorner(axis: 'x' | 'y', input: HTMLInputElement): void {
     const s = this.single();
-    const v = parseNumber(value);
-    if (!s || v === null) return;
+    const v = parseNumber(input.value);
+    if (!s) return;
     const frame = this.engine.frame();
     const c = frame.toCad({ x: s.posX - s.width / 2, z: s.posZ + s.length / 2 });
-    const w = frame.toWorld(axis === 'x' ? { x: v, y: c.y } : { x: c.x, y: v });
-    this.engine.updateStalls(this.ids(), st => ({ ...st, posX: w.x + st.width / 2, posZ: w.z - st.length / 2 }), 'Position');
+    const ok = v !== null && this.engine.updateStalls(this.ids(), st => {
+      const w = frame.toWorld(axis === 'x' ? { x: v, y: c.y } : { x: c.x, y: v });
+      return { ...st, posX: w.x + st.width / 2, posZ: w.z - st.length / 2 };
+    }, 'Position');
+    if (!ok) input.value = this.corner(s)[axis];
   }
 
-  setSide(side: GateSide, on: boolean): void {
-    this.engine.updateStalls(this.ids(), s => {
+  setSide(side: GateSide, input: HTMLInputElement): void {
+    const on = input.checked;
+    const ok = this.engine.updateStalls(this.ids(), s => {
       if (s.footprint?.length) return s;
       const sides = on ? [...new Set([...s.openSides, side])] : s.openSides.filter(x => x !== side);
       return sides.length ? { ...s, openSides: sides, gateSide: sides[0] } : s;
     }, 'Open sides');
+    if (!ok) {
+      const state = this.sharedSides()[side];
+      input.checked = state === 'on';
+      input.indeterminate = state === 'mixed';
+    }
   }
 
   setColour(value: string): void {

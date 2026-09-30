@@ -5,9 +5,11 @@ import { NotifyService } from '../../core/notify.service';
 import { extractErrorMessage } from '../../core/http-error.util';
 import { stallArea } from '../geometry/footprint-view';
 import { floorOutlines } from '../geometry/hall-plan';
-import type { Footprint, Point, Rect } from '../geometry/placement-rules';
-import { polygonBounds } from '../geometry/placement-rules';
+import { placementContextFor } from '../geometry/hall-rules';
+import type { Footprint, PlacementContext, Point, Rect, Violation } from '../geometry/placement-rules';
+import { polygonBounds, validatePlacement } from '../geometry/placement-rules';
 import { pointSegmentDistance, rotate, stallPolygon } from '../geometry/polygon-geometry';
+import { normalizeFootprint, sidesOfEdges } from '../geometry/stall-footprint';
 import { LayoutAssistantService } from '../layout-assistant.service';
 import type { GateSide, Stall } from '../models/stall.model';
 import { PlannerStore } from '../planner-store.service';
@@ -72,6 +74,8 @@ export interface Preview {
   rect?: Rect;
   /** Stall edges to highlight (open-side editing). */
   edges?: Array<[Point, Point]>;
+  /** Per preview stall: true when placing it would break a rule (drawn red; the click is refused). */
+  invalid?: boolean[];
 }
 
 export type LogKind = 'command' | 'info' | 'result' | 'error';
@@ -107,6 +111,8 @@ type Toggle = 'grid' | 'snap' | 'ortho' | 'polar' | 'osnap' | 'dyn';
 const HISTORY_LIMIT = 300;
 const UNDO_LIMIT = 200;
 const SIDES: readonly GateSide[] = ['FRONT', 'RIGHT', 'BACK', 'LEFT'];
+/** Sides as the plan shows them (FRONT is the bottom edge). */
+const SIDE_WORDS: Record<GateSide, string> = { FRONT: 'bottom', RIGHT: 'right', BACK: 'top', LEFT: 'left' };
 
 /**
  * The drafting workspace's command engine: the command line, prompts, selection, snaps, undo and
@@ -134,6 +140,9 @@ export class DraftingEngine {
   private rowFlip = false;
   private rowBackToBack = false;
   private stallTurns = 0;
+  /** Side that RECTANG opens to the aisle. */
+  private rectOpen: GateSide = 'FRONT';
+  private rectSize: { x: number; y: number } = { x: 3, y: 3 };
   private renumberPrefix = 'A-';
 
   // --- command state ---
@@ -160,6 +169,8 @@ export class DraftingEngine {
   private viewSeq = 0;
   private idSeq = 0;
   private pdfWaiter: (() => void) | null = null;
+  /** The last PDF read by PP, reused for the next hall of the same drawing. */
+  private lastPdf: File | null = null;
   private runSeq = 0;
 
   private undoStack: Snapshot[] = [];
@@ -235,7 +246,7 @@ export class DraftingEngine {
       }
     });
 
-    this.log('Type a command or its alias (? lists them). Stalls: STL, SR, ISL. Modify: M, CO, RO, MI, AR, E.', 'info');
+    this.log('Type a command or its alias (? lists them). Draw a stall: REC (corner to corner), PL (any shape). Fixed size: STL, SR, ISL. Modify: M, CO, RO, MI, AR, E.', 'info');
   }
 
   // --- command line ----------------------------------------------------------------------------------
@@ -395,6 +406,8 @@ export class DraftingEngine {
 
   private execute(name: CommandName): Promise<void> | void {
     switch (name) {
+      case 'RECTANG': return this.rectangleCommand();
+      case 'PLINE': return this.plineCommand();
       case 'STALL': return this.stallCommand();
       case 'STALLROW': return this.stallRowCommand();
       case 'ISLAND': return this.islandCommand();
@@ -621,10 +634,104 @@ export class DraftingEngine {
     this.store.stalls.update(update);
   }
 
-  /** Property palette edits. */
-  updateStalls(ids: ReadonlySet<string>, patch: (s: Stall) => Stall, label = 'Properties'): void {
-    if (!ids.size) return;
-    this.commit(label, all => all.map(s => (ids.has(String(s.id)) ? patch(s) : s)));
+  /**
+   * Property palette and editing commands: patch the given stalls, unless that breaks a rule.
+   * Returns whether the change was made.
+   */
+  updateStalls(ids: ReadonlySet<string>, patch: (s: Stall) => Stall, label = 'Properties'): boolean {
+    if (!ids.size) return false;
+    const next = this.store.currentStalls().filter(s => ids.has(String(s.id))).map(patch);
+    return this.commitIfAllowed(label, next, all => all.map(s => (ids.has(String(s.id)) ? patch(s) : s)));
+  }
+
+  // --- the rules gate ----------------------------------------------------------------------------------
+  //
+  // Nothing that breaks a rule is drawn. Every command checks the drawing as it WOULD be after the
+  // edit and refuses the edit when a stall it creates or changes gets a violation it did not
+  // already have. (Stalls imported with problems, e.g. from a PDF, can still be moved to fix
+  // them; a change may not make things worse.)
+
+  /**
+   * The stalls an edit would put in breach of a rule. `next` are the stalls after the edit: new
+   * ones, or changed ones under their own id; `removed` leave the drawing.
+   */
+  private blocked(next: readonly Stall[], removed: ReadonlySet<string> = new Set()): Array<{ index: number; stall: Stall; violation: Violation }> {
+    const hall = this.hall();
+    if (!hall || !next.length) return [];
+    const eventType = this.store.eventType();
+    const current = this.store.currentStalls();
+    const ids = new Set(next.map(s => String(s.id)));
+    const rest = current.filter(s => !ids.has(String(s.id)) && !removed.has(String(s.id)));
+    const after = placementContextFor(hall, [...rest, ...next], eventType);
+    let before: PlacementContext | null = null;
+    const out: Array<{ index: number; stall: Stall; violation: Violation }> = [];
+    next.forEach((s, index) => {
+      if (s.status === 'CANCELLED') return;
+      let found = validatePlacement(s, after, String(s.id)).violations;
+      const old = current.find(o => String(o.id) === String(s.id));
+      if (found.length && old) {
+        before ??= placementContextFor(hall, current, eventType);
+        const had = new Set(validatePlacement(old, before, String(old.id)).violations.map(violationKey));
+        found = found.filter(v => !had.has(violationKey(v)));
+      }
+      if (found.length) out.push({ index, stall: s, violation: found[0] });
+    });
+    return out;
+  }
+
+  /** Commit the edit, or refuse it and say which rule it would break. */
+  private commitIfAllowed(
+    label: string,
+    next: readonly Stall[],
+    update: (all: Stall[]) => Stall[],
+    removed?: ReadonlySet<string>
+  ): boolean {
+    const refused = this.blocked(next, removed);
+    if (!refused.length) {
+      this.commit(label, update);
+      return true;
+    }
+    const { index, stall, violation } = refused[0];
+    const existing = this.store.currentStalls().some(s => String(s.id) === String(stall.id));
+    const who = existing ? `${stall.stallNumber ?? stall.name}: ` : next.length > 1 ? `stall ${index + 1} of ${next.length}: ` : '';
+    const more = refused.length > 1 ? ` ${refused.length - 1} more would break a rule too.` : '';
+    this.log(`Not done: ${who}${violation.message} (${violation.ruleRef}).${more}`, 'error');
+    this.notify.error(`${label} not allowed`, `${who}${violation.message}`);
+    return false;
+  }
+
+  /** Preview of stalls, each marked when placing it would be refused. Memoised per drawing. */
+  private checked(stalls: readonly Stall[], removed?: ReadonlySet<string>): Preview {
+    const key = JSON.stringify([
+      stalls.map(s => [s.id, s.posX, s.posZ, s.width, s.length, s.rotation ?? 0, s.openSides, s.openEdges ?? null]),
+      [...(removed ?? [])]
+    ]);
+    const current = this.store.stalls();
+    if (this.previewMemo.key !== key || this.previewMemo.stalls !== current) {
+      const bad = new Set(this.blocked(stalls, removed).map(b => b.index));
+      this.previewMemo = { key, stalls: current, invalid: stalls.map((_, i) => bad.has(i)) };
+    }
+    return { stalls: [...stalls], invalid: this.previewMemo.invalid };
+  }
+  private previewMemo: { key: string; stalls: Stall[] | null; invalid: boolean[] } = { key: '', stalls: null, invalid: [] };
+
+  /** Stand-ins for stalls not created yet, so a preview can be checked. */
+  private ghosts(footprints: readonly Footprint[]): Stall[] {
+    const hallId = this.hall()?.id ?? '';
+    return footprints.map((f, i) => ({
+      id: `ghost-${i}`, hallId, name: '', height: 4, color: '', stallNumber: null, status: 'AVAILABLE', stallTypeId: null,
+      gateSide: f.openSides?.[0] ?? 'FRONT', openSides: f.openSides ?? ['FRONT'],
+      ...f,
+      rotation: f.rotation ?? 0
+    } as Stall));
+  }
+
+  /** New stalls shaped like `sources` at the given placements (copy, mirror, array). */
+  private copiesOf(sources: readonly Stall[], placed: readonly Stall[]): Stall[] {
+    return this.newStalls(placed.map(s => ({ ...s, rotation: s.rotation ?? 0 }) as NewFootprint)).map((c, i) => {
+      const src = sources[i % sources.length];
+      return { ...c, color: src.color, height: src.height, footprint: placed[i].footprint ?? null, openEdges: placed[i].openEdges ?? null };
+    });
   }
 
   // --- creating stalls ------------------------------------------------------------------------------------
@@ -666,22 +773,11 @@ export class DraftingEngine {
       return [];
     }
     const created = this.newStalls(footprints);
-    this.commit(label, all => [...all, ...created]);
+    if (!this.commitIfAllowed(label, created, all => [...all, ...created])) return [];
     const area = created.reduce((a, s) => a + stallArea(s), 0);
     const names = created.length > 2 ? `${created[0].name} … ${created.at(-1)!.name}` : created.map(s => s.name).join(', ');
     this.log(`${created.length} ${created.length === 1 ? 'stall' : 'stalls'} created: ${names}. ${trim(area)} m² added.`);
-    this.reportIssues(created.map(s => String(s.id)));
     return created;
-  }
-
-  /** The rule check, told for the stalls just drawn or changed. */
-  private reportIssues(ids: readonly string[]): void {
-    const set = new Set(ids);
-    const entries = this.issues().filter(e => set.has(e.stallId) || e.violations.some(v => v.relatedStallIds.some(id => set.has(id))));
-    if (!entries.length) return;
-    const first = entries[0].violations[0];
-    const who = this.store.currentStalls().find(s => String(s.id) === entries[0].stallId);
-    this.log(`${entries.length} rule ${entries.length === 1 ? 'issue' : 'issues'}: ${who?.stallNumber ?? who?.name ?? ''} ${first.message} (${first.ruleRef}). CHK steps through them.`, 'error');
   }
 
   private sizeText(): string {
@@ -716,13 +812,156 @@ export class DraftingEngine {
     return { ...f, posX: corner.x + f.width / 2, posZ: corner.z - f.length / 2 } as NewFootprint;
   }
 
+  /** A stall exactly the drawn rectangle, open on the chosen side. null when too small. */
+  private rectFootprint(a: Point, b: Point): NewFootprint | null {
+    const width = Math.abs(b.x - a.x), length = Math.abs(b.z - a.z);
+    if (width < 0.5 - 1e-9 || length < 0.5 - 1e-9) return null;
+    return {
+      posX: (a.x + b.x) / 2,
+      posZ: (a.z + b.z) / 2,
+      width: Math.round(width * 1000) / 1000,
+      length: Math.round(length * 1000) / 1000,
+      rotation: 0,
+      openSides: [this.rectOpen],
+      gateSide: this.rectOpen
+    };
+  }
+
+  private cycleRectOpen(): void {
+    this.rectOpen = SIDES[(SIDES.indexOf(this.rectOpen) + 1) % SIDES.length];
+    this.log(`New stalls open on the ${SIDE_WORDS[this.rectOpen]}.`, 'info');
+  }
+
+  /** RECTANG: first corner, other corner, as AutoCAD's RECTANG; the rectangle is the stall. */
+  private async rectangleCommand(): Promise<void> {
+    for (;;) {
+      const a = await this.ask({
+        kind: 'point',
+        message: `Specify first corner (opens on the ${SIDE_WORDS[this.rectOpen]})`,
+        keywords: ['Open']
+      });
+      if (a.kind === 'empty') return;
+      if (a.kind === 'keyword') { this.cycleRectOpen(); continue; }
+      if (a.kind !== 'point') continue;
+      const first = a.point;
+      let other: Point | null = null;
+      while (!other) {
+        const b = await this.ask({
+          kind: 'point',
+          message: 'Specify other corner',
+          keywords: ['Dimensions', 'Open'],
+          base: first,
+          preview: p => {
+            const f = this.rectFootprint(first, p);
+            return f ? this.checked(this.ghosts([f])) : { rect: rectOf(first, p) };
+          }
+        });
+        if (b.kind === 'empty') break;
+        if (b.kind === 'keyword' && b.keyword === 'Open') { this.cycleRectOpen(); continue; }
+        if (b.kind === 'keyword') {
+          const x = await this.askNumber('Length along X (m)', this.rectSize.x, 0.5);
+          const y = await this.askNumber('Width along Y (m)', this.rectSize.y, 0.5);
+          this.rectSize = { x, y };
+          // As AutoCAD: a last click picks which quadrant the rectangle goes into.
+          const towards = (p: Point) => ({
+            x: first.x + (p.x >= first.x ? x : -x),
+            z: first.z + (p.z <= first.z ? -y : y)
+          });
+          const c = await this.ask({
+            kind: 'point',
+            message: 'Specify the side to draw it on',
+            base: first,
+            preview: p => this.checked(this.ghosts([this.rectFootprint(first, towards(p))!]))
+          });
+          if (c.kind === 'point') other = towards(c.point);
+          continue;
+        }
+        if (b.kind === 'point') {
+          if (!this.rectFootprint(first, b.point)) {
+            this.log('A stall is at least 0.5 m on each side.', 'error');
+            continue;
+          }
+          other = b.point;
+        }
+      }
+      if (other) this.addStalls('Rectangle', [this.rectFootprint(first, other)!]);
+    }
+  }
+
+  /**
+   * PLINE: a stall of any outline, point by point (L-shapes, corner cuts). The first segment is
+   * its open side (OS changes it). Close with C, Enter, or by clicking the start point.
+   */
+  private async plineCommand(): Promise<void> {
+    const pts: Point[] = [];
+    for (;;) {
+      const n = pts.length;
+      const a = await this.ask({
+        kind: 'point',
+        message: n === 0
+          ? 'Specify start point (the first segment will be the open side)'
+          : n < 3 ? 'Specify next point' : 'Specify next point or Enter to close',
+        keywords: n >= 3 ? ['Close', 'Undo'] : n ? ['Undo'] : undefined,
+        base: pts.at(-1) ?? null,
+        preview: p => {
+          const outline = [...pts, p];
+          return {
+            polygon: outline.length >= 3 ? outline : undefined,
+            lines: outline.slice(1).map((q, i) => [outline[i], q] as [Point, Point]),
+            edges: outline.length >= 2 ? [[outline[0], outline[1]]] : undefined
+          };
+        }
+      });
+      if (a.kind === 'keyword' && a.keyword === 'Undo') { pts.pop(); continue; }
+      if (a.kind === 'empty' || (a.kind === 'keyword' && a.keyword === 'Close')) {
+        if (n >= 3) this.addShapedStall(pts);
+        else if (n) this.log('A stall needs at least three points; nothing drawn.', 'info');
+        return;
+      }
+      if (a.kind !== 'point') continue;
+      if (n >= 3 && dist(a.point, pts[0]) < 1e-6) {
+        this.addShapedStall(pts);
+        return;
+      }
+      if (n && dist(a.point, pts[n - 1]) < 1e-6) continue;
+      pts.push(a.point);
+    }
+  }
+
+  private addShapedStall(points: Point[]): void {
+    const norm = normalizeFootprint(points);
+    if (typeof norm === 'string') {
+      this.log(`Not a usable stall outline: ${norm}`, 'error');
+      return;
+    }
+    const open = norm.edgeMap.get(0) ?? 0;
+    const local = norm.points;
+    const axisRect = local.length === 4 && local.every((p, i) => {
+      const q = local[(i + 1) % 4];
+      return Math.abs(p.x - q.x) < 1e-6 || Math.abs(p.z - q.z) < 1e-6;
+    });
+    const sides = sidesOfEdges(local, [open]) as GateSide[];
+    const base: NewFootprint = {
+      posX: norm.offset.x, posZ: norm.offset.z, width: norm.width, length: norm.length,
+      rotation: 0, openSides: sides.length ? sides : ['FRONT'], gateSide: sides[0] ?? 'FRONT'
+    };
+    if (axisRect) {
+      this.addStalls('Polyline', [base]);
+      return;
+    }
+    const [created] = this.newStalls([base]);
+    const stall = { ...created, footprint: local, openEdges: [open] };
+    if (!this.commitIfAllowed('Polyline', [stall], all => [...all, stall])) return;
+    this.log(`${stall.name} created: ${local.length}-corner shape, ${trim(stallArea(stall))} m².`);
+  }
+
   private async stallCommand(): Promise<void> {
     for (;;) {
       const a = await this.ask({
         kind: 'point',
         message: `Specify insertion point (${this.sizeText()} m)`,
         keywords: ['Size', 'Rotate'],
-        preview: p => ({ stalls: [this.ghost(p)] })
+        preview: p => this.checked(this.ghosts([this.ghost(p)]))
       });
       if (a.kind === 'empty') return;
       if (a.kind === 'keyword') {
@@ -765,7 +1004,7 @@ export class DraftingEngine {
           message: 'Specify end point',
           keywords: ['Flip', 'Back-to-back'],
           base: start,
-          preview: p => ({ stalls: rowFootprints(spec(p)), lines: [[start, p]] })
+          preview: p => ({ ...this.checked(this.ghosts(rowFootprints(spec(p)))), lines: [[start, p]] })
         });
         if (b.kind === 'keyword') {
           if (b.keyword === 'Flip') this.rowFlip = !this.rowFlip;
@@ -792,7 +1031,7 @@ export class DraftingEngine {
         kind: 'point',
         message: 'Specify opposite corner',
         base: corner,
-        preview: p => ({ stalls: islandFootprints(corner, p, this.size()), rect: rectOf(corner, p) })
+        preview: p => ({ ...this.checked(this.ghosts(islandFootprints(corner, p, this.size()))), rect: rectOf(corner, p) })
       });
       if (b.kind === 'point') this.addStalls('Island', islandFootprints(corner, b.point, this.size()));
     }
@@ -838,22 +1077,23 @@ export class DraftingEngine {
         kind: 'point',
         message: copy ? 'Specify second point or <exit>' : 'Specify second point',
         base,
-        preview: p => ({ stalls: picked.map(s => translate(s, delta(base, p))), lines: [[base, p]] })
+        preview: p => {
+          const moved = picked.map(s => translate(s, delta(base, p)));
+          return { ...this.checked(copy ? moved.map((s, i) => ({ ...s, id: `ghost-${i}` })) : moved), lines: [[base, p]] };
+        }
       });
       if (b.kind !== 'point') return;
       const d = delta(base, b.point);
       if (copy) {
-        const copies = this.newStalls(picked.map(s => ({ ...translate(s, d), rotation: s.rotation ?? 0 }) as NewFootprint))
-          .map((c, i) => ({ ...c, color: picked[i].color, height: picked[i].height, footprint: picked[i].footprint ?? null, openEdges: picked[i].openEdges ?? null }));
-        this.commit('Copy', all => [...all, ...copies]);
-        this.log(`${copies.length} copied.`);
-        this.reportIssues(copies.map(s => String(s.id)));
+        const copies = this.copiesOf(picked, picked.map(s => translate(s, d)));
+        if (this.commitIfAllowed('Copy', copies, all => [...all, ...copies])) this.log(`${copies.length} copied.`);
         continue;
       }
-      this.commit('Move', all => all.map(s => (ids.has(String(s.id)) ? translate(s, d) : s)));
-      this.log(`${picked.length} moved ${trim(dist(base, b.point))} m.`);
-      this.reportIssues([...ids]);
-      return;
+      const moved = picked.map(s => translate(s, d));
+      if (this.commitIfAllowed('Move', moved, all => all.map(s => (ids.has(String(s.id)) ? translate(s, d) : s)))) {
+        this.log(`${picked.length} moved ${trim(dist(base, b.point))} m.`);
+        return;
+      }
     }
   }
 
@@ -863,23 +1103,26 @@ export class DraftingEngine {
     const a = await this.ask({ kind: 'point', message: 'Specify base point' });
     if (a.kind !== 'point') return;
     const base = a.point;
-    const ids = new Set(picked.map(s => String(s.id)));
     const turned = (angle: number) => picked.map(s => rotateAbout(s, base, -angle));
-    const b = await this.ask({
-      kind: 'point',
-      message: 'Specify rotation angle (degrees, counter-clockwise)',
-      base,
-      numberAsText: true,
-      preview: p => ({ stalls: turned(cadAngle(base, p)), lines: [[base, p]] })
-    });
-    let angle: number | null = null;
-    if (b.kind === 'point') angle = cadAngle(base, b.point);
-    if (b.kind === 'text') angle = parseNumber(b.text);
-    if (angle === null) return;
-    const byId = new Map(turned(angle).map(s => [String(s.id), s]));
-    this.commit('Rotate', all => all.map(s => byId.get(String(s.id)) ?? s));
-    this.log(`${picked.length} rotated ${trim(angle)}°.`);
-    this.reportIssues([...ids]);
+    for (;;) {
+      const b = await this.ask({
+        kind: 'point',
+        message: 'Specify rotation angle (degrees, counter-clockwise)',
+        base,
+        numberAsText: true,
+        preview: p => ({ ...this.checked(turned(cadAngle(base, p))), lines: [[base, p]] })
+      });
+      let angle: number | null = null;
+      if (b.kind === 'point') angle = cadAngle(base, b.point);
+      if (b.kind === 'text') angle = parseNumber(b.text);
+      if (angle === null) return;
+      const next = turned(angle);
+      const byId = new Map(next.map(s => [String(s.id), s]));
+      if (this.commitIfAllowed('Rotate', next, all => all.map(s => byId.get(String(s.id)) ?? s))) {
+        this.log(`${picked.length} rotated ${trim(angle)}°.`);
+        return;
+      }
+    }
   }
 
   private async mirrorCommand(): Promise<void> {
@@ -892,23 +1135,22 @@ export class DraftingEngine {
       kind: 'point',
       message: 'Specify second point of mirror line',
       base: first,
-      preview: p => ({ stalls: picked.map(s => mirrorIn(s, first, p)), lines: [[first, p]] })
+      preview: p => ({ ...this.checked(picked.map((s, i) => ({ ...mirrorIn(s, first, p), id: `ghost-${i}` }))), lines: [[first, p]] })
     });
     if (b.kind !== 'point') return;
     const second = b.point;
     const c = await this.ask({ kind: 'text', message: 'Erase source stalls?', keywords: ['Yes', 'No'], defaultValue: 'No' });
     const erase = c.kind === 'keyword' && c.keyword === 'Yes';
     const mirrored = picked.map(s => mirrorIn(s, first, second));
+    let done: boolean;
     if (erase) {
       const byId = new Map(mirrored.map(s => [String(s.id), s]));
-      this.commit('Mirror', all => all.map(s => byId.get(String(s.id)) ?? s));
+      done = this.commitIfAllowed('Mirror', mirrored, all => all.map(s => byId.get(String(s.id)) ?? s));
     } else {
-      const copies = this.newStalls(mirrored as unknown as NewFootprint[])
-        .map((c2, i) => ({ ...c2, color: picked[i].color, height: picked[i].height, footprint: mirrored[i].footprint ?? null, openEdges: mirrored[i].openEdges ?? null }));
-      this.commit('Mirror', all => [...all, ...copies]);
-      this.reportIssues(copies.map(s => String(s.id)));
+      const copies = this.copiesOf(picked, mirrored);
+      done = this.commitIfAllowed('Mirror', copies, all => [...all, ...copies]);
     }
-    this.log(`${picked.length} mirrored.`);
+    if (done) this.log(`${picked.length} mirrored.`);
   }
 
   private async arrayCommand(): Promise<void> {
@@ -928,14 +1170,10 @@ export class DraftingEngine {
     const rowSpacing = rows > 1 ? await this.askNumber('Row spacing (m, + is up)', box.maxZ - box.minZ, -1e6) : 0;
     const colSpacing = cols > 1 ? await this.askNumber('Column spacing (m, + is right)', box.maxX - box.minX, -1e6) : 0;
     const offsets = arrayOffsets(rows, cols, rowSpacing, colSpacing);
-    const footprints = offsets.flatMap(d => picked.map(s => ({ ...translate(s, d), rotation: s.rotation ?? 0 }) as NewFootprint));
-    const created = this.newStalls(footprints).map((c, i) => {
-      const src = picked[i % picked.length];
-      return { ...c, color: src.color, height: src.height, footprint: src.footprint ?? null, openEdges: src.openEdges ?? null };
-    });
-    this.commit('Array', all => [...all, ...created]);
-    this.log(`${created.length} stalls created in ${rows} x ${cols}.`);
-    this.reportIssues(created.map(s => String(s.id)));
+    const created = this.copiesOf(picked, offsets.flatMap(d => picked.map(s => translate(s, d))));
+    if (this.commitIfAllowed('Array', created, all => [...all, ...created])) {
+      this.log(`${created.length} stalls created in ${rows} x ${cols}.`);
+    }
   }
 
   private async eraseCommand(): Promise<void> {
@@ -974,7 +1212,6 @@ export class DraftingEngine {
           ...(sameShape ? { openSides: [...source.openSides], gateSide: source.gateSide } : {})
         };
       }, 'Match properties');
-      this.reportIssues([String(target.id)]);
     }
   }
 
@@ -1002,7 +1239,7 @@ export class DraftingEngine {
     if (cols * rows < 2) return;
     const parts = this.newStalls(splitFootprint(stall, cols, rows));
     const id = String(stall.id);
-    this.commit('Split', all => all.flatMap(s => (String(s.id) === id ? parts : [s])));
+    if (!this.commitIfAllowed('Split', parts, all => all.flatMap(s => (String(s.id) === id ? parts : [s])), new Set([id]))) return;
     this.selection.set(new Set(parts.map(p => String(p.id))));
     this.log(`${stall.name} split into ${parts.length}.`);
   }
@@ -1019,15 +1256,16 @@ export class DraftingEngine {
       this.log('These stalls do not form one rectangle (a gap, an overlap or a turned stall).', 'error');
       return;
     }
-    const [created] = this.newStalls([merged]);
+    const created = { ...this.newStalls([merged])[0], name: picked[0].name };
     const ids = new Set(picked.map(s => String(s.id)));
     let placed = false;
-    this.commit('Merge', all => all.flatMap(s => {
+    const ok = this.commitIfAllowed('Merge', [created], all => all.flatMap(s => {
       if (!ids.has(String(s.id))) return [s];
       if (placed) return [];
       placed = true;
-      return [{ ...created, name: picked[0].name }];
-    }));
+      return [created];
+    }), ids);
+    if (!ok) return;
     this.selection.set(new Set([String(created.id)]));
     this.log(`${picked.length} stalls merged into one of ${trim(merged.width)} x ${trim(merged.length)} m.`);
   }
@@ -1122,15 +1360,15 @@ export class DraftingEngine {
           continue;
         }
         const sides = has ? stall.openSides.filter(s => s !== hit.side) : [...stall.openSides, hit.side];
-        this.updateStalls(new Set([a.id]), s => ({ ...s, openSides: sides, gateSide: sides[0] }), 'Open side');
-        this.log(`${stall.stallNumber ?? stall.name}: ${hit.side.toLowerCase()} ${has ? 'closed' : 'open'}.`, 'info');
+        if (this.updateStalls(new Set([a.id]), s => ({ ...s, openSides: sides, gateSide: sides[0] }), 'Open side')) {
+          this.log(`${stall.stallNumber ?? stall.name}: ${SIDE_WORDS[hit.side]} side ${has ? 'closed' : 'opened'}.`, 'info');
+        }
       } else if (hit.edge !== undefined) {
         const edges = stall.openEdges ?? [];
         const has = edges.includes(hit.edge);
         const next = has ? edges.filter(e => e !== hit.edge) : [...edges, hit.edge];
         this.updateStalls(new Set([a.id]), s => ({ ...s, openEdges: next }), 'Open side');
       }
-      this.reportIssues([a.id]);
     }
   }
 
@@ -1334,10 +1572,22 @@ export class DraftingEngine {
     }
   }
 
+  /** The PDF dialog read a file. */
+  rememberPdf(file: File): void {
+    this.lastPdf = file;
+  }
+
   private async pdfPlotCommand(): Promise<void> {
+    let file: File | null = null;
+    if (this.lastPdf) {
+      const a = await this.ask({ kind: 'text', message: 'Plot from PDF', keywords: ['New file'], defaultValue: this.lastPdf.name });
+      file = a.kind === 'keyword' ? null : this.lastPdf;
+    }
     const before = this.snapshot('Plot from PDF');
-    this.store.openPdfImport();
-    this.log('Pick the PDF and check the stalls in the dialog; they land on the canvas when you confirm.', 'info');
+    this.store.openPdfImport(file);
+    this.log(file
+      ? `Reading ${file.name} again for ${this.hall()?.name ?? 'this hall'}.`
+      : 'Pick the PDF. Its halls are matched to the halls already added; the stalls that pass the rules land on the canvas.', 'info');
     const closed = new Promise<void>(resolve => (this.pdfWaiter = resolve));
     await Promise.race([closed, this.ask({ kind: 'text', message: 'Plot from PDF (finish in the dialog)' }).then(() => undefined)]);
     this.pdfWaiter = null;
@@ -1347,6 +1597,8 @@ export class DraftingEngine {
       this.redoStack = [];
       this.syncUndoLabels();
       this.log(`${this.stalls().length} stalls on the canvas after the PDF plot.`);
+      const broken = this.issues().length;
+      if (broken) this.log(`${broken} ${broken === 1 ? 'stall breaks' : 'stalls break'} a rule (imported as drawn). CHK steps through them; the layout saves once they are fixed.`, 'error');
       this.zoomExtents();
     }
   }
@@ -1421,6 +1673,10 @@ export class DraftingEngine {
 }
 
 // --- helpers -------------------------------------------------------------------------------------------
+
+function violationKey(v: Violation): string {
+  return `${v.code}|${[...v.relatedStallIds].sort().join(',')}`;
+}
 
 function delta(a: Point, b: Point): Point {
   return { x: b.x - a.x, z: b.z - a.z };

@@ -53,7 +53,7 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
   for (const other of others) {
     const q = stallPolygon(other), ids = [String(other.id)];
     if (overlaps(p, q)) {
-      add('STALL_OVERLAP', `Overlaps stall ${other.stallNumber ?? other.id}.`, p, ids);
+      add('STALL_OVERLAP', `Overlaps stall ${other.stallNumber || 'an unsaved stall'}.`, p, ids);
       continue;
     }
     const gap = distance(p, q);
@@ -68,7 +68,7 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
       const cornerPair = corner || otherCorner;
       if (cornerPair || gap > EPS || !backToBack(candidate, other)) {
         add(cornerPair ? 'CORNER_PASSAGE' : gap <= EPS ? 'INVALID_BACK_TO_BACK' : 'PATHWAY_WIDTH',
-          `Required ${passage} m clear passage; ${Math.round(gap * 1e6) / 1e6} m available next to ${other.stallNumber ?? other.id}.`, p, ids,
+          `Required ${passage} m clear passage; ${Math.round(gap * 1e6) / 1e6} m available next to ${other.stallNumber || 'an unsaved stall'}.`, p, ids,
           { requiredWidth: passage, actualWidth: gap });
       }
     }
@@ -77,7 +77,7 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
     const access = corridor(p, index, passage);
     if (!inside(access)) add('OPEN_SIDE_PASSAGE', `${side} requires ${passage} m of usable floor in front of its entire edge.`, access, [], { side, requiredWidth: passage });
     for (const other of others) if (overlaps(access, stallPolygon(other))) {
-      add('OPEN_SIDE_BLOCKED', `${side} passage is blocked by ${other.stallNumber ?? other.id}.`, access, [String(other.id)], { side, requiredWidth: passage });
+      add('OPEN_SIDE_BLOCKED', `${side} passage is blocked by ${other.stallNumber || 'an unsaved stall'}.`, access, [String(other.id)], { side, requiredWidth: passage });
     }
     // Passage zones are walkable; physical restricted zones are not usable passage.
     for (const zone of ctx.zones.filter(z => ['PARTITION', 'SMOKE_CURTAIN', 'NO_CONSTRUCTION', 'FACILITY_ACCESS'].includes(z.kind))) {
@@ -87,7 +87,7 @@ export function validateOrientedPlacement(candidate: Footprint, ctx: PlacementCo
   for (const other of others) for (const { index, label: side } of openEdgeList(other)) {
     const access = corridor(stallPolygon(other), index, passage);
     if (overlaps(p, access)) add('OPEN_SIDE_BLOCKED',
-      `Blocks the ${side} open side of ${other.stallNumber ?? other.id}; keep ${passage} m clear.`, access, [String(other.id)]);
+      `Blocks the ${side} open side of ${other.stallNumber || 'an unsaved stall'}; keep ${passage} m clear.`, access, [String(other.id)]);
   }
   const wallGap = ctx.circleRadius != null
     ? ctx.circleRadius - Math.max(...p.map(v => Math.hypot(v.x, v.z)))

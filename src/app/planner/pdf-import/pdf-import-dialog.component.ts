@@ -8,6 +8,7 @@ import {
   ElementRef,
   inject,
   Injector,
+  input,
   output,
   signal,
   untracked,
@@ -79,6 +80,13 @@ const RULE_LABELS: Record<string, string> = {
 export class PdfImportDialogComponent {
   /** The dialog closed, imported or not (the drafting PDFPLOT command waits for it). */
   readonly closed = output<void>();
+  /** A PDF was chosen (the drafting workspace keeps it, so the next hall reuses it). */
+  readonly fileChosen = output<File>();
+  /**
+   * Drafting workspace: plot onto the halls already added, found by the drawing's hall numbers,
+   * never onto a new hall sized to the drawing; and import only the stalls that pass the rules.
+   */
+  readonly existingHallsOnly = input(false);
   readonly store = inject(PlannerStore);
   private readonly injector = inject(Injector);
   private readonly api = inject(LayoutApiService);
@@ -103,16 +111,51 @@ export class PdfImportDialogComponent {
   readonly nudgeGroup = signal('');
   readonly check = signal<RuleCheck | null>(null);
   readonly checking = signal(false);
+  /**
+   * Drafting workspace: import the drawing as it is, rules broken or not. Off by default and
+   * chosen per import; the stalls that break a rule stay listed and block saving until fixed.
+   */
+  readonly ignoreRules = signal(false);
   private stamp = Date.now();
   private readToken = 0;
   private opener: HTMLElement | null = null;
 
   readonly NEW_HALL = NEW_HALL;
   readonly halls = computed(() => this.store.halls().filter(h => !String(h.id).startsWith('pdf-hall-')));
-  readonly targetHall = computed<Hall | null>(() => this.halls().find(h => String(h.id) === this.targetId()) ?? null);
+  /** Added halls whose name carries one of the drawing's hall numbers ("Hall 5" for 5G-26). */
+  readonly matchedHalls = computed(() => {
+    const r = this.result();
+    return r ? this.halls().filter(h => matchGroups(h.name, r.groups).length) : [];
+  });
+  readonly hallChoices = computed(() => (this.existingHallsOnly() ? this.matchedHalls() : this.halls()));
+  readonly targetHall = computed<Hall | null>(() => this.hallChoices().find(h => String(h.id) === this.targetId()) ?? null);
   readonly workHall = computed<Hall | null>(() => {
     const r = this.result();
-    return r && this.groups().length ? importHall(this.targetHall(), r, this.groups(), this.stamp) : null;
+    if (!r || !this.groups().length) return null;
+    const target = this.targetHall();
+    if (this.existingHallsOnly()) {
+      // The added hall itself (same id, same name): the stalls land on it, not on a copy.
+      if (!target) return null;
+      return needsHalfMetres(r, this.groups())
+        ? { ...target, rules: { ...(target.rules ?? {}), snapStep: 0.5 } }
+        : target;
+    }
+    return importHall(target, r, this.groups(), this.stamp);
+  });
+  /** Why nothing can be plotted: the drawing's hall is not added yet. */
+  readonly missingHall = computed(() => {
+    const r = this.result();
+    if (!this.existingHallsOnly() || !r || this.matchedHalls().length) return null;
+    const numbers = r.groups.map(g => g.group).filter(g => g !== '?');
+    return numbers.length
+      ? `This drawing is of Hall ${numbers.join(', ')}. No added hall has ${numbers.length > 1 ? 'those numbers' : 'that number'} in its name: add the hall first (Setup → Select hall → Import a floor plan), then run PP again.`
+      : 'The drawing’s hall number could not be read, so it cannot be matched to an added hall.';
+  });
+  /** Stalls already on the target hall, which the import replaces (Undo brings them back). */
+  readonly replacing = computed(() => {
+    const target = this.targetHall();
+    if (!this.existingHallsOnly() || !target) return 0;
+    return this.store.stalls().filter(s => String(s.hallId) === String(target.id) && s.status !== 'CANCELLED').length;
   });
   private readonly mask = computed(() => {
     const hall = this.workHall();
@@ -208,10 +251,9 @@ export class PdfImportDialogComponent {
         this.store.pdfImport.set(null);
         afterNextRender(() => {
           this.open();
-          if (request.file) {
-            this.restart();
-            void this.read(request.file);
-          }
+          // Every request starts afresh: with its file, or at the file picker.
+          this.restart();
+          if (request.file) void this.read(request.file);
         }, { injector: this.injector });
       });
     });
@@ -237,6 +279,7 @@ export class PdfImportDialogComponent {
 
   restart(): void {
     this.readToken++;
+    this.ignoreRules.set(false);
     this.releasePage();
     this.result.set(null);
     this.check.set(null);
@@ -267,6 +310,7 @@ export class PdfImportDialogComponent {
       return;
     }
     this.fileName.set(file.name);
+    this.fileChosen.emit(file);
     this.step.set('reading');
     this.releasePage();
     this.pageError.set('');
@@ -296,8 +340,18 @@ export class PdfImportDialogComponent {
     this.check.set(null);
     this.filter.set('review');
     this.mode.set('drawing');
-    // Default target: the planner hall whose name carries the drawing's hall numbers.
-    const match = this.halls().find(h => matchGroups(h.name, r.groups).length);
+    // Default target: the planner hall whose name carries the drawing's hall numbers; in the
+    // drafting workspace the open hall when the drawing has it.
+    const open = this.store.currentHall();
+    const current = this.existingHallsOnly() && open && matchGroups(open.name, r.groups).length ? open : null;
+    const match = current ?? this.halls().find(h => matchGroups(h.name, r.groups).length);
+    if (this.existingHallsOnly() && !match) {
+      this.targetId.set('');
+      this.groups.set([]);
+      this.nudgeGroup.set('');
+      this.step.set('review');
+      return;
+    }
     const groups = match ? matchGroups(match.name, r.groups) : r.groups.slice(0, 1).map(g => g.group);
     this.targetId.set(match ? String(match.id) : NEW_HALL);
     this.groups.set(groups);

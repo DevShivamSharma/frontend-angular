@@ -72,12 +72,24 @@
 
             <section>
               <h3>Place into</h3>
-              <select class="control" [value]="targetId()" (change)="setTarget($any($event.target).value)" aria-label="Planner hall">
-                @for (h of halls(); track h.id) {
-                  <option [value]="'' + h.id" [selected]="'' + h.id === targetId()">{{ h.name }}</option>
+              @if (missingHall(); as m) {
+                <p class="issue s-error" role="alert">{{ m }}</p>
+              } @else {
+                <select class="control" [value]="targetId()" (change)="setTarget($any($event.target).value)" aria-label="Planner hall">
+                  @for (h of hallChoices(); track h.id) {
+                    <option [value]="'' + h.id" [selected]="'' + h.id === targetId()">{{ h.name }}</option>
+                  }
+                  @if (!existingHallsOnly()) {
+                    <option [value]="NEW_HALL" [selected]="targetId() === NEW_HALL">New hall sized to the drawing</option>
+                  }
+                </select>
+                @if (existingHallsOnly() && hallChoices().length > 1) {
+                  <p class="note">This drawing has {{ hallChoices().length }} added halls. Plot one now; open the next hall in the workspace and run PP again: the same PDF is reused.</p>
                 }
-                <option [value]="NEW_HALL" [selected]="targetId() === NEW_HALL">New hall sized to the drawing</option>
-              </select>
+                @if (replacing(); as n) {
+                  <p class="note">Replaces the {{ n }} {{ n === 1 ? 'stall' : 'stalls' }} now on {{ targetHall()?.name }} (Undo brings them back).</p>
+                }
+              }
               <div class="groups" role="group" aria-label="Halls of the drawing">
                 @for (g of groupInfo(); track g.group) {
                   <label class="chip" [title]="'1 m = ' + g.pitchX.toFixed(3) + ' pt · grid fit ±' + g.rms.toFixed(3) + ' m'">
@@ -182,12 +194,26 @@
               }
             </div>
             <div class="actions">
-              <button type="button" class="btn-secondary" [disabled]="!c.compliant.length" (click)="confirm('compliant')">
+              <button
+                type="button"
+                [class]="existingHallsOnly() && !ignoreRules() ? 'btn-primary' : 'btn-secondary'"
+                [disabled]="!c.compliant.length"
+                (click)="confirm('compliant')"
+                [title]="existingHallsOnly() ? 'Stalls that break a rule are left out: nothing that breaks a rule is drawn.' : ''"
+              >
                 Import the {{ c.compliant.length }} that pass
               </button>
-              <button type="button" class="btn-primary" [disabled]="!plannerStalls().length" (click)="confirm('all')">
-                Import all {{ plannerStalls().length }} as drawn
-              </button>
+              @if (existingHallsOnly() && c.compliant.length < plannerStalls().length) {
+                <label class="ignore-rules" title="The stalls that break a rule are imported too. They stay listed under Rule check, and the layout cannot be saved until they are fixed.">
+                  <input type="checkbox" [checked]="ignoreRules()" (change)="ignoreRules.set($any($event.target).checked)" />
+                  Ignore the rules for this import
+                </label>
+              }
+              @if (!existingHallsOnly() || ignoreRules()) {
+                <button type="button" class="btn-primary" [class.is-warn]="existingHallsOnly()" [disabled]="!plannerStalls().length" (click)="confirm('all')">
+                  Import all {{ plannerStalls().length }} as drawn
+                </button>
+              }
             </div>
           } @else {
             <div class="rules">Next: check the {{ plannerStalls().length }} included stalls against the planner’s rules for this hall.</div>

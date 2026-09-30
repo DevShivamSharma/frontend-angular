@@ -196,15 +196,15 @@
             <dt><label for="p-name">Name</label></dt>
             <dd><input id="p-name" type="text" maxlength="60" [value]="s.name" (change)="rename($any($event.target).value)" /></dd>
             <dt><label for="p-w">Width</label></dt>
-            <dd class="unit"><input id="p-w" type="number" step="0.5" min="0.5" [value]="s.width" [disabled]="!!s.footprint?.length" (change)="setDimension('width', $any($event.target).value)" /> m</dd>
+            <dd class="unit"><input id="p-w" type="number" step="0.5" min="0.5" [value]="s.width" [disabled]="!!s.footprint?.length" (change)="setDimension('width', $any($event.target))" /> m</dd>
             <dt><label for="p-l">Depth</label></dt>
-            <dd class="unit"><input id="p-l" type="number" step="0.5" min="0.5" [value]="s.length" [disabled]="!!s.footprint?.length" (change)="setDimension('length', $any($event.target).value)" /> m</dd>
+            <dd class="unit"><input id="p-l" type="number" step="0.5" min="0.5" [value]="s.length" [disabled]="!!s.footprint?.length" (change)="setDimension('length', $any($event.target))" /> m</dd>
             <dt>Area</dt><dd class="mono">{{ area(s) }} m²</dd>
             @if (!(s.rotation ?? 0)) {
               <dt><label for="p-x">Corner X</label></dt>
-              <dd class="unit"><input id="p-x" type="number" step="0.5" [value]="corner(s).x" (change)="setCorner('x', $any($event.target).value)" /> m</dd>
+              <dd class="unit"><input id="p-x" type="number" step="0.5" [value]="corner(s).x" (change)="setCorner('x', $any($event.target))" /> m</dd>
               <dt><label for="p-y">Corner Y</label></dt>
-              <dd class="unit"><input id="p-y" type="number" step="0.5" [value]="corner(s).y" (change)="setCorner('y', $any($event.target).value)" /> m</dd>
+              <dd class="unit"><input id="p-y" type="number" step="0.5" [value]="corner(s).y" (change)="setCorner('y', $any($event.target))" /> m</dd>
             } @else {
               <dt>Rotation</dt><dd class="mono">{{ s.rotation }}°</dd>
             }
@@ -236,7 +236,7 @@
                   type="checkbox"
                   [checked]="sharedSides()[o.side] === 'on'"
                   [indeterminate]="sharedSides()[o.side] === 'mixed'"
-                  (change)="setSide(o.side, $any($event.target).checked)"
+                  (change)="setSide(o.side, $any($event.target))"
                 />
                 {{ o.label }}
               </label>
@@ -342,5 +342,5 @@
 
 <app-rule-picker-dialog />
 @defer (when store.pdfImport() !== null) {
-  <app-pdf-import-dialog (closed)="engine.pdfDialogClosed()" />
+  <app-pdf-import-dialog [existingHallsOnly]="true" (closed)="engine.pdfDialogClosed()" (fileChosen)="engine.rememberPdf($event)" />
 }

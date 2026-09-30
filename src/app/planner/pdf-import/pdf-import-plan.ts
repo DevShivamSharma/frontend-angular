@@ -28,7 +28,10 @@ export interface Alignment {
 
 /** The drawing halls whose number appears in the planner hall's name ("Hall 8-9-10" -> 8, 9, 10). */
 export function matchGroups(hallName: string, groups: ReadonlyArray<PdfGroup>): string[] {
-  const numbers = new Set((hallName.match(/\d+/g) ?? []).map(n => String(Number(n))));
+  // "Hall 12A" is hall 12A, not 12; a trailing G or F is the floor ("Hall 5G" is hall 5).
+  const numbers = new Set(
+    [...hallName.toUpperCase().matchAll(/(\d+)([A-Z]?)(?![A-Z])/g)].map(m => String(Number(m[1])) + (/[GF]/.test(m[2]) ? '' : m[2]))
+  );
   return groups.map(g => g.group).filter(g => numbers.has(g));
 }
 
