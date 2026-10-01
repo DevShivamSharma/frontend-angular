@@ -123,12 +123,17 @@ export interface SelfcareLegend {
  * arrive parsed or still as text; `parseJson()` takes either.
  */
 export interface SelfcareLayoutRow {
+  /** Row id of the layout table (`T_EVENT_HALL_LAYOUT_DATA.id` / `T_HALL_LAYOUTS.id`). */
+  id?: number | string;
   /** Live API spelling. */
   hallId?: number | string;
   /** Database-export spelling. */
   hall_id?: number | string;
   name?: string;
   event_id?: string;
+  /** Event-specific layouts only: the booked hall the stalls of this layout reference. */
+  event_hall_id?: string;
+  event_hall_layout_id?: number | string;
   length?: number | string;
   breadth?: number | string;
   layout_data?: SelfcareLayoutData | string | null;
@@ -205,6 +210,29 @@ const OUTSIDE_COLOR = '#ffffff';
  */
 const ICON_NAME = /^[a-z0-9][a-z0-9_-]*$/i;
 
+/**
+ * Which SelfCare layout a hall was imported from, with the grid settings its stall cells use.
+ *
+ * Kept verbatim (no defaults filled in) so the stall adapter (`selfcare-stalls.ts`) can match
+ * stalls to THIS layout and read ITS cell size, instead of assuming Hall 12A's 1 x 1 m grid for
+ * every hall. Held in the editor only; the planner backend does not store it.
+ */
+export interface SelfcareLayoutSource {
+  layoutId: number | string | null;
+  hallId: number | string | null;
+  /** Null for a default (`T_HALL_LAYOUTS`) layout, which is not tied to one event. */
+  eventId: string | null;
+  eventHallId: string | null;
+  /** Metres along X / down the plan, as SelfCare stores them. */
+  length: number;
+  breadth: number;
+  /** `layout_data.shape`, raw ("non-circular", "circular"), or null when missing. */
+  shape: string | null;
+  /** `layout_data.stallWidth` / `stallHeight` in metres, or null when missing. */
+  stallWidth: number | null;
+  stallHeight: number | null;
+}
+
 /** Everything one SelfCare row contributes to a planner hall. */
 export interface SelfcareImport {
   /** `hallId` / `hall_id`, or null when the row carries neither. */
@@ -228,6 +256,7 @@ export interface SelfcareImport {
   amenities: HallAmenity[];
   compass: HallCompass | null;
   legends: HallLegend[];
+  source: SelfcareLayoutSource;
 }
 
 /**
@@ -346,7 +375,18 @@ export function importSelfcareLayout(row: SelfcareLayoutRow): SelfcareImport {
     markers,
     amenities,
     compass: toCompass(direction, width, length),
-    legends
+    legends,
+    source: {
+      layoutId: row.id ?? null,
+      hallId: row.hallId ?? row.hall_id ?? null,
+      eventId: row.event_id ?? null,
+      eventHallId: row.event_hall_id ?? null,
+      length: width,
+      breadth: length,
+      shape: typeof data.shape === 'string' ? data.shape : null,
+      stallWidth: positiveOrNull(data.stallWidth),
+      stallHeight: positiveOrNull(data.stallHeight)
+    }
   };
 }
 
@@ -487,7 +527,8 @@ export function applySelfcareLayout(hall: Hall, row: SelfcareLayoutRow): Hall {
     markers: imported.markers,
     amenities: imported.amenities,
     compass: imported.compass,
-    legends: imported.legends
+    legends: imported.legends,
+    selfcareLayout: imported.source
   };
 }
 
@@ -585,6 +626,11 @@ function parseJson<T>(value: T | string | null | undefined): T | null {
   } catch {
     return null;
   }
+}
+
+function positiveOrNull(value: unknown): number | null {
+  const n = Number(value);
+  return value != null && Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function numberOf(value: unknown, fallback: number): number {

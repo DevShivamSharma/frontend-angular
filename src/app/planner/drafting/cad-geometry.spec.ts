@@ -175,15 +175,15 @@ describe('RENUMBER order', () => {
 describe('portal export', () => {
   const plan = { minX: -10, maxX: 10, minZ: -5, maxZ: 5 };
 
-  it('writes 1 m cells and per-cell borders in px, dashed where open', () => {
+  it('writes 1 m cells and per-cell borders at the SelfCare 20 px/m, dashed where open', () => {
     const out = portalExport('Hall X', plan, [stall({ posX: -8.5, posZ: -4, width: 3, length: 2, openSides: ['FRONT'] as GateSide[], stallNumber: 'STALL-001' })]);
-    expect([out.length, out.breadth]).toEqual([20, 10]);
+    expect([out.length, out.breadth, out.metersToPixels]).toEqual([20, 10, 20]);
     const s = out.default_stalls[0];
     expect(s.area).toBe('6sqm');
     expect(s.stallCoords[0]).toEqual({ x: 0, y: 0 });
-    expect(s.stallCoords.at(-1)).toEqual({ x: 20, y: 10 });
+    expect(s.stallCoords.at(-1)).toEqual({ x: 40, y: 20 });
     expect(s.borderCoords.length).toBe(10);
-    expect(s.borderCoords.filter(b => b.isDashed).every(b => b.y1 === 20 && b.y2 === 20)).toBeTrue();
+    expect(s.borderCoords.filter(b => b.isDashed).every(b => b.y1 === 40 && b.y2 === 40)).toBeTrue();
     expect(s.borderCoords.filter(b => b.isDashed).length).toBe(3);
   });
 
@@ -194,6 +194,13 @@ describe('portal export', () => {
       stall({ name: 'gone', posX: 0, posZ: 0, width: 3, length: 2, status: 'CANCELLED' })
     ]);
     expect(out.default_stalls.length).toBe(0);
-    expect(out.skipped.map(s => s.reason)).toEqual(['rotated 30°', 'not on the 1 m grid']);
+    expect(out.skipped.map(s => s.reason)).toEqual(['rotated 30°', 'not on the 1 × 1 m cell grid']);
+  });
+
+  it('exports a quarter-turned stall, and uses the layout cell size when given', () => {
+    const turned = stall({ posX: -8, posZ: -3.5, width: 3, length: 2, rotation: 90, openSides: ['FRONT'] as GateSide[] });
+    const cells = portalExport('Hall X', plan, [turned]).default_stalls[0].stallCoords;
+    expect(cells.length).toBe(6);
+    expect(portalExport('Hall X', plan, [turned], { cellWidth: 2, cellHeight: 2 }).skipped[0].reason).toBe('not on the 2 × 2 m cell grid');
   });
 });

@@ -37,6 +37,7 @@ import {
   SelfcareLayoutRow,
   unwrapSelfcareData
 } from './geometry/selfcare-layout';
+import { importSelfcareStalls, SelfcareStallImport, SelfcareStallRow } from './geometry/selfcare-stalls';
 import { buildApiPayload, LayoutApiService } from './layout-api.service';
 import { EventType, Hall, HallShape, StallType } from './models/hall.model';
 import { LayoutSummary, ServerViolation } from './models/layout.model';
@@ -1017,6 +1018,37 @@ export class PlannerStore {
       this.selectedStallId.set(null);
     }
     return names;
+  }
+
+  /**
+   * Import SelfCare stalls: `{ layout, stalls }`, where `layout` is the hall-layout row (or its
+   * response envelope) the stalls were drawn on and `stalls` the `T_STALLS` rows (or envelope).
+   *
+   * The layout is applied first, exactly as `importSelfcare` does, so the stalls are read against
+   * THAT hall's size and cell grid. The imported stalls then replace the stalls shown on the hall,
+   * like opening a layout: unsaved, unnumbered, placed where SelfCare has them. The usual audit
+   * judges them against the hall's rules; nothing is moved to pass. Returns every issue found;
+   * throws when the file holds no layout.
+   */
+  importSelfcareStalls(payload: unknown): SelfcareStallImport {
+    const body = (payload ?? {}) as { layout?: unknown; stalls?: unknown };
+    if (body.layout == null) throw new Error('The file has no "layout": the SelfCare hall layout the stalls belong to.');
+    const layoutRows = unwrapSelfcareData<SelfcareLayoutRow>(body.layout as SelfcareLayoutRow);
+    if (layoutRows.length !== 1) throw new Error(`Expected one SelfCare layout, found ${layoutRows.length}.`);
+    this.importSelfcare(body.layout);
+
+    const hall = this.currentHall();
+    if (!hall) throw new Error('No hall to import the stalls onto.');
+    const rows = unwrapSelfcareData<SelfcareStallRow>((body.stalls ?? []) as SelfcareStallRow[]);
+    const result = importSelfcareStalls(rows, hall.selfcareLayout, hall.id);
+
+    this.clearFeedback();
+    this.proposals.set(null);
+    this.stalls.update(p => [...p.filter(s => String(s.hallId) !== String(hall.id)), ...result.stalls]);
+    this.selectedSavedId.set(null);
+    this.selectedStallId.set(null);
+    this.layoutName.set(`${hall.name} · SelfCare`);
+    return result;
   }
 
   /**

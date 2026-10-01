@@ -5,6 +5,7 @@ import type {
   LayoutRules,
   Point
 } from '../geometry/placement-rules';
+import type { SelfcareLayoutSource } from '../geometry/selfcare-layout';
 
 /**
  * Hall shapes supported by the planner.
@@ -75,6 +76,11 @@ export interface Hall {
   /** The SelfCare legend rows, so the UI can show the plan's own key rather than a hardcoded one. */
   legends?: HallLegend[] | null;
   rules?: Partial<LayoutRules> | null;
+  /**
+   * The SelfCare layout this hall's plan was imported from (ids and stall-cell grid). Editor
+   * state only: not part of the save payload, so a hall loaded from the planner backend has none.
+   */
+  selfcareLayout?: SelfcareLayoutSource | null;
 }
 
 /**

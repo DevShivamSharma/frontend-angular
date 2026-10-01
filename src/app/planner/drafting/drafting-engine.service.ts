@@ -9,6 +9,8 @@ import { placementContextFor } from '../geometry/hall-rules';
 import type { Footprint, PlacementContext, Point, Rect, Violation } from '../geometry/placement-rules';
 import { polygonBounds, validatePlacement } from '../geometry/placement-rules';
 import { pointSegmentDistance, rotate, stallPolygon } from '../geometry/polygon-geometry';
+import { hallSize } from '../geometry/planner-geometry';
+import { selfcareCellGrid } from '../geometry/selfcare-stalls';
 import { normalizeFootprint, sidesOfEdges } from '../geometry/stall-footprint';
 import { LayoutAssistantService } from '../layout-assistant.service';
 import type { GateSide, Stall } from '../models/stall.model';
@@ -1645,9 +1647,16 @@ export class DraftingEngine {
 
   exportForPortal(): void {
     const hall = this.hall();
-    const plan = this.plan();
-    if (!hall || !plan) return;
-    const data = portalExport(hall.name, plan, this.store.currentStalls());
+    if (!hall) return;
+    // The SelfCare canvas is the hall rectangle from its top-left corner, not the plan bounds
+    // (walls and foyers reach past it), with the imported layout's own cell size.
+    const { width, length } = hallSize(hall);
+    const frame = { minX: -width / 2, maxX: width / 2, minZ: -length / 2, maxZ: length / 2 };
+    const grid = selfcareCellGrid(hall.selfcareLayout);
+    if (typeof grid === 'string') this.log(`${grid} Exporting on 1 × 1 m cells.`, 'info');
+    const data = portalExport(hall.name, frame, this.store.currentStalls(), typeof grid === 'string'
+      ? {}
+      : { metersToPixels: grid.pxPerMetre, cellWidth: grid.cellWidth, cellHeight: grid.cellHeight });
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -1656,7 +1665,8 @@ export class DraftingEngine {
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     this.log(`${data.default_stalls.length} stalls exported for the booking portal.${data.skipped.length ? ` ${data.skipped.length} skipped: ${data.skipped.slice(0, 3).map(s => `${s.name} (${s.reason})`).join(', ')}${data.skipped.length > 3 ? '…' : ''}` : ''}`);
-    if (data.skipped.length) this.notify.error('Some stalls were not exported', `${data.skipped.length} stalls are rotated, custom-shaped or off the 1 m grid, which the portal cannot show.`);
+    for (const w of data.warnings) this.log(`${w.name}: ${w.reason}`, 'info');
+    if (data.skipped.length) this.notify.error('Some stalls were not exported', `${data.skipped.length} stalls are rotated off a quarter turn, off the cell grid or outside the hall canvas, which the portal cannot show.`);
   }
 
   private help(): void {

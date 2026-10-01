@@ -1,4 +1,5 @@
 import type { Point, StallStatus } from '../geometry/placement-rules';
+import type { SelfcareStallSource } from '../geometry/selfcare-stalls';
 
 /** Side of the stall that is left open for customer entry. */
 export type GateSide = 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT';
@@ -44,6 +45,11 @@ export interface Stall {
   footprint?: Point[] | null;
   /** Open (customer-facing) edges of a custom stall: edge i runs footprint[i] -> footprint[i + 1]. */
   openEdges?: number[] | null;
+  /**
+   * Imported from SelfCare: its source ids, raw row and the geometry it was imported with
+   * (geometry/selfcare-stalls.ts). Editor state only; the planner backend does not store it.
+   */
+  selfcare?: SelfcareStallSource | null;
 }
 
 /** Raw stall-shaped input from the backend or from an Excel row. */
