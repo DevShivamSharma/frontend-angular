@@ -24,6 +24,13 @@ export const routes: Routes = [
     title: 'Drafting · Stall planner',
     loadComponent: () => import('./planner/drafting/drafting-page.component').then(m => m.DraftingPageComponent)
   },
+  // The exhibitor-facing view of a saved layout: the stall map, availability and booking.
+  // Opened with `?layoutId=` from a saved layout's View button.
+  {
+    path: 'planner/view',
+    title: 'Stall map',
+    loadComponent: () => import('./planner/exhibitor-view/exhibitor-view-page.component').then(m => m.ExhibitorViewPageComponent)
+  },
   {
     path: 'planner',
     loadComponent: () => import('./setup/setup-shell.component').then(m => m.SetupShellComponent),

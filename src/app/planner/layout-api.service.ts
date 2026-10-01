@@ -11,6 +11,7 @@ import {
   LayoutSaveRequest,
   LayoutSaveResponse,
   LayoutSummary,
+  StallBookedResponse,
   StallPayload
 } from './models/layout.model';
 import { Stall } from './models/stall.model';
@@ -170,6 +171,17 @@ export class LayoutApiService {
     return firstValueFrom(this.http.post<LayoutSaveResponse>(
       `${this.api}/layout/${encodeURIComponent(layoutId)}/stalls/${encodeURIComponent(parentNumber)}/split`,
       { children, idempotencyKey }
+    ));
+  }
+
+  /**
+   * `POST /api/layout/{id}/stalls/{stallNumber}/book` — books an AVAILABLE stall. The server
+   * answers 409 when someone else booked it first.
+   */
+  book(layoutId: string | number, stallNumber: string): Promise<StallBookedResponse> {
+    return firstValueFrom(this.http.post<StallBookedResponse>(
+      `${this.api}/layout/${encodeURIComponent(layoutId)}/stalls/${encodeURIComponent(stallNumber)}/book`,
+      {}
     ));
   }
 

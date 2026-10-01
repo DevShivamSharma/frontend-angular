@@ -1,0 +1,174 @@
+<div class="xp">
+  <div class="xp-stage">
+    <!-- The list beside the plan is the keyboard route to every stall; the plan itself takes
+         arrow keys (pan), + / - (zoom) and 0 (fit). -->
+    <svg
+      #svg
+      class="xp-svg"
+      tabindex="0"
+      role="group"
+      [attr.aria-label]="'Floor plan of ' + hall().name + '. Arrow keys move, plus and minus zoom, 0 fits the hall.'"
+      [attr.viewBox]="viewBox()"
+      preserveAspectRatio="xMidYMid meet"
+      (wheel)="onWheel($event)"
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerUp($event)"
+      (pointercancel)="onPointerUp($event)"
+      (click)="onClick($event)"
+      (keydown)="onKey($event)"
+    >
+      <defs>
+        <pattern id="xp-grid" patternUnits="userSpaceOnUse" [attr.width]="gridStep()" [attr.height]="gridStep()">
+          <path class="xp-grid-line" [attr.d]="'M' + gridStep() + ' 0L0 0 0 ' + gridStep()" vector-effect="non-scaling-stroke" />
+        </pattern>
+        <pattern id="xp-booked-hatch" patternUnits="userSpaceOnUse" width="0.8" height="0.8" patternTransform="rotate(45)">
+          <rect class="xp-hatch-bg" width="0.8" height="0.8" />
+          <line class="xp-hatch-line" x1="0" y1="0" x2="0" y2="0.8" vector-effect="non-scaling-stroke" />
+        </pattern>
+      </defs>
+
+      <!-- Hall floor -->
+      <g class="xp-floor">
+        @for (poly of floors().polygons; track $index) {
+          <polygon [attr.points]="poly" />
+          @if (showGrid()) {
+            <polygon class="xp-grid" [attr.points]="poly" />
+          }
+        }
+        @if (floors().circle; as circle) {
+          <circle cx="0" cy="0" [attr.r]="circle.r" />
+        }
+      </g>
+
+      <!-- Restricted zones (passages, no-construction areas) and painted plan patches -->
+      @for (zone of zones(); track $index) {
+        <polygon class="xp-zone" [attr.points]="zone.points" [attr.fill]="zone.fill" [attr.stroke]="zone.fill">
+          <title>{{ zone.label }}</title>
+        </polygon>
+      }
+      @for (patch of patches(); track $index) {
+        <rect
+          class="xp-patch"
+          [attr.x]="patch.posX - patch.width / 2"
+          [attr.y]="patch.posZ - patch.length / 2"
+          [attr.width]="patch.width"
+          [attr.height]="patch.length"
+          [attr.fill]="patch.color"
+        >
+          @if (patch.title) {
+            <title>{{ patch.title }}</title>
+          }
+        </rect>
+      }
+
+      <!-- Hall walls -->
+      @for (wall of walls(); track $index) {
+        <rect
+          class="xp-wall"
+          [attr.x]="wall.posX - wall.width / 2"
+          [attr.y]="wall.posZ - wall.length / 2"
+          [attr.width]="wall.width"
+          [attr.height]="wall.length"
+          [attr.fill]="wall.color || null"
+        />
+      }
+
+      <!-- Stalls: status fill, walls on closed sides, open (aisle-facing) sides left light -->
+      @for (stall of stalls(); track stall.id) {
+        <g
+          class="xp-stall"
+          [attr.data-stall-id]="stall.id"
+          [class.is-available]="stall.available"
+          [class.is-booked]="!stall.available"
+          [class.is-selected]="stall.id === selectedId()"
+          [class.is-dimmed]="dimmed(stall)"
+          [attr.aria-label]="ariaLabel(stall)"
+        >
+          <polygon class="xp-stall-body" [attr.points]="points(stall)" vector-effect="non-scaling-stroke" />
+          <path class="xp-stall-wall" [attr.d]="edgePath(stall, false)" vector-effect="non-scaling-stroke" />
+          @if (labelVisible(stall)) {
+            <text
+              class="xp-stall-label"
+              text-anchor="middle"
+              dominant-baseline="central"
+              [attr.x]="stall.label.at.x"
+              [attr.y]="stall.label.at.z"
+              [attr.font-size]="stall.label.font"
+              [attr.transform]="stall.label.vertical ? 'rotate(-90 ' + stall.label.at.x + ' ' + stall.label.at.z + ')' : null"
+            >{{ stall.name }}</text>
+          }
+          <title>{{ ariaLabel(stall) }}</title>
+        </g>
+      }
+
+      <!-- Entrances and exits -->
+      @for (opening of openings(); track $index) {
+        <g class="xp-opening" [class.is-emergency]="opening.emergency">
+          <line [attr.x1]="opening.x1" [attr.y1]="opening.y1" [attr.x2]="opening.x2" [attr.y2]="opening.y2" vector-effect="non-scaling-stroke" />
+          <text [attr.x]="opening.tx" [attr.y]="opening.ty" text-anchor="middle" dominant-baseline="central" font-size="0.8">{{ opening.label }}</text>
+        </g>
+      }
+
+      <!-- Gate / foyer captions, facilities and the north arrow, as the saved plan places them -->
+      @for (marker of markers(); track $index) {
+        <text class="xp-marker" [attr.x]="marker.position.x" [attr.y]="marker.position.z" dominant-baseline="hanging" font-size="0.75">{{ marker.text }}</text>
+      }
+      @for (amenity of amenities(); track $index) {
+        <g class="xp-amenity">
+          <image
+            [attr.href]="amenity.href"
+            [attr.x]="amenity.x - iconSize / 2"
+            [attr.y]="amenity.y - iconSize / 2"
+            [attr.width]="iconSize"
+            [attr.height]="iconSize"
+          />
+          <text [attr.x]="amenity.x" [attr.y]="amenity.y + iconSize / 2 + 0.2" text-anchor="middle" dominant-baseline="hanging" font-size="0.55">{{ amenity.label }}</text>
+          <title>{{ amenity.label }}</title>
+        </g>
+      }
+      @if (compass(); as c) {
+        <g class="xp-compass">
+          <image
+            href="assets/images/direction.svg"
+            [attr.transform]="c.transform"
+            [attr.x]="-c.size / 2"
+            [attr.y]="-c.size / 2"
+            [attr.width]="c.size"
+            [attr.height]="c.size"
+          />
+          <text [attr.x]="c.lx" [attr.y]="c.ly" dominant-baseline="hanging" font-size="1.1">{{ c.label }}</text>
+        </g>
+      }
+    </svg>
+
+    <div class="xp-controls" role="group" aria-label="Map zoom">
+      <button type="button" class="xp-control" aria-label="Zoom in" title="Zoom in" (click)="zoomBy(1 / 1.4)">
+        <app-icon name="plus" [size]="16" />
+      </button>
+      <button type="button" class="xp-control" aria-label="Zoom out" title="Zoom out" (click)="zoomBy(1.4)">
+        <span class="xp-minus" aria-hidden="true"></span>
+      </button>
+      <button type="button" class="xp-control" aria-label="Show the whole hall" title="Show the whole hall" (click)="fit()">
+        <app-icon name="maximize" [size]="16" />
+      </button>
+    </div>
+  </div>
+
+  <!-- Under the plan, never over it: no stall is ever hidden behind the key. -->
+  <div class="xp-key" aria-label="Map key">
+    <span><i class="xp-swatch is-available"></i>Available</span>
+    <span><i class="xp-swatch is-booked"></i>Booked</span>
+    <span><i class="xp-swatch is-selected"></i>Selected</span>
+    @if (matches()) {
+      <span><i class="xp-swatch is-dimmed"></i>Not in your filter</span>
+    }
+    <span><i class="xp-swatch is-wall"></i>Stall wall (closed side)</span>
+    @for (zone of zoneKey(); track zone.label) {
+      <span><i class="xp-swatch is-zone" [style.--zone]="zone.color"></i>{{ zone.label }}</span>
+    }
+    @if (openings().length) {
+      <span><i class="xp-swatch is-opening"></i>Entrance / exit</span>
+    }
+  </div>
+</div>

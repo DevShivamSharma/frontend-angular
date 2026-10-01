@@ -18,6 +18,13 @@ export interface LayoutDetail {
   stalls?: StallInput[];
 }
 
+/** Response of `POST /api/layout/{id}/stalls/{stallNumber}/book`: the stall, now BOOKED. */
+export interface StallBookedResponse {
+  message?: string;
+  layoutId?: number | string;
+  stall: StallInput;
+}
+
 /** Response of `POST /api/layout/save` as consumed by `saveLayout` (`App.js:572`). */
 export interface LayoutSaveResponse {
   id?: number | string;

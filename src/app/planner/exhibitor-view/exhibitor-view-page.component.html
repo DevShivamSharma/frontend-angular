@@ -1,0 +1,184 @@
+@switch (status()) {
+  @case ('loading') {
+    <div class="xv xv-loading" aria-busy="true">
+      <header class="xv-header">
+        <div class="xv-skeleton xv-skeleton-title"></div>
+        <div class="xv-skeleton xv-skeleton-stats"></div>
+      </header>
+      <div class="xv-body">
+        <div class="xv-map xv-skeleton"></div>
+        <aside class="xv-panel">
+          <div class="xv-skeleton xv-skeleton-card"></div>
+          @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+            <div class="xv-skeleton xv-skeleton-row"></div>
+          }
+        </aside>
+      </div>
+      <span class="sr-only" role="status">Loading the stall map…</span>
+    </div>
+  }
+
+  @case ('error') {
+    <div class="xv xv-message" role="alert">
+      <app-icon name="alert" [size]="28" />
+      <h1>Couldn’t open this stall map</h1>
+      <p>{{ loadError() }}</p>
+      @if (layoutId()) {
+        <button type="button" class="btn-primary" (click)="load()">
+          <app-icon name="refresh" [size]="14" />
+          Try again
+        </button>
+      }
+    </div>
+  }
+
+  @case ('ready') {
+    <div class="xv">
+      <header class="xv-header">
+        <div class="xv-heading">
+          <span class="xv-eyebrow">{{ hall()?.name }}</span>
+          <h1>{{ layoutName() }}</h1>
+        </div>
+        <div class="xv-stats" aria-label="Stall availability">
+          <span class="xv-stat is-available"><b>{{ availableCount() }}</b> available</span>
+          <span class="xv-stat is-booked"><b>{{ bookedCount() }}</b> booked</span>
+        </div>
+      </header>
+
+      <div class="xv-body">
+        <section class="xv-map" aria-label="Floor plan">
+          @if (hall(); as hall) {
+            <app-exhibitor-plan
+              class="xv-plan"
+              [hall]="hall"
+              [stalls]="stalls()"
+              [selectedId]="selectedId()"
+              [matches]="matchIds()"
+              [focus]="focus()"
+              (select)="choose($event)"
+            />
+          }
+          @if (!selected()) {
+            <p class="xv-hint">Tap a stall to see its details. Drag to move, pinch or scroll to zoom.</p>
+          }
+        </section>
+
+        <aside class="xv-panel" aria-label="Stalls">
+          @if (selected(); as s) {
+            <section class="xv-details" [class.is-booked]="!s.available" aria-live="polite">
+              <div class="xv-details-head">
+                <div>
+                  <span class="xv-status" [class.is-available]="s.available">{{ s.available ? 'Available' : 'Booked' }}</span>
+                  <h2>{{ s.name }}</h2>
+                </div>
+                <button type="button" class="xv-close" aria-label="Close stall details" (click)="choose(null)">
+                  <app-icon name="x" [size]="16" />
+                </button>
+              </div>
+
+              @if (bookedHere() === s.id) {
+                <div class="xv-booked-note" role="status">
+                  <app-icon name="check" [size]="16" />
+                  <span>Booked. Your stall reference is <b>{{ s.stall.stallNumber }}</b>.</span>
+                </div>
+              }
+
+              <dl class="xv-facts">
+                <div><dt>Size</dt><dd>{{ s.sizeText }}</dd></div>
+                <div><dt>Area</dt><dd>{{ s.area }} m²</dd></div>
+                <div><dt>Open sides</dt><dd>{{ s.frontage }}</dd></div>
+                <div><dt>Price</dt><dd class="is-muted">Not listed for this layout</dd></div>
+                @if (s.stall.stallNumber) {
+                  <div><dt>Reference</dt><dd>{{ s.stall.stallNumber }}</dd></div>
+                }
+              </dl>
+
+              @if (s.available) {
+                <button type="button" class="btn-primary xv-book" [disabled]="booking()" (click)="book()">
+                  {{ booking() ? 'Booking…' : 'Book stall ' + s.name }}
+                </button>
+              } @else if (bookedHere() !== s.id) {
+                <p class="xv-unavailable">This stall is already booked. Choose an available (green) stall.</p>
+              }
+            </section>
+          }
+
+          <div class="xv-list-tools">
+            <label class="xv-search">
+              <app-icon name="search" [size]="14" />
+              <span class="sr-only">Search stalls</span>
+              <input type="search" placeholder="Search stall, e.g. 12A-14" [value]="query()" (input)="setQuery($event)" />
+            </label>
+            <div class="xv-filter" role="group" aria-label="Show">
+              <button type="button" [class.is-active]="filter() === 'ALL'" [attr.aria-pressed]="filter() === 'ALL'" (click)="filter.set('ALL')">
+                All {{ stalls().length }}
+              </button>
+              <button type="button" [class.is-active]="filter() === 'AVAILABLE'" [attr.aria-pressed]="filter() === 'AVAILABLE'" (click)="filter.set('AVAILABLE')">
+                Available {{ availableCount() }}
+              </button>
+            </div>
+
+            <!-- Only what this layout has: a group with one choice would filter nothing. -->
+            @if (sizeOptions().length > 1) {
+              <div class="xv-chips" role="group" aria-label="Stall size">
+                <span class="xv-chips-label">Size</span>
+                @for (o of sizeOptions(); track o.bucket) {
+                  <button type="button" class="xv-chip" [class.is-active]="sizes().has(o.bucket)" [attr.aria-pressed]="sizes().has(o.bucket)" (click)="toggleSize(o.bucket)">
+                    {{ o.label }} <span class="xv-chip-count">{{ o.count }}</span>
+                  </button>
+                }
+              </div>
+            }
+            @if (kindOptions().length > 1) {
+              <div class="xv-chips" role="group" aria-label="Stall type">
+                <span class="xv-chips-label" title="How many sides of the stall open onto an aisle">Type</span>
+                @for (o of kindOptions(); track o.kind) {
+                  <button type="button" class="xv-chip" [class.is-active]="kinds().has(o.kind)" [attr.aria-pressed]="kinds().has(o.kind)" (click)="toggleKind(o.kind)">
+                    {{ o.label }} <span class="xv-chip-count">{{ o.count }}</span>
+                  </button>
+                }
+              </div>
+            }
+
+            <div class="xv-result" role="status">
+              @if (filtering()) {
+                <span>Showing <b>{{ listed().length }}</b> of {{ stalls().length }} stalls</span>
+                <button type="button" class="xv-clear" (click)="clearFilters()">Clear filters</button>
+              } @else {
+                <span>{{ stalls().length }} stalls</span>
+              }
+            </div>
+          </div>
+
+          <ul class="xv-list" aria-label="Stall list">
+            @for (s of listed(); track s.id) {
+              <li>
+                <button
+                  type="button"
+                  class="xv-row"
+                  [class.is-selected]="s.id === selectedId()"
+                  [attr.aria-current]="s.id === selectedId() ? 'true' : null"
+                  (click)="choose(s.id, true)"
+                >
+                  <i class="xv-dot" [class.is-available]="s.available" aria-hidden="true"></i>
+                  <span class="xv-row-name">{{ s.name }}</span>
+                  <span class="xv-row-meta">{{ s.sizeText }} · {{ s.area }} m² · {{ kindLabel(s.kind) }}</span>
+                  <span class="sr-only">{{ s.available ? 'available' : 'booked' }}</span>
+                </button>
+              </li>
+            } @empty {
+              <li class="xv-empty">
+                @if (stalls().length) {
+                  No stall matches these filters.
+                  <button type="button" class="xv-clear" (click)="clearFilters()">Clear filters</button>
+                } @else {
+                  This layout has no stalls yet.
+                }
+              </li>
+            }
+          </ul>
+        </aside>
+      </div>
+    </div>
+  }
+}

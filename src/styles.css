@@ -740,8 +740,14 @@ select.control {
 }
 
 .saved-row-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
   margin-top: var(--space-2);
+}
+
+.saved-row-actions a.btn-mini {
+  text-decoration: none;
 }
 
 /* ---- Grids -------------------------------------------------------------- */
