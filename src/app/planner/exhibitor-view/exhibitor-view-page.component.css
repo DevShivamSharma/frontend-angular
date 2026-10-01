@@ -87,11 +87,17 @@
   min-height: 0;
 }
 
-.xv-hint {
+/* Pinned over the plan's top-left corner; the hint sits just under it. */
+.xv-badge {
   position: absolute;
   top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 12px;
+}
+
+.xv-hint {
+  position: absolute;
+  top: 88px;
+  left: 12px;
   margin: 0;
   padding: 6px 14px;
   border-radius: 999px;

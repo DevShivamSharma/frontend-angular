@@ -2,7 +2,7 @@
   @if (!session.messages().length) {
     <div class="chat-empty">
       <h3>Describe your next layout</h3>
-      <p>Choose a size, an area and a stall count. Review the outlines on the hall, then apply when you’re ready.</p>
+      <p>Choose a size, an area and a stall count. Review the outlines on the hall, then apply when you’re ready. You can also change rules, e.g. “turn off wall clearance” or “add rule: corner stalls are premium”.</p>
       <div class="chat-examples">
         @for (example of session.examples(); track example) {
           <button type="button" (click)="useExample(example)">{{ example }} <app-icon name="arrow-right" [size]="14" /></button>
@@ -21,12 +21,15 @@
             <div class="plan-count">{{ message.fits }} of {{ plan.requestedCount ?? plan.stalls.length }} stalls fit</div>
           }
           @for (note of plan.notes; track $index) { <p class="chat-note">{{ note }}</p> }
+          @if (message.ruleLines?.length) {
+            <ul class="rule-changes" aria-label="Rule changes">@for (line of message.ruleLines; track $index) { <li>{{ line }}</li> }</ul>
+          }
           @if (plan.removals?.length && message.state === 'pending') {
             <details><summary>Review {{ plan.removals?.length }} removals</summary><ul>@for (stall of plan.removals; track stall.id) { <li>{{ stall.name }}</li> }</ul></details>
           }
           @if (message.state === 'pending') {
             <div class="chat-actions">
-              <button class="chat-apply" type="button" [disabled]="session.busy() || (plan.action !== 'clear' && !message.fits)" (click)="session.apply(message)">{{ plan.action === 'clear' ? 'Apply removals' : 'Apply' }}</button>
+              <button class="chat-apply" type="button" [disabled]="session.busy() || (plan.action === 'place' && !message.fits)" (click)="session.apply(message)">{{ plan.action === 'clear' ? 'Apply removals' : plan.action === 'rules' ? 'Apply rules' : 'Apply' }}</button>
               <button type="button" [disabled]="session.busy()" (click)="session.discard(message)">Discard</button>
             </div>
           } @else if (message.state) {
@@ -41,7 +44,7 @@
 <div class="chat-composer">
   <label class="sr-only" [for]="inputId">Layout request</label>
   <div class="composer-field">
-    <textarea #input [id]="inputId" rows="2" maxlength="500" placeholder="Describe stalls, size and location…" [value]="session.draft()" (input)="onInput($event)" (keydown)="onKey($event)" [disabled]="!session.hall()"></textarea>
+    <textarea #input [id]="inputId" rows="2" maxlength="500" placeholder="Describe stalls, size and location, or a rule…" [value]="session.draft()" (input)="onInput($event)" (keydown)="onKey($event)" [disabled]="!session.hall()"></textarea>
     <button type="button" class="chat-send" aria-label="Send layout request" title="Send request" [disabled]="!session.draft().trim() || session.busy() || !session.hall()" (click)="session.send()"><app-icon name="arrow-up" [size]="17" /></button>
   </div>
   <div class="composer-meta"><span>Enter to send · Shift + Enter for a new line</span>@if (session.draft().length > 400) { <span>{{ session.draft().length }}/500</span> }</div>

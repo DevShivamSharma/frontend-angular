@@ -12,6 +12,7 @@ import type { Hall } from '../models/hall.model';
 import type { Stall } from '../models/stall.model';
 import { ExhibitorPlanComponent } from './exhibitor-plan.component';
 import { ExhibitorStallDetailsComponent } from './exhibitor-stall-details.component';
+import { HallBadgeComponent } from './hall-badge.component';
 import {
   exhibitorStalls,
   kindLabel,
@@ -35,7 +36,7 @@ type Filter = 'ALL' | 'AVAILABLE';
   selector: 'app-exhibitor-view-page',
   templateUrl: './exhibitor-view-page.component.html',
   styleUrl: './exhibitor-view-page.component.css',
-  imports: [ExhibitorPlanComponent, ExhibitorStallDetailsComponent, IconComponent],
+  imports: [ExhibitorPlanComponent, ExhibitorStallDetailsComponent, HallBadgeComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown.escape)': 'choose(null)' }
 })

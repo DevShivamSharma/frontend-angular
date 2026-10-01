@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL } from '../core/api-base.token';
+import type { BasicRuleId } from './geometry/basic-rules';
 import { Hall } from './models/hall.model';
 import { Stall } from './models/stall.model';
 import { PlannedStall } from './planner-store.service';
@@ -40,9 +41,23 @@ export interface AssistantRequest {
   }>;
 }
 
+/**
+ * Rule changes the assistant proposes (action "rules"): hall-rule switches, the passage width for
+ * the layout's event type, the wall clearance, and written planner rules to add. Applied only on
+ * review, like stall proposals.
+ */
+export interface RuleChanges {
+  enable: BasicRuleId[];
+  disable: BasicRuleId[];
+  passageWidth: number | null;
+  wallClearance: number | null;
+  notes: string[];
+}
+
 /** What comes back. `stalls` are proposals in hall metres; nothing is applied until reviewed. */
 export interface AssistantResponse {
-  action?: 'place' | 'clear' | 'none';
+  action?: 'place' | 'clear' | 'none' | 'rules';
+  rules?: RuleChanges | null;
   requestedCount?: number | null;
   placedCount?: number;
   clarification?: string | null;

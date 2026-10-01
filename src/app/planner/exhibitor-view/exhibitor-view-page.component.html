@@ -57,6 +57,7 @@
               [focus]="focus()"
               (select)="choose($event)"
             />
+            <app-hall-badge class="xv-badge" [hallName]="hall.name" [available]="availableCount()" [total]="stalls().length" />
           }
           @if (!selected()) {
             <p class="xv-hint">Tap a stall to see its details. Drag to move, pinch or scroll to zoom.</p>

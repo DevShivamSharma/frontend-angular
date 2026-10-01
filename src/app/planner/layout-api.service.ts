@@ -190,6 +190,11 @@ export class LayoutApiService {
     return firstValueFrom(this.http.get<PlannerRule[]>(`${this.api}/planner-rules`));
   }
 
+  /** `POST /api/planner-rules` — adds a written rule to the shared library. */
+  createPlannerRule(description: string): Promise<PlannerRule> {
+    return firstValueFrom(this.http.post<PlannerRule>(`${this.api}/planner-rules`, { description }));
+  }
+
   /** `GET /api/stall-types` — the stall sizes offered in draw mode (backend configuration). */
   listStallTypes(): Promise<StallType[]> {
     return firstValueFrom(this.http.get<StallType[]>(`${this.api}/stall-types`));

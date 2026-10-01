@@ -15,6 +15,7 @@ import {
   Footprint,
   PlacementStall,
   footprintRect,
+  LayoutRules,
   Point,
   Rect,
   validatePlacement,
@@ -1210,6 +1211,27 @@ export class PlannerStore {
   /** The rules chosen for this layout's design; saved with the layout. */
   applyRules(ids: ReadonlyArray<number>): void {
     this.appliedRuleIds.set([...new Set(ids)]);
+  }
+
+  /** Replaces the current hall's rules (switches and values), e.g. an applied assistant proposal. */
+  setHallRules(rules: LayoutRules): void {
+    const hall = this.currentHall();
+    if (!hall) return;
+    this.halls.update(list => list.map(h => h === hall ? { ...h, rules } : h));
+    this.clearFeedback();
+    this.proposals.set(null);
+  }
+
+  /**
+   * Adds written rules to the shared library and applies them to this layout. The library keeps
+   * them at once; the layout keeps them when it is saved (like rules ticked in the rule picker).
+   */
+  async addPlannerRules(descriptions: ReadonlyArray<string>): Promise<void> {
+    for (const description of descriptions) {
+      const rule = await this.api.createPlannerRule(description);
+      this.plannerRules.update(list => [...list, rule]);
+      this.applyRules([...this.appliedRuleIds(), rule.id]);
+    }
   }
 
   setBasicRules(settings: BasicRuleSettings): void {
