@@ -31,6 +31,8 @@ import { PdfImportCardComponent } from './pdf-import/pdf-import-card.component';
 import { PdfImportDialogComponent } from './pdf-import/pdf-import-dialog.component';
 import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
+import { StallRulesPanelComponent } from './components/stall-rules-panel.component';
+import { effectiveRules } from './geometry/placement-rules';
 import { WorkingHallPanelComponent } from './components/working-hall-panel.component';
 import { AssistPanelComponent } from './components/assist-panel.component';
 import { PlannerRulesDialogComponent } from './components/planner-rules-dialog.component';
@@ -93,6 +95,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
     Scene3dComponent,
     EditorToolbarComponent,
     ViolationsPanelComponent,
+    StallRulesPanelComponent,
     IconComponent,
     RouterLink
   ],
@@ -113,6 +116,18 @@ export class PlannerPageComponent implements OnInit {
   readonly currentStalls = this.store.currentStalls;
   readonly selectedStall = this.store.selectedStall;
   readonly selectedStallId = this.store.selectedStallId;
+  /** The selected stall's rules panel: open or closed, kept while another stall is selected. */
+  readonly showStallRules = signal(false);
+  readonly stallRules = this.store.selectedStallRules;
+  readonly stallBreaksRule = computed(() => {
+    const report = this.stallRules();
+    return !!report && (report.other.length > 0 || report.checks.some(c => c.status === 'broken'));
+  });
+  readonly ruleValues = computed(() => {
+    const rules = effectiveRules(this.currentHall()?.rules);
+    return { passage: rules.minPassageWidth[this.eventType()], clearance: rules.peripheralClearance };
+  });
+  readonly layoutRuleNotes = computed(() => this.store.appliedRules().map(r => r.description));
   readonly dragging = this.store.dragging;
   readonly snap = this.store.snap;
   readonly mode = this.store.mode;

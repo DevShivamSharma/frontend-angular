@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import * as T from 'three';
 import { batchVenue } from '../src/app/home/venue-batching';
 import { PLAZA_PLANTERS, prepareVenueSurfaceDetail } from '../src/app/home/venue-surface-detail';
+import { ITPO_WALKWAY_BINS, ITPO_WALKWAY_PLANTER_T, ITPO_WALKWAY_RUNS } from '../src/app/home/venue-edge-detail';
 
 // Decode the supplied geometry without a browser or texture/network mocks.
 // This verifies placement against every actual visible obstacle, not a copied
@@ -85,4 +86,31 @@ test('surface detailing: real model clearance, untouched buildings/roads, and bo
     expect(triangles).toBeLessThan(3500);
     batchVenue(additions, () => null, () => 'static');
     expect(additions.children).toHaveLength(3); // stone, foliage, bark
+});
+
+test('ITPO office walkway: planters, bins and the clear walk all stand on the office paving', () => {
+    test.setTimeout(90_000);
+    const root = suppliedGeometry();
+    const meshes = root.children as T.Mesh[];
+    const ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0);
+    const paving = ['PHOTO_ADMIN office ground court', 'PHOTO_ADMIN office pedestrian apron'];
+    const groundAt = (s: number, t: number, label: string) => {
+        ray.set(new T.Vector3(.5 * s + .8660254038 * t, 150, -.8660254038 * s + .5 * t), down);
+        const hit = ray.intersectObjects(meshes, false)[0];
+        expect(hit, label).toBeTruthy();
+        expect(hit.point.y, label).toBeLessThan(.2);
+        expect(paving, label).toContain(hit.object.name);
+    };
+    const t = ITPO_WALKWAY_PLANTER_T;
+    for (const [from, to] of ITPO_WALKWAY_RUNS) for (let s = from; s <= to; s += 1.5)
+        for (const dt of [-.8, 0, .8]) groundAt(s, t + dt, `planter ${s},${t + dt}`);
+    for (const s of ITPO_WALKWAY_BINS) groundAt(s, t - 2.2, `bin ${s}`);
+    // The walk from 2 m off the office face (its roof cornice overhangs the first metre) to the planter.
+    for (let s = ITPO_WALKWAY_RUNS[0][0]; s <= ITPO_WALKWAY_RUNS[2][1]; s += 3)
+        for (let walk = t - 7.5; walk <= t - 1.5; walk += 1.5) groundAt(s, walk, `walk ${s},${walk}`);
+
+    prepareVenueSurfaceDetail(root);
+    const walkway = root.getObjectByName('SITE_EDGE_itpo_walkway') as T.Group;
+    expect(walkway.children.filter(o => o.name === 'SITE_EDGE_itpo_lamp_pole')).toHaveLength(3);
+    expect(walkway.children.filter(o => o.name === 'SITE_EDGE_itpo_bin')).toHaveLength(3);
 });

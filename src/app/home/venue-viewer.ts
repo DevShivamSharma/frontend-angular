@@ -268,6 +268,17 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             controls.target.copy(W(-284.315, -123.449, 5));
             controls.update();
             events.status('Convention Centre · Forecourt');
+        } else if (new URLSearchParams(location.search).get('view') === 'itpo-office') {
+            camera.position.copy(W(-330, -300, 140));
+            controls.target.copy(W(-439, -365, 8));
+            controls.update();
+            events.status('ITPO Office');
+        } else if (new URLSearchParams(location.search).get('view') === 'itpo-walkway') {
+            // Eye level on the office's east walk, looking along it as in the site photo.
+            camera.position.copy(W(-486, -350, 2.2));
+            controls.target.copy(W(-405, -345, 1.6));
+            controls.update();
+            events.status('ITPO Office · Walkway');
         }
         const ray = new T.Raycaster(), pointer = new T.Vector2();
         let down: [

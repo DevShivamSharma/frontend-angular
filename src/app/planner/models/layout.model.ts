@@ -23,6 +23,8 @@ export interface StallBookedResponse {
   message?: string;
   layoutId?: number | string;
   stall: StallInput;
+  /** The same booking as SelfCare table rows (backend-nest/docs/selfcare-booking-payload.md). */
+  selfcare?: Record<string, unknown>;
 }
 
 /** Response of `POST /api/layout/save` as consumed by `saveLayout` (`App.js:572`). */

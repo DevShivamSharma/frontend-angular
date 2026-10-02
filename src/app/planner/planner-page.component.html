@@ -400,8 +400,34 @@
                 <app-icon name="trash" [size]="12" />
                 {{ stall.stallNumber ? 'Cancel' : 'Remove' }}
               </button>
+              <button
+                type="button"
+                class="btn-mini"
+                [class.is-blue]="showStallRules()"
+                [attr.aria-expanded]="showStallRules()"
+                title="Which hall rules apply to this stall, and whether it meets them"
+                (click)="showStallRules.set(!showStallRules())"
+              >
+                <app-icon name="shield" [size]="12" />
+                Rules
+                @if (stallBreaksRule()) {
+                  <span class="hud-rule-alert" aria-label="breaks a rule">!</span>
+                }
+              </button>
             </div>
           </div>
+          @if (showStallRules()) {
+            @if (stallRules(); as report) {
+              <app-stall-rules-panel
+                [report]="report"
+                [passageWidth]="ruleValues().passage"
+                [wallClearance]="ruleValues().clearance"
+                [notes]="layoutRuleNotes()"
+              />
+            } @else {
+              <p class="hud-meta">A cancelled stall takes no space, so no rule applies to it.</p>
+            }
+          }
         </div>
       }
 

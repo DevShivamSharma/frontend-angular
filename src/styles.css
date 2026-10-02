@@ -2205,6 +2205,7 @@ select.control {
 
 .hud-selection-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
   margin-left: var(--space-3);
   padding-left: var(--space-3);
@@ -2215,6 +2216,19 @@ select.control {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+/* On the Rules button: the selected stall breaks at least one rule. */
+.hud-rule-alert {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--danger-solid);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 /* ---- Assist panel ------------------------------------------------------- */

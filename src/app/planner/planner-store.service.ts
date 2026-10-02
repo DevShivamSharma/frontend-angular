@@ -7,7 +7,8 @@ import { FreeSpaceMap } from './geometry/free-space';
 import { BasicRuleSettings, ruleEnabled } from './geometry/basic-rules';
 import { previewSplit, SplitOptions } from './geometry/stall-split';
 import { GridSystem } from './geometry/grid-system';
-import { isRuleDriven, placementContextFor } from './geometry/hall-rules';
+import { isRuleDriven, placementContextFor, toPlacementStall } from './geometry/hall-rules';
+import { stallRuleReport, type StallRuleReport } from './geometry/stall-rule-report';
 import {
   AuditEntry,
   auditLayout,
@@ -270,6 +271,13 @@ export class PlannerStore {
   readonly selectedStall = computed(() =>
     this.stalls().find(s => String(s.id) === String(this.selectedStallId()))
   );
+
+  /** The selected stall checked against each hall rule; null for none or a cancelled stall. */
+  readonly selectedStallRules = computed<StallRuleReport | null>(() => {
+    const stall = this.selectedStall();
+    const ctx = this.placementContext();
+    return stall && ctx && stall.status !== 'CANCELLED' ? stallRuleReport(toPlacementStall(stall), ctx) : null;
+  });
 
   /** Stalls that occupy space. A cancelled stall keeps its number but frees its area. */
   readonly activeStalls = computed(() => this.currentStalls().filter(s => s.status !== 'CANCELLED'));
