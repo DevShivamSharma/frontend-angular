@@ -26,42 +26,48 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 5px 9px;
-  border-radius: 6px;
-  background: rgba(15, 23, 42, 0.92);
-  color: #fff;
+  gap: 3px;
+  padding: 6px 10px 7px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
   font: 600 11px/1.1 Inter, system-ui, sans-serif;
   white-space: nowrap;
   pointer-events: none;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   will-change: transform;
 }
 
 .xv3-stall-label b {
   font-size: 12px;
   font-weight: 800;
+  color: #0f172a;
 }
 
-.xv3-stall-label span {
-  font-size: 10px;
-  font-weight: 500;
+.xv3-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  line-height: 1.2;
 }
 
-.xv3-stall-label.is-available {
+.xv3-pill.is-available {
   background: #16a34a;
 }
 
-.xv3-stall-label.is-booked {
+.xv3-pill.is-booked {
   background: #ea580c;
 }
 
 .xv3-stall-label.is-selected {
-  background: #2563eb;
-  outline: 2px solid #fff;
-  outline-offset: 1px;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3), 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 
 .xv3-stall-label.is-dimmed {
