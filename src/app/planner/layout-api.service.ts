@@ -90,6 +90,7 @@ export function buildHallPayload(currentHall: Hall): HallPayload {
     length: num(currentHall.length, 0),
     radius: num(currentHall.radius, 0),
     ...(currentHall.blockedAreas?.length ? { blockedAreas: currentHall.blockedAreas } : {}),
+    planningZones: currentHall.planningZones ?? [],
     // Rule-driven geometry travels with the hall so a saved layout keeps its shape and rules.
     ...(currentHall.boundary?.length ? { boundary: currentHall.boundary } : {}),
     ...(currentHall.zones?.length ? { zones: currentHall.zones } : {}),
@@ -155,7 +156,12 @@ export class LayoutApiService {
     );
   }
 
-  /** `GET /api/layout/{id}` */
+  publish(id: string | number | null, payload: LayoutSaveRequest, overrideReason: string): Promise<LayoutSaveResponse> {
+    const route = id === null ? '/layout/publish' : '/layout/' + encodeURIComponent(id) + '/publish';
+    return firstValueFrom(this.http.post<LayoutSaveResponse>(this.api + route, { ...payload, overrideReason }));
+  }
+
+  /** Open the saved layout. */
   open(id: string | number): Promise<LayoutDetail> {
     return firstValueFrom(this.http.get<LayoutDetail>(`${this.api}/layout/${id}`));
   }
@@ -178,10 +184,10 @@ export class LayoutApiService {
    * `POST /api/layout/{id}/stalls/{stallNumber}/book` — books an AVAILABLE stall. The server
    * answers 409 when someone else booked it first.
    */
-  book(layoutId: string | number, stallNumber: string): Promise<StallBookedResponse> {
+  book(layoutId: string | number, stallNumber: string, request: { stall_type?: 'bare' | 'shell'; expectedQuote?: string } = {}): Promise<StallBookedResponse> {
     return firstValueFrom(this.http.post<StallBookedResponse>(
       `${this.api}/layout/${encodeURIComponent(layoutId)}/stalls/${encodeURIComponent(stallNumber)}/book`,
-      {}
+      request
     ));
   }
 

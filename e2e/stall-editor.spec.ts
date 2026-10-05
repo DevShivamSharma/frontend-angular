@@ -2,8 +2,11 @@ import { test, expect, Page } from '@playwright/test';
 import { DEFAULT_LAYOUT_RULES } from '../src/app/planner/geometry/placement-rules';
 import { dismissPlottingRules } from './planner-test-helpers';
 
+test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('stall-planner.guided-tour.v1', 'completed')); });
+
 const hall = { id: 901, name: 'Passage test hall', shape: 'SQUARE', width: 50, length: 50, radius: 0,
-  rules: { ...DEFAULT_LAYOUT_RULES } };
+  // This suite isolates passage, resize and split behaviour; corner keep-out has dedicated meeting-rule coverage.
+  rules: { ...DEFAULT_LAYOUT_RULES, enabledRules: { ...DEFAULT_LAYOUT_RULES.enabledRules, cornerKeepOut: false } } };
 const stall = (id: number, posX: number, posZ: number, side = 'FRONT', extra = {}) => ({
   id, hallId: hall.id, name: `Test ${id}`, stallNumber: `T-${id}`, posX, posZ,
   width: 4, length: 4, height: 3, color: '#3498db', gateSide: side, openSides: [side],
@@ -18,7 +21,7 @@ async function setup(page: Page, stalls: unknown[] = [], customHall = hall) {
     const body = url.pathname === '/api/halls' ? [customHall] : url.pathname === '/api/layout/123' ? { hall: customHall, layout: { id: 123, name: customHall.name, eventType: 'B2B' }, stalls } : [];
     await route.fulfill({ json: body });
   });
-  await page.goto('/planner');
+  await page.goto('/planner/editor');
   await dismissPlottingRules(page);
   await page.waitForFunction(() => (window as any).ng?.getComponent(document.querySelector('app-planner-page'))?.store.hallsStatus() === 'ready');
   await page.evaluate(({ stalls }) => {
@@ -59,8 +62,8 @@ for (const width of [3, 5]) {
     expect((await state(page)).rejection.violations.some((v: any) => v.code === 'OPEN_SIDE_BLOCKED')).toBe(true);
     await expect(page.locator('app-violations-panel[section=alerts]')).toContainText('Blocks the FRONT open side');
     // Closed sides may share a wall.
-    await edit(page, 'Position Z (m)', '-22');
     await edit(page, 'Position X (m)', '-18');
+    await edit(page, 'Position Z (m)', '-22');
     expect((await state(page)).stalls[1]).toMatchObject({ posX: -18, posZ: -22 });
   });
 }
@@ -133,7 +136,7 @@ test('UI: draw orientation, invalid setting, changed setting audits existing lay
   await page.locator('app-editor-toolbar').getByLabel('Open side').selectOption('LEFT');
   expect(await page.evaluate(() => (window as any).ng.getComponent(document.querySelector('app-planner-page')).store.draftOpenSide())).toBe('LEFT');
   const passage = page.getByRole('spinbutton', { name: 'Passage width (m)' });
-  await passage.fill('2'); await passage.press('Tab');
+  await passage.fill('1'); await passage.press('Tab');
   await expect(passage).toHaveValue('3');
   await passage.fill('5'); await passage.press('Tab');
   expect((await state(page)).audit.length).toBeGreaterThan(0);

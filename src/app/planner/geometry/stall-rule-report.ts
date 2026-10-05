@@ -40,15 +40,19 @@ const CODES: Record<BasicRuleId, readonly ViolationCode[]> = {
   FACILITY_ACCESS: ['RESTRICTED_ZONE'],
   FOYER: ['RESTRICTED_ZONE'],
   PARTITION: ['RESTRICTED_ZONE'],
-  SMOKE_CURTAIN: ['RESTRICTED_ZONE']
+  SMOKE_CURTAIN: ['RESTRICTED_ZONE'],
+  cornerKeepOut: ['CORNER_PASSAGE'],
+  internalZones: ['INTERNAL_ZONE', 'ZONE_BOUNDARY'],
+  eventSeparation: ['EVENT_SEPARATION']
 };
 
 /** Rules that check every stall, whatever the hall holds. The others need a zone of their kind. */
-const ALWAYS: readonly BasicRuleId[] = ['hallBoundary', 'stallOverlap', 'sizeStep', 'peripheralClearance', 'openSideAccess'];
+const ALWAYS: readonly BasicRuleId[] = ['hallBoundary', 'stallOverlap', 'sizeStep', 'peripheralClearance', 'openSideAccess', 'cornerKeepOut'];
 
 export function stallRuleReport(stall: Footprint & { id: string | number }, ctx: PlacementContext): StallRuleReport {
   const id = String(stall.id);
   const zoneKinds = new Set<string>(ctx.zones.filter(z => z.polygon?.length >= 3).map(z => z.kind));
+  if (ctx.planningZones?.length) { zoneKinds.add('internalZones'); zoneKinds.add('eventSeparation'); }
   const checks = BASIC_RULES.map((rule): StallRuleCheck => {
     const base = { id: rule.id, label: rule.label, description: rule.description, messages: [] };
     if (!ALWAYS.includes(rule.id) && !zoneKinds.has(rule.id)) return { ...base, status: 'not-used' };

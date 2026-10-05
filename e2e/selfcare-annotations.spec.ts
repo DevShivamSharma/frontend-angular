@@ -119,7 +119,7 @@ test('live API: repaired standalone halls render from persistence', async ({ pag
   const response = await request.get('http://localhost:8080/api/halls?standalone=true').catch(() => null);
   test.skip(!response?.ok(), 'Local Nest API is unavailable; fixture checks still run.');
   const halls = await response!.json();
-  await page.goto('/planner');
+  await page.goto('/planner/editor');
   await dismissPlottingRules(page);
   await page.waitForFunction(() => (window as any).ng?.getComponent(document.querySelector('app-planner-page'))?.store.hallsStatus() === 'ready');
   for (const [name, icons, labels] of [['Hall 14FF', 22, 16], ['Hall 14GF', 27, 17], ['Hall 8-9-10', 8, 10]] as const) {
@@ -168,7 +168,7 @@ test('live API: every sourced hall retains its complete annotations', async ({ p
   page.on('response', r => {
     if (r.url().includes('/assets/images/')) assets.set(new URL(r.url()).pathname, r.status());
   });
-  await page.goto('/planner');
+  await page.goto('/planner/editor');
   await dismissPlottingRules(page);
   await page.waitForFunction(() => (window as any).ng?.getComponent(document.querySelector('app-planner-page'))?.store.hallsStatus() === 'ready');
   const report: unknown[] = [];

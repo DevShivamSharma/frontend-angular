@@ -1,6 +1,15 @@
 import { test, expect, APIRequestContext } from '@playwright/test';
 import { dismissPlottingRules } from './planner-test-helpers';
 
+test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('stall-planner.guided-tour.v1', 'completed')); });
+
+async function dismissLanding(page: import('@playwright/test').Page) {
+  await expect(page.locator('dialog[open]').first()).toBeVisible();
+  const guide=page.getByRole('dialog',{name:'Before you plot'});
+  if(await guide.isVisible()) await dismissPlottingRules(page);
+  else await page.locator('dialog[open]').getByRole('button',{name:'Close',exact:true}).click();
+}
+
 const api = process.env['STALL_API_URL'] ?? 'http://localhost:8080/api';
 
 async function backendAvailable(request: APIRequestContext): Promise<boolean> {
@@ -13,8 +22,8 @@ async function backendAvailable(request: APIRequestContext): Promise<boolean> {
 
 test('real backend: save/reload restores passage, geometry, open sides and server numbers', async ({ page, request }, info) => {
   test.skip(!await backendAvailable(request), 'Real backend is unavailable; no persistence claim is made.');
-  await page.goto('/planner');
-  await dismissPlottingRules(page);
+  await page.goto('/planner/editor');
+  await dismissLanding(page);
   await page.waitForFunction(() => {
     const s = (window as any).ng?.getComponent(document.querySelector('app-planner-page'))?.store;
     return s && s.hallsStatus() !== 'loading' && s.listStatus() !== 'loading';
@@ -42,7 +51,7 @@ test('real backend: save/reload restores passage, geometry, open sides and serve
     expect(id).toBeTruthy();
     await expect.poll(() => page.evaluate(() => (window as any).ng.getComponent(document.querySelector('app-planner-page')).store.busy())).toBe(false);
     await page.reload();
-    await dismissPlottingRules(page);
+    await dismissLanding(page);
     await page.getByRole('tab', { name: /Layouts/ }).click();
     await page.getByRole('button', { name: `Open ${name}`, exact: true }).click();
     await expect(page.getByRole('spinbutton', { name: 'Passage width (m)' })).toHaveValue('5');
@@ -77,8 +86,8 @@ test('real backend: atomic split endpoint and child persistence', async ({ page,
   try {
     const opened = await (await request.get(`${api}/layout/${id}`)).json();
     const parent = opened.stalls[0];
-    await page.goto('/planner');
-    await dismissPlottingRules(page);
+    await page.goto('/planner/editor');
+    await dismissLanding(page);
     await page.getByRole('tab', { name: /Layouts/ }).click();
     await page.getByRole('button', { name: `Open ${name}`, exact: true }).click();
     await page.getByRole('tab', { name: /Stalls/ }).click();
@@ -93,11 +102,12 @@ test('real backend: atomic split endpoint and child persistence', async ({ page,
     test.skip([404, 405, 501].includes(split.status()), `Backend split endpoint unavailable (HTTP ${split.status()}); full split persistence is unverified.`);
     expect(split.ok(), await split.text()).toBe(true);
     await page.reload();
-    await dismissPlottingRules(page);
+    await dismissLanding(page);
     await page.getByRole('tab', { name: /Layouts/ }).click();
     await page.getByRole('button', { name: `Open ${name}`, exact: true }).click();
     await page.getByRole('tab', { name: /Stalls/ }).click();
     await expect(page.locator('.stall-chip').filter({ hasText: `${parent.stallNumber}-A` })).toBeAttached();
+    await page.getByRole('checkbox', { name: 'Labels', exact: true }).check();
     const label = page.locator('.label-overlay > div').filter({ hasText: `${parent.stallNumber}-A` });
     await expect(label).toBeVisible();
     const labelBox = await label.boundingBox();

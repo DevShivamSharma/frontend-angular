@@ -50,11 +50,12 @@
         [class.is-selected]="isSelected(stall.id)"
         [class.is-cancelled]="stall.status === 'CANCELLED'"
       >
+        <input type="checkbox" [attr.aria-label]="'Select '+(stall.stallNumber??stall.name)" [checked]="isSelected(stall.id)" [disabled]="stall.status==='CANCELLED'" (change)="store.selectStall(stall.id,true)" />
         <button
           type="button"
           class="stall-row"
           [attr.aria-pressed]="isSelected(stall.id)"
-          (click)="select(stall.id)"
+          (click)="select(stall.id,$event)"
         >
           <span class="stall-chip">{{ stall.stallNumber ?? 'NEW' }}</span>
           <span class="stall-row-body">

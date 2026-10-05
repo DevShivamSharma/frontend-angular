@@ -11,13 +11,15 @@ This contract was checked against the local placement implementation on 2026-09-
   Front = local +Z, back = −Z, left = −X, right = +X; open sides rotate with the rectangle.
   Existing quarter-turn controls continue to swap dimensions and open sides together.
 - `openSides` is authoritative; `gateSide` mirrors its first element for legacy clients.
-- `hall.rules.minPassageWidth.B2B/B2C` stores the chosen width per event, between 3 and 5 m.
+- `hall.rules.minPassageWidth.B2B/B2C` stores the chosen width per event, between 1.5 and 5 m.
   Missing values default to 3 m. Explicit saved values are preserved and invalid values reported.
 - All halls, including custom/offline halls, use placement validation with the enabled basic checks.
   Position snapping remains a separate setting.
 - With overlap and open-side passage checks enabled, passage is required in front of open sides only.
-  Stalls may share walls or stand any distance apart on their closed sides, also at hall corners;
-  a pair only must not overlap.
+  Stalls may share walls or stand any distance apart on their closed sides; a pair only must not overlap.
+  The independent `cornerKeepOut` check defaults on and reports `CORNER_PASSAGE` when the real
+  stall footprint is less than one passage width from both walls adjoining a hall corner.
+  Exact clearance is allowed; circles and interior obstacles do not create hall corners.
 - With the applicable checks enabled, every open frontage needs a full-width, full-depth clear
   corridor inside its floor region.
   Walls, outside masks, holes and physical restricted zones cannot count as passage. Marked
@@ -29,12 +31,12 @@ This contract was checked against the local placement implementation on 2026-09-
 ## Basic-rule switches
 
 `hall.rules.enabledRules` stores optional boolean switches. Missing settings or keys mean on,
-so existing layouts keep their previous validation behavior. The 13 IDs are defined in
+including the new `cornerKeepOut` check. Legacy corner placements may need repair or an explicit switch-off. IDs are defined in
 `src/app/planner/geometry/basic-rules.ts` and mirrored in
 `../backend-nest/src/layouts/placement/basic-rules.ts`: `hallBoundary`, `stallOverlap`,
 `sizeStep`, `peripheralClearance`, `openSideAccess`, `PASSAGE`, `NO_CONSTRUCTION`,
 `ENTRY_EXIT_ACCESS`, `EMERGENCY_EXIT_ACCESS`, `FACILITY_ACCESS`, `FOYER`, `PARTITION`
-and `SMOKE_CURTAIN`.
+and `SMOKE_CURTAIN`, plus `cornerKeepOut`. The `internalZones` and `eventSeparation` checks enforce sellable-zone containment, internal reservations and the minimum cross-event distance. Planning zones, utilization and publication are implemented through WP-2–WP-6; see the backend placement API contract and MASTER-PLAN.md.
 
 The shared `basic-rules.component` supplies the controls in the Rules sidebar, rule picker
 and PDF import dialog. Sidebar changes apply immediately to the current hall. The rule picker
@@ -151,3 +153,12 @@ as skipped, never as verified. Results: `playwright-report/index.html`, `test-re
 screenshots and failure traces live in each test's folder. See `stall-placement-validation.md` for
 the final run's outcome. On Windows, an optional `PW_RUN_ID` writes fresh artifacts under
 `test-results/{PW_RUN_ID}` and `playwright-report/{PW_RUN_ID}` to avoid locks on previous files.
+
+## October meeting rule values (WP-1)
+
+Emergency door access, when enabled, has a minimum depth of 3 m, even when passages or
+`openingAccessDepth` are narrower. A larger `emergencyExitClearance` is honored; new values
+below 3 m are rejected by the API. Other door access still uses the configured depth or aisle.
+
+Hall rules persist `maxUtilization` (default 0.7) and `eventSeparation` (default 3 m).
+WP-1 stores these values; utilization enforcement and zone separation follow in later work packages.

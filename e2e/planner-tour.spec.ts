@@ -11,9 +11,10 @@ async function openPlanner(page: Page) {
     const path = new URL(route.request().url()).pathname;
     return route.fulfill({ json: path === '/api/halls' ? [testHall] : [] });
   });
-  await page.goto('/planner');
+  await page.goto('/planner/editor');
   await expect(tour(page)).not.toBeVisible();
   await dismissPlottingRules(page);
+  await page.getByRole('button', { name: 'Help / Restart tour', exact: true }).click();
   await expect(tour(page)).toBeVisible();
   return writes;
 }
@@ -129,7 +130,7 @@ test('blocked local storage uses session fallback without crashing', async ({ pa
   expect(errors).toEqual([]);
 });
 
-test('tour waits for hall loading after rules close, and supports offline fallback', async ({ page }) => {
+test('Help tour supports the offline fallback after hall loading fails', async ({ page }) => {
   let release!: () => void;
   const waitForHall = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/api/**', async route => {
@@ -138,10 +139,12 @@ test('tour waits for hall loading after rules close, and supports offline fallba
       await route.fulfill({ status: 503, json: { message: 'Offline' } });
     } else await route.fulfill({ json: [] });
   });
-  await page.goto('/planner');
+  await page.goto('/planner/editor');
   await dismissPlottingRules(page);
   await expect(tour(page)).not.toBeVisible();
   release();
+  await page.waitForFunction(() => (window as any).ng.getComponent(document.querySelector('app-planner-page')).store.hallsStatus() === 'unavailable');
+  await page.getByRole('button', { name: 'Help / Restart tour', exact: true }).click();
   await expectPlacement(page, 'hall');
   for (let i = 0; i < 4; i++) await tour(page).getByRole('button', { name: 'Next', exact: true }).click();
   await expect(tour(page)).toContainText('You are using an offline sample');

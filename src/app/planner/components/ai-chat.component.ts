@@ -1,9 +1,10 @@
+import { GuidedPlanningComponent } from './guided-planning.component';
 import { AfterViewChecked, ChangeDetectionStrategy, Component, ElementRef, inject, Input, ViewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { AiChatSession } from '../ai-chat-session.service';
 import { IconComponent } from './icon.component';
 
-@Component({selector:'app-ai-chat',imports:[DatePipe,IconComponent],templateUrl:'./ai-chat.component.html',styleUrl:'./ai-chat.component.css',changeDetection:ChangeDetectionStrategy.OnPush})
+@Component({selector:'app-ai-chat',imports:[DatePipe,IconComponent,GuidedPlanningComponent],templateUrl:'./ai-chat.component.html',styleUrl:'./ai-chat.component.css',changeDetection:ChangeDetectionStrategy.OnPush})
 export class AiChatComponent implements AfterViewChecked {
   readonly session=inject(AiChatSession);
   @Input() inputId='ai-assist-input';

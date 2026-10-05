@@ -1,0 +1,15 @@
+<dialog #dialog aria-labelledby="publish-title" (close)="restoreFocus()" (cancel)="store.busy() ? $event.preventDefault() : null" (keydown)="$event.stopPropagation()">
+  <div class="meeting-panel"><div class="publish-heading"><h2 id="publish-title">Review before publishing</h2><button type="button" class="btn-secondary" (click)="close()" [disabled]="store.busy()">Close</button></div>
+  <p>Publishing assigns stall numbers and makes this saved layout ready for exhibitor viewing.</p>
+  @if(opened()) { @if(store.publishReport();as report) {
+    <p class="usage-summary" [class.over-limit]="report.usage.exceeded"><strong>{{report.usage.ratio*100|number:'1.0-1'}}% used</strong> · {{report.usage.usedArea|number:'1.0-1'}} of {{report.usage.floorArea|number:'1.0-1'}} m² · {{report.usage.limit*100|number:'1.0-0'}}% limit</p>
+    <h3>{{report.issues.length ? report.issues.length+' issues to review' : 'All placement checks passed'}}</h3>
+    <ul class="publish-issues">@for(issue of report.issues;track $index) {<li><span>{{issue.message}}</span>@if(issue.violation || issue.stallId) {<button type="button" class="btn-mini" (click)="locate(issue)">Locate</button>}</li>}</ul>
+    @if(store.publishSuggestions().length) {<h3>Space for another 6 × 6 m stall</h3><p>Each suggestion is checked independently. Locate a spot to add it before publishing.</p><ul class="publish-issues">@for(spot of store.publishSuggestions();track $index) {<li><span>{{spot.label}} · X {{spot.posX}}, Z {{spot.posZ}}</span><button class="btn-mini" (click)="store.locate([],spot);close()">Locate space</button></li>}</ul>}
+    @if(report.issues.length) {<label>Reason for publishing with these issues<textarea class="control" rows="3" maxlength="1000" [ngModel]="reason()" (ngModelChange)="reason.set($event)" placeholder="Explain the reviewed exception; stored with this publication."></textarea></label>}
+    @if(!store.activeStalls().length) {<p class="over-limit">Add at least one active stall before publishing.</p>}
+    <div class="meeting-actions"><button class="btn-primary" (click)="publish()" [disabled]="store.busy()||!store.activeStalls().length||(report.issues.length>0&&!reason().trim())">{{store.busy()?'Publishing…':report.issues.length?'Publish anyway':'Publish layout'}}</button><button class="btn-secondary" (click)="close()" [disabled]="store.busy()">Keep editing</button></div>
+  }
+  }
+  </div>
+</dialog>

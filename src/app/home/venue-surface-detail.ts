@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { addFrontGarden, addItpoWalkway } from './venue-edge-detail';
+import { addItpoExterior } from './venue-itpo-exterior';
 
 const PAVING_REPEAT_METRES = 32;
 // Decorative additions, not surveyed venue features. Each bed and its clearance
@@ -12,6 +13,7 @@ export const PLAZA_PLANTERS: readonly (readonly [number, number])[] = [
 export function prepareVenueSurfaceDetail(root: T.Group): void {
     addFrontGarden(root);
     addItpoWalkway(root);
+    addItpoExterior(root);
     root.updateMatrixWorld(true);
     const materials = new Map<string, T.MeshStandardMaterial>();
     const replaced = new Set<T.BufferGeometry>();

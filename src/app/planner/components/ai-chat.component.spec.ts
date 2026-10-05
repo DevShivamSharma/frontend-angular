@@ -13,8 +13,9 @@ describe('AI chat',()=>{
     store={currentHall:signal({id:1,name:'Hall 1GF',shape:'SQUARE',width:50,length:50,markers:[{text:'FOYER-1G'}]}),currentStalls:signal([]),eventType:signal('B2C'),grid:signal({cellSize:1}),clearPlan:jasmine.createSpy(),reviewPlan:jasmine.createSpy().and.callFake((p:any[])=>p.map(()=>({valid:true}))),applyPlan:jasmine.createSpy().and.returnValue(1),cancelStall:jasmine.createSpy()};
     assistant={plan:jasmine.createSpy().and.resolveTo({summary:'One stall',stalls:[stall],requestedCount:1,action:'place',notes:[]})};
     await TestBed.configureTestingModule({imports:[AiChatComponent],providers:[AiChatSession,{provide:PlannerStore,useValue:store},{provide:LayoutAssistantService,useValue:assistant}]}).compileComponents();
-    fixture=TestBed.createComponent(AiChatComponent);session=TestBed.inject(AiChatSession);fixture.detectChanges();
+    fixture=TestBed.createComponent(AiChatComponent);session=TestBed.inject(AiChatSession);session.agreeRules();fixture.detectChanges();
   });
+  it('requires agreement before accepting requests and resets it when the hall changes',async()=>{session.reviewRules();fixture.detectChanges();expect(fixture.nativeElement.querySelectorAll('.standard-rules li').length).toBe(7);session.draft.set('3 stalls of 6x6');await session.send();expect(assistant.plan).not.toHaveBeenCalled();session.agreeRules();expect(session.rulesAgreed()).toBeTrue();store.currentHall.set({...store.currentHall(),id:2});expect(session.rulesAgreed()).toBeFalse();});
   it('shows hall-specific example prompts',()=>{expect(fixture.nativeElement.textContent).toContain('FOYER-1G');});
   it('disables send while empty, shows loading, and never applies automatically',async()=>{
     let finish!:(p:any)=>void;assistant.plan.and.returnValue(new Promise(resolve=>finish=resolve));

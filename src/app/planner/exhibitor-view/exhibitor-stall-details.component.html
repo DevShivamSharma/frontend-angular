@@ -20,14 +20,29 @@
     <div><dt>Size</dt><dd>{{ s.sizeText }}</dd></div>
     <div><dt>Area</dt><dd>{{ s.area }} m²</dd></div>
     <div><dt>Open sides</dt><dd>{{ s.frontage }}</dd></div>
-    <div><dt>Price</dt><dd class="is-muted">Not listed for this layout</dd></div>
+    @if (!pricing()) { <div><dt>Price</dt><dd class="is-muted">Not listed for this layout</dd></div> }
     @if (s.stall.stallNumber) {
       <div><dt>Reference</dt><dd>{{ s.stall.stallNumber }}</dd></div>
     }
   </dl>
 
+  @if (pricing(); as p) {
+    @if (s.available) {
+      <label for="booking-stall-type">Stall type</label>
+      <select id="booking-stall-type" class="control" [value]="stallType()" (change)="changeType($event)" [disabled]="booking()">
+        <option value="bare" [disabled]="p.policy.bare_rate === null">Bare space</option>
+        <option value="shell" [disabled]="p.policy.shell_rate === null">Shell scheme</option>
+      </select>
+    }
+    @if (quoteLoading()) { <p role="status">Loading price…</p> }
+    @if (quoteError()) { <p role="alert" class="price-error">{{ quoteError() }} <button type="button" class="btn-mini" (click)="retry.emit()" [disabled]="quoteLoading() || booking()">Try again</button></p> }
+    <app-price-breakdown [quote]="quote()" />
+    @if (s.available && !published()) { <p class="price-note">Draft layout. Booking opens after the organiser publishes it.</p> }
+    @if (quote()) { <p class="price-note">EMC charges are separate from the SelfCare base amount. Booking does not collect payment.</p> }
+  }
+
   @if (s.available) {
-    <button type="button" class="btn-primary xd-book" [disabled]="booking()" (click)="book.emit()">
+    <button type="button" class="btn-primary xd-book" [disabled]="booking() || (pricing() && (!published() || quoteLoading() || !!quoteError() || !quote()))" (click)="book.emit()">
       {{ booking() ? 'Booking…' : 'Book stall ' + s.name }}
     </button>
   } @else if (!bookedHere()) {

@@ -15,7 +15,7 @@ async function expectCornerToast(page: Page, message: string) {
     return !!box && box.x >= 0 && box.y >= 0 && box.y < 24 &&
       box.x + box.width <= size.width && box.y + box.height < size.height;
   }).toBe(true);
-  await expect(toast(page)).toHaveCSS('border-top-width', '1px');
+  await expect(toast(page).getByRole('button', { name: 'Dismiss notification' })).toBeVisible();
 }
 
 for (const [device, viewport] of Object.entries({ desktop: { width: 1440, height: 1000 }, mobile: { width: 390, height: 844 } })) {
@@ -69,7 +69,7 @@ test('save, update and delete keep their shared toast; request failures use it t
   await toast(page).getByRole('button', { name: 'Dismiss notification' }).click();
 
   await page.getByRole('button', { name: 'Delete Notification test', exact: true }).click();
-  await page.locator('.swal2-popup').getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click();
   await expectCornerToast(page, 'Layout deleted.');
   await expect(page.getByRole('button', { name: 'Delete Notification test', exact: true })).toHaveCount(0);
   await toast(page).getByRole('button', { name: 'Dismiss notification' }).click();
@@ -90,8 +90,8 @@ test('planner stays in the viewport after long sidebar scrolling and a confirmat
   await page.getByRole('tab', { name: /Layouts/ }).click();
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
   await page.getByRole('button', { name: 'Delete Saved layout 1', exact: true }).click();
-  await page.locator('.swal2-popup').getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.locator('.swal2-container')).toHaveCount(0);
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('alertdialog')).not.toBeVisible();
   await page.mouse.move(300, 540);
   await page.mouse.wheel(0, 15000);
   await expect.poll(() => page.locator('.sidebar-body').evaluate(el => el.scrollTop)).toBeGreaterThan(100);

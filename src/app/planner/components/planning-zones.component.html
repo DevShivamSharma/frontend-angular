@@ -1,0 +1,25 @@
+<section class="meeting-panel" aria-labelledby="planning-zones-title">
+  <h3 id="planning-zones-title">Planning zones</h3>
+  <p>Draw Food and Exhibition areas for stalls. Media and Admin areas stay internal. Different event types keep 3 m between stalls.</p>
+  <fieldset #zoneForm tabindex="-1" [disabled]="store.busy()">
+    <label>Zone name<input class="control" [(ngModel)]="label" maxlength="100" /></label>
+    <div class="meeting-grid"><label>Zone type<select class="control" [(ngModel)]="kind">@for (type of kinds;track type) {<option [value]="type">{{type}}</option>}</select></label>
+    <label>Event type<select class="control" [(ngModel)]="eventType"><option>B2B</option><option>B2C</option></select></label></div>
+    <div class="zone-color-row"><label>Zone colour<input type="color" [ngModel]="color()" (ngModelChange)="setColor($event)" /></label><button class="btn-secondary" type="button" (click)="setColor(null)">Auto colour</button></div>
+    <p class="zone-color-hint">New zones use different colours automatically. Colour does not change the zone’s rules.</p>
+    <div class="meeting-actions"><button class="btn-primary" type="button" (click)="draw()">{{id ? 'Redraw zone' : 'Draw zone'}}</button><button class="btn-secondary" type="button" (click)="fresh()">New zone</button></div>
+    @if (store.mode()==='zone') {<p class="meeting-status" role="status">Drag a rectangle on the hall. Right-drag to orbit. <button class="btn-mini" (click)="store.setMode('select')">Cancel drawing</button></p>}
+    <details><summary>{{id ? 'Resize or edit coordinates' : 'Use exact coordinates'}}</summary>
+      <p>Metres from the hall centre. Saving these values makes a rectangular zone.</p>
+      <div class="meeting-grid"><label>Centre X<input type="number" class="control" [(ngModel)]="x" step="0.5" /></label><label>Centre Z<input type="number" class="control" [(ngModel)]="z" step="0.5" /></label><label>Width (m)<input type="number" class="control" [(ngModel)]="width" min="0.5" step="0.5" /></label><label>Length (m)<input type="number" class="control" [(ngModel)]="length" min="0.5" step="0.5" /></label></div>
+      <button class="btn-secondary" type="button" (click)="save(true)">Save zone coordinates</button>
+    </details>
+    @if(id) {<button class="btn-secondary" type="button" (click)="save()">Update zone</button>}
+  </fieldset>
+  <ul class="zone-list" aria-label="Planning zones">
+    @for(zone of store.currentHall()?.planningZones??[];track zone.id) {
+      <li><span class="zone-swatch" [style.background]="zoneColor(zone,$index)" aria-hidden="true"></span><div><strong>{{zone.label}}</strong><small>{{zone.kind}} · {{zone.eventType}} · {{zone.kind==='MEDIA'||zone.kind==='ADMIN'?'Internal':'Sellable'}}</small></div>
+      <button class="btn-mini" (click)="edit(zone)" [attr.aria-label]="'Edit '+zone.label">Edit</button><button class="btn-mini" [disabled]="store.busy()" (click)="store.removeZone(zone.id);fresh()" [attr.aria-label]="'Delete zone '+zone.label">Delete</button></li>
+    } @empty {<li class="empty-zone">No planning zones yet. Draw the first area above.</li>}
+  </ul><p>Save the layout to keep your zones. Existing stalls are audited after zone changes.</p>
+</section>

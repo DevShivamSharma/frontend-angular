@@ -11,6 +11,7 @@ import { PlannedStall } from './planner-store.service';
 /** What the backend is asked for: a requirement in the user's words, plus the hall it applies to. */
 export interface AssistantRequest {
   requirement: string;
+  zoneId?: string;
   hall: {
     id: string | number;
     name: string;
@@ -22,6 +23,7 @@ export interface AssistantRequest {
     boundary?: unknown;
     blockedAreas?: unknown;
     zones?: unknown;
+    planningZones?: unknown;
     rules?: unknown;
     markers?: unknown;
     openings?: unknown;
@@ -30,6 +32,8 @@ export interface AssistantRequest {
   existingStalls: Array<{
     id?: string | number;
     rotation?: number;
+    footprint?: Array<{ x: number; z: number }> | null;
+    openEdges?: number[] | null;
     openSides?: string[];
     gateSide?: string;
     name: string;
@@ -85,10 +89,12 @@ export class LayoutAssistantService {
     requirement: string,
     hall: Hall,
     stalls: ReadonlyArray<Stall>,
-    gridCell: number
+    gridCell: number,
+    zoneId?: string
   ): Promise<AssistantResponse> {
     const body: AssistantRequest = {
       requirement,
+      ...(zoneId ? { zoneId } : {}),
       hall: {
         id: hall.id,
         name: hall.name,
@@ -97,6 +103,7 @@ export class LayoutAssistantService {
         length: hall.length,
         radius: hall.radius,
         gridCell,
+        planningZones: hall.planningZones ?? [],
         markers: hall.markers ?? [],
         openings: hall.openings ?? [],
         eventType: (hall as Hall & { eventType?: 'B2B' | 'B2C' }).eventType,
@@ -108,6 +115,7 @@ export class LayoutAssistantService {
       existingStalls: stalls.map(s => ({
         id: s.id,
         rotation: s.rotation ?? 0,
+        footprint: s.footprint, openEdges: s.openEdges,
         openSides: s.openSides,
         gateSide: s.gateSide,
         name: s.name,

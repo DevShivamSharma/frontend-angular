@@ -1,5 +1,6 @@
 <div class="chat-messages" #messages role="log" aria-label="Layout conversation" aria-live="polite" aria-relevant="additions text">
-  @if (!session.messages().length) {
+  <app-guided-planning />
+  @if (!session.messages().length && session.rulesAgreed()) {
     <div class="chat-empty">
       <h3>Describe your next layout</h3>
       <p>Choose a size, an area and a stall count. Review the outlines on the hall, then apply when you’re ready. You can also change rules, e.g. “turn off wall clearance” or “add rule: corner stalls are premium”.</p>
@@ -44,8 +45,8 @@
 <div class="chat-composer">
   <label class="sr-only" [for]="inputId">Layout request</label>
   <div class="composer-field">
-    <textarea #input [id]="inputId" rows="2" maxlength="500" placeholder="Describe stalls, size and location, or a rule…" [value]="session.draft()" (input)="onInput($event)" (keydown)="onKey($event)" [disabled]="!session.hall()"></textarea>
-    <button type="button" class="chat-send" aria-label="Send layout request" title="Send request" [disabled]="!session.draft().trim() || session.busy() || !session.hall()" (click)="session.send()"><app-icon name="arrow-up" [size]="17" /></button>
+    <textarea #input [id]="inputId" rows="2" maxlength="500" placeholder="Describe stalls, size and location, or a rule…" [value]="session.draft()" (input)="onInput($event)" (keydown)="onKey($event)" [disabled]="!session.hall() || !session.rulesAgreed()"></textarea>
+    <button type="button" class="chat-send" aria-label="Send layout request" title="Send request" [disabled]="!session.draft().trim() || session.busy() || !session.hall() || !session.rulesAgreed()" (click)="session.send()"><app-icon name="arrow-up" [size]="17" /></button>
   </div>
   <div class="composer-meta"><span>Enter to send · Shift + Enter for a new line</span>@if (session.draft().length > 400) { <span>{{ session.draft().length }}/500</span> }</div>
 </div>

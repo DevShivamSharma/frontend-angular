@@ -4,12 +4,13 @@ import * as T from 'three';
 import { batchVenue } from '../src/app/home/venue-batching';
 import { PLAZA_PLANTERS, prepareVenueSurfaceDetail } from '../src/app/home/venue-surface-detail';
 import { ITPO_WALKWAY_BINS, ITPO_WALKWAY_PLANTER_T, ITPO_WALKWAY_RUNS } from '../src/app/home/venue-edge-detail';
+import { addItpoExterior, GATE9_CHECK_ROOM } from '../src/app/home/venue-itpo-exterior';
 
 // Decode the supplied geometry without a browser or texture/network mocks.
 // This verifies placement against every actual visible obstacle, not a copied
 // rectangle or a list of assumed building names.
 function suppliedGeometry() {
-    const bytes = readFileSync('outputs/outputs/IITF_2026_ARCHITECTURAL.glb');
+    const bytes = readFileSync('src/assets/venue/IITF_2026_ARCHITECTURAL.glb');
     const length = bytes.readUInt32LE(12), data = JSON.parse(bytes.subarray(20, 20 + length).toString());
     const binary = 28 + length, root = new T.Group();
     function values(index: number): number[] {
@@ -113,4 +114,50 @@ test('ITPO office walkway: planters, bins and the clear walk all stand on the of
     const walkway = root.getObjectByName('SITE_EDGE_itpo_walkway') as T.Group;
     expect(walkway.children.filter(o => o.name === 'SITE_EDGE_itpo_lamp_pole')).toHaveLength(3);
     expect(walkway.children.filter(o => o.name === 'SITE_EDGE_itpo_bin')).toHaveLength(3);
+});
+
+test('photo-guided ITPO court and Gate 9 checkpoint fit the real ground and preserve circulation', () => {
+    const root = suppliedGeometry(), authored = [...root.children] as T.Mesh[];
+    addItpoExterior(root); root.updateMatrixWorld(true);
+    const additions = root.getObjectByName('SITE_DETAIL_itpo_exterior') as T.Group;
+    expect(additions).toBeTruthy();
+    const down = new T.Vector3(0, -1, 0), ray = new T.Raycaster();
+    const errors: string[] = [];
+    // Sample the actual transformed footprint, including its interior. This
+    // catches a rotated room/canopy or a kerb intruding onto the curved drive.
+    additions.traverse(object => {
+        if (!(object instanceof T.Mesh) || !/raised_planter|canopy_base|service_wall|checkpoint_plinth/.test(object.name)) return;
+        object.geometry.computeBoundingBox(); const bounds = object.geometry.boundingBox!;
+        for (let x = 0; x <= 4; x++) for (let z = 0; z <= 4; z++) {
+            const point = new T.Vector3(T.MathUtils.lerp(bounds.min.x, bounds.max.x, x / 4), 0,
+                T.MathUtils.lerp(bounds.min.z, bounds.max.z, z / 4)).applyMatrix4(object.matrixWorld);
+            point.y = 45; ray.set(point, down);
+            const hit = ray.intersectObjects(authored, false)[0];
+            if (!hit || hit.point.y > .16 || !/office ground court|office pedestrian apron/.test(hit.object.name))
+                errors.push(`${object.name} ${x},${z}: ${hit?.object.name} @ ${hit?.point.y}`);
+        }
+    });
+    expect(errors, 'Every footprint remains on office paving, away from roads, lawns and buildings').toEqual([]);
+    const addedMeshes: T.Mesh[] = []; additions.traverse(o => { if (o instanceof T.Mesh) addedMeshes.push(o); });
+    const W = (s: number, t: number) => new T.Vector3(.5 * s + .8660254038 * t, 2, -.8660254038 * s + .5 * t);
+    // An uninterrupted walk along the office, and the gate centre's entry lane.
+    for (let s = -480; s <= -405; s += 2) {
+        ray.set(W(s, -386), down);
+        expect(ray.intersectObjects(addedMeshes, false), `clear office walk at ${s}`).toHaveLength(0);
+    }
+    const nx = Math.sin(GATE9_CHECK_ROOM.angle), nt = Math.cos(GATE9_CHECK_ROOM.angle);
+    for (let inward = -3; inward <= 18; inward += 1.5) for (const side of [-2, 0, 2]) {
+        ray.set(W(-542.692 + nx * inward + nt * side, -363.315 + nt * inward - nx * side), down);
+        expect(ray.intersectObjects(addedMeshes, false), `clear Gate 9 entry ${inward},${side}`).toHaveLength(0);
+    }
+    const triangles = addedMeshes.reduce((sum, m) => sum + (m.geometry.index?.count ?? m.geometry.getAttribute('position').count) / 3, 0);
+    expect(triangles).toBeLessThan(30000);
+    batchVenue(additions, object => {
+        for (let n: T.Object3D | null = object; n; n = n.parent) if (n.userData['gate_id']) return n.userData['gate_id'];
+        return null;
+    }, () => 'static');
+    const batches: T.Mesh[] = []; additions.traverse(o => { if (o instanceof T.Mesh) batches.push(o); });
+    expect(batches.length).toBeLessThan(35);
+    expect(batches.some(o => o.userData['destinationId'] === 'gate9')).toBe(true);
+    console.log({ itpoTriangles: triangles, itpoBatches: batches.length });
 });

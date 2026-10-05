@@ -28,7 +28,7 @@ import { hallFloor, planBounds } from '../geometry/hall-plan';
 import { buildFloorRegions, buildPlanAreas, UD_TOOLTIP } from './plan-renderer';
 import { disposeChildren, StallObject } from './stall3d-renderer';
 import { disposeSpriteTextures } from './text-sprite';
-import { buildClearances, buildOpeningMarkers, buildRestrictedZones } from './zones-renderer';
+import { buildPlanningZones, buildClearances, buildOpeningMarkers, buildRestrictedZones } from './zones-renderer';
 
 /** Payload of the `moveStall` output. */
 export interface StallMove {
@@ -73,6 +73,8 @@ const DRAG_THRESHOLD = 0.05;
 export class Scene3dComponent implements AfterViewInit {
   readonly hall = input<Hall | undefined>(undefined);
   readonly stalls = input<ReadonlyArray<Stall>>([]);
+  readonly selectedStallIds = input<readonly string[]>([]);
+  readonly toggleStall = output<string | number>();
   readonly selectedStallId = input<string | number | null>(null);
   readonly dragging = input(false);
   /** Draw mode: dragging on the grid creates a stall instead of orbiting / selecting. */
@@ -95,6 +97,7 @@ export class Scene3dComponent implements AfterViewInit {
   readonly draftStart = output<Point>();
   readonly draftMove = output<Point>();
   readonly draftEnd = output<void>();
+  readonly draftCancel = output<void>();
   readonly draftLeave = output<void>();
   /** The suggested-spot ghost of a rejected placement was clicked. */
   readonly acceptSuggestion = output<void>();
@@ -181,6 +184,7 @@ export class Scene3dComponent implements AfterViewInit {
       const hall = this.hall();
       const stalls = this.stalls();
       const selectedStallId = this.selectedStallId();
+      this.selectedStallIds();
       if (!this.ready) return;
       this.syncStalls(hall, stalls, selectedStallId);
     });
@@ -230,7 +234,7 @@ export class Scene3dComponent implements AfterViewInit {
     effect(() => {
       const mode = this.mode();
       if (this.ready) this.updateCursor();
-      if (mode === 'draw' || this.drawPointerId === null) return;
+      if (mode === 'draw' || mode === 'zone' || this.drawPointerId === null) return;
       if (this.ready) {
         this.controls.enabled = !this.dragging();
         const canvas = this.renderer.domElement;
@@ -344,6 +348,7 @@ export class Scene3dComponent implements AfterViewInit {
       this.blockedAreasGroup.add(buildPlanAreas(hall.blockedAreas ?? [], { drawOutside: true }));
     }
 
+    if (hall.planningZones?.length) this.restrictedGroup.add(buildPlanningZones(hall.planningZones));
     if (hall.zones?.length) {
       // Clearance outlines belong to the rule engine; a hall without rules shows the plan as is.
       this.restrictedGroup.add(buildRestrictedZones(hall.zones, effectiveRules(hall.rules), !!hall.rules));
@@ -506,7 +511,7 @@ export class Scene3dComponent implements AfterViewInit {
         this.stallGroup.add(object.group);
       }
 
-      object.update(stall, String(selectedStallId) === key);
+      object.update(stall, this.selectedStallIds().includes(key) || String(selectedStallId) === key);
     }
 
     for (const [key, object] of this.stallObjects) {
@@ -527,7 +532,7 @@ export class Scene3dComponent implements AfterViewInit {
       return;
     }
 
-    if (this.mode() === 'draw') {
+    if ((this.mode() === 'draw' || this.mode() === 'zone')) {
       this.pointerDownHit = true;
       if (event.button !== 0) return; // right/middle drag still orbits and pans
       const point = this.intersectDragPlane(event);
@@ -544,6 +549,7 @@ export class Scene3dComponent implements AfterViewInit {
     const hit = this.pickStall(event);
     this.pointerDownHit = hit !== null;
     if (!hit) return;
+    if(event.shiftKey || event.ctrlKey || event.metaKey) { this.toggleStall.emit(hit.stall.id); return; }
 
     const point = this.intersectDragPlane(event);
     if (!point) return;
@@ -571,7 +577,7 @@ export class Scene3dComponent implements AfterViewInit {
 
   private readonly onPointerMove = (event: PointerEvent): void => {
     this.updateCursor(event);
-    if (this.mode() === 'draw') {
+    if ((this.mode() === 'draw' || this.mode() === 'zone')) {
       const point = this.intersectDragPlane(event);
       if (!point) return;
       if (this.drawPointerId === event.pointerId) {
@@ -610,7 +616,8 @@ export class Scene3dComponent implements AfterViewInit {
     if (this.drawPointerId !== null && this.drawPointerId === event.pointerId) {
       this.drawPointerId = null;
       this.controls.enabled = !this.dragging();
-      this.draftEnd.emit();
+      if(event.type!=='pointercancel') this.draftEnd.emit();
+      else this.draftCancel.emit();
       this.renderer.domElement.releasePointerCapture?.(event.pointerId);
       return;
     }
@@ -625,7 +632,7 @@ export class Scene3dComponent implements AfterViewInit {
       // A click on a wall of an already-selected stall changes its open side
       // instead of re-selecting. First clicks and clicks on the floor,
       // markers or outline still only select.
-      if (side && wasSelected) {
+      if (side && wasSelected && this.selectedStallIds().length <= 1) {
         this.openSideChange.emit({ id, side });
       } else {
         this.selectStall.emit(id);
@@ -645,13 +652,13 @@ export class Scene3dComponent implements AfterViewInit {
   private readonly onPointerLeave = (): void => {
     this.hideTooltip();
     this.updateCursor();
-    if (this.mode() === 'draw' && this.drawPointerId === null) this.draftLeave.emit();
+    if ((this.mode() === 'draw' || this.mode() === 'zone') && this.drawPointerId === null) this.draftLeave.emit();
   };
 
   /** Three.js owns this canvas, so cursor styles must be applied directly to it. */
   private updateCursor(event?: PointerEvent): void {
     this.renderer.domElement.style.cursor = this.drag ? 'grabbing'
-      : this.mode() === 'draw' ? 'crosshair'
+      : (this.mode() === 'draw' || this.mode() === 'zone') ? 'crosshair'
       : event && this.pickSuggestion(event) ? 'pointer'
       : event && this.pickStall(event) ? 'grab' : 'default';
   }

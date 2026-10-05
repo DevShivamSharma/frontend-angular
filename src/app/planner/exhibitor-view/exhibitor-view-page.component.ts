@@ -1,3 +1,5 @@
+import { PricingApiService } from '../pricing/pricing-api.service';
+import type { PricingSnapshot, StallQuote } from '../pricing/pricing.model';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -12,7 +14,6 @@ import type { Hall } from '../models/hall.model';
 import type { Stall } from '../models/stall.model';
 import { ExhibitorPlanComponent } from './exhibitor-plan.component';
 import { ExhibitorStallDetailsComponent } from './exhibitor-stall-details.component';
-import { HallBadgeComponent } from './hall-badge.component';
 import {
   exhibitorStalls,
   kindLabel,
@@ -36,12 +37,20 @@ type Filter = 'ALL' | 'AVAILABLE';
   selector: 'app-exhibitor-view-page',
   templateUrl: './exhibitor-view-page.component.html',
   styleUrl: './exhibitor-view-page.component.css',
-  imports: [ExhibitorPlanComponent, ExhibitorStallDetailsComponent, HallBadgeComponent, IconComponent],
+  imports: [ExhibitorPlanComponent, ExhibitorStallDetailsComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown.escape)': 'choose(null)' }
 })
 export class ExhibitorViewPageComponent {
   private readonly api = inject(LayoutApiService);
+  private readonly prices = inject(PricingApiService);
+  readonly pricing = signal<PricingSnapshot | null>(null);
+  readonly published = signal(false);
+  readonly quote = signal<StallQuote | null>(null);
+  readonly quoteLoading = signal(false);
+  readonly quoteError = signal('');
+  readonly stallType = signal<'bare' | 'shell'>('bare');
+  private quoteSequence = 0;
   private readonly notify = inject(NotifyService);
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap);
 
@@ -93,6 +102,10 @@ export class ExhibitorViewPageComponent {
 
   constructor() {
     effect(() => {
+      const number=this.selected()?.stall.stallNumber, pricing=this.pricing(), type=this.stallType(), id=this.layoutId();
+      untracked(() => void this.loadQuote(id, number, pricing, type));
+    });
+    effect(() => {
       const id = this.layoutId();
       untracked(() => void this.load(id));
     });
@@ -109,6 +122,9 @@ export class ExhibitorViewPageComponent {
       const detail = await this.api.open(id);
       const hall = detail.hall;
       if (!hall) throw new Error('This layout has no hall plan to show.');
+      this.pricing.set(detail.layout?.pricingPolicy ?? null);
+      this.published.set(detail.layout?.status === 'PUBLISHED');
+      this.stallType.set(detail.layout?.pricingPolicy?.policy.bare_rate === null ? 'shell' : 'bare');
       this.hall.set(hall);
       this.layoutName.set(detail.layout?.name || detail.name || hall.name);
       this.savedStalls.set((detail.stalls ?? []).map(s => normalizeStall(s, hall.id)));
@@ -148,6 +164,18 @@ export class ExhibitorViewPageComponent {
     return kindLabel(kind);
   }
 
+  async loadQuote(id: string | null, number: string | null | undefined, pricing: PricingSnapshot | null, type: 'bare' | 'shell'): Promise<void> {
+    const seq=++this.quoteSequence;
+    this.quote.set(null); this.quoteError.set(''); this.quoteLoading.set(false);
+    if(!id || !number || !pricing) return;
+    this.quoteLoading.set(true);
+    try { const quote=await this.prices.quote(id,number,type); if(seq===this.quoteSequence) this.quote.set(quote); }
+    catch(e) { if(seq===this.quoteSequence) this.quoteError.set(extractErrorMessage(e)); }
+    finally { if(seq===this.quoteSequence) this.quoteLoading.set(false); }
+  }
+
+  retryQuote(): void { void this.loadQuote(this.layoutId(),this.selected()?.stall.stallNumber,this.pricing(),this.stallType()); }
+
   async book(): Promise<void> {
     const stall = this.selected();
     const layoutId = this.layoutId();
@@ -158,17 +186,20 @@ export class ExhibitorViewPageComponent {
       return;
     }
 
+    const quote = this.quote();
+    if (this.pricing() && (!this.published() || this.quoteLoading() || this.quoteError() || !quote || quote.stallNumber !== number || quote.stallType !== this.stallType())) return;
+    this.booking.set(true);
+    try {
+    const priceText = quote ? ' Total: ' + new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR' }).format(quote.total) + '. Payment remains pending.' : '';
     const confirmed = await this.notify.confirm({
       title: `Book stall ${stall.name}?`,
-      text: `${stall.sizeText} · ${stall.area} m² · ${stall.frontage}. Once booked, it is no longer offered to other exhibitors.`,
+      text: `${stall.sizeText} · ${stall.area} m² · ${stall.frontage}. Once booked, it is no longer offered to other exhibitors.${priceText}`,
       confirmText: 'Book stall',
       cancelText: 'Not now'
     });
     if (!confirmed) return;
 
-    this.booking.set(true);
-    try {
-      const result = await this.api.book(layoutId, number);
+      const result = await this.api.book(layoutId, number, quote ? { stall_type:quote.stallType, expectedQuote:quote.fingerprint } : {});
       const hallId = this.hall()!.id;
       const booked = normalizeStall(result.stall, hallId);
       this.savedStalls.update(list => list.map(s => (s.stallNumber === number ? booked : s)));
@@ -177,7 +208,7 @@ export class ExhibitorViewPageComponent {
       this.notify.success('Stall booked', `${stall.name} is now booked.`);
     } catch (e) {
       if (e instanceof HttpErrorResponse && e.status === 409) {
-        this.notify.error('Stall no longer available', 'Another exhibitor booked it a moment ago. Please choose another stall.');
+        this.notify.error('Booking needs review', extractErrorMessage(e));
         await this.load(layoutId);
       } else {
         this.notify.error('Booking failed', extractErrorMessage(e));

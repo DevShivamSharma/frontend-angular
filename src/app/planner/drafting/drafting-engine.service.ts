@@ -93,7 +93,7 @@ export type LayerId = 'base' | 'zones' | 'services' | 'notes' | 'stalls' | 'labe
 
 export const LAYERS: ReadonlyArray<{ id: LayerId; label: string; locked?: boolean }> = [
   { id: 'base', label: 'Hall base', locked: true },
-  { id: 'zones', label: 'Restricted zones' },
+  { id: 'zones', label: 'Planning & restricted zones' },
   { id: 'services', label: 'Exits & services' },
   { id: 'notes', label: 'Plan labels' },
   { id: 'stalls', label: 'Stalls' },

@@ -67,7 +67,7 @@
             }
           </div>
           <div class="saved-row-meta">
-            ID {{ layout.id }} · {{ stallCount(layout) }} {{ stallCount(layout) === 1 ? 'shop' : 'shops' }}
+            ID {{ layout.id }} · {{ layout.status==='PUBLISHED'?'Published':'Draft' }} · {{ stallCount(layout) }} {{ stallCount(layout) === 1 ? 'shop' : 'shops' }}
           </div>
           <div class="saved-row-actions">
             <!-- A new tab: the exhibitor view is a separate page, and the editor keeps any unsaved work. -->
@@ -111,3 +111,5 @@
     }
   </div>
 </section>
+
+<app-pricing-panel />

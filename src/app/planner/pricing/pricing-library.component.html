@@ -1,0 +1,63 @@
+<main class="library">
+  <header>
+    <a routerLink="/">Venue overview</a>
+    <div class="heading"><div><h1>Hall pricing library</h1><p>Event and hall rates saved for the client demo.</p></div><button type="button" (click)="load()" [disabled]="busy()">Refresh rates</button></div>
+  </header>
+  @if (busy()) { <p role="status">Loading saved pricing…</p> }
+  @if (error()) { <div class="error" role="alert"><p>{{ error() }}</p><button (click)="load()">Try again</button></div> }
+  @if (data(); as library) {
+    <p class="coverage">{{ library.stallRates.length }} source stall rates · {{ savedCount() }} editable masters · {{ library.hallRentals.length }} hall rental entries</p>
+    <nav aria-label="Pricing type"><button [attr.aria-pressed]="view() === 'stalls'" (click)="changeView('stalls')">Stall rates</button><button [attr.aria-pressed]="view() === 'rentals'" (click)="changeView('rentals')">Hall rentals</button></nav>
+    @if (view() === 'stalls') {
+      <div class="filters">
+        <label>Event<select [ngModel]="event()" (ngModelChange)="changeEvent($event)"><option value="">All events</option>@for (e of events(); track e.id) { <option [value]="e.id">{{ e.name }}</option> }</select></label>
+        <label>Hall / location<select [ngModel]="hall()" (ngModelChange)="hall.set($event); filtersChanged()"><option value="">All halls / locations</option>@for (h of halls(); track h) { <option [value]="h">{{ h }}</option> }</select></label>
+        <label>Category<select [ngModel]="category()" (ngModelChange)="category.set($event); filtersChanged()"><option value="">All categories</option><option>General</option><option>Premium</option><option>Marquee</option><option>GeneralNew</option></select></label>
+        <label>Availability<select [ngModel]="status()" (ngModelChange)="status.set($event); filtersChanged()"><option value="">All source rates</option><option value="saved">Editable masters</option><option value="reference">Reference only</option></select></label>
+      </div>
+      <div class="results-head"><p role="status">{{ filtered().length }} matching {{ filtered().length === 1 ? 'rate' : 'rates' }}</p><button class="text-button" (click)="clear()">Clear filters</button></div>
+      @if (selected(); as rate) {
+        <div class="workspace">
+          <section class="rate-list" aria-label="Matching stall rates">
+            @for (r of visibleRates(); track r.id) {
+              <button class="rate-row" [class.chosen]="rate.id === r.id" [attr.aria-pressed]="rate.id === r.id" (click)="selectRate(r.id)">
+                <span class="row-title">{{ r.hallName }} <span class="state" [class.reference]="!r.masterId">{{ r.masterId ? 'Saved' : 'Reference' }}</span></span>
+                <span>{{ r.eventLabel }} · {{ r.category }}</span>
+                <span class="row-amount">Bare {{ amount(r.source['bare_rate']) }} · Shell {{ amount(r.source['shell_rate']) }}</span>
+                <span class="muted">{{ r.source['start_date']?.slice(0,10) || 'Undated' }} to {{ r.source['end_date']?.slice(0,10) || 'unspecified' }}</span>
+              </button>
+            }
+            <div class="pagination"><button [disabled]="page() === 0" (click)="page.set(page()-1); selectedId.set(visibleRates()[0]?.id || '')">Previous</button><span>Page {{ page()+1 }} of {{ lastPage()+1 }}</span><button [disabled]="page() === lastPage()" (click)="page.set(page()+1); selectedId.set(visibleRates()[0]?.id || '')">Next</button></div>
+          </section>
+          <section #detail tabindex="-1" class="detail" aria-labelledby="rate-heading">
+            <div class="detail-head"><h2 id="rate-heading">{{ rate.hallName }}</h2><span class="state" [class.reference]="!rate.masterId">{{ rate.masterId ? 'Editable master saved' : 'Reference only' }}</span></div>
+            <p>{{ rate.eventName }}</p><p class="muted">{{ rate.category }}{{ rate.source['is_fnb_stall'] === 't' ? ' · Food & beverage' : ' · Domestic rates' }}</p>
+            <dl class="amounts"><div><dt>{{ rate.source['is_fnb_stall'] === 't' ? 'Bare field · basis unconfirmed' : 'Bare / m²' }}</dt><dd>{{ amount(rate.source['bare_rate']) }}</dd></div><div><dt>{{ rate.source['is_fnb_stall'] === 't' ? 'Shell field · basis unconfirmed' : 'Shell / m²' }}</dt><dd>{{ amount(rate.source['shell_rate']) }}</dd></div><div><dt>Catalogue / stall</dt><dd>{{ amount(rate.source['catlog_entry_charge']) }}</dd></div></dl>
+            <h3>Open-side premium</h3>
+            <dl><div><dt>Corner charges enabled</dt><dd>{{ rate.source['corner_charges_applicable'] === 't' ? 'Yes' : rate.source['corner_charges_applicable'] === 'f' ? 'No' : 'Not specified' }}</dd></div>@for (p of premiums; track p[0]) { <div><dt>{{ p[1] }}</dt><dd>{{ percent(rate.source[p[0]]) }}</dd></div> }</dl>
+            <h3>Source applicability window</h3><dl class="dates"><div><dt>From</dt><dd>{{ date(rate.source['start_date']) }}</dd></div><div><dt>Until</dt><dd>{{ date(rate.source['end_date']) }}</dd></div></dl>
+            @if (rate.masterId) {
+              <p class="note">Saved before tax. Tax and EMC are set to 0 for the demo; dates and categories are selected manually.</p>
+              <details><summary>Editable master #{{ rate.masterId }}</summary><p class="master-name">{{ rate.masterName }}</p><p>Choose this name in the planner’s Layouts → Pricing &amp; EMC section to edit or apply it.</p></details>
+            } @else { <div class="note"><p>Saved for reference. Review before using in a quote:</p><ul>@for (issue of rate.issues; track issue) { <li>{{ issue }}</li> }</ul></div> }
+            @if (rate.source['is_fnb_stall'] === 't') { <h3>F&amp;B source charges</h3><dl><div><dt>F&amp;B price</dt><dd>{{ amount(rate.source['fnb_price']) }}</dd></div><div><dt>Kitchen price</dt><dd>{{ amount(rate.source['kitchen_price']) }}</dd></div></dl><p class="muted">Billing basis requires confirmation. These are not mapped to per-m² masters.</p> }
+            @if (rate.source['is_overseas_pricing'] === 't') { <details><summary>Overseas source rates</summary><p class="muted">Currency is not specified in this table. Amounts below are kept in source units.</p><dl>@for (p of overseas; track p[0]) { <div><dt>{{ p[1] }}</dt><dd>{{ amount(rate.source[p[0]], false) }}</dd></div> }@for (p of overseasPremiums; track p[0]) { <div><dt>{{ p[1] }}</dt><dd>{{ percent(rate.source[p[0]]) }}</dd></div> }</dl></details> }
+            <details class="provenance"><summary>Source record</summary><p>p-db · T_STALL_PRICE_MASTER</p><p class="master-name">{{ rate.id }}</p><p>Status: {{ rate.source['status'] }}{{ rate.isTest ? ' · Source test event' : '' }}</p></details>
+          </section>
+        </div>
+      } @else { <div class="empty"><h2>No matching rates</h2><p>Choose another event, hall or category.</p><button (click)="clear()">Clear filters</button></div> }
+    } @else {
+      <div class="rental-search"><label>Find a hall or rental category<input type="search" [ngModel]="query()" (ngModelChange)="query.set($event); selectedId.set('')" placeholder="For example, Hall 12A" /></label><p role="status">{{ rentalHalls().length }} {{ rentalHalls().length === 1 ? 'hall / location' : 'halls / locations' }}</p></div>
+      <p class="note">Category-based hall rental schedules. Recorded amounts are shown separately from stall rates; confirm the billing unit before calculating a hall booking.</p>
+      @if (rentalHall(); as hall) {
+        <div class="workspace"><section class="hall-list" aria-label="Hall rental locations">@for (h of rentalHalls(); track h.id) { <button class="rate-row" [class.chosen]="hall.id === h.id" [attr.aria-pressed]="hall.id === h.id" (click)="selectRate(h.id)"><span class="row-title">{{ h.name }}</span><span>{{ h.categoryName }}</span>@if (!h.active) { <span class="muted">Inactive in source</span> }</button> }</section>
+          <section #detail tabindex="-1" class="detail"><h2>{{ hall.name }}</h2><p>{{ hall.categoryName }}</p><p class="muted">{{ hall.active ? 'Active in source' : 'Inactive in source' }} · amounts in INR</p>
+            @for (s of rentalSchedules(); track s.id) { <h3>{{ s.period }}</h3><dl><div><dt>Exhibition</dt><dd>{{ amount(s.exhibition) }}</dd></div><div><dt>Mounting</dt><dd>{{ amount(s.mounting) }}</dd></div><div><dt>Dismantling</dt><dd>{{ amount(s.dismantling) }}</dd></div></dl><details><summary>F&amp;B and ticketed charges</summary><dl><div><dt>F&amp;B exhibition</dt><dd>{{ amount(s.fnbExhibition) }}</dd></div><div><dt>F&amp;B mounting</dt><dd>{{ amount(s.fnbMounting) }}</dd></div><div><dt>F&amp;B dismantling</dt><dd>{{ amount(s.fnbDismantling) }}</dd></div><div><dt>Ticketed exhibition</dt><dd>{{ amount(s.ticketedExhibition) }}</dd></div><div><dt>Ticketed mounting</dt><dd>{{ amount(s.ticketedMounting) }}</dd></div><div><dt>Ticketed dismantling</dt><dd>{{ amount(s.ticketedDismantling) }}</dd></div></dl></details><p class="muted">{{ date(s.validFrom) }} to {{ date(s.validTo) }}</p>@if (reversedWindow(s.validFrom, s.validTo)) { <p class="note">Source end date precedes the start date. Confirm the seasonal dates before using this schedule.</p> } }
+            <details><summary>Category adjustments in source</summary><dl><div><dt>Additional charges</dt><dd>{{ percent(hall.additionalChargesPercent) }}</dd></div><div><dt>Discount</dt><dd>{{ percent(hall.discountPercent) }}</dd></div></dl><p class="muted">Stored category fields. Their applicability is not inferred or applied to these amounts.</p></details>
+            <p class="muted">Source: p-db · T_HALLS_PRICE · linked by hall category.</p>
+          </section>
+        </div>
+      } @else { <div class="empty"><h2>No matching halls</h2><button (click)="query.set('')">Clear search</button></div> }
+    }
+  } @else if (!busy() && !error()) { <div class="empty"><h2>No saved pricing library</h2><p>Import the source pricing records to populate this view.</p></div> }
+</main>

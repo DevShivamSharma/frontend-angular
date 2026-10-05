@@ -128,3 +128,10 @@ h2 {
     margin: var(--space-3) 0;
   }
 }
+
+.price-error{color:var(--danger-text);font-size:13px}.price-note{font-size:12px;color:var(--text-secondary);line-height:1.5}label{display:block;font-size:13px;margin-bottom:6px}.control{width:100%}
+
+@media(max-width:900px){
+  .xd-head{position:sticky;top:calc(-1 * var(--space-4));z-index:1;margin:calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;padding:var(--space-3) var(--space-4);background:var(--surface-selected);border-bottom:1px solid var(--border-subtle)}
+  :host(.is-booked) .xd-head{background:var(--booked-surface)}
+}

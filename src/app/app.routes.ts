@@ -9,6 +9,7 @@ import { HomePageComponent } from './home/home-page.component';
  * SPA fallback parity; no guards are added until authentication requirements exist.
  */
 export const routes: Routes = [
+  { path: 'planner/pricing', title: 'Hall pricing library', loadComponent: () => import('./planner/pricing/pricing-library.component').then(m => m.PricingLibraryComponent) },
   { path: '', component: HomePageComponent },
   // Step 3, the stall editor, full screen. Listed before the setup routes so `planner/editor`
   // is never taken for a setup step. Opened with `?hallId=` from "Start creating".

@@ -1,0 +1,560 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T17:21:40.187Z",
+  "title": "Design System: 3D Stall Planner controls",
+  "extensions": {
+    "colorMeta": {
+      "surface-app": {
+        "role": "neutral",
+        "displayName": "Surface App",
+        "tonalRamp": [
+          "oklch(15% 0.0029 264.54)",
+          "oklch(26% 0.0029 264.54)",
+          "oklch(38% 0.0029 264.54)",
+          "oklch(49% 0.0029 264.54)",
+          "oklch(61% 0.0029 264.54)",
+          "oklch(72% 0.0029 264.54)",
+          "oklch(84% 0.0029 264.54)",
+          "oklch(95% 0.0029 264.54)"
+        ]
+      },
+      "surface-sidebar": {
+        "role": "neutral",
+        "displayName": "Surface Sidebar",
+        "tonalRamp": [
+          "oklch(15% 0.0034 247.86)",
+          "oklch(26% 0.0034 247.86)",
+          "oklch(38% 0.0034 247.86)",
+          "oklch(49% 0.0034 247.86)",
+          "oklch(61% 0.0034 247.86)",
+          "oklch(72% 0.0034 247.86)",
+          "oklch(84% 0.0034 247.86)",
+          "oklch(95% 0.0034 247.86)"
+        ]
+      },
+      "surface-card": {
+        "role": "neutral",
+        "displayName": "Surface Card",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "surface-card-hover": {
+        "role": "neutral",
+        "displayName": "Surface Card Hover",
+        "tonalRamp": [
+          "oklch(15% 0.0069 247.90)",
+          "oklch(26% 0.0069 247.90)",
+          "oklch(38% 0.0069 247.90)",
+          "oklch(49% 0.0069 247.90)",
+          "oklch(61% 0.0069 247.90)",
+          "oklch(72% 0.0069 247.90)",
+          "oklch(84% 0.0069 247.90)",
+          "oklch(95% 0.0069 247.90)"
+        ]
+      },
+      "surface-selected": {
+        "role": "neutral",
+        "displayName": "Surface Selected",
+        "tonalRamp": [
+          "oklch(15% 0.0142 254.60)",
+          "oklch(26% 0.0142 254.60)",
+          "oklch(38% 0.0142 254.60)",
+          "oklch(49% 0.0142 254.60)",
+          "oklch(61% 0.0142 254.60)",
+          "oklch(72% 0.0142 254.60)",
+          "oklch(84% 0.0142 254.60)",
+          "oklch(95% 0.0142 254.60)"
+        ]
+      },
+      "surface-track": {
+        "role": "neutral",
+        "displayName": "Surface Track",
+        "tonalRamp": [
+          "oklch(15% 0.0074 260.73)",
+          "oklch(26% 0.0074 260.73)",
+          "oklch(38% 0.0074 260.73)",
+          "oklch(49% 0.0074 260.73)",
+          "oklch(61% 0.0074 260.73)",
+          "oklch(72% 0.0074 260.73)",
+          "oklch(84% 0.0074 260.73)",
+          "oklch(95% 0.0074 260.73)"
+        ]
+      },
+      "border-subtle": {
+        "role": "neutral",
+        "displayName": "Border Subtle",
+        "tonalRamp": [
+          "oklch(15% 0.0075 260.73)",
+          "oklch(26% 0.0075 260.73)",
+          "oklch(38% 0.0075 260.73)",
+          "oklch(49% 0.0075 260.73)",
+          "oklch(61% 0.0075 260.73)",
+          "oklch(72% 0.0075 260.73)",
+          "oklch(84% 0.0075 260.73)",
+          "oklch(95% 0.0075 260.73)"
+        ]
+      },
+      "border-default": {
+        "role": "neutral",
+        "displayName": "Border Default",
+        "tonalRamp": [
+          "oklch(15% 0.0123 259.82)",
+          "oklch(26% 0.0123 259.82)",
+          "oklch(38% 0.0123 259.82)",
+          "oklch(49% 0.0123 259.82)",
+          "oklch(61% 0.0123 259.82)",
+          "oklch(72% 0.0123 259.82)",
+          "oklch(84% 0.0123 259.82)",
+          "oklch(95% 0.0123 259.82)"
+        ]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Border Strong",
+        "tonalRamp": [
+          "oklch(15% 0.0273 261.12)",
+          "oklch(26% 0.0273 261.12)",
+          "oklch(38% 0.0273 261.12)",
+          "oklch(49% 0.0273 261.12)",
+          "oklch(61% 0.0273 261.12)",
+          "oklch(72% 0.0273 261.12)",
+          "oklch(84% 0.0273 261.12)",
+          "oklch(95% 0.0273 261.12)"
+        ]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Text Primary",
+        "tonalRamp": [
+          "oklch(15% 0.0368 260.03)",
+          "oklch(26% 0.0368 260.03)",
+          "oklch(38% 0.0368 260.03)",
+          "oklch(49% 0.0368 260.03)",
+          "oklch(61% 0.0368 260.03)",
+          "oklch(72% 0.0368 260.03)",
+          "oklch(84% 0.0368 260.03)",
+          "oklch(95% 0.0368 260.03)"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Text Secondary",
+        "tonalRamp": [
+          "oklch(15% 0.0374 257.28)",
+          "oklch(26% 0.0374 257.28)",
+          "oklch(38% 0.0374 257.28)",
+          "oklch(49% 0.0374 257.28)",
+          "oklch(61% 0.0374 257.28)",
+          "oklch(72% 0.0374 257.28)",
+          "oklch(84% 0.0374 257.28)",
+          "oklch(95% 0.0374 257.28)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Text Muted",
+        "tonalRamp": [
+          "oklch(15% 0.0298 261.06)",
+          "oklch(26% 0.0298 261.06)",
+          "oklch(38% 0.0298 261.06)",
+          "oklch(49% 0.0298 261.06)",
+          "oklch(61% 0.0298 261.06)",
+          "oklch(72% 0.0298 261.06)",
+          "oklch(84% 0.0298 261.06)",
+          "oklch(95% 0.0298 261.06)"
+        ]
+      },
+      "accent-solid": {
+        "role": "primary",
+        "displayName": "Accent Solid",
+        "tonalRamp": [
+          "oklch(15% 0.2152 262.88)",
+          "oklch(26% 0.2152 262.88)",
+          "oklch(38% 0.2152 262.88)",
+          "oklch(49% 0.2152 262.88)",
+          "oklch(61% 0.2152 262.88)",
+          "oklch(72% 0.2152 262.88)",
+          "oklch(84% 0.2152 262.88)",
+          "oklch(95% 0.2152 262.88)"
+        ]
+      },
+      "accent-solid-hover": {
+        "role": "primary",
+        "displayName": "Accent Solid Hover",
+        "tonalRamp": [
+          "oklch(15% 0.2172 264.38)",
+          "oklch(26% 0.2172 264.38)",
+          "oklch(38% 0.2172 264.38)",
+          "oklch(49% 0.2172 264.38)",
+          "oklch(61% 0.2172 264.38)",
+          "oklch(72% 0.2172 264.38)",
+          "oklch(84% 0.2172 264.38)",
+          "oklch(95% 0.2172 264.38)"
+        ]
+      },
+      "danger-text": {
+        "role": "status",
+        "displayName": "Danger Text",
+        "tonalRamp": [
+          "oklch(15% 0.1905 27.52)",
+          "oklch(26% 0.1905 27.52)",
+          "oklch(38% 0.1905 27.52)",
+          "oklch(49% 0.1905 27.52)",
+          "oklch(61% 0.1905 27.52)",
+          "oklch(72% 0.1905 27.52)",
+          "oklch(84% 0.1905 27.52)",
+          "oklch(95% 0.1905 27.52)"
+        ]
+      },
+      "danger-surface": {
+        "role": "status",
+        "displayName": "Danger Surface",
+        "tonalRamp": [
+          "oklch(15% 0.0129 17.38)",
+          "oklch(26% 0.0129 17.38)",
+          "oklch(38% 0.0129 17.38)",
+          "oklch(49% 0.0129 17.38)",
+          "oklch(61% 0.0129 17.38)",
+          "oklch(72% 0.0129 17.38)",
+          "oklch(84% 0.0129 17.38)",
+          "oklch(95% 0.0129 17.38)"
+        ]
+      },
+      "danger-border": {
+        "role": "status",
+        "displayName": "Danger Border",
+        "tonalRamp": [
+          "oklch(15% 0.1035 19.57)",
+          "oklch(26% 0.1035 19.57)",
+          "oklch(38% 0.1035 19.57)",
+          "oklch(49% 0.1035 19.57)",
+          "oklch(61% 0.1035 19.57)",
+          "oklch(72% 0.1035 19.57)",
+          "oklch(84% 0.1035 19.57)",
+          "oklch(95% 0.1035 19.57)"
+        ]
+      },
+      "warning-text": {
+        "role": "status",
+        "displayName": "Warning Text",
+        "tonalRamp": [
+          "oklch(15% 0.1247 46.20)",
+          "oklch(26% 0.1247 46.20)",
+          "oklch(38% 0.1247 46.20)",
+          "oklch(49% 0.1247 46.20)",
+          "oklch(61% 0.1247 46.20)",
+          "oklch(72% 0.1247 46.20)",
+          "oklch(84% 0.1247 46.20)",
+          "oklch(95% 0.1247 46.20)"
+        ]
+      },
+      "warning-surface": {
+        "role": "status",
+        "displayName": "Warning Surface",
+        "tonalRamp": [
+          "oklch(15% 0.0214 95.28)",
+          "oklch(26% 0.0214 95.28)",
+          "oklch(38% 0.0214 95.28)",
+          "oklch(49% 0.0214 95.28)",
+          "oklch(61% 0.0214 95.28)",
+          "oklch(72% 0.0214 95.28)",
+          "oklch(84% 0.0214 95.28)",
+          "oklch(95% 0.0214 95.28)"
+        ]
+      },
+      "warning-border": {
+        "role": "status",
+        "displayName": "Warning Border",
+        "tonalRamp": [
+          "oklch(15% 0.1534 91.61)",
+          "oklch(26% 0.1534 91.61)",
+          "oklch(38% 0.1534 91.61)",
+          "oklch(49% 0.1534 91.61)",
+          "oklch(61% 0.1534 91.61)",
+          "oklch(72% 0.1534 91.61)",
+          "oklch(84% 0.1534 91.61)",
+          "oklch(95% 0.1534 91.61)"
+        ]
+      },
+      "success-text": {
+        "role": "status",
+        "displayName": "Success Text",
+        "tonalRamp": [
+          "oklch(15% 0.0896 152.54)",
+          "oklch(26% 0.0896 152.54)",
+          "oklch(38% 0.0896 152.54)",
+          "oklch(49% 0.0896 152.54)",
+          "oklch(61% 0.0896 152.54)",
+          "oklch(72% 0.0896 152.54)",
+          "oklch(84% 0.0896 152.54)",
+          "oklch(95% 0.0896 152.54)"
+        ]
+      },
+      "success-surface": {
+        "role": "status",
+        "displayName": "Success Surface",
+        "tonalRamp": [
+          "oklch(15% 0.0221 160.24)",
+          "oklch(26% 0.0221 160.24)",
+          "oklch(38% 0.0221 160.24)",
+          "oklch(49% 0.0221 160.24)",
+          "oklch(61% 0.0221 160.24)",
+          "oklch(72% 0.0221 160.24)",
+          "oklch(84% 0.0221 160.24)",
+          "oklch(95% 0.0221 160.24)"
+        ]
+      },
+      "success-border": {
+        "role": "status",
+        "displayName": "Success Border",
+        "tonalRamp": [
+          "oklch(15% 0.1006 157.23)",
+          "oklch(26% 0.1006 157.23)",
+          "oklch(38% 0.1006 157.23)",
+          "oklch(49% 0.1006 157.23)",
+          "oklch(61% 0.1006 157.23)",
+          "oklch(72% 0.1006 157.23)",
+          "oklch(84% 0.1006 157.23)",
+          "oklch(95% 0.1006 157.23)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Meeting body",
+        "purpose": "Guidance and form content in the new planner controls."
+      },
+      "title": {
+        "displayName": "Section title",
+        "purpose": "Recurring meeting-panel headings."
+      },
+      "label": {
+        "displayName": "Field label",
+        "purpose": "Persistent names for editable values."
+      },
+      "action": {
+        "displayName": "Action label",
+        "purpose": "Primary and secondary buttons."
+      },
+      "helper": {
+        "displayName": "Helper text",
+        "purpose": "Compact zone metadata and support text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 1px 2px rgb(16 24 40 / 0.05)",
+        "purpose": "Existing white card surfaces."
+      },
+      {
+        "name": "overlay",
+        "value": "0 0 0 1px rgb(16 24 40 / 0.06), 0 4px 16px rgb(16 24 40 / 0.1)",
+        "purpose": "Floating controls over the 3D stage."
+      },
+      {
+        "name": "active-tab",
+        "value": "0 1px 3px rgb(16 24 40 / 0.12)",
+        "purpose": "Selected sidebar tab."
+      },
+      {
+        "name": "input-focus",
+        "value": "0 0 0 3px rgb(37 99 235 / 0.18)",
+        "purpose": "Focused native fields."
+      },
+      {
+        "name": "exhibitor-bottom-sheet",
+        "value": "0 -8px 24px rgb(16 24 40 / 0.16)",
+        "purpose": "Existing exhibitor stall-detail sheet at 900px and below, now containing the pricing breakdown."
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition",
+        "value": "150ms ease",
+        "purpose": "Existing hover, focus, and press feedback."
+      },
+      {
+        "name": "press-offset",
+        "value": "translateY(1px)",
+        "purpose": "Enabled button active state."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms; animation-iteration-count: 1",
+        "purpose": "Existing global reduced-motion override."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "planner-stack",
+        "value": "900px"
+      },
+      {
+        "name": "dialog-compact",
+        "value": "600px"
+      },
+      {
+        "name": "meeting-compact",
+        "value": "420px"
+      },
+      {
+        "name": "pricing-fields-stack",
+        "value": "359px"
+      },
+      {
+        "name": "pricing-library-stack",
+        "value": "900px"
+      },
+      {
+        "name": "pricing-library-compact",
+        "value": "480px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action in a meeting panel.",
+      "html": "<button class=\"ds-primary\">Draw zone</button>",
+      "css": ".ds-primary{font:600 13px 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;min-height:32px;padding:8px 12px;border-radius:var(--radius-sm, 5px);cursor:pointer;transition:background 150ms ease,border-color 150ms ease,color 150ms ease,transform 150ms ease;background:var(--accent-solid, #2563eb);color:var(--surface-card, #ffffff);border:1px solid transparent}.ds-primary:hover:not(:disabled){background:var(--accent-solid-hover, #1d4ed8)}.ds-primary:focus-visible{outline:2px solid var(--accent, #2563eb);outline-offset:3px}.ds-primary:active:not(:disabled){transform:translateY(1px)}.ds-primary:disabled{opacity:.55;cursor:not-allowed}"
+    },
+    {
+      "name": "Secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Alternative or return action in the same flow.",
+      "html": "<button class=\"ds-secondary\">Keep editing</button>",
+      "css": ".ds-secondary{font:600 13px 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;min-height:32px;padding:8px 12px;border-radius:var(--radius-sm, 5px);cursor:pointer;transition:background 150ms ease,border-color 150ms ease,color 150ms ease,transform 150ms ease;background:transparent;color:var(--text-secondary, #475569);border:1px solid var(--border-default, #d0d5dd)}.ds-secondary:hover:not(:disabled){background:var(--surface-card-hover, #f1f5f9);border-color:var(--border-strong, #98a2b3);color:var(--text-primary, #1e293b)}.ds-secondary:focus-visible{outline:2px solid var(--accent, #2563eb);outline-offset:3px}.ds-secondary:active:not(:disabled){transform:translateY(1px)}.ds-secondary:disabled{opacity:.55;cursor:not-allowed}"
+    },
+    {
+      "name": "Mini action",
+      "kind": "button",
+      "refersTo": "button-mini",
+      "description": "Compact row action for locating or editing an item.",
+      "html": "<button class=\"ds-mini\">Locate</button>",
+      "css": ".ds-mini{font:600 13px 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;min-height:32px;padding:8px 12px;border-radius:var(--radius-sm, 5px);cursor:pointer;transition:background 150ms ease,border-color 150ms ease,color 150ms ease,transform 150ms ease;font-size:11px;padding:4px 8px;background:transparent;color:var(--text-secondary, #475569);border:1px solid var(--border-default, #d0d5dd)}.ds-mini:hover:not(:disabled){background:var(--surface-card-hover, #f1f5f9);border-color:var(--border-strong, #98a2b3);color:var(--text-primary, #1e293b)}.ds-mini:focus-visible{outline:2px solid var(--accent, #2563eb);outline-offset:3px}.ds-mini:active:not(:disabled){transform:translateY(1px)}.ds-mini:disabled{opacity:.55;cursor:not-allowed}"
+    },
+    {
+      "name": "Bounded number field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Persistent label, native constraints, aligned numeric value.",
+      "html": "<label class=\"ds-field\">Aisle width (m)<input class=\"ds-control\" type=\"number\" value=\"3\" min=\"1.5\" max=\"5\" step=\"0.5\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;font:550 13px/1.5 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;color:var(--text-primary, #1e293b)}.ds-control{min-width:0;min-height:36px;padding:8px 12px;background:var(--surface-card, #ffffff);color:var(--text-primary, #1e293b);border:1px solid var(--border-default, #d0d5dd);border-radius:var(--radius-sm, 5px);font:inherit;font-variant-numeric:tabular-nums;caret-color:var(--accent, #2563eb);transition:border-color 150ms ease,box-shadow 150ms ease}.ds-control:hover:not(:disabled){border-color:var(--border-strong, #98a2b3)}.ds-control:focus{border-color:var(--accent, #2563eb);box-shadow:0 0 0 3px var(--accent-ring, rgb(37 99 235 / 0.18))}.ds-control:focus-visible{outline:2px solid var(--accent, #2563eb);outline-offset:3px}.ds-control:user-invalid{border-color:#dc2626}"
+    },
+    {
+      "name": "Sidebar navigation",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "A sample of the existing segmented icon-and-label navigation.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"Planner sections\"><button class=\"ds-tab ds-active\" role=\"tab\" aria-selected=\"true\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M3 3h18v18H3z\"></path><path d=\"M3 11h7V3M10 11v4M10 19v2M10 15h5M19 15h2\"></path><path d=\"M15 3v5h6\"></path></svg>Zones</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"></path><path d=\"M9 12l2 2 4-4\"></path></svg>Rules</button></div>",
+      "css": ".ds-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;padding:3px;background:var(--surface-track, #eceff4);border-radius:var(--radius-md, 7px);max-width:200px}.ds-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;padding:4px 2px;background:transparent;border:0;border-radius:var(--radius-sm, 5px);color:var(--text-muted, #5b6576);font:600 11px 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;cursor:pointer;transition:color 150ms ease,background 150ms ease,box-shadow 150ms ease}.ds-tab:hover{color:var(--text-primary, #1e293b);background:rgb(255 255 255 / .6)}.ds-tab.ds-active{color:var(--text-primary, #1e293b);background:var(--surface-card, #ffffff);box-shadow:0 1px 3px rgb(16 24 40 / .12)}.ds-active svg{color:var(--accent, #2563eb)}.ds-tab:focus-visible{outline:2px solid var(--accent, #2563eb);outline-offset:2px}"
+    },
+    {
+      "name": "Context card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Existing grouping surface for hall context and compact controls.",
+      "html": "<div class=\"ds-card\">Working hall</div>",
+      "css": ".ds-card{padding:12px;margin-bottom:12px;background:var(--surface-card, #ffffff);color:var(--text-primary, #1e293b);border:1px solid var(--border-subtle, #e4e7ec);border-radius:var(--radius-lg, 10px);box-shadow:0 1px 2px rgb(16 24 40 / .05);font:13px/1.5 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif}"
+    },
+    {
+      "name": "Status chip",
+      "kind": "chip",
+      "description": "Passive text-bearing status badge from the existing stall list.",
+      "html": "<span class=\"ds-status\">AVAILABLE</span>",
+      "css": ".ds-status{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--success-border, #a6f4c5);background:var(--success-surface, #ecfdf3);color:var(--success-text, #14532d);font:700 9.5px 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;letter-spacing:.02em;white-space:nowrap}"
+    },
+    {
+      "name": "Publication issue row",
+      "kind": "custom",
+      "description": "Readable issue text with a separate compact location action.",
+      "html": "<div class=\"ds-issue\"><span>Stall overlaps the hall boundary.</span><button class=\"ds-locate\">Locate</button></div>",
+      "css": ".ds-issue{display:flex;align-items:start;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--border-subtle, #e4e7ec);font:13px/1.5 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;color:var(--text-primary, #1e293b)}.ds-locate{font:600 13px 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;min-height:32px;padding:8px 12px;border-radius:var(--radius-sm, 5px);cursor:pointer;transition:background 150ms ease,border-color 150ms ease,color 150ms ease,transform 150ms ease;flex:none;font-size:11px;padding:4px 8px;background:transparent;color:var(--text-secondary, #475569);border:1px solid var(--border-default, #d0d5dd)}.ds-locate:hover:not(:disabled){background:var(--surface-card-hover, #f1f5f9);border-color:var(--border-strong, #98a2b3)}.ds-locate:focus-visible{outline:2px solid var(--accent, #2563eb);outline-offset:3px}.ds-locate:active:not(:disabled){transform:translateY(1px)}.ds-locate:disabled{opacity:.55;cursor:not-allowed}"
+    },
+    {
+      "name": "Price breakdown",
+      "kind": "custom",
+      "description": "Shared planner and exhibitor quote: source revision, aligned INR amounts, separate EMC rows, and a bordered total. Example values are illustrative.",
+      "html": "<div class=\"ds-price\"><p class=\"ds-price-source\">Example master · revision 1 · Bare space</p><dl aria-label=\"Price breakdown\"><div><dt>36 m² × ₹100.00</dt><dd>₹3,600.00</dd></div><div><dt>Open-side premium</dt><dd>₹360.00</dd></div><div><dt>Catalogue</dt><dd>₹0.00</dd></div><div><dt>Stall tax</dt><dd>₹712.80</dd></div><div><dt>EMC charge</dt><dd>₹223.00</dd></div><div><dt>EMC tax</dt><dd>₹40.14</dd></div><div class=\"ds-price-total\"><dt>Total</dt><dd>₹4,935.94</dd></div></dl></div>",
+      "css": ".ds-price{font:13px var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif);color:var(--text-primary, #1e293b)}.ds-price-source{color:var(--text-secondary, #475569);margin:12px 0 8px;overflow-wrap:anywhere}.ds-price dl{margin:0 0 12px}.ds-price dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:5px 0}.ds-price dt{overflow-wrap:anywhere}.ds-price dd{margin:0;white-space:nowrap;font-variant-numeric:tabular-nums}.ds-price dl>.ds-price-total{border-top:1px solid var(--border-default, #d0d5dd);margin-top:6px;padding-top:10px;font-size:16px;font-weight:650}"
+    },
+    {
+      "name": "Pricing recovery alert",
+      "kind": "custom",
+      "description": "Rendered planner operation error with a specific recovery action. Runtime code focuses and scrolls the alert while retaining entries; this snippet shows its presentation.",
+      "html": "<div class=\"ds-pricing-error\" role=\"alert\" tabindex=\"-1\"><p>A price master with this name already exists. Nothing was imported.</p><button type=\"button\" class=\"ds-pricing-recovery\">Return to price form</button></div>",
+      "css": ".ds-pricing-error{font:13px var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif);color:var(--danger-text, #b91c1c);overflow-wrap:anywhere}.ds-pricing-recovery{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2, 8px);min-height:34px;padding:var(--space-1, 4px) var(--space-2, 8px);border:1px solid var(--border-default, #d0d5dd);border-radius:var(--radius-sm, 5px);background:transparent;color:var(--text-secondary, #475569);font:600 11px var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif);cursor:pointer;transition:background var(--transition, 150ms ease),border-color var(--transition, 150ms ease),color var(--transition, 150ms ease),transform var(--transition, 150ms ease)}.ds-pricing-recovery:hover:not(:disabled){background:var(--surface-card-hover, #f1f5f9);border-color:var(--border-strong, #98a2b3);color:var(--text-primary, #1e293b)}.ds-pricing-recovery:focus-visible{outline:2px solid var(--accent, #2563eb);outline-offset:2px}.ds-pricing-recovery:active:not(:disabled){transform:translateY(1px)}.ds-pricing-recovery:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-pricing-recovery{transition-duration:.01ms}}"
+    },
+    {
+      "name": "Hall pricing library source selection",
+      "kind": "custom",
+      "description": "A selected source rate beside its detail, using the existing palette and local library typography. On narrow screens the detail precedes the list; runtime row selection focuses and scrolls to it. Example values are illustrative. Saved-master and reference-only status remain explicit.",
+      "html": "<div class=\"ds-library\"><div class=\"ds-library-list\"><button type=\"button\" class=\"ds-library-row ds-library-chosen\" aria-pressed=\"true\"><span class=\"ds-library-row-title\">Example hall <span class=\"ds-library-state\">Saved</span></span><span>Example event · General</span><span class=\"ds-library-number\">Bare ₹100 · Shell ₹200</span><span class=\"ds-library-muted\">Source applicability window</span></button><button type=\"button\" class=\"ds-library-row\" aria-pressed=\"false\"><span class=\"ds-library-row-title\">Source-only location <span class=\"ds-library-state ds-library-reference\">Reference</span></span><span>Billing basis requires confirmation</span></button></div><section class=\"ds-library-detail\" tabindex=\"-1\" aria-labelledby=\"ds-library-heading\"><div class=\"ds-library-detail-head\"><h2 id=\"ds-library-heading\">Example hall</h2><span class=\"ds-library-state\">Editable master saved</span></div><p>Example event</p><p class=\"ds-library-muted\">General · Domestic rates</p><dl class=\"ds-library-amounts\"><div><dt>Bare / m²</dt><dd>₹100</dd></div><div><dt>Shell / m²</dt><dd>₹200</dd></div><div><dt>Catalogue / stall</dt><dd>Not specified</dd></div></dl><p class=\"ds-library-note\">Saved before tax. Tax and EMC are set to 0 for the demo; dates and categories are selected manually.</p><details><summary>Source record</summary><p>p-db · T_STALL_PRICE_MASTER</p></details></section></div>",
+      "css": ".ds-library{display:grid;grid-template-columns:minmax(290px,.9fr) minmax(360px,1.3fr);gap:24px;align-items:start;color:var(--text-primary,#1e293b);font:14px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}.ds-library-list{border-top:1px solid var(--border-default,#d0d5dd)}.ds-library-row{display:flex;flex-direction:column;gap:5px;text-align:left;width:100%;min-height:42px;border:0;border-bottom:1px solid var(--border-subtle,#e4e7ec);border-radius:0;padding:16px;background:var(--surface-card,#fff);font:inherit;font-size:13px;color:inherit;cursor:pointer}.ds-library-row:hover{background:var(--surface-card-hover,#f1f5f9)}.ds-library-row.ds-library-chosen{background:var(--surface-selected,#eff6ff);box-shadow:inset 0 0 0 1px var(--accent,#2563eb);position:relative}.ds-library-row-title{font-size:15px;font-weight:650;display:flex;justify-content:space-between;align-items:center;gap:12px}.ds-library-state{font-size:12px;font-weight:600;white-space:nowrap;color:var(--success-text,#14532d);background:var(--success-surface,#ecfdf3);padding:3px 7px;border-radius:5px}.ds-library-reference{color:var(--warning-text,#92400e);background:var(--warning-surface,#fffbeb)}.ds-library-muted{font-size:13px;color:var(--text-muted,#5b6576)}.ds-library-number,.ds-library-amounts dd{font-variant-numeric:tabular-nums}.ds-library-detail{padding:24px;border:1px solid var(--border-default,#d0d5dd);border-radius:10px;background:var(--surface-card,#fff);min-width:0;scroll-margin-top:20px}.ds-library-detail-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}.ds-library-detail h2{font-size:22px;line-height:1.3;margin:0}.ds-library-detail p{margin:8px 0 16px;overflow-wrap:anywhere}.ds-library-amounts{margin:0;padding:12px 0;border-block:1px solid var(--border-subtle,#e4e7ec)}.ds-library-amounts>div{display:flex;justify-content:space-between;gap:20px;padding:7px 0}.ds-library-amounts dt{color:var(--text-secondary,#475569)}.ds-library-amounts dd{margin:0;text-align:right;overflow-wrap:anywhere;font-size:19px;font-weight:650}.ds-library-detail .ds-library-note{padding:12px 14px;background:var(--warning-surface,#fffbeb);color:var(--warning-text,#92400e);border:1px solid var(--warning-border,#fcd34d);border-radius:7px;margin:20px 0 16px;font-size:13px}.ds-library-detail details{border-top:1px solid var(--border-subtle,#e4e7ec);padding-top:12px;margin-top:16px;font-size:13px}.ds-library-detail summary{cursor:pointer;font-weight:600;color:var(--text-secondary,#475569)}.ds-library-row:focus-visible,.ds-library-detail:focus-visible,.ds-library-detail summary:focus-visible{outline:3px solid var(--accent,#2563eb);outline-offset:3px}@media(max-width:900px){.ds-library{grid-template-columns:1fr}.ds-library-detail{grid-row:1}.ds-library-list{grid-row:2}}@media(max-width:480px){.ds-library-detail{padding:18px}.ds-library-row-title{flex-wrap:wrap}.ds-library-amounts dd{font-size:18px}}"
+    },
+    {
+      "name": "Zone identity controls",
+      "kind": "custom",
+      "description": "Native per-zone colour input and Auto colour action; text carries the zone rules independently of its swatch.",
+      "html": "<div class=\"ds-zone-colour\"><label>Zone colour<input type=\"color\" value=\"#047857\" /></label><button type=\"button\">Auto colour</button></div><p class=\"ds-zone-hint\">New zones use different colours automatically. Colour does not change the zone’s rules.</p><div class=\"ds-zone-row\"><span class=\"ds-zone-swatch\" aria-hidden=\"true\"></span><div><strong>Exhibition</strong><small>EXHIBITION · B2B · Sellable</small></div></div>",
+      "css": ".ds-zone-colour{display:flex;align-items:center;gap:12px;margin-top:4px;color:var(--text-primary,#1e293b);font:13px/1.5 var(--font-sans,'Inter',ui-sans-serif,system-ui,sans-serif)}.ds-zone-colour label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;margin-bottom:12px;font-weight:550}.ds-zone-colour input{width:100%;height:38px;min-height:38px;padding:3px;border:1px solid var(--border-default,#d0d5dd);border-radius:7px;background:var(--surface-card,#fff);cursor:pointer}.ds-zone-colour button{margin-top:10px;min-height:32px;padding:8px 12px;border:1px solid var(--border-default,#d0d5dd);border-radius:var(--radius-sm,5px);background:transparent;color:var(--text-secondary,#475569);font:600 13px var(--font-sans,'Inter',ui-sans-serif,system-ui,sans-serif);cursor:pointer}.ds-zone-colour button:hover{background:var(--surface-card-hover,#f1f5f9);border-color:var(--border-strong,#98a2b3)}.ds-zone-colour button:active{transform:translateY(1px)}.ds-zone-colour button:focus-visible,.ds-zone-colour input:focus-visible{outline:2px solid var(--accent,#2563eb);outline-offset:3px}.ds-zone-hint{font:12px/1.5 var(--font-sans,'Inter',ui-sans-serif,system-ui,sans-serif);margin:0 0 16px;color:var(--text-secondary,#475569)}.ds-zone-row{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--border-subtle,#e4e7ec);color:var(--text-primary,#1e293b);font:13px/1.5 var(--font-sans,'Inter',ui-sans-serif,system-ui,sans-serif)}.ds-zone-swatch{width:10px;height:24px;border-radius:3px;background:#047857;flex:none}.ds-zone-row small{display:block;color:var(--text-secondary,#475569);font-size:11px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The existing hall planning workspace",
+    "overview": "This record applies to the existing 3D planner sidebar, canvas chrome, and the planning zones, guided planning, batch selection, and publication review extensions. It also records the pricing section in the Layouts tab, the price breakdown and related controls in exhibitor stall details, and the dedicated Hall pricing library at `/planner/pricing`. It also records per-zone identity controls and the narrow removal of the exhibitor map’s floating Hall card. It does not establish an identity for the venue home, setup, drafting, or the rest of the exhibitor pages. CAD retains its incumbent dark model space and local controls; the light palette and typography tokens here do not dictate the CAD palette.\n\nThe incumbent interface is a compact operating workspace: cool pale surfaces, white controls, slate text, and blue action and selection cues. Plain headings, explicit labels, restrained borders, and a large interactive hall keep the task and current state legible. This is an extracted description of the shipped code, not a newly selected visual identity.",
+    "keyCharacteristics": [
+      "Compact controls beside a dominant spatial canvas.",
+      "One blue interaction accent, with separate status colors and per-zone identities.",
+      "Visible focus, numeric alignment, and task-specific review steps.",
+      "Scrollable stacked controls and canvas on narrow screens."
+    ],
+    "rules": [
+      {
+        "name": "The Role Separation Rule",
+        "body": "Blue identifies actions, focus, and selection; status colors communicate outcomes, while per-zone colors identify individual areas alongside textual rule semantics.",
+        "section": "colors"
+      },
+      {
+        "name": "The Controls and Canvas Rule",
+        "body": "Keep form controls in the sidebar and let the hall occupy the remaining desktop width. At the stacked breakpoint, preserve access to both controls and the hall through vertical scrolling.",
+        "section": "layout"
+      },
+      {
+        "name": "The Pricing Recovery Rule",
+        "body": "In pricing, bring an operation failure into view and pair it with the relevant recovery action while retaining the entries needed to continue.",
+        "section": "components"
+      },
+      {
+        "name": "The Pricing Source Rule",
+        "body": "In the Hall pricing library, show whether a source record has an editable master, keep its source limitations visible, and separate stall rates from hall rental schedules.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do inherit the planner's existing CSS variables and Inter stack.",
+      "Do pair a colored status or zone swatch with readable text.",
+      "Do retain visible keyboard focus and labelled native fields.",
+      "Do keep desktop sidebar scrolling separate from the canvas and preserve narrow-screen vertical access.",
+      "Do keep rule agreement and publication exceptions explicit in their corresponding flows."
+    ],
+    "donts": [
+      "Don't apply this planner and scoped-pricing record to unrelated routes as a redesign mandate.",
+      "Don't use per-zone colors as additional primary action colors or infer planning rules from colour alone.",
+      "Don't rely on a status color alone to explain an issue or a selection.",
+      "Don't turn component-specific geometry into new global tokens."
+    ]
+  }
+}

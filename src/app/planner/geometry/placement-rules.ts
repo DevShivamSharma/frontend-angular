@@ -1,3 +1,4 @@
+import { planningZoneViolations, type PlanningZone } from './planning-zones';
 /**
  * Placement rules for the rule-driven hall editor. Pure: no framework, no ORM, no I/O.
  *
@@ -14,6 +15,8 @@
 
 /** Tolerance for "touching is allowed" comparisons. Distances come out of sqrt, hence not 1e-8. */
 import { validateOrientedPlacement } from './oriented-placement';
+import { atHallCorner } from './hall-corners';
+export { atHallCorner } from './hall-corners';
 import { stallPolygon } from './polygon-geometry';
 import { BasicRuleSettings, ruleEnabled } from './basic-rules';
 
@@ -101,7 +104,7 @@ export interface HallOpening {
 export interface LayoutRules {
   /** Per-layout placement checks; unspecified switches default to on. */
   enabledRules?: BasicRuleSettings | null;
-  /** Configurable 3–5 m per event; a missing setting defaults to 3 m. */
+  /** Configurable 1.5–5 m per event (never below 1.5 m); a missing setting defaults to 3 m. */
   minPassageWidth: Record<EventType, number>;
   /** ITPO D5: free passage along all external walls. */
   peripheralClearance: number;
@@ -115,7 +118,17 @@ export interface LayoutRules {
   snapStep: number;
   /** Prefix of persisted stall numbers, e.g. "STALL-" -> "STALL-001". */
   stallNumberPrefix: string;
+  /** Share of the hall floor stalls may cover; the rest is kept for shafts, water and service. */
+  maxUtilization?: number;
+  /** Metres between stalls of a B2B zone and stalls of a B2C zone. */
+  eventSeparation?: number;
+  /** Minimum free depth in front of an emergency exit, whatever the passage width. */
+  emergencyExitClearance?: number;
 }
+
+/** The passage width range: never narrower than 1.5 m (meeting decision), at most 5 m. */
+export const MIN_PASSAGE_WIDTH = 1.5;
+export const MAX_PASSAGE_WIDTH = 5;
 
 export const DEFAULT_LAYOUT_RULES: LayoutRules = {
   minPassageWidth: { B2B: 3, B2C: 3 },
@@ -125,6 +138,9 @@ export const DEFAULT_LAYOUT_RULES: LayoutRules = {
   gridUnit: 1,
   snapStep: 1,
   stallNumberPrefix: 'STALL-',
+  maxUtilization: 0.7,
+  eventSeparation: 3,
+  emergencyExitClearance: 3,
 };
 
 /** Stored (partial) rules merged over the defaults. */
@@ -166,6 +182,7 @@ export interface PlacementStall extends Footprint {
 }
 
 export interface PlacementContext {
+  planningZones?: PlanningZone[] | null;
   enforceGrid?: boolean;
   /** Exact circular boundary for halls without an irregular floor outline. */
   circleRadius?: number;
@@ -192,6 +209,8 @@ export type ViolationCode =
   | 'INVALID_OPEN_SIDES'
   | 'OPEN_SIDE_BLOCKED'
   | 'CORNER_PASSAGE'
+  | 'INTERNAL_ZONE'
+  | 'EVENT_SEPARATION'
   | 'INVALID_TOUCHING'
   | 'INVALID_BACK_TO_BACK'
   | 'OPEN_SIDE_PASSAGE'
@@ -203,6 +222,8 @@ export type ViolationCode =
   | 'PERIPHERAL_CLEARANCE'
   | 'ENTRY_EXIT_BLOCKED'
   | 'EMERGENCY_ACCESS'
+  | 'MAX_UTILIZATION'
+  | 'ZONE_BOUNDARY'
   | 'NO_CONTIGUOUS_SPACE';
 
 /** Where a violation is, so the editor can draw it. */
@@ -240,9 +261,9 @@ export function validatePlacement(
 ): ValidationResult {
   const violations: Violation[] = [];
   const passage = ctx.rules.minPassageWidth[ctx.eventType];
-  if (!Number.isFinite(passage) || passage < 3 || passage > 5) {
+  if (!Number.isFinite(passage) || passage < MIN_PASSAGE_WIDTH || passage > MAX_PASSAGE_WIDTH) {
     return { valid: false, violations: [{ code: 'INVALID_PASSAGE_WIDTH', ruleRef: 'Passage',
-      message: 'Choose a passage width between 3 and 5 m.', geometry: [], relatedStallIds: [] }] };
+      message: `Choose a passage width between ${MIN_PASSAGE_WIDTH} and ${MAX_PASSAGE_WIDTH} m.`, geometry: [], relatedStallIds: [] }] };
   }
   const custom = !!candidate.footprint && candidate.footprint.length >= 3;
   if (custom ? !(candidate.openEdges ?? []).length : !openSidesOf(candidate).length) {
@@ -263,7 +284,9 @@ export function validatePlacement(
   // Rotated or custom-shaped stalls (on either side of a pair) are checked on their real polygons.
   const polygonal = (s: Footprint) => (s.rotation ?? 0) % 360 !== 0 || (!!s.footprint && s.footprint.length >= 3);
   if (polygonal(candidate) || ctx.stalls.some(polygonal)) {
-    return validateOrientedPlacement(candidate, { ...ctx, enforceGrid: true }, ignoreId);
+    const oriented = validateOrientedPlacement(candidate, { ...ctx, enforceGrid: true }, ignoreId);
+    const extra = [...cornerRuleViolations(candidate, ctx), ...planningZoneViolations(candidate, ctx, ignoreId)];
+    return extra.length ? { valid: false, violations: [...oriented.violations, ...extra] } : oriented;
   }
 
   const rect = footprintRect(candidate);
@@ -425,7 +448,21 @@ export function validatePlacement(
     });
   }
 
+  violations.push(...cornerRuleViolations(candidate, ctx), ...planningZoneViolations(candidate, ctx, ignoreId));
   return { valid: violations.length === 0, violations };
+}
+
+/**
+ * Corner keep-out agreed in the October 2026 review, for rectangular and polygonal stalls.
+ */
+function cornerRuleViolations(candidate: Footprint, ctx: PlacementContext): Violation[] {
+  const violations: Violation[] = [];
+  if (ruleEnabled(ctx.rules, 'cornerKeepOut') && atHallCorner(candidate, ctx)) {
+    violations.push({ code: 'CORNER_PASSAGE', ruleRef: 'Hall corners',
+      message: 'No stall in a corner of the hall: keep one passage width clear from at least one adjoining wall.',
+      geometry: [{ type: 'polygon', points: stallPolygon(candidate) }], relatedStallIds: [] });
+  }
+  return violations;
 }
 
 /** One audit entry per stall that currently breaks a rule. */
@@ -474,7 +511,9 @@ export function openingAccessRect(
   const width = Number(opening.width);
   if (!Number.isFinite(width) || width <= 0) return null;
 
-  const depth = rules.openingAccessDepth ?? rules.minPassageWidth[eventType];
+  const passage = rules.openingAccessDepth ?? rules.minPassageWidth[eventType];
+  // An emergency exit keeps its own minimum (3 m) even when aisles are narrower.
+  const depth = opening.kind === 'EMERGENCY' ? Math.max(3, passage, rules.emergencyExitClearance ?? 3) : passage;
   const { x, z } = opening.position;
   const half = width / 2;
 

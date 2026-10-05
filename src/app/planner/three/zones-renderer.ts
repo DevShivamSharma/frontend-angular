@@ -1,3 +1,5 @@
+import { planningZoneColor, zoneLabelColor } from '../geometry/zone-colors';
+import type { PlanningZone } from '../geometry/planning-zones';
 import * as THREE from 'three';
 import { ruleEnabled } from '../geometry/basic-rules';
 
@@ -225,4 +227,17 @@ function bounds(points: Point[]): Rect {
     minZ: Math.min(...points.map(p => p.z)),
     maxZ: Math.max(...points.map(p => p.z))
   };
+}
+
+export function buildPlanningZones(zones:readonly PlanningZone[]):THREE.Group {
+ const group=new THREE.Group();group.name='planning-zones';
+ for(const [index,zone] of zones.entries()) {
+  const color=planningZoneColor(zone,index),fill=flatPolygon(zone.polygon,color,.17,.08);
+  fill.userData['planTooltip']=zone.label+' · '+zone.kind+' · '+zone.eventType;
+  group.add(fill,outline(zone.polygon,color,.1));
+  const x=zone.polygon.reduce((s,p)=>s+p.x,0)/zone.polygon.length,z=zone.polygon.reduce((s,p)=>s+p.z,0)/zone.polygon.length;
+  const label=makeTextSprite([zone.label,zone.kind+' · '+zone.eventType],{color:zoneLabelColor(color),background:color,lineHeight:.7,bold:true});
+  label.position.set(x,.8,z);group.add(label);
+ }
+ return group;
 }

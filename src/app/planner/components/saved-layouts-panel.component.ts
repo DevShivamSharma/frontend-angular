@@ -3,6 +3,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
+import { PricingPanelComponent } from '../pricing/pricing-panel.component';
 import { LayoutSummary } from '../models/layout.model';
 import { IconComponent } from './icon.component';
 import { PlannerStore } from '../planner-store.service';
@@ -11,7 +12,7 @@ import { PlannerStore } from '../planner-store.service';
 @Component({
   selector: 'app-saved-layouts-panel',
   templateUrl: './saved-layouts-panel.component.html',
-  imports: [ReactiveFormsModule, IconComponent, RouterLink],
+  imports: [ReactiveFormsModule, IconComponent, RouterLink, PricingPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SavedLayoutsPanelComponent {

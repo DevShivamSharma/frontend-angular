@@ -87,7 +87,7 @@ test('geometry: disconnected floor regions remain available in free-space search
 });
 
 test('geometry: width range, multiple open sides and cancelled neighbours', () => {
-  for (const width of [2, 6, NaN]) expect(codes(at(10, 10), context(width))).toContain('INVALID_PASSAGE_WIDTH');
+  for (const width of [1, 6, NaN]) expect(codes(at(10, 10), context(width))).toContain('INVALID_PASSAGE_WIDTH');
   expect(codes({ ...at(10, 10), openSides: [] }, context())).toContain('INVALID_OPEN_SIDES');
   const ctx = context();
   ctx.stalls = [{ ...at(10, 10), id: 'cancelled', status: 'CANCELLED' }];
@@ -130,6 +130,8 @@ test('geometry: closed sides either side of an exterior notch need no passage be
   const ctx = context();
   ctx.boundary = [{ x: 0, z: 0 }, { x: 15, z: 0 }, { x: 15, z: 30 }, { x: 25, z: 30 },
     { x: 25, z: 0 }, { x: 40, z: 0 }, { x: 40, z: 40 }, { x: 0, z: 40 }];
+  expect(codes(at(10, 1), ctx)).toContain('CORNER_PASSAGE');
+  ctx.rules = { ...ctx.rules, enabledRules: { cornerKeepOut: false } };
   ctx.stalls = [{ ...at(26, 1), id: 'across-notch' }];
   expect(validatePlacement(at(10, 1), ctx).valid).toBe(true);
   ctx.stalls = [{ ...at(10, 1), id: 'existing-corner' }];

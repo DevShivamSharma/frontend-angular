@@ -1,3 +1,6 @@
+import { PlanningZonesComponent } from './components/planning-zones.component';
+import { BatchStallsComponent } from './components/batch-stalls.component';
+import { PublishDialogComponent } from './components/publish-dialog.component';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -45,7 +48,7 @@ import { PlannerStore } from './planner-store.service';
 import { Scene3dComponent, StallMove, StallOpenSide, ViewCommand } from './three/scene3d.component';
 
 /** Sidebar sections. UI only: which group of panels is visible. */
-export type SidebarTab = 'stalls' | 'assist' | 'layouts' | 'hall' | 'rules';
+export type SidebarTab = 'stalls' | 'zones' | 'assist' | 'layouts' | 'hall' | 'rules';
 
 interface SidebarTabView {
   id: SidebarTab;
@@ -56,7 +59,7 @@ interface SidebarTabView {
   warn: boolean;
 }
 
-const TAB_ORDER: readonly SidebarTab[] = ['stalls', 'assist', 'layouts', 'hall', 'rules'];
+const TAB_ORDER: readonly SidebarTab[] = ['stalls', 'zones', 'assist', 'layouts', 'hall', 'rules'];
 
 /** Same breakpoint as the stacked layout in planner-page.component.css. */
 const COMPACT_QUERY = '(max-width: 900px)';
@@ -77,7 +80,7 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
   templateUrl: './planner-page.component.html',
   styleUrl: './planner-page.component.css',
   providers: [PlannerStore, AiChatSession],
-  imports: [
+  imports: [PlanningZonesComponent, BatchStallsComponent, PublishDialogComponent,
     PlannerTourComponent,
     SelfcareImportComponent,
     PdfImportCardComponent,
@@ -224,6 +227,7 @@ export class PlannerPageComponent implements OnInit {
 
     return [
       { id: 'stalls', label: 'Stalls', icon: 'store', count: badge(this.currentStalls().length), warn: false },
+      { id: 'zones', label: 'Zones', icon: 'floor-plan', count: badge(this.currentHall()?.planningZones?.length??0), warn:false },
       { id: 'assist', label: 'Assist', icon: 'sparkles', count: null, warn: false },
       { id: 'layouts', label: 'Layouts', icon: 'save', count: badge(this.store.savedLayouts().length), warn: false },
       { id: 'hall', label: 'Hall', icon: 'building', count: null, warn: false },
@@ -253,7 +257,7 @@ export class PlannerPageComponent implements OnInit {
     return {
       shops: this.currentStalls().length,
       area: Math.round(used),
-      occupancy: floor > 0 ? Math.round((used / floor) * 100) : 0,
+      occupancy: Math.round((this.store.publishReport()?.usage.ratio??0)*100),
       issues: this.ruleDriven() ? this.issueCount() : 0
     };
   });

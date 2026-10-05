@@ -1,3 +1,5 @@
+import { effectiveRules } from './geometry/placement-rules';
+import { sellableZone } from './geometry/planning-zones';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { LayoutAssistantService, AssistantResponse } from './layout-assistant.service';
 import { PlannerStore } from './planner-store.service';
@@ -24,6 +26,13 @@ export class AiChatSession {
   readonly hall = this.store.currentHall;
   private serial = 0;
   private requestId = 0;
+  private readonly agreedSnapshot = signal('');
+  readonly guideRules = computed(()=>effectiveRules(this.hall()?.rules));
+  readonly sellableZones = computed(()=>(this.hall()?.planningZones??[]).filter(sellableZone));
+  private rulesSnapshot():string {return JSON.stringify([this.hall()?.id,this.guideRules(),this.store.eventType(),this.hall()?.planningZones]);}
+  readonly rulesAgreed = computed(()=>!!this.hall() && this.agreedSnapshot()===this.rulesSnapshot());
+  agreeRules():void {this.agreedSnapshot.set(this.rulesSnapshot());}
+  reviewRules():void {this.agreedSnapshot.set('');}
   readonly examples = computed(() => {
     const marker = this.hall()?.markers?.find(m=>/foyer/i.test(m.text)) ?? this.hall()?.markers?.[0];
     return [marker ? `12 stalls of 3x3 near ${marker.text}` : '12 stalls of 3x3', '20 stalls of 3x3 along the left wall, 4 m aisles', 'Fill the hall with 3x2 stalls', 'Set the passage width to 4 m'];
@@ -44,15 +53,15 @@ export class AiChatSession {
   private update(id:number,patch:Partial<ChatMessage>) { this.messages.update(items=>items.map(m=>m.id===id?{...m,...patch}:m)); }
   private expire() { this.messages.update(items=>items.map(m=>m.state==='pending'?{...m,state:'expired'}:m)); }
   private snapshot() { return JSON.stringify(this.store.currentStalls()); }
-  async send() {
+  async send(zoneId?:string) {
     const requirement=this.draft().trim(), hall=this.hall();
-    if (!requirement || requirement.length>500 || !hall || this.busy()) return;
+    if (!requirement || requirement.length>500 || !hall || this.busy() || !this.rulesAgreed()) return;
     const id=++this.requestId;
     const removalSnapshot=this.snapshot();
     this.expire(); this.store.clearPlan(); this.busy.set(true); this.draft.set('');
     this.append({role:'user',text:requirement});
     try {
-      const plan=await this.assistant.plan(requirement,{...hall,eventType:this.store.eventType()} as typeof hall,this.store.currentStalls(),this.store.grid()?.cellSize??1);
+      const plan=await this.assistant.plan(requirement,{...hall,eventType:this.store.eventType()} as typeof hall,this.store.currentStalls(),this.store.grid()?.cellSize??1,zoneId);
       if (id!==this.requestId || this.hall()!==hall) return;
       if (plan.action==='rules' && plan.rules) {
         const ruleLines=this.ruleLines(plan.rules);

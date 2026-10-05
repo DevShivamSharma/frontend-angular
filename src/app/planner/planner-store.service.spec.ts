@@ -130,7 +130,7 @@ describe('PlannerStore', () => {
   });
 
   describe('addStall', () => {
-    it('places the first shop at the far -X/-Z corner', () => {
+    it('keeps the first shop out of the far -X/-Z corner', () => {
       const created = store.addStall({
         name: '',
         width: 8,
@@ -141,8 +141,8 @@ describe('PlannerStore', () => {
       });
 
       expect(created).toBeTruthy();
-      // One metre of wall clearance also applies to the offline hall.
-      expect(created!.posX).toBe(-15);
+      // The default 3 m corner keep-out moves X off the corner; wall clearance keeps Z at 1 m.
+      expect(created!.posX).toBe(-13);
       expect(created!.posZ).toBe(-15);
       expect(created!.name).toBe('Shop 1');
       expect(store.selectedStallId()).toBe(created!.id);
@@ -162,7 +162,7 @@ describe('PlannerStore', () => {
       const second = store.addStall(form);
 
       expect(second!.posZ).toBe(-15);
-      expect(second!.posX).toBe(-7); // next to the first 8 m stall, sharing a wall
+      expect(second!.posX).toBe(-5); // next to the first 8 m stall, sharing a wall
       expect(second!.name).toBe('Shop 2');
     });
 
@@ -248,7 +248,7 @@ describe('PlannerStore', () => {
       const shop = addShop();
       store.moveStall(shop.id, 100, 0);
 
-      expect(store.selectedStall()!.posX).toBe(-15);
+      expect(store.selectedStall()!.posX).toBe(shop.posX);
       expect(store.error()).toContain('outside the hall boundary');
     });
 
@@ -265,7 +265,7 @@ describe('PlannerStore', () => {
 
       store.moveStall(second.id, first.posX, first.posZ);
 
-      expect(store.stalls().find(s => s.id === second.id)!.posX).toBe(-7);
+      expect(store.stalls().find(s => s.id === second.id)!.posX).toBe(second.posX);
       expect(store.error()).toContain('Overlaps existing stall');
     });
 
