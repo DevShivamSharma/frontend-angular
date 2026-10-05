@@ -1,9 +1,12 @@
+import type { PricingSnapshot } from '../pricing/pricing.model';
+import type { PublishIssue } from '../geometry/publish-check';
+export interface Publication { status?: 'DRAFT' | 'PUBLISHED'; publishedAt?: string | null; publishOverrides?: { reason: string; issues: PublishIssue[] } | null; }
 import type { Violation } from '../geometry/placement-rules';
 import { EventType, Hall, HallShape } from './hall.model';
 import { GateSide, StallInput, StallStatus } from './stall.model';
 
 /** Row shape rendered in the "Saved Layouts" list (`App.js:593`). */
-export interface LayoutSummary {
+export interface LayoutSummary extends Publication {
   id: number | string;
   name: string;
   stallCount?: number;
@@ -12,16 +15,25 @@ export interface LayoutSummary {
 
 /** Response of `GET /api/layout/{id}` as consumed by `openLayout` (`App.js:575`). */
 export interface LayoutDetail {
-  layout?: { id?: number | string; name?: string; eventType?: EventType; ruleIds?: number[] };
+  layout?: Publication & { pricingPolicy?: PricingSnapshot; id?: number | string; name?: string; eventType?: EventType; ruleIds?: number[] };
   name?: string;
   hall?: Hall;
   stalls?: StallInput[];
 }
 
+/** Response of `POST /api/layout/{id}/stalls/{stallNumber}/book`: the stall, now BOOKED. */
+export interface StallBookedResponse {
+  message?: string;
+  layoutId?: number | string;
+  stall: StallInput;
+  /** The same booking as SelfCare table rows (backend-nest/docs/selfcare-booking-payload.md). */
+  selfcare?: Record<string, unknown>;
+}
+
 /** Response of `POST /api/layout/save` as consumed by `saveLayout` (`App.js:572`). */
 export interface LayoutSaveResponse {
   id?: number | string;
-  layout?: { id?: number | string };
+  layout?: Publication & { id?: number | string };
   /** The stalls as persisted, with their assigned stall numbers. */
   stalls?: StallInput[];
 }
@@ -37,6 +49,7 @@ export interface HallPayload {
   blockedAreas?: unknown[];
   boundary?: unknown[];
   zones?: unknown[];
+  planningZones?: unknown[];
   openings?: unknown[];
   markers?: unknown[];
   amenities?: unknown[];

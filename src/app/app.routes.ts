@@ -9,6 +9,7 @@ import { HomePageComponent } from './home/home-page.component';
  * SPA fallback parity; no guards are added until authentication requirements exist.
  */
 export const routes: Routes = [
+  { path: 'planner/pricing', title: 'Hall pricing library', loadComponent: () => import('./planner/pricing/pricing-library.component').then(m => m.PricingLibraryComponent) },
   { path: '', component: HomePageComponent },
   // Step 3, the stall editor, full screen. Listed before the setup routes so `planner/editor`
   // is never taken for a setup step. Opened with `?hallId=` from "Start creating".
@@ -23,6 +24,13 @@ export const routes: Routes = [
     path: 'planner/draft',
     title: 'Drafting · Stall planner',
     loadComponent: () => import('./planner/drafting/drafting-page.component').then(m => m.DraftingPageComponent)
+  },
+  // The exhibitor-facing view of a saved layout: the stall map, availability and booking.
+  // Opened with `?layoutId=` from a saved layout's View button.
+  {
+    path: 'planner/view',
+    title: 'Stall map',
+    loadComponent: () => import('./planner/exhibitor-view/exhibitor-view-page.component').then(m => m.ExhibitorViewPageComponent)
   },
   {
     path: 'planner',

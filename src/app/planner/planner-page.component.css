@@ -32,7 +32,7 @@
   box-sizing: border-box;
   border-right: 1px solid var(--border-subtle);
   min-height: 0;
-  transition: margin-left 200ms ease;
+  /* Sidebar width changes instantly, avoiding a layout animation on the 3D canvas. */
 }
 
 /* Hidden sidebar: slid out by its own width, so the stage (flex: 1) takes the space. The 3D view
@@ -269,3 +269,11 @@
   .planner.tour-active .sidebar { transition: none; }
 }
 
+
+.sidebar-tabs{grid-template-columns:repeat(6,minmax(0,1fr));overflow-x:auto;scrollbar-width:thin}.sidebar-tab{flex:1 0 auto;min-width:52px}.utilization{margin:10px 0 0;font-variant-numeric:tabular-nums}.utilization-track{position:relative;height:6px;border-radius:3px;background:var(--border-subtle)}.utilization-track span{display:block;height:100%;border-radius:3px;background:var(--accent-solid)}.utilization-track .over{background:var(--danger-text)}.utilization-track i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text-primary)}.utilization small{display:block;margin-top:6px;color:var(--text-secondary);font-size:11px}.publication-actions{display:flex;gap:12px;align-items:center;margin:12px 0}.publication-record{font-size:12px;max-height:80px;overflow:auto}.publication-record p{overflow-wrap:anywhere}
+
+@media(max-width:900px){.planner:not(.tour-active) .sidebar{max-height:none;overflow:visible}.planner:not(.tour-active) .sidebar-body{flex:none;max-height:70dvh;min-height:320px}.planner:not(.tour-active) .sidebar-header{flex:none}.sidebar-tab{min-width:0}.sidebar-header>.planner-tour-help{min-height:32px}.hud-info{max-width:180px}}
+
+/* The Help tour reserves space for its current action and explanatory card. */
+.tour-active .utilization, .tour-active .publication-actions, .tour-active .publication-record { display: none; }
+.tour-active .sidebar-body { scroll-padding-block: 8px; }

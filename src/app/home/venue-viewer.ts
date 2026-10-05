@@ -171,6 +171,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             return;
         } tween = { start: performance.now(), duration, a: camera.position.clone(), b: controls.target.clone(), p: position, t: target }; invalidate(); }
         function view(id:string) {
+            controls.maxPolarAngle = Math.PI * .46;
             resetLevel();highlight(id);const v=views[id];if(!v)return;
             const target=W(...v.t),eye=W(...v.p);
             const radius=v.radius ?? (({overview:490,cc:110,hall1:70,hall14:70,hall6:86,hall11:74,hall12A:74,hall12:56,fountain:72} as Record<string,number>)[id]||62);
@@ -185,6 +186,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         viewCommand=view;
         for (const d of destinations.filter(d => d.gate && d.camera))
             views[d.id] = { p: d.camera!, t: d.target ?? d.center, radius: d.radius };
+        // Include the adjoining checkpoint when selecting Gate 9 from the menu.
+        views['gate9'] = { p: [-571, -401, 22], t: [-536, -369, 2.5], radius: 22 };
         levelCommand=n=>{view('cc');level=n;};
         globeCommand=()=>{resetLevel();tween=null;globe?.goGlobe();};
         isGlobe=()=>!!globe?.isGlobe;
@@ -263,12 +266,40 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             invalidate();
         };
         events.status('Bharat Mandapam');
+        const detailView = new URLSearchParams(location.search).get('view');
+        const fitDetailWidth = (aspect: number) =>
+            ['itpo-office', 'gate9'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
         if (new URLSearchParams(location.search).get('view') === 'cc-forecourt') {
             camera.position.copy(W(10.685, 141.551, 220));
             controls.target.copy(W(-284.315, -123.449, 5));
             controls.update();
             events.status('Convention Centre · Forecourt');
+        } else if (new URLSearchParams(location.search).get('view') === 'itpo-office') {
+            camera.position.copy(W(-565, -480, 115));
+            controls.target.copy(W(-450, -379, 5));
+            controls.update();
+            events.status('ITPO Office');
+        } else if (new URLSearchParams(location.search).get('view') === 'itpo-courtyard') {
+            controls.maxPolarAngle = Math.PI * .4998;
+            camera.position.copy(W(-407, -384, 2.2));
+            controls.target.copy(W(-487, -386, 2));
+            controls.update();
+            events.status('ITPO Office · Garden Walk');
+        } else if (new URLSearchParams(location.search).get('view') === 'gate9') {
+            camera.position.copy(W(-571, -401, 22));
+            controls.target.copy(W(-536, -369, 2.5));
+            controls.update();
+            events.status('Gate 9 · Security Check');
+        } else if (new URLSearchParams(location.search).get('view') === 'itpo-walkway') {
+            // Eye level on the office's east walk, looking along it as in the site photo.
+            controls.maxPolarAngle = Math.PI * .4998;
+            camera.position.copy(W(-486, -350, 2.2));
+            controls.target.copy(W(-405, -345, 1.6));
+            controls.update();
+            events.status('ITPO Office · Walkway');
         }
+        camera.position.sub(controls.target).multiplyScalar(fitDetailWidth(camera.aspect)).add(controls.target);
+        controls.update();
         const ray = new T.Raycaster(), pointer = new T.Vector2();
         let down: [
             number,
@@ -296,7 +327,13 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             if (!mat.transparent || mat.opacity > .9)
                 break;
         } }, { signal });
-        function resize() { renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); ambientOcclusion.resize(); invalidate(); }
+        function resize() {
+            renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.setSize(innerWidth, innerHeight);
+            const aspect = innerWidth / innerHeight;
+            if (!globe?.isGlobe && !globe?.transitioning)
+                camera.position.sub(controls.target).multiplyScalar(fitDetailWidth(aspect) / fitDetailWidth(camera.aspect)).add(controls.target);
+            camera.aspect = aspect; camera.updateProjectionMatrix(); ambientOcclusion.resize(); invalidate();
+        }
         listen('resize', resize);
         listen('pageshow', resize);
         function updateFrame() { if (tween) {

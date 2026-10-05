@@ -156,6 +156,20 @@ describe('PDF import plan', () => {
     for (const s of stalls) expect(cellCentres(placeOutline(s, fit.alignment)).every(p => mask.free(p))).toBe(true);
   });
 
+  it('fits flush between walls on half metres instead of turning the drawing round', () => {
+    // A 21 x 10 m hall with its right 6 m outside: the floor is x -10.5..4.5, exactly the 15 m row.
+    const stalls = [box('12A', 0, 0), box('12A', 4, 0), box('12A', 8, 0), box('12A', 12, 0, 3)];
+    const r = result(stalls, [group('12A', 0, 0)]);
+    const hall: Hall = {
+      ...plainHall(21, 10),
+      blockedAreas: [{ kind: 'outside', posX: 7.5, posZ: 0, width: 6, length: 10, color: '#ffffff' }],
+    };
+    const fit = autoFit(r, ['12A'], hall);
+    expect(fit.alignment.rotation).toBe(0);
+    expect(fit.alignment.offsets['12A'].x).toBe(-10.5);
+    expect(fit.total).toBe(4);
+  });
+
   it('keeps the drawing layout when everything fits as drawn', () => {
     const r = result([box('10', 0, 0), box('9', 0, 0)], [group('10', 0, 0), group('9', 50, 0)]);
     const hall = plainHall(60, 20);

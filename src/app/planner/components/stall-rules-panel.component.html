@@ -1,0 +1,54 @@
+<section class="srp" aria-label="Rules for this stall">
+  <div class="srp-summary" role="status">
+    @if (broken().length || report().other.length) {
+      <span class="srp-pill is-broken">{{ broken().length + report().other.length }} to fix</span>
+    } @else if (met().length) {
+      <span class="srp-pill is-ok">Meets every rule that is on</span>
+    } @else {
+      <span class="srp-pill">No rule is on for this layout</span>
+    }
+    <span>{{ met().length }} met · {{ off().length }} off</span>
+    <span class="srp-values">Passage {{ passageWidth() }} m · Wall clearance {{ wallClearance() }} m</span>
+  </div>
+
+  <ul class="srp-list">
+    @for (check of broken(); track check.id) {
+      <li class="is-broken">
+        <app-icon name="x" [size]="12" />
+        <div>
+          <b>{{ check.label }}</b>
+          @for (message of check.messages; track $index) { <p>{{ message }}</p> }
+        </div>
+      </li>
+    }
+    @for (message of report().other; track $index) {
+      <li class="is-broken">
+        <app-icon name="x" [size]="12" />
+        <div><b>Always checked</b><p>{{ message }}</p></div>
+      </li>
+    }
+    @for (check of met(); track check.id) {
+      <li class="is-ok" [title]="check.description">
+        <app-icon name="check" [size]="12" />
+        <div><b>{{ check.label }}</b></div>
+      </li>
+    }
+    @for (check of off(); track check.id) {
+      <li class="is-off" [title]="check.description">
+        <span class="srp-dash" aria-hidden="true"></span>
+        <div><b>{{ check.label }}</b> <span class="srp-tag">Off for this layout</span></div>
+      </li>
+    }
+  </ul>
+
+  @if (unusedLabels()) {
+    <p class="srp-unused">Not used in this hall (no such zones): {{ unusedLabels() }}</p>
+  }
+
+  @if (notes().length) {
+    <div class="srp-notes">
+      <b>Written rules for this layout</b>
+      <ul>@for (note of notes(); track $index) { <li>{{ note }}</li> }</ul>
+    </div>
+  }
+</section>

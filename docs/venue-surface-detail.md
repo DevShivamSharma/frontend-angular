@@ -2,6 +2,32 @@
 
 Later outer-road and front-garden refinement: [venue-edge-alignment.md](venue-edge-alignment.md).
 
+## ITPO exterior photo update (2 October 2026)
+
+The user marked the previously empty court on the other side of the office and supplied
+three site photographs. `venue-itpo-exterior.ts` adds three raised concrete/hedge beds,
+layered broad-leaf fig shrubs, twin-head street lamps, green bins, two cream arched
+open shelters, a low enclosure with terracotta louvres, and a black/yellow kerb.
+A separate 4.8 × 4 m security check room stands beside Gate 9, with windows, a door,
+an entrance awning and a shallow overhanging roof. Its meshes retain Gate 9 selection
+through batching. These are photo-guided approximations, not surveyed dimensions.
+
+The original office, roads, gate, east walkway and source GLB remain intact. The new
+26,144 triangles form 19 material/selection batches in the isolated geometry check;
+the full viewer also separates shadow and glazing semantics. The existing scene owns
+all geometry/material disposal. There are no extra image downloads or animation loops.
+
+Preview routes: `/?view=itpo-office` (marked court overview), `/?view=itpo-courtyard`
+(eye-level walk), and `/?view=gate9` (gate and checkpoint). The normal Gate 9 menu view
+also includes the checkpoint. Overview and gate presets fit narrow viewport widths.
+
+All three `e2e/venue-surfaces.spec.ts` checks passed in `itpo-exterior-confirm`. They
+sample the shipping model's ground beneath every new major footprint, verify the
+continuous office walk and gate lane stay open, preserve authored geometry, and bound
+added geometry/batches. The first run caught a checkpoint corner touching a fallback
+road kerb; moving the room one metre resolved it. Natural/Color and desktop/mobile
+previews were inspected in the browser; captures are in `.impeccable/review/` (ignored).
+
 Requested finish: subtle paving/roof detail with greenery on ground only. The large open campus surfaces use the supplied model's `paved_ground` material. Existing roof geometry, roof materials, buildings, roads, map masking and labels are preserved.
 
 ## Changes
@@ -9,6 +35,7 @@ Requested finish: subtle paving/roof detail with greenery on ground only. The la
 - `src/app/home/venue-surface-detail.ts`: world-aligned stone coursing on the actual paving meshes, with small slab joints and larger inset borders. Seven decorative planter beds add fourteen small trees in open ground areas. These are visual design additions, not surveyed venue features.
 - `src/app/home/venue-appearance.ts`: neutral paving in Natural; the supplied red Kota stone image remains the base texture in Color, composed into matching coursing. Two cached 1024-pixel atlases, mipmaps and anisotropic filtering keep sampling consistent during movement. Color's atlas is created lazily with the existing palette. Both atlases are uploaded before display and released by the existing appearance controller.
 - `src/app/home/venue-viewer.ts`: prepare the surfaces once before the existing lossless batch pass.
+- `src/app/home/venue-edge-detail.ts` (`addItpoWalkway`): the ITPO office's east walkway as photographed on site (October 2026): along the ~8.5 m paved walk, a raised concrete planter in three runs with a hedge, fiddle-leaf fig shrubs, one tall street lamp per run and green bins at the crossings. Built from the model's own materials (the bins have their own green), on the "office ground court" paving; `e2e/venue-surfaces.spec.ts` ray-checks every run, bin and the clear walk against the supplied GLB. Positions are photo-guided, not surveyed. View it with `/?view=itpo-walkway` (eye level, as in the photo) or `/?view=itpo-office` (overview).
 - `e2e/venue-surfaces.spec.ts`: inspect actual supplied GLB triangles to verify the planter footprints and clearance, preserve authored geometry and non-paving UVs, and bound the additional geometry/batches.
 
 No source GLB/image was edited. There is no added network asset, second model, animation loop, per-frame geometry calculation or material update. Demand rendering, cached shadows, camera controls and the existing appearance switch remain in use. The new planters contain 2,800 triangles and batch into three material groups. Texture storage for both generated atlases is approximately 10.7 MiB including mipmaps, once both modes have been opened.

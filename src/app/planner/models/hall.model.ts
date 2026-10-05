@@ -1,3 +1,4 @@
+import type { PlanningZone } from '../geometry/planning-zones';
 import type {
   EventType,
   HallOpening,
@@ -53,6 +54,7 @@ export interface BlockedArea {
  * `excel-hall-1712345678901`. See `App.js:529` and `App.js:531-544`.
  */
 export interface Hall {
+  planningZones?: PlanningZone[] | null;
   id: string | number;
   name: string;
   shape: HallShape;

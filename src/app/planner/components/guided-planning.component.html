@@ -1,0 +1,29 @@
+<section class="meeting-panel" aria-label="Guided stall planning">
+@if(!session.rulesAgreed()) {
+  <h3>Standard rules</h3><p>Review these seven rules before cutting stalls.</p>
+  <ol class="standard-rules">
+    <li>Keep stalls inside the hall, without overlaps. @if(session.guideRules().enabledRules?.hallBoundary===false||session.guideRules().enabledRules?.stallOverlap===false) {<strong>Override active in Rules.</strong>}</li>
+    <li>Open-side aisles: <strong>{{session.guideRules().minPassageWidth[session.store.eventType()]}} m</strong> (minimum 1.5 m).</li>
+    <li>Emergency exit access: <strong>at least 3 m</strong>.</li>
+    <li>Hall corners: <strong>{{session.guideRules().enabledRules?.cornerKeepOut===false?'override — stalls allowed':'keep clear'}}</strong>.</li>
+    <li>Food/Exhibition sellable; Media/Admin internal: <strong>{{session.guideRules().enabledRules?.internalZones===false?'override — check off':'enforced'}}</strong>.</li>
+    <li>B2B/B2C separation: <strong>{{session.guideRules().eventSeparation??3}} m</strong>. @if(session.guideRules().enabledRules?.eventSeparation===false) {<strong>Override — check off.</strong>}</li>
+    <li>Maximum floor utilization: <strong>{{(session.guideRules().maxUtilization??0.7)*100}}%</strong>.</li>
+  </ol>
+  @if(modifying()) {
+    <fieldset [disabled]="session.busy()"><label>Aisle width (m)<input class="control" type="number" [(ngModel)]="passage" min="1.5" max="5" step="0.5" /></label>
+    <label><span><input type="checkbox" [(ngModel)]="corners" /> Keep hall corners clear</span></label>
+    <label><span><input type="checkbox" [(ngModel)]="internal" /> Enforce sellable and internal zones</span></label>
+    <div class="meeting-grid"><label>B2B/B2C gap (m)<input class="control" type="number" [(ngModel)]="separation" min="3" max="20" step="0.5" /></label><label>Utilization limit (%)<input class="control" type="number" [(ngModel)]="limit" min="1" max="70" /></label></div>
+    <button class="btn-primary" (click)="saveRules()">Save rules &amp; agree</button></fieldset>
+  } @else {<div class="meeting-actions"><button class="btn-primary" [disabled]="session.busy()" (click)="session.agreeRules()">Agree</button><button class="btn-secondary" (click)="modify()">Modify</button></div>}
+} @else {
+  <h3>Cut stalls</h3><p>Rules agreed. <button class="btn-mini" (click)="session.reviewRules();modifying.set(false)">Review rules</button></p>
+  <fieldset [disabled]="session.busy()"><label>Planning area<select class="control" [(ngModel)]="zone"><option value="">{{session.hall()?.planningZones?.length?'All sellable zones · largest first':'Whole hall'}}</option>@for(z of session.sellableZones();track z.id) {<option [value]="z.id">{{z.label}} · {{z.eventType}}</option>}</select></label>
+  <label>Stall size<select class="control" [(ngModel)]="size"><option value="6x6">6 × 6 m · standard</option><option value="3x3">3 × 3 m</option><option value="3x2">3 × 2 m</option><option value="custom">Custom</option></select></label>
+  @if(size==='custom') {<div class="meeting-grid"><label>Stall width (m)<input type="number" class="control" [(ngModel)]="width" min="0.5" step="0.5" /></label><label>Stall length (m)<input type="number" class="control" [(ngModel)]="length" min="0.5" step="0.5" /></label></div>}
+  <label>Count or fill<input class="control" [(ngModel)]="count" placeholder="fill, or 1–500" /></label>
+  <button class="btn-primary" (click)="plan()">{{session.busy()?'Planning…':'Create proposal'}}</button><p>Review the outlines, then Apply. Fill stops at the utilization limit or when no valid space remains.</p></fieldset>
+}
+@if(error()) {<p class="over-limit" role="alert">{{error()}}</p>}
+</section>

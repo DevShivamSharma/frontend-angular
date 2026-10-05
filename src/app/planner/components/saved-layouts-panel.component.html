@@ -67,9 +67,22 @@
             }
           </div>
           <div class="saved-row-meta">
-            ID {{ layout.id }} · {{ stallCount(layout) }} {{ stallCount(layout) === 1 ? 'shop' : 'shops' }}
+            ID {{ layout.id }} · {{ layout.status==='PUBLISHED'?'Published':'Draft' }} · {{ stallCount(layout) }} {{ stallCount(layout) === 1 ? 'shop' : 'shops' }}
           </div>
-          <div class="grid-2 saved-row-actions">
+          <div class="saved-row-actions">
+            <!-- A new tab: the exhibitor view is a separate page, and the editor keeps any unsaved work. -->
+            <a
+              class="btn-mini"
+              routerLink="/planner/view"
+              [queryParams]="{ layoutId: layout.id }"
+              target="_blank"
+              rel="noopener"
+              [attr.aria-label]="'View ' + layout.name + ' as exhibitors see it (opens in a new tab)'"
+              title="Open the exhibitor view: stall map, availability and booking"
+            >
+              <app-icon name="floor-plan" [size]="12" />
+              View
+            </a>
             <button
               type="button"
               class="btn-mini is-blue"
@@ -98,3 +111,5 @@
     }
   </div>
 </section>
+
+<app-pricing-panel />

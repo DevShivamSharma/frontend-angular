@@ -47,6 +47,7 @@ export function placementContextFor(
       ...(hall.blockedAreas ?? []).filter(a => a.kind === 'wall' || a.kind === 'outside')
         .map(a => rectanglePolygon(footprintRect(a)))
     ],
+    planningZones: hall.planningZones ?? [],
     zones: hall.zones ?? [],
     openings: hall.openings ?? [],
     rules: effectiveRules(hall.rules),

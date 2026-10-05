@@ -1,3 +1,4 @@
+<app-publish-dialog #publishDialog />
 <app-planner-rules-dialog #rulesGuide (closed)="rulesDismissed.set(true)" />
 <app-rule-picker-dialog (closed)="rulesDismissed.set(true)" />
 <!-- The PDF plan import, its geometry and pdf.js load on first use (Working hall or Hall tab). -->
@@ -77,6 +78,9 @@
         </div>
       </div>
 
+      <div class="utilization" aria-label="Hall utilization"><div class="utilization-track" role="meter" aria-label="Used hall floor" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="stats().occupancy"><span [style.width.%]="stats().occupancy>100?100:stats().occupancy" [class.over]="store.publishReport()?.usage?.exceeded"></span><i [style.left.%]="(store.publishReport()?.usage?.limit??0.7)*100"></i></div><small>{{stats().occupancy}}% used · {{(store.publishReport()?.usage?.limit??0.7)*100}}% limit · {{store.publicationStatus()}}</small></div>
+      <div class="publication-actions"><button class="btn-secondary" [disabled]="store.busy()||!currentHall()" (click)="publishDialog.open()">Review &amp; publish</button>@if(store.selectedSavedId()!==null) {<a class="btn-mini" routerLink="/planner/view" [queryParams]="{layoutId:store.selectedSavedId()}">Exhibitor view</a>}</div>
+      @if(store.publication().publishOverrides;as override) {<details class="publication-record"><summary>Publication override</summary><p>{{override.reason}}</p></details>}
       <div class="sidebar-tabs" role="tablist" aria-label="Planner sections" (keydown)="onTabKey($event)">
         @for (tab of tabs(); track tab.id) {
           <button
@@ -127,10 +131,12 @@
         aria-labelledby="sidebar-tab-stalls"
         [hidden]="activeTab() !== 'stalls'"
       >
+        <app-batch-stalls />
         <app-edit-stall-form />
         <app-add-stall-form />
         <app-shops-list />
       </div>
+      <div role="tabpanel" id="sidebar-panel-zones" aria-labelledby="sidebar-tab-zones" [hidden]="activeTab() !== 'zones'"><app-planning-zones /></div>
       <div
         role="tabpanel"
         id="sidebar-panel-assist"
@@ -197,6 +203,8 @@
       [hall]="currentHall()"
       [stalls]="stalls()"
       [selectedStallId]="selectedStallId()"
+      [selectedStallIds]="store.selectedIds()"
+      (toggleStall)="store.selectStall($event,true)"
       [dragging]="dragging()"
       [mode]="mode()"
       [editorOverlay]="overlay()"
@@ -213,6 +221,7 @@
       (draftStart)="store.draftStart($event)"
       (draftMove)="store.draftMove($event)"
       (draftEnd)="store.draftEnd()"
+      (draftCancel)="store.draftCancel()"
       (draftLeave)="store.draftLeave()"
       (acceptSuggestion)="store.acceptSuggestion()"
     />
@@ -254,7 +263,9 @@
       <div class="hud hud-left">
         <div class="hud-title">{{ currentHall()?.name }}</div>
         <div class="hud-meta">
-          @if (mode() === 'draw') {
+          @if (mode() === 'zone') {
+            Drag a rectangle to draw a planning zone
+          } @else if (mode() === 'draw') {
             Drag on the grid to draw a stall · right-drag to orbit
           } @else {
             Drag shops to move · Snap {{ snap() ? (grid()?.snapStep ?? 1) + ' m' : 'off' }}
@@ -400,8 +411,34 @@
                 <app-icon name="trash" [size]="12" />
                 {{ stall.stallNumber ? 'Cancel' : 'Remove' }}
               </button>
+              <button
+                type="button"
+                class="btn-mini"
+                [class.is-blue]="showStallRules()"
+                [attr.aria-expanded]="showStallRules()"
+                title="Which hall rules apply to this stall, and whether it meets them"
+                (click)="showStallRules.set(!showStallRules())"
+              >
+                <app-icon name="shield" [size]="12" />
+                Rules
+                @if (stallBreaksRule()) {
+                  <span class="hud-rule-alert" aria-label="breaks a rule">!</span>
+                }
+              </button>
             </div>
           </div>
+          @if (showStallRules()) {
+            @if (stallRules(); as report) {
+              <app-stall-rules-panel
+                [report]="report"
+                [passageWidth]="ruleValues().passage"
+                [wallClearance]="ruleValues().clearance"
+                [notes]="layoutRuleNotes()"
+              />
+            } @else {
+              <p class="hud-meta">A cancelled stall takes no space, so no rule applies to it.</p>
+            }
+          }
         </div>
       }
 

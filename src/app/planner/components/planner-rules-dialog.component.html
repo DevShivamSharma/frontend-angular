@@ -22,7 +22,7 @@
       <li data-rule="floor-grid"><strong>Stay on the usable floor.</strong> Keep the whole stall inside the hall, clear of walls, outside areas and floor holes. Width and length must be positive multiples of the size step.</li>
       <li data-rule="passage-openings"><strong>Leave room for people.</strong> Keep {{ passage() }} m clear in front of the full width of every open side. At least one side must stay open; never block another stall’s access.</li>
       <li data-rule="walls-zones"><strong>Respect the marked clearances.</strong> Keep {{ rules().peripheralClearance }} m from external walls. Keep restricted zones and entry, exit, service and emergency access clear. Hidden restrictions still apply.</li>
-      <li data-rule="touching-corners"><strong>Shared walls are allowed.</strong> Stalls may touch or stand close together on their closed sides, also at hall corners; no passage is needed there. Stalls must never overlap.</li>
+      <li data-rule="touching-corners"><strong>Shared walls are allowed.</strong> Stalls may touch or stand close together on closed sides without overlapping. With Hall corners enabled, keep a full passage width from at least one of the two walls meeting at a corner.</li>
       <li data-rule="editing"><strong>Check every change.</strong> Add, draw, move, resize, rotate, duplicate and assisted placement are validated. Invalid drops return to their previous position; invalid edits are rejected.</li>
       <li data-rule="save-audit"><strong>Resolve issues before saving.</strong> Use the Rules tab to locate problems. Existing invalid layouts stay visible for repair. Save and Update are blocked until placement issues are resolved; the server can also reject a write.</li>
     </ul>
@@ -30,7 +30,7 @@
     <div class="more-rules">
       <details data-rule="settings-geometry">
         <summary>Hall settings, snapping & access <app-icon name="chevron-down" [size]="16" /></summary>
-        <p>B2B and B2C passages can each be set from 3–5 m; a missing setting defaults to 3 m. Changing settings rechecks the layout without rearranging stalls. Invalid saved passage values must be corrected.</p>
+        <p>B2B and B2C passages can each be set from 1.5–5 m (never below 1.5 m); a missing setting defaults to 3 m. With emergency access enabled, exits keep at least 3 m clear, even with narrower aisles. Changing settings rechecks the layout without rearranging stalls. Invalid saved passage values must be corrected.</p>
         <p>All sizes and positions are in metres. X/Z describe the stall centre; openings rotate with the stall. Move snapping aligns edges, so half-metre centres can be valid. Turning snap off does not disable size or clearance checks. Draw stays grid-based; Add rounds sizes to the configured step.</p>
         <p>Circular and irregular outlines, holes and separate floor regions matter. A stall cannot bridge outside space. Exterior space does not count as usable passage in front of an open side.</p>
         <p>Passage, no-construction, emergency/entry access, facility, restricted foyer, partition and smoke-curtain zones prohibit stalls. Facility, partition and smoke-curtain buffers default to 1 m; hall or individual-zone settings can override them. Door access uses its configured depth, otherwise the event passage width. Walkable passage zones can serve an open side; physical restrictions cannot.</p>

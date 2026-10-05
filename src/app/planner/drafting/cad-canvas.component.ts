@@ -3,6 +3,7 @@ import {
 } from '@angular/core';
 
 import { floorOutlines, planSize } from '../geometry/hall-plan';
+import { planningZoneColor, zoneLabelColor } from '../geometry/zone-colors';
 import type { Footprint, Point, Rect } from '../geometry/placement-rules';
 import { polygonBounds } from '../geometry/placement-rules';
 import { stallPolygon } from '../geometry/polygon-geometry';
@@ -78,6 +79,10 @@ const DRAG_THRESHOLD = 4;
       aria-label="Drawing canvas"
       role="img"
     ></canvas>
+    <div class="view-tools" role="group" aria-label="Drawing view">
+      <button type="button" (click)="zoomExtents()" title="Fit the whole drawing">Fit plan</button>
+      <button type="button" (click)="engine.panMode.set(!engine.panMode())" [attr.aria-pressed]="engine.panMode()" title="Drag the canvas to pan">Pan</button>
+    </div>
     @if (tooltip(); as t) {
       <div class="dyn" [style.left.px]="t.x" [style.top.px]="t.y">
         <span class="dyn-prompt">{{ t.prompt }}</span>
@@ -96,6 +101,12 @@ const DRAG_THRESHOLD = 4;
       max-width: 60ch; overflow: hidden; text-overflow: ellipsis;
     }
     .dyn-value { color: #7fdbff; }
+    .view-tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
+    .view-tools button { min-height: 36px; padding: 6px 12px; border: 1px solid #56606d; border-radius: 3px; background: #222a34; color: #dfe6ee; font: inherit; cursor: pointer; }
+    .view-tools button:hover { background: #303c4b; }
+    .view-tools button[aria-pressed="true"] { border-color: #4ea1ff; background: #24466a; }
+    .view-tools button:focus-visible { outline: 2px solid #7fdbff; outline-offset: 2px; }
+    @media (pointer: coarse) { .view-tools button { min-height: 44px; } }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -120,20 +131,29 @@ export class CadCanvasComponent {
   private lastMiddle = 0;
   private frame = 0;
 
-  /** Redraw on any change to what is shown. */
-  private readonly scene = computed(() => ({
+  private backing: HTMLCanvasElement | null = null;
+  private paintedDrawing: unknown = null;
+  private paintedView = '';
+
+  /** Geometry is cached separately from the cursor, drag preview and command feedback. */
+  private readonly drawing = computed(() => ({
     hall: this.store.currentHall(),
     stalls: this.engine.stalls(),
     selection: this.engine.selection(),
     hovered: this.engine.hovered(),
+    layers: this.engine.layers(),
+    gridVisible: this.engine.toggles().grid,
+    grid: this.store.grid(),
+    issues: this.engine.issueStallIds(),
+    proposals: this.store.proposals(),
+    proposalIndex: this.engine.proposalIndex()
+  }));
+
+  private readonly scene = computed(() => ({
+    ...this.drawing(),
     preview: this.engine.preview(),
     cursor: this.engine.cursor(),
     snap: this.engine.snapMark(),
-    layers: this.engine.layers(),
-    toggles: this.engine.toggles(),
-    issues: this.engine.issueStallIds(),
-    proposals: this.store.proposals(),
-    proposalIndex: this.engine.proposalIndex(),
     request: this.engine.request(),
     pointer: this.pointer()
   }));
@@ -153,7 +173,7 @@ export class CadCanvasComponent {
       }
     }
     const prompt = request.message.length > 48 ? request.message.slice(0, 46) + '…' : request.message;
-    return { x: Math.min(p.x + 18, this.width - 260), y: p.y + 20, prompt, value };
+    return { x: Math.max(4, Math.min(p.x + 18, this.width - 260)), y: Math.min(p.y + 20, this.height - 36), prompt, value };
   });
 
   constructor() {
@@ -190,6 +210,7 @@ export class CadCanvasComponent {
       destroyRef.onDestroy(() => {
         observer.disconnect();
         cancelAnimationFrame(this.frame);
+        if (this.backing) { this.backing.width = 0; this.backing.height = 0; this.backing = null; }
       });
     });
   }
@@ -366,23 +387,37 @@ export class CadCanvasComponent {
     const ctx = el.getContext('2d');
     if (!ctx || !this.width) return;
     const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = C.bg;
-    ctx.fillRect(0, 0, this.width, this.height);
-
-    const s = this.scene();
+    const s = this.scene(), drawing = this.drawing();
     const hall = s.hall;
+    const key = [this.width, this.height, el.width, el.height, dpr, this.scale, this.originX, this.originZ].join('|');
+    const backing = this.backing ??= document.createElement('canvas');
+    if (this.paintedDrawing !== drawing || this.paintedView !== key) {
+      // Resizing clears drawing state as well as pixels, so every cache paint starts clean.
+      backing.width = el.width; backing.height = el.height;
+      const paint = backing.getContext('2d');
+      if (!paint) return;
+      paint.setTransform(dpr, 0, 0, dpr, 0, 0);
+      paint.fillStyle = C.bg;
+      paint.fillRect(0, 0, this.width, this.height);
+      if (hall) {
+        const view: Rect = { minX: this.originX, minZ: this.originZ, maxX: this.originX + this.width / this.scale, maxZ: this.originZ + this.height / this.scale };
+        if (s.layers.base) this.drawBase(paint, hall);
+        if (s.gridVisible) this.drawGrid(paint, view);
+        if (s.layers.base) this.drawOutline(paint, hall);
+        if (s.layers.zones) this.drawZones(paint, hall);
+        if (s.layers.services) this.drawServices(paint, hall);
+        if (s.layers.notes) this.drawNotes(paint, hall);
+        if (s.layers.stalls) this.drawStalls(paint, s.stalls, view, s);
+        if (s.proposals?.length) this.drawProposals(paint, s.proposals, s.proposalIndex);
+      }
+      this.paintedDrawing = drawing;
+      this.paintedView = key;
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, el.width, el.height);
+    ctx.drawImage(backing, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!hall) return;
-    const view: Rect = { minX: this.originX, minZ: this.originZ, maxX: this.originX + this.width / this.scale, maxZ: this.originZ + this.height / this.scale };
-
-    if (s.layers.base) this.drawBase(ctx, hall);
-    if (s.toggles.grid) this.drawGrid(ctx, view);
-    if (s.layers.base) this.drawOutline(ctx, hall);
-    if (s.layers.zones) this.drawZones(ctx, hall);
-    if (s.layers.services) this.drawServices(ctx, hall);
-    if (s.layers.notes) this.drawNotes(ctx, hall);
-    if (s.layers.stalls) this.drawStalls(ctx, s.stalls, view, s);
-    if (s.proposals?.length) this.drawProposals(ctx, s.proposals, s.proposalIndex);
     if (s.preview) this.drawPreview(ctx, s.preview);
     const req = s.request;
     if (req?.kind === 'point' && req.base && s.cursor) {
@@ -481,6 +516,23 @@ export class CadCanvasComponent {
   }
 
   private drawZones(ctx: CanvasRenderingContext2D, hall: Hall): void {
+    for (const [index, zone] of (hall.planningZones ?? []).entries()) {
+      if (zone.polygon.length < 3) continue;
+      const colour = planningZoneColor(zone, index);
+      this.path(ctx, zone.polygon);
+      ctx.globalAlpha = 0.22; ctx.fillStyle = colour; ctx.fill();
+      ctx.globalAlpha = 1; ctx.strokeStyle = colour; ctx.lineWidth = 2; ctx.stroke();
+      const bounds = polygonBounds(zone.polygon);
+      const available = (bounds.maxX - bounds.minX) * this.scale;
+      if (available < 65) continue;
+      ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+      const label = zone.label + ' · ' + zone.kind + ' · ' + zone.eventType;
+      const labelWidth = ctx.measureText(label).width + 12;
+      if (labelWidth > available) continue;
+      const x = this.sx((bounds.minX + bounds.maxX) / 2), y = this.sy((bounds.minZ + bounds.maxZ) / 2);
+      ctx.fillStyle = colour; ctx.fillRect(x - labelWidth / 2, y - 10, labelWidth, 20);
+      ctx.fillStyle = zoneLabelColor(colour); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y);
+    }
     for (const z of hall.zones ?? []) {
       if (z.hidden || z.polygon.length < 3) continue;
       const colour = z.color || ZONE_COLOURS[z.kind] || C.dim;

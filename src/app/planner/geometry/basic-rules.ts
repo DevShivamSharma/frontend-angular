@@ -2,7 +2,10 @@
 export const BASIC_RULE_IDS = [
   'hallBoundary', 'stallOverlap', 'sizeStep', 'peripheralClearance', 'openSideAccess',
   'PASSAGE', 'NO_CONSTRUCTION', 'ENTRY_EXIT_ACCESS', 'EMERGENCY_EXIT_ACCESS',
-  'FACILITY_ACCESS', 'FOYER', 'PARTITION', 'SMOKE_CURTAIN'
+  'FACILITY_ACCESS', 'FOYER', 'PARTITION', 'SMOKE_CURTAIN',
+  // Meeting rules (October 2026): no stalls in the hall's corners, none in internal (Media/Admin)
+  // zones, and B2B / B2C zones kept apart.
+  'cornerKeepOut', 'internalZones', 'eventSeparation'
 ] as const;
 
 export type BasicRuleId = typeof BASIC_RULE_IDS[number];
@@ -25,5 +28,8 @@ export const BASIC_RULES: ReadonlyArray<{ id: BasicRuleId; label: string; descri
   { id: 'FACILITY_ACCESS', label: 'Fire-safety & facility access', description: 'Keep the configured clearance around hose reels and public facilities.' },
   { id: 'FOYER', label: 'Foyer restrictions', description: 'Keep marked foyers and pre-function areas free.' },
   { id: 'PARTITION', label: 'Partition clearance', description: 'Keep the configured clearance around partitions.' },
-  { id: 'SMOKE_CURTAIN', label: 'Smoke-curtain clearance', description: 'Keep the configured clearance around smoke curtains.' }
+  { id: 'SMOKE_CURTAIN', label: 'Smoke-curtain clearance', description: 'Keep the configured clearance around smoke curtains.' },
+  { id: 'cornerKeepOut', label: 'Hall corners', description: 'Keep a full passage width from at least one of the two walls meeting at a hall corner.' },
+  { id: 'internalZones', label: 'Internal zones', description: 'No stalls in Media or Admin zones; they are not sold.' },
+  { id: 'eventSeparation', label: 'B2B / B2C separation', description: 'Keep 3 m between stalls of B2B zones and stalls of B2C zones.' }
 ];

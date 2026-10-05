@@ -21,7 +21,7 @@ export type ShopSort = 'number' | 'name' | 'size';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ShopsListComponent {
-  private readonly store = inject(PlannerStore);
+  readonly store = inject(PlannerStore);
 
   readonly currentStalls = this.store.currentStalls;
   readonly selectedStallId = this.store.selectedStallId;
@@ -53,11 +53,11 @@ export class ShopsListComponent {
   });
 
   isSelected(id: string | number): boolean {
-    return String(this.selectedStallId()) === String(id);
+    return this.store.selectedIds().includes(String(id));
   }
 
-  select(id: string | number): void {
-    this.store.selectStall(id);
+  select(id: string | number, event?: MouseEvent): void {
+    this.store.selectStall(id, !!event && (event.shiftKey || event.ctrlKey || event.metaKey));
   }
 
   duplicate(id: string | number): void {

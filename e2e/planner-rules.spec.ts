@@ -160,7 +160,7 @@ test('settings-geometry: event settings are independent; invalid saved values bl
   const writes = await setupPlanner(page, [], { ...testHall, rules: { ...DEFAULT_LAYOUT_RULES, minPassageWidth: { B2B: 6, B2C: 4 } } });
   await page.getByRole('tab', { name: /Layouts/ }).click();
   await page.getByRole('button', { name: 'Save New', exact: true }).click();
-  expect((await plannerState(page)).error).toContain('between 3 and 5'); expect(writes).toEqual([]);
+  expect((await plannerState(page)).error).toContain('between 1.5 and 5'); expect(writes).toEqual([]);
   const input = page.getByRole('spinbutton', { name: 'Passage width (m)' });
   await input.fill('3.5'); await input.press('Tab');
   await page.getByRole('combobox', { name: 'Event type' }).selectOption('B2C');
@@ -221,6 +221,7 @@ test('assist-import: real chat previews, rechecks changed fits and only applies 
   ] } }));
   await page.getByRole('tab', { name: /Assist/ }).click();
   const chat = page.locator('app-assist-panel');
+  await chat.getByRole('button', { name: 'Agree', exact: true }).click();
   await chat.getByRole('textbox', { name: 'Layout request' }).fill('Place two 4x4 stalls');
   await chat.getByRole('button', { name: 'Send layout request' }).click();
   await expect(chat).toContainText('2 of 2 stalls fit'); expect((await plannerState(page)).stalls).toEqual([]);
@@ -236,6 +237,7 @@ test('assist-import: changed layout expires AI removals and changed hall expires
   await setupPlanner(page, [testStall()]);
   await page.route('**/api/layout/assist', route => route.fulfill({ json: { action: 'clear', stalls: [], summary: 'Remove Test 1', removals: [{ id: 1, name: 'Test 1' }] } }));
   await page.getByRole('tab', { name: /Assist/ }).click(); const chat = page.locator('app-assist-panel');
+  await chat.getByRole('button', { name: 'Agree', exact: true }).click();
   await chat.getByRole('textbox', { name: 'Layout request' }).fill('Remove this stall');
   await chat.getByRole('button', { name: 'Send layout request' }).click();
   await expect(chat.getByRole('button', { name: 'Apply removals' })).toBeVisible();
@@ -275,7 +277,9 @@ test('assist-import: SelfCare source restrictions stay hidden and active; local 
   const payload = { name: 'Imported custom hall', length: 50, breadth: 50, layout_data: { nonClickableAreas: [
     { x: 20, y: 20, width: 10, height: 10, fillColor: '#ff0000', visibleInView: false }
   ] }, legends: [{ label: 'Compulsory passage', colorCode: '#ff0000' }] };
-  await page.locator('app-selfcare-import input[type=file]').setInputFiles({ name: 'hall.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) });
+  const fileChooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import SelfCare layout', exact: true }).click();
+  await (await fileChooser).setFiles({ name: 'hall.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) });
   await expect.poll(async () => (await plannerState(page)).hall.name).toBe('Imported custom hall');
   const h = (await plannerState(page)).hall;
   expect(h.zones).toHaveLength(1); expect(h.zones[0]).toMatchObject({ hidden: true, kind: 'PASSAGE' });
@@ -302,7 +306,8 @@ test('helpers-limits: hiding clearances does not disable validation; Locate and 
 
 test('offline: fallback guide and placement work; unsaved layout is lost on page reload', async ({ page }) => {
   await page.route('**/api/**', route => route.abort());
-  await page.goto('/planner'); await dismissPlottingRules(page);
+  await page.addInitScript(() => localStorage.setItem('stall-planner.guided-tour.v1', 'completed'));
+  await page.goto('/planner/editor'); await dismissPlottingRules(page);
   await expect(page.locator('.is-offline')).toBeVisible();
   await page.getByRole('button', { name: /Add Shop \(then/ }).click();
   expect((await plannerState(page)).stalls).toHaveLength(1); expect((await plannerState(page)).audit).toEqual([]);

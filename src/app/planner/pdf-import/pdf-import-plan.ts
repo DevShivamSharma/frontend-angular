@@ -176,7 +176,11 @@ export function cellCentres(outline: Point[]): Point[] {
   return out;
 }
 
-/** Each corner moved a quarter metre inwards: a cheap "is this stall on the floor" probe. */
+/**
+ * Each corner moved half a metre inwards: a cheap "is this stall on the floor" probe. Half a
+ * metre, so a stall the 1 m coarse search leaves half a metre into a wall still counts there and
+ * the half-metre fine search can then place it flush (halls whose walls sit on half metres).
+ */
 function probes(outline: Point[]): Point[] {
   const n = outline.length;
   const inward = (a: Point, b: Point): Point => {
@@ -186,7 +190,7 @@ function probes(outline: Point[]): Point[] {
   return outline.map((v, i) => {
     const a = inward(outline[(i - 1 + n) % n], v);
     const b = inward(v, outline[(i + 1) % n]);
-    return { x: v.x + 0.25 * (a.x + b.x), z: v.z + 0.25 * (a.z + b.z) };
+    return { x: v.x + CELL * (a.x + b.x), z: v.z + CELL * (a.z + b.z) };
   });
 }
 

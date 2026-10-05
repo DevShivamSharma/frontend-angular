@@ -42,6 +42,7 @@ __screenshots__/
 /junit.xml
 /playwright-report/
 /test-results/
+/.impeccable/review/
 
 # Logs
 logs/

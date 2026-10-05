@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL } from '../core/api-base.token';
+import type { BasicRuleId } from './geometry/basic-rules';
 import { Hall } from './models/hall.model';
 import { Stall } from './models/stall.model';
 import { PlannedStall } from './planner-store.service';
@@ -10,6 +11,7 @@ import { PlannedStall } from './planner-store.service';
 /** What the backend is asked for: a requirement in the user's words, plus the hall it applies to. */
 export interface AssistantRequest {
   requirement: string;
+  zoneId?: string;
   hall: {
     id: string | number;
     name: string;
@@ -21,6 +23,7 @@ export interface AssistantRequest {
     boundary?: unknown;
     blockedAreas?: unknown;
     zones?: unknown;
+    planningZones?: unknown;
     rules?: unknown;
     markers?: unknown;
     openings?: unknown;
@@ -29,6 +32,8 @@ export interface AssistantRequest {
   existingStalls: Array<{
     id?: string | number;
     rotation?: number;
+    footprint?: Array<{ x: number; z: number }> | null;
+    openEdges?: number[] | null;
     openSides?: string[];
     gateSide?: string;
     name: string;
@@ -40,9 +45,23 @@ export interface AssistantRequest {
   }>;
 }
 
+/**
+ * Rule changes the assistant proposes (action "rules"): hall-rule switches, the passage width for
+ * the layout's event type, the wall clearance, and written planner rules to add. Applied only on
+ * review, like stall proposals.
+ */
+export interface RuleChanges {
+  enable: BasicRuleId[];
+  disable: BasicRuleId[];
+  passageWidth: number | null;
+  wallClearance: number | null;
+  notes: string[];
+}
+
 /** What comes back. `stalls` are proposals in hall metres; nothing is applied until reviewed. */
 export interface AssistantResponse {
-  action?: 'place' | 'clear' | 'none';
+  action?: 'place' | 'clear' | 'none' | 'rules';
+  rules?: RuleChanges | null;
   requestedCount?: number | null;
   placedCount?: number;
   clarification?: string | null;
@@ -70,10 +89,12 @@ export class LayoutAssistantService {
     requirement: string,
     hall: Hall,
     stalls: ReadonlyArray<Stall>,
-    gridCell: number
+    gridCell: number,
+    zoneId?: string
   ): Promise<AssistantResponse> {
     const body: AssistantRequest = {
       requirement,
+      ...(zoneId ? { zoneId } : {}),
       hall: {
         id: hall.id,
         name: hall.name,
@@ -82,6 +103,7 @@ export class LayoutAssistantService {
         length: hall.length,
         radius: hall.radius,
         gridCell,
+        planningZones: hall.planningZones ?? [],
         markers: hall.markers ?? [],
         openings: hall.openings ?? [],
         eventType: (hall as Hall & { eventType?: 'B2B' | 'B2C' }).eventType,
@@ -93,6 +115,7 @@ export class LayoutAssistantService {
       existingStalls: stalls.map(s => ({
         id: s.id,
         rotation: s.rotation ?? 0,
+        footprint: s.footprint, openEdges: s.openEdges,
         openSides: s.openSides,
         gateSide: s.gateSide,
         name: s.name,

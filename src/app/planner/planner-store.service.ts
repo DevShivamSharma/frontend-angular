@@ -1,3 +1,8 @@
+import { nextPlanningZoneColor, planningZoneColor, validZoneColor } from './geometry/zone-colors';
+import { batchOpenSides, pavilion } from './geometry/stall-batch';
+import { planningZoneGeometryError, utilization, footprintArea, type PlanningZone } from './geometry/planning-zones';
+import { prepublishReport, emptySpaceSuggestions } from './geometry/publish-check';
+import type { Publication } from './models/layout.model';
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 
 import { extractErrorMessage, extractViolations } from '../core/http-error.util';
@@ -7,7 +12,8 @@ import { FreeSpaceMap } from './geometry/free-space';
 import { BasicRuleSettings, ruleEnabled } from './geometry/basic-rules';
 import { previewSplit, SplitOptions } from './geometry/stall-split';
 import { GridSystem } from './geometry/grid-system';
-import { isRuleDriven, placementContextFor } from './geometry/hall-rules';
+import { isRuleDriven, placementContextFor, toPlacementStall } from './geometry/hall-rules';
+import { stallRuleReport, type StallRuleReport } from './geometry/stall-rule-report';
 import {
   AuditEntry,
   auditLayout,
@@ -15,6 +21,9 @@ import {
   Footprint,
   PlacementStall,
   footprintRect,
+  LayoutRules,
+  MAX_PASSAGE_WIDTH,
+  MIN_PASSAGE_WIDTH,
   Point,
   Rect,
   validatePlacement,
@@ -66,7 +75,7 @@ export interface NewStallValue {
 }
 
 /** Select = click/drag existing stalls. Draw = drag on the grid to create a stall. */
-export type EditorMode = 'select' | 'draw';
+export type EditorMode = 'select' | 'draw' | 'zone';
 
 /** The live stall preview while hovering or dragging in draw mode. */
 export interface StallDraft {
@@ -182,6 +191,27 @@ export class PlannerStore {
   private readonly notify = inject(NotifyService);
   private readonly destroyRef = inject(DestroyRef);
 
+  readonly selectionIds = signal<string[]>([]);
+  readonly selectedStalls = computed(() => {
+    const primary=String(this.selectedStallId());
+    const ids=this.selectionIds().includes(primary)?this.selectionIds():[primary];
+    return this.activeStalls().filter(s=>ids.includes(String(s.id)));
+  });
+  readonly selectedIds = computed(() => this.selectedStalls().map(s=>String(s.id)));
+  readonly zoneSettings = signal<{ id?: string; kind: PlanningZone['kind']; label: string; eventType: EventType; color?: string }>({kind:'EXHIBITION',label:'Exhibition',eventType:'B2B'});
+  readonly publication = signal<Publication>({status:'DRAFT'});
+  private readonly publishedSnapshot = signal('');
+  readonly publicationStatus = computed(() => this.publication().status === 'PUBLISHED' && this.publishedSnapshot() === this.layoutSnapshot() ? 'Published' : 'Draft');
+  readonly publishReport = computed(() => {
+    const ctx=this.placementContext(); return ctx?prepublishReport(ctx,this.audit()):null;
+  });
+  readonly publishSuggestions = computed(() => {
+    const ctx=this.placementContext(); return ctx?emptySpaceSuggestions(ctx):[];
+  });
+  private layoutSnapshot(): string {
+    return JSON.stringify([this.currentHall(),this.currentStalls(),this.eventType(),this.layoutName(),this.appliedRuleIds()]);
+  }
+
   readonly halls = signal<Hall[]>(fallbackHalls());
   readonly activeHallId = signal<string | number>(fallbackHalls()[0].id);
   readonly stalls = signal<Stall[]>([]);
@@ -270,6 +300,13 @@ export class PlannerStore {
     this.stalls().find(s => String(s.id) === String(this.selectedStallId()))
   );
 
+  /** The selected stall checked against each hall rule; null for none or a cancelled stall. */
+  readonly selectedStallRules = computed<StallRuleReport | null>(() => {
+    const stall = this.selectedStall();
+    const ctx = this.placementContext();
+    return stall && ctx && stall.status !== 'CANCELLED' ? stallRuleReport(toPlacementStall(stall), ctx) : null;
+  });
+
   /** Stalls that occupy space. A cancelled stall keeps its number but frees its area. */
   readonly activeStalls = computed(() => this.currentStalls().filter(s => s.status !== 'CANCELLED'));
 
@@ -327,7 +364,7 @@ export class PlannerStore {
       freeSpace: this.freeSpace(),
       highlight: this.highlight(),
       passageWidth:
-        ctx && ruleEnabled(ctx.rules, 'openSideAccess') && (draft || this.dragging()) ? ctx.rules.minPassageWidth[ctx.eventType] : null,
+        ctx && this.mode()!=='zone' && ruleEnabled(ctx.rules, 'openSideAccess') && (draft || this.dragging()) ? ctx.rules.minPassageWidth[ctx.eventType] : null,
       proposals: this.splitPreview()?.children.map(s => ({ footprint: s, label: `${s.stallNumber} (preview)`,
         valid: !this.splitPreview()?.violations.length })) ?? this.proposals()
     };
@@ -370,12 +407,22 @@ export class PlannerStore {
 
   /** Switching halls clears the stall selection. App.js:583. */
   setActiveHall(id: string | number): void {
+    if (String(id)!==String(this.activeHallId())) {
+      this.selectedSavedId.set(null); this.publication.set({status:'DRAFT'}); this.selectionIds.set([]);
+      this.mode.set('select');
+    }
     this.activeHallId.set(id);
     this.selectedStallId.set(null);
     this.clearFeedback();
   }
 
-  selectStall(id: string | number | null): void {
+  selectStall(id: string | number | null, additive=false): void {
+    const ids=this.selectedIds();
+    if (id!==null && additive) {
+      const key=String(id), next=ids.includes(key)?ids.filter(x=>x!==key):[...ids,key];
+      this.selectionIds.set(next); this.selectedStallId.set(next.at(-1)??null); this.splitOptions.set(null); return;
+    }
+    this.selectionIds.set(id===null?[]:[String(id)]);
     this.splitOptions.set(null);
     this.selectedStallId.set(id);
   }
@@ -417,6 +464,75 @@ export class PlannerStore {
 
   setLayoutName(value: string): void {
     this.layoutName.set(value);
+  }
+
+  selectAll(): void { this.setSelection(this.activeStalls()); }
+  selectRow(): void {
+    const anchor=this.selectedStall(); if(!anchor) return;
+    const t=(anchor.rotation??0)*Math.PI/180;
+    this.setSelection(this.activeStalls().filter(s=>Math.abs(-(s.posX-anchor.posX)*Math.sin(t)+(s.posZ-anchor.posZ)*Math.cos(t))<0.05 && Math.abs((s.rotation??0)-(anchor.rotation??0))<0.01));
+  }
+  private setSelection(stalls: readonly Stall[]): void {
+    this.selectionIds.set(stalls.map(s=>String(s.id))); this.selectedStallId.set(stalls[0]?.id??null);
+  }
+  batchSides(side: GateSide, mode:'set'|'toggle'|'opposite'): void {
+    if(this.busy() || !this.selectedStalls().length) return;
+    try {
+      const changed=batchOpenSides(this.selectedStalls(),this.activeStalls(),side,mode), ids=new Set(changed.map(s=>String(s.id)));
+      const others=this.currentStalls().filter(s=>!ids.has(String(s.id))), ctx=placementContextFor(this.currentHall()!,[...others,...changed],this.eventType());
+      for(const stall of changed) {
+        const violations=validatePlacement(toPlacementStall(stall),ctx,String(stall.id)).violations;
+        if(violations.length) { this.reject('Batch rejected',stall,violations,stall.id); return; }
+      }
+      const replacements=new Map(changed.map(s=>[String(s.id),s]));
+      this.stalls.update(all=>all.map(s=>replacements.get(String(s.id))??s)); this.clearFeedback();
+    } catch(e) { this.showError((e as Error).message); }
+  }
+  mergePavilion(): void {
+    if(this.busy()) return;
+    try {
+      const picked=this.selectedStalls(), merged=pavilion(picked), ids=new Set(picked.map(s=>String(s.id)));
+      const ctx=placementContextFor(this.currentHall()!,this.currentStalls().filter(s=>!ids.has(String(s.id))),this.eventType());
+      const violations=validatePlacement(toPlacementStall(merged),ctx).violations;
+      if(violations.length) { this.reject('Merge rejected',merged,violations,null); return; }
+      this.stalls.update(all=>[...all.flatMap(s=>!ids.has(String(s.id))?[s]:s.stallNumber?[{...s,status:'CANCELLED' as const}]:[]),merged]);
+      this.selectStall(merged.id); this.clearFeedback();
+    } catch(e) { this.showError((e as Error).message); }
+  }
+  async cancelSelection(): Promise<void> {
+    const picked=this.selectedStalls(); if(!picked.length || this.busy()) return;
+    if(picked.some(s=>s.status==='BOOKED')) { this.showError('Booked stalls cannot be cancelled in a batch.'); return; }
+    const ids=new Set(picked.map(s=>String(s.id)));
+    if(!await this.notify.confirm({title:'Cancel '+picked.length+' stalls?',text:'Numbered stalls keep their numbers and release their area. Unsaved stalls are removed.',confirmText:'Cancel stalls',danger:true})) return;
+    this.stalls.update(all=>all.flatMap(s=>!ids.has(String(s.id))?[s]:s.stallNumber?[{...s,status:'CANCELLED' as const}]:[]));
+    this.selectStall(null);
+  }
+  setPlanningZones(zones: PlanningZone[]): boolean {
+    const hall=this.currentHall(), ctx=this.placementContext(); if(!hall || !ctx) return false;
+    if(zones.length>100 || zones.some(z=>!z.label.trim() || z.label.length>100)) { this.showError('Use a zone name of 1–100 characters; at most 100 zones per hall.'); return false; }
+    if(zones.some(z=>z.color!=null&&!validZoneColor(z.color))) { this.showError('Choose a valid six-digit hex zone colour.'); return false; }
+    zones=zones.map((zone,index)=>({...zone,color:planningZoneColor(zone,index)}));
+    const error=planningZoneGeometryError(zones,ctx); if(error) { this.showError(error); return false; }
+    this.halls.update(all=>all.map(h=>h===hall?{...h,planningZones:zones}:h)); this.clearFeedback(); this.clearPlan(); return true;
+  }
+  removeZone(id: string): void { this.setPlanningZones((this.currentHall()?.planningZones??[]).filter(z=>z.id!==id)); }
+  beginZone(settings: {id?:string;kind:PlanningZone['kind'];label:string;eventType:EventType;color?:string}): void {
+    if(!settings.label.trim()) { this.showError('Name the zone before drawing.'); return; }
+    this.zoneSettings.set({...settings,label:settings.label.trim(),color:settings.color??nextPlanningZoneColor(this.currentHall()?.planningZones??[],settings.id)}); this.selectStall(null); this.setMode('zone');
+  }
+  async publishLayout(reason: string): Promise<boolean> {
+    if(this.busy() || !this.currentHall() || !this.activeStalls().length) return false;
+    this.busy.set(true); this.error.set('');
+    const snapshot=this.layoutSnapshot();
+    try {
+      const payload=buildApiPayload(this.currentHall(),this.currentStalls(),this.layoutName(),this.eventType(),this.ruleIdsToSave());
+      const saved=await this.api.publish(this.selectedSavedId(),payload,reason);
+      if(snapshot!==this.layoutSnapshot()) { this.showError('The saved snapshot was published, but the editor changed during the request. Reopen the published layout to review it.'); await this.loadList(); return false; }
+      this.selectedSavedId.set(saved.layout?.id??saved.id??null); this.applyPersistedStalls(saved.stalls);
+      this.publication.set(saved.layout??{status:'PUBLISHED'}); this.publishedSnapshot.set(this.layoutSnapshot());
+      await this.loadList(); this.notify.success('Layout published. Stall numbers are ready.'); return true;
+    } catch(e) { this.showError('Publish failed: '+extractErrorMessage(e)); return false; }
+    finally { this.busy.set(false); }
   }
 
   // --- stall transitions ---------------------------------------------------
@@ -811,6 +927,8 @@ export class PlannerStore {
     const grid = this.grid();
     const ctx = this.placementContext();
     const accepted: PlacementStall[] = [];
+    const usage=ctx?utilization(ctx):null;
+    let area=usage?.usedArea??0;
 
     const reviewed = planned.map(stall => {
       const raw: Footprint = {
@@ -827,7 +945,9 @@ export class PlannerStore {
       const violations = ctx ? validatePlacement(footprint, {
         ...ctx, stalls: [...ctx.stalls, ...accepted.map(s => ({ ...s, id: String(s.id) }))]
       }).violations : this.checkPlacement(footprint, null);
+      if(usage && area+footprintArea(footprint)>usage.floorArea*usage.limit+1e-6) violations.push({code:'MAX_UTILIZATION',ruleRef:'Utilization',message:'This proposal exceeds the current hall utilization limit.',geometry:[],relatedStallIds:[]});
       const valid = violations.length === 0;
+      if(valid) area+=footprintArea(footprint);
       if (valid) accepted.push({ ...footprint, id: `proposal-${accepted.length}` });
 
       return {
@@ -847,8 +967,9 @@ export class PlannerStore {
 
   /** Create the stalls of the reviewed plan that fit. Returns how many were added. */
   applyPlan(): number {
-    const proposals = this.proposals();
-    if (!proposals?.length) return 0;
+    const previous = this.proposals();
+    if (!previous?.length) return 0;
+    const proposals = this.reviewPlan(previous.filter(p=>p.valid).map(p=>({...p.footprint,name:p.name,height:p.height,color:p.color,openSides:p.openSides})));
 
     let added = 0;
     for (const proposal of proposals) {
@@ -884,8 +1005,10 @@ export class PlannerStore {
   // --- hall transitions ----------------------------------------------------
 
   /** App.js:529. */
+  private nextLocalHallId = 0;
+
   createHall(form: HallFormValue): Hall {
-    const id = `hall-${Date.now()}`;
+    const id = `hall-${Date.now()}-${++this.nextLocalHallId}`;
     const hall: Hall = {
       id,
       name: form.name.trim() || `Custom Hall ${this.halls().length + 1}`,
@@ -896,7 +1019,7 @@ export class PlannerStore {
     };
 
     this.halls.update(p => [...p, hall]);
-    this.activeHallId.set(id);
+    this.setActiveHall(id);
     this.layoutName.set(hall.name);
     return hall;
   }
@@ -1094,6 +1217,7 @@ export class PlannerStore {
       const saved = await this.api.save(payload);
       this.selectedSavedId.set(saved.layout?.id ?? saved.id ?? null);
       this.applyPersistedStalls(saved.stalls);
+      this.publication.set({status: 'DRAFT'});
       await this.loadList();
       this.notify.success('Layout saved successfully.');
     } catch (e) {
@@ -1127,6 +1251,8 @@ export class PlannerStore {
       this.layoutName.set(d.layout?.name || d.name || h.name || '');
       this.eventType.set(d.layout?.eventType === 'B2C' ? 'B2C' : 'B2B');
       this.appliedRuleIds.set(Array.isArray(d.layout?.ruleIds) ? d.layout!.ruleIds.filter(id => Number.isSafeInteger(id)) : []);
+      this.selectionIds.set([]); this.mode.set('select');
+      this.publication.set(d.layout??{status:'DRAFT'}); this.publishedSnapshot.set(this.layoutSnapshot());
     } catch (e) {
       this.showError(`❌ Open Error: ${extractErrorMessage(e)}`);
     } finally {
@@ -1183,6 +1309,7 @@ export class PlannerStore {
       );
       const updated = await this.api.update(savedId, payload);
       this.applyPersistedStalls(updated?.stalls);
+      this.publication.set({status: 'DRAFT'});
       await this.loadList();
       this.notify.success('Layout updated successfully.');
     } catch (e) {
@@ -1210,6 +1337,27 @@ export class PlannerStore {
   /** The rules chosen for this layout's design; saved with the layout. */
   applyRules(ids: ReadonlyArray<number>): void {
     this.appliedRuleIds.set([...new Set(ids)]);
+  }
+
+  /** Replaces the current hall's rules (switches and values), e.g. an applied assistant proposal. */
+  setHallRules(rules: LayoutRules): void {
+    const hall = this.currentHall();
+    if (!hall) return;
+    this.halls.update(list => list.map(h => h === hall ? { ...h, rules } : h));
+    this.clearFeedback();
+    this.proposals.set(null);
+  }
+
+  /**
+   * Adds written rules to the shared library and applies them to this layout. The library keeps
+   * them at once; the layout keeps them when it is saved (like rules ticked in the rule picker).
+   */
+  async addPlannerRules(descriptions: ReadonlyArray<string>): Promise<void> {
+    for (const description of descriptions) {
+      const rule = await this.api.createPlannerRule(description);
+      this.plannerRules.update(list => [...list, rule]);
+      this.applyRules([...this.appliedRuleIds(), rule.id]);
+    }
   }
 
   setBasicRules(settings: BasicRuleSettings): void {
@@ -1310,8 +1458,8 @@ export class PlannerStore {
   }
 
   setPassageWidth(width: number): void {
-    if (!Number.isFinite(width) || width < 3 || width > 5) {
-      this.showError('Passage width must be between 3 and 5 m.');
+    if (!Number.isFinite(width) || width < MIN_PASSAGE_WIDTH || width > MAX_PASSAGE_WIDTH) {
+      this.showError(`Passage width must be between ${MIN_PASSAGE_WIDTH} and ${MAX_PASSAGE_WIDTH} m.`);
       return;
     }
     const hall = this.currentHall();
@@ -1352,7 +1500,8 @@ export class PlannerStore {
   /** Pointer down on the grid in draw mode. */
   draftStart(point: Point): void {
     const grid = this.grid();
-    if (this.mode() !== 'draw' || !grid) return;
+    if ((this.mode() !== 'draw' && this.mode() !== 'zone') || !grid) return;
+    if(this.mode()==='zone') { this.setZoneDraft(point,point); return; }
     this.rejection.set(null);
     this.serverViolations.set([]);
     this.setDraft(grid.draftFootprint(point, point, this.selectedStallType(), true), point, true);
@@ -1362,6 +1511,7 @@ export class PlannerStore {
     const grid = this.grid();
     const draft = this.draft();
     if (!grid || !draft?.dragging) return;
+    if(this.mode()==='zone') { this.setZoneDraft(draft.start,point); return; }
     this.setDraft(grid.draftFootprint(draft.start, point, this.selectedStallType(), true), draft.start, true);
   }
 
@@ -1370,6 +1520,13 @@ export class PlannerStore {
     const draft = this.draft();
     if (!draft?.dragging) return;
     this.draft.set(null);
+    if(this.mode()==='zone') {
+      const f=draft.footprint,r=footprintRect(f), settings=this.zoneSettings();
+      const zone:PlanningZone={...settings,id:settings.id??crypto.randomUUID(),polygon:[{x:r.minX,z:r.minZ},{x:r.maxX,z:r.minZ},{x:r.maxX,z:r.maxZ},{x:r.minX,z:r.maxZ}]};
+      const zones=this.currentHall()?.planningZones??[];
+      if(this.setPlanningZones(zones.some(z=>z.id===zone.id)?zones.map(z=>z.id===zone.id?zone:z):[...zones,zone])) { this.setMode('select'); }
+      return;
+    }
 
     if (draft.valid) {
       this.createStall(draft.footprint, this.selectedStallTypeId());
@@ -1380,6 +1537,8 @@ export class PlannerStore {
   }
 
   /** Pointer left the canvas: drop the hover preview. */
+  draftCancel(): void { this.draft.set(null); }
+
   draftLeave(): void {
     if (!this.draft()?.dragging) this.draft.set(null);
   }
@@ -1440,6 +1599,11 @@ export class PlannerStore {
     } catch (e) {
       this.showError(`❌ Audit Error: ${extractErrorMessage(e)}`);
     }
+  }
+
+  private setZoneDraft(start: Point, point: Point): void {
+    const footprint=this.grid()!.draftFootprint(start,point,null,true);
+    this.draft.set({footprint,start,dragging:true,valid:true,violations:[]});
   }
 
   private setDraft(footprint: Footprint, start: Point, dragging: boolean): void {
@@ -1573,8 +1737,8 @@ export class PlannerStore {
 
   private canPersist(): boolean {
     const ctx = this.placementContext();
-    if (ctx && (!Number.isFinite(this.passageWidth()) || this.passageWidth() < 3 || this.passageWidth() > 5)) {
-      this.showError('Choose a passage width between 3 and 5 m before saving.');
+    if (ctx && (!Number.isFinite(this.passageWidth()) || this.passageWidth() < MIN_PASSAGE_WIDTH || this.passageWidth() > MAX_PASSAGE_WIDTH)) {
+      this.showError(`Choose a passage width between ${MIN_PASSAGE_WIDTH} and ${MAX_PASSAGE_WIDTH} m before saving.`);
       return false;
     }
     const first = this.audit()[0];
