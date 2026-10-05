@@ -38,8 +38,12 @@
       <path class="zone" [attr.d]="z.d" [attr.fill]="z.color" [attr.stroke]="z.color" />
     }
   }
+  <!-- A hall whose floor is its plan's grid: what is not floor is shaded, walls drawn. -->
+  @for (m of floorMasks(); track $index) {
+    <rect [class]="m.kind === 'wall' ? 'floor-wall' : 'not-floor'" [attr.x]="m.posX - m.width / 2" [attr.y]="m.posZ - m.length / 2" [attr.width]="m.width" [attr.height]="m.length" />
+  }
   @if (showPillars()) {
-    @for (p of draft().blockedAreas; track $index) {
+    @for (p of pillars(); track $index) {
       <rect class="pillar" [attr.x]="p.posX - p.width / 2" [attr.y]="p.posZ - p.length / 2" [attr.width]="p.width" [attr.height]="p.length" />
     }
   }

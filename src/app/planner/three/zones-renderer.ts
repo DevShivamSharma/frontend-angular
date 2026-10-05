@@ -92,7 +92,8 @@ export function buildRestrictedZones(zones: HallZone[], rules: LayoutRules, draw
  * each opening (ITPO D2/D3).
  */
 export function buildClearances(
-  boundary: Point[] | null,
+  /** The hall outline, or each floor region's outline when the plan has several. */
+  outlines: Point[] | Point[][] | null,
   openings: HallOpening[],
   rules: LayoutRules,
   eventType: EventType
@@ -108,7 +109,9 @@ export function buildClearances(
   });
 
   const band = ruleEnabled(rules, 'peripheralClearance') ? rules.peripheralClearance : 0;
-  if (boundary && boundary.length >= 3 && band > 0) {
+  const rings = !outlines?.length ? [] : Array.isArray(outlines[0]) ? (outlines as Point[][]) : [outlines as Point[]];
+  for (const boundary of rings) {
+    if (boundary.length < 3 || band <= 0) continue;
     forEachEdge(boundary, (a, b) => {
       const dx = b.x - a.x;
       const dz = b.z - a.z;

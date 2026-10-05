@@ -155,12 +155,21 @@ export class HallImportPageComponent implements OnInit {
   /** Doors follow the outline and the facilities kept, so edits never leave a door off the wall. */
   readonly openings = computed(() => openingsFor(this.amenities().filter(a => a.included), this.boundary()));
   readonly needsScale = computed(() => this.result()?.scale.known === false);
+  /**
+   * Floor area in plan m²: the outline, less what a grid-floor draft masks off ('outside'
+   * rectangles, disjoint) between its grid areas.
+   */
+  readonly floorMasked = computed(() => (this.draft()?.blockedAreas ?? []).some(b => b.kind === 'outside'));
+  readonly floorArea = computed(() => {
+    const masked = (this.draft()?.blockedAreas ?? []).filter(b => b.kind === 'outside').reduce((sum, b) => sum + b.width * b.length, 0);
+    return Math.max(0, polygonArea(this.boundary()) - masked);
+  });
   /** Real metres per plan metre: a measured length wins, else the hall's area (PDF without scale), else 1. */
   readonly factor = computed(() => {
     const measured = this.calibration();
     if (measured) return measured;
     const area = this.realArea();
-    const planArea = polygonArea(this.boundary());
+    const planArea = this.floorArea();
     return this.needsScale() && area && area > 0 && planArea > 0 ? Math.sqrt(area / planArea) : 1;
   });
   readonly size = computed(() => {
@@ -169,7 +178,7 @@ export class HallImportPageComponent implements OnInit {
     const box = boundsOf(b);
     const k = this.factor();
     const fmt = (n: number) => (Math.round(n * 10) / 10).toLocaleString('en-IN');
-    return `${fmt((box.maxX - box.minX) * k)} × ${fmt((box.maxZ - box.minZ) * k)} m · ${Math.round(polygonArea(b) * k * k).toLocaleString('en-IN')} m²`;
+    return `${fmt((box.maxX - box.minX) * k)} × ${fmt((box.maxZ - box.minZ) * k)} m · ${Math.round(this.floorArea() * k * k).toLocaleString('en-IN')} m²`;
   });
   /** What the plan canvas shows: the whole plan while picking or drawing an area, else the hall. */
   readonly onOverview = computed(() => this.tool() === 'pick' || this.tool() === 'draw');
@@ -636,18 +645,24 @@ export class HallImportPageComponent implements OnInit {
         .map(a => ({ kind: a.kind, label: a.label.trim(), position: s(a.position) })),
       openings: this.includeOpenings() ? this.openings().map(o => ({ ...o, position: s(o.position) })) : [],
       zones: this.includeZones() ? d.zones.map(z => ({ ...z, polygon: z.polygon.map(s) })) : [],
-      blockedAreas: this.includePillars()
-        ? d.blockedAreas.map(b => {
-            const c = s({ x: b.posX, z: b.posZ });
-            return { ...b, posX: c.x, posZ: c.z, width: round(b.width * k), length: round(b.length * k) };
-          })
-        : [],
+      // Floor masks ('outside' / 'wall': a hall whose floor is its plan's grid) always go with the
+      // hall; the toggle is for the pillars only.
+      blockedAreas: d.blockedAreas
+        .filter(b => b.kind !== 'zone' || this.includePillars())
+        .map(b => {
+          const c = s({ x: b.posX, z: b.posZ });
+          return { ...b, posX: c.x, posZ: c.z, width: round(b.width * k), length: round(b.length * k) };
+        }),
       markers: this.includeMarkers() ? d.markers.map(m => ({ ...m, position: s(m.position) })) : [],
       legends: this.legends()
         .filter(l => l.included)
         .map(({ included: _, ...l }) => l),
       compass: d.compass ? { ...d.compass, position: s(d.compass.position), size: d.compass.size * k } : null
     };
+  }
+
+  pillarCount(d: HallDraft): number {
+    return d.blockedAreas.filter(b => b.kind === 'zone').length;
   }
 
   private confirmDiscard(): Promise<boolean> {

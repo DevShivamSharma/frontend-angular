@@ -67,6 +67,9 @@ export class PlanCanvasComponent implements AfterViewInit {
   readonly amenities = input.required<CanvasAmenity[]>();
   readonly showZones = input(true);
   readonly showPillars = input(true);
+  /** Pillars only: 'outside' and 'wall' rectangles carve the floor (see `floorMasks`). */
+  readonly pillars = computed(() => this.draft().blockedAreas.filter(b => b.kind === 'zone'));
+  readonly floorMasks = computed(() => this.draft().blockedAreas.filter(b => b.kind !== 'zone'));
   readonly showOpenings = input(true);
   readonly showMarkers = input(true);
   readonly selectedId = input<string | null>(null);

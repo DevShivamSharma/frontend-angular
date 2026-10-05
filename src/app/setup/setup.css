@@ -308,6 +308,10 @@ app-setup-shell .k-pillar {
   width: 10px !important;
   background: #6b7080;
 }
+app-setup-shell .k-not-floor {
+  background: #e6eaf0;
+  border: 1px solid #742371;
+}
 
 
 /* --- hall tabs (import review of a multi-hall plan) ----------------------------------- */

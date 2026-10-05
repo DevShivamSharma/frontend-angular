@@ -24,7 +24,7 @@ import { buildFreeSpace, buildPreview, buildProposals, buildViolations } from '.
 import { buildHallBoundary } from './hall-boundary-renderer';
 import { buildHallGrid } from './hall-grid-renderer';
 import { annotationBounds, buildAmenityCards, buildCompass, buildExitLabels } from './annotations-renderer';
-import { hallFloor, planBounds } from '../geometry/hall-plan';
+import { floorOutlines, hallFloor, planBounds } from '../geometry/hall-plan';
 import { buildFloorRegions, buildPlanAreas, UD_TOOLTIP } from './plan-renderer';
 import { disposeChildren, StallObject } from './stall3d-renderer';
 import { disposeSpriteTextures } from './text-sprite';
@@ -362,7 +362,9 @@ export class Scene3dComponent implements AfterViewInit {
     disposeLayer(this.clearanceGroup);
     if (!hall?.rules || !show) return;
     this.clearanceGroup.add(
-      buildClearances(hall.boundary ?? null, hall.openings ?? [], effectiveRules(hall.rules), eventType)
+      // The band runs along the floor the stalls stand on: each traced region of a plan with
+      // several (a hall and its foyer), else the outline.
+      buildClearances(floorOutlines(hall), hall.openings ?? [], effectiveRules(hall.rules), eventType)
     );
   }
 

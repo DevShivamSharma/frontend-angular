@@ -206,6 +206,9 @@
             <span><i class="k-door"></i>Door or gate</span>
             <span><i class="k-zone"></i>Smoke curtain / restricted</span>
             <span><i class="k-pillar"></i>Pillar</span>
+            @if (floorMasked()) {
+              <span><i class="k-not-floor"></i>Not floor (no grid on the plan)</span>
+            }
           </p>
         </section>
 
@@ -358,7 +361,7 @@
             </label>
             <label class="toggle">
               <input type="checkbox" [checked]="includePillars()" (change)="includePillars.set($any($event.target).checked)" />
-              <span><strong>Pillars · {{ d.blockedAreas.length }}</strong><small>Shown on the plan; pavilions can be built around them.</small></span>
+              <span><strong>Pillars · {{ pillarCount(d) }}</strong><small>Shown on the plan; pavilions can be built around them.</small></span>
             </label>
             <label class="toggle">
               <input type="checkbox" [checked]="includeMarkers()" (change)="includeMarkers.set($any($event.target).checked)" />

@@ -60,6 +60,13 @@
 .pillar {
   fill: #6b7080;
 }
+.not-floor {
+  fill: #e6eaf0;
+  fill-opacity: 0.7;
+}
+.floor-wall {
+  fill: #742371;
+}
 .opening {
   stroke: #f28c00;
   stroke-linecap: round;
