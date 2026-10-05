@@ -1,6 +1,6 @@
 import type { EventType, Hall } from '../models/hall.model';
 import type { GateSide, Stall } from '../models/stall.model';
-import { planBounds } from '../geometry/hall-plan';
+import { floorOutlines, planBounds } from '../geometry/hall-plan';
 import { placementContextFor, toPlacementStall } from '../geometry/hall-rules';
 import { pointInPolygon, validatePlacement, type Point, type Rect, type Violation } from '../geometry/placement-rules';
 import { normalizeStall } from '../geometry/planner-geometry';
@@ -115,6 +115,68 @@ export function centredAlignment(
   };
 }
 
+// --- registration: the drawing's grid on the hall's grid ---------------------------------------
+
+/** How far (m) a drawing's grid area and a hall floor may differ in size and still be the same. */
+const SAME_SIZE = 1.5;
+/** How far (m) from corner-on-corner the grid match looks. */
+const SEARCH = 1.5;
+
+/**
+ * The exact placement when the drawing and the hall come from the same plan: the drawing's own
+ * grid (its outline, notches and foyer steps included) is laid on the hall's grid floor where the
+ * two coincide best, in half-metre steps from corner on corner, so every stall lands where the
+ * drawing puts it and on the hall's grid lines. Two drawings of one hall may cut the grid a metre
+ * shorter at one end; the shape match ignores that. Tries the drawing's orientation first, then
+ * the other quarter turns. null when no hall floor has the drawing's size (a different hall, or a
+ * result without grid areas): auto-fit then does its best.
+ */
+export function registeredAlignment(
+  result: PdfImportResult,
+  groups: ReadonlyArray<string>,
+  hall: Hall,
+): Alignment | null {
+  const floors = floorOutlines(hall).map(bounds).sort((a, b) => area(b) - area(a));
+  const gridAreas = result.gridAreas ?? [];
+  if (!floors.length || !gridAreas.length || !groups.length) return null;
+  const mask = FloorMask.forHall(hall);
+  for (const rotation of [0, 180, 90, 270] as QuarterTurn[]) {
+    const offsets: Record<string, Point> = {};
+    for (const g of groups) {
+      const areas = gridAreas.filter(a => a.group === g).sort((a, b) => b.area - a.area);
+      if (!areas.length) break;
+      const box = bounds(areas[0].outline.map(p => turn(p, rotation)));
+      const floor = floors.find(f =>
+        Math.abs(f.maxX - f.minX - (box.maxX - box.minX)) <= SAME_SIZE &&
+        Math.abs(f.maxZ - f.minZ - (box.maxZ - box.minZ)) <= SAME_SIZE,
+      );
+      if (!floor) break;
+      // Every half-metre cell of the drawing's grid areas: on the hall floor counts for, off it
+      // (outside, on a wall) against.
+      const cells = areas.flatMap(a => cellCentres(a.outline.map(p => turn(p, rotation))));
+      const corner = { x: floor.minX - box.minX, z: floor.minZ - box.minZ };
+      let best = { d: corner, score: -Infinity };
+      for (let dx = -SEARCH; dx <= SEARCH; dx += CELL) {
+        for (let dz = -SEARCH; dz <= SEARCH; dz += CELL) {
+          const d = { x: corner.x + dx, z: corner.z + dz };
+          let score = 0;
+          for (const c of cells) score += mask.free({ x: c.x + d.x, z: c.z + d.z }) ? 1 : -1;
+          if (score > best.score || (score === best.score && Math.hypot(dx, dz) < Math.hypot(best.d.x - corner.x, best.d.z - corner.z))) {
+            best = { d, score };
+          }
+        }
+      }
+      offsets[g] = { x: clean(best.d.x), z: clean(best.d.z) };
+    }
+    if (groups.every(g => offsets[g])) return { rotation, offsets };
+  }
+  return null;
+}
+
+function area(r: Rect): number {
+  return (r.maxX - r.minX) * (r.maxZ - r.minZ);
+}
+
 // --- auto-fit ------------------------------------------------------------------------------------
 
 const CELL = 0.5;
@@ -213,6 +275,18 @@ export function autoFit(
   hall: Hall,
   rotations: ReadonlyArray<QuarterTurn> = [0, 90, 180, 270],
 ): FitResult {
+  // The same plan's grid on both sides: place exactly, no search.
+  const registered = registeredAlignment(result, groups, hall);
+  if (registered) {
+    const mask = FloorMask.forHall(hall);
+    const onFloor: Record<string, number> = {};
+    for (const g of groups) {
+      onFloor[g] = result.stalls
+        .filter(s => s.group === g)
+        .filter(s => cellCentres(placeOutline(s, registered)).every(p => mask.free(p))).length;
+    }
+    return { alignment: registered, onFloor, total: Object.values(onFloor).reduce((s, v) => s + v, 0) };
+  }
   let best: FitResult | null = null;
   for (const rotation of rotations) {
     const start = centredAlignment(result, groups, hall, rotation);

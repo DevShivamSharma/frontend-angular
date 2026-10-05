@@ -65,6 +65,13 @@ export interface PdfUnresolved {
   reason: string;
 }
 
+/** An area the drawing's stall grid covers (hall floor, foyer): a rectangle in its group's metres. */
+export interface PdfGridArea {
+  group: string;
+  outline: Point[];
+  area: number;
+}
+
 export interface PdfImportResult {
   page: { width: number; height: number; rotation: number };
   layers: Array<{ name: string; role: string; paths: number }>;
@@ -73,5 +80,7 @@ export interface PdfImportResult {
   stalls: PdfStall[];
   excluded: PdfExcluded[];
   unresolved: PdfUnresolved[];
+  /** Missing from older backends: then the import falls back to auto-fit. */
+  gridAreas?: PdfGridArea[];
   issues: string[];
 }

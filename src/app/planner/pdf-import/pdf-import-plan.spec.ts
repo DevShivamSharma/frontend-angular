@@ -18,6 +18,7 @@ import {
   importHall,
   matchGroups,
   placeOutline,
+  registeredAlignment,
   toPlannerStall,
   turn,
 } from './pdf-import-plan';
@@ -168,6 +169,45 @@ describe('PDF import plan', () => {
     expect(fit.alignment.rotation).toBe(0);
     expect(fit.alignment.offsets['12A'].x).toBe(-10.5);
     expect(fit.total).toBe(4);
+  });
+
+  describe('on the hall\'s own grid floor', () => {
+    // A hall imported from its plan's grid: floor x -10..10, z -5..5 with a 2 x 3 m notch on the
+    // left (x -10..-8, z -1..2), carved out of a 24 x 14 m plan by white masks, as SelfCare does.
+    const mask = (x0: number, z0: number, x1: number, z1: number) =>
+      ({ posX: (x0 + x1) / 2, posZ: (z0 + z1) / 2, width: x1 - x0, length: z1 - z0, kind: 'outside' as const, color: '#ffffff' });
+    const gridHall: Hall = {
+      ...plainHall(24, 14),
+      boundary: [{ x: -12, z: -7 }, { x: 12, z: -7 }, { x: 12, z: 7 }, { x: -12, z: 7 }],
+      blockedAreas: [mask(-12, -7, 12, -5), mask(-12, 5, 12, 7), mask(-12, -5, -10, 5), mask(10, -5, 12, 5), mask(-10, -1, -8, 2)],
+    };
+    // The drawing's grid, same notch, in its own frame (floor x 3..23, z 7..17); one stall flush
+    // against the notch.
+    const drawn = (top: number) => ({
+      ...result([box('8', 5, 11, 4, 3)], [group('8', 0, 0)]),
+      gridAreas: [{
+        group: '8',
+        area: 194,
+        outline: [[3, top], [23, top], [23, 17], [3, 17], [3, 14], [5, 14], [5, 11], [3, 11]].map(([x, z]) => ({ x, z })),
+      }],
+    });
+
+    it('lays the drawing\'s grid exactly on the hall\'s, so stalls land where they are drawn', () => {
+      const a = registeredAlignment(drawn(7), ['8'], gridHall)!;
+      expect(a).toEqual({ rotation: 0, offsets: { '8': { x: -13, z: -12 } } });
+      // The stall against the notch stays against it: x -8 is the notch's edge.
+      expect(placeOutline(drawn(7).stalls[0], a)[0]).toEqual({ x: -8, z: -1 });
+      expect(autoFit(drawn(7), ['8'], gridHall).alignment).toEqual(a);
+    });
+
+    it('matches by the grid\'s shape when the drawing cuts its grid a metre short', () => {
+      // Grid drawn from z 8 instead of 7: corner on corner would be a metre off; the notch is not.
+      expect(registeredAlignment(drawn(8), ['8'], gridHall)!.offsets['8']).toEqual({ x: -13, z: -12 });
+    });
+
+    it('leaves a drawing of another hall to auto-fit', () => {
+      expect(registeredAlignment(drawn(7), ['8'], plainHall(60, 40))).toBeNull();
+    });
   });
 
   it('keeps the drawing layout when everything fits as drawn', () => {

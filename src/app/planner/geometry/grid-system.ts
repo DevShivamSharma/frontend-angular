@@ -34,9 +34,15 @@ export class GridSystem {
 
     // A hall traced from its plan: the grid covers the whole plan, from the plan's own corner, so
     // grid lines stay on the source's whole metres and reach a foyer beyond the breadth.
-    if (hallFloor(hall).length) {
+    const floor = hallFloor(hall);
+    if (floor.length) {
       const b = planBounds(hall);
-      return new GridSystem(b.minX, b.minZ, b.maxX - b.minX, b.maxZ - b.minZ, cellSize, snapStep);
+      // Lines in phase with the floor's own corner: a floor traced from the plan's grid starts on
+      // a grid line, while walls drawn outside it can push the plan's corner off the lattice.
+      const f = polygonBounds(floor.flatMap(r => r.outer));
+      const minX = f.minX - Math.ceil((f.minX - b.minX) / cellSize - 1e-9) * cellSize;
+      const minZ = f.minZ - Math.ceil((f.minZ - b.minZ) / cellSize - 1e-9) * cellSize;
+      return new GridSystem(minX, minZ, b.maxX - minX, b.maxZ - minZ, cellSize, snapStep);
     }
 
     if (hall.boundary && hall.boundary.length >= 3) {

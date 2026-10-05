@@ -28,6 +28,7 @@ import type { PdfImportResult, PdfStall } from './pdf-import.model';
 import {
   autoFit,
   centredAlignment,
+  registeredAlignment,
   cellCentres,
   checkRules,
   defaultTarget,
@@ -408,7 +409,11 @@ export class PdfImportDialogComponent {
     const hall = this.workHall();
     if (!r || !hall) return;
     this.check.set(null);
-    this.alignment.set(centredAlignment(r, this.groups(), hall, this.alignment()?.rotation ?? 0));
+    // Back to the drawing's own placement: on the hall's grid when both share it, else centred.
+    this.alignment.set(
+      (this.targetHall() ? registeredAlignment(r, this.groups(), hall) : null) ??
+        centredAlignment(r, this.groups(), hall, this.alignment()?.rotation ?? 0)
+    );
   }
 
   rotate(by: 90 | -90): void {
