@@ -38,6 +38,8 @@ export class ExhibitorScene3dComponent implements AfterViewInit {
   readonly selectedId = input<string | null>(null);
   /** Stalls matching the list's search and filters; the rest are dimmed. null: nothing filtered. */
   readonly matches = input<ReadonlySet<string> | null>(null);
+  /** Whether hall marker labels (gates, ramps, etc.) are shown in the 3D view. */
+  readonly showLabels = input<boolean>(true);
   /** Bring a stall into view (e.g. picked from the list). `seq` repeats a request for the same stall. */
   readonly focus = input<{ id: string; seq: number } | null>(null);
 
@@ -186,7 +188,8 @@ export class ExhibitorScene3dComponent implements AfterViewInit {
 
   private frameAll(hall: Hall): void {
     const frame = planFrame(hall, this.stalls());
-    this.focusRect(frame, 0.9);
+    // Fill a larger share of the viewport: the ExhiPlan-style mockup fills most of the frame.
+    this.focusRect(frame, 0.78);
   }
 
   private focusRect(rect: Rect, fill: number): void {
@@ -308,10 +311,39 @@ export class ExhibitorScene3dComponent implements AfterViewInit {
     this.controls.update();
     const { clientWidth, clientHeight } = this.host().nativeElement;
     this.renderer.render(this.scene, this.camera);
+    // Project every stall's label, then show only those big enough and not clashing with a
+    // nearby label. Selected stall is always visible and takes precedence.
+    const projected: Array<{ entry: StallEntry; x: number; y: number; screenWidth: number; selected: boolean }> = [];
     for (const entry of this.stallEntries.values()) {
-      entry.projectLabel(this.camera, clientWidth, clientHeight);
+      const info = entry.projectLabel(this.camera, clientWidth, clientHeight);
+      if (!info) { entry.placeLabel(false, 0, 0); continue; }
+      projected.push({ entry, ...info });
+    }
+    // Draw selected first so it reserves its screen cell before other labels compete for it.
+    projected.sort((a, b) => (b.selected ? 1 : 0) - (a.selected ? 1 : 0) || b.screenWidth - a.screenWidth);
+    const occupied: Array<{ x: number; y: number }> = [];
+    const MIN_SCREEN_WIDTH = 50;
+    // Labels are ~130 px wide and ~36 px tall. Keep that clear around every chosen label.
+    const SPACING_X = 110;
+    const SPACING_Y = 40;
+    const LABEL_HALF = 65;
+    // Also hide a label whose horizontal centre falls near the canvas edge: its box would spill
+    // past the clipped overlay and look like a stacked column against the edge.
+    const EDGE_MARGIN = 40;
+    for (const p of projected) {
+      const bigEnough = p.selected || p.screenWidth >= MIN_SCREEN_WIDTH;
+      const insideCanvas = p.x >= LABEL_HALF - EDGE_MARGIN && p.x <= clientWidth - (LABEL_HALF - EDGE_MARGIN);
+      const clash = occupied.some(o => Math.abs(o.x - p.x) < SPACING_X && Math.abs(o.y - p.y) < SPACING_Y);
+      const show = bigEnough && (p.selected || (insideCanvas && !clash));
+      p.entry.placeLabel(show, p.x, p.y);
+      if (show) occupied.push({ x: p.x, y: p.y });
     }
     for (const child of this.markerGroup.children) {
+      const labelEl = child.userData['labelEl'] as HTMLElement | undefined;
+      if (!this.showLabels()) {
+        if (labelEl) labelEl.style.display = 'none';
+        continue;
+      }
       const projector = child.userData['projectLabel'] as ((cam: THREE.PerspectiveCamera, w: number, h: number) => void) | undefined;
       projector?.(this.camera, clientWidth, clientHeight);
     }
@@ -515,16 +547,44 @@ class StallEntry {
     this.anchor.position.set(this.stall.label.at.x, h + 0.6, this.stall.label.at.z);
   }
 
-  projectLabel(camera: THREE.PerspectiveCamera, width: number, height: number): void {
+  /**
+   * Projects the label and returns the screen position + stall's apparent screen width, so the
+   * scene can decide whether to show it (big enough and not overlapping another label).
+   */
+  projectLabel(
+    camera: THREE.PerspectiveCamera,
+    width: number,
+    height: number,
+  ): { x: number; y: number; screenWidth: number; selected: boolean } | null {
     const world = new THREE.Vector3();
     this.anchor.getWorldPosition(world);
     const ndc = world.clone().project(camera);
-    if (ndc.z > 1) {
-      this.label.style.display = 'none';
-      return;
+    // Behind the camera or off-screen on the x/y axes: no label.
+    if (ndc.z > 1 || ndc.z < -1 || ndc.x < -1 || ndc.x > 1 || ndc.y < -1 || ndc.y > 1) return null;
+    // Project the stall's bounding box too, so we know how big it looks on screen right now.
+    const b = this.stall.bounds;
+    const corners = [
+      new THREE.Vector3(b.minX, 0, b.minZ),
+      new THREE.Vector3(b.maxX, 0, b.minZ),
+      new THREE.Vector3(b.maxX, 0, b.maxZ),
+      new THREE.Vector3(b.minX, 0, b.maxZ),
+    ];
+    let sMinX = Infinity, sMaxX = -Infinity;
+    for (const c of corners) {
+      const p = c.project(camera);
+      sMinX = Math.min(sMinX, (p.x * 0.5 + 0.5) * width);
+      sMaxX = Math.max(sMaxX, (p.x * 0.5 + 0.5) * width);
     }
     const x = (ndc.x * 0.5 + 0.5) * width;
     const y = (-ndc.y * 0.5 + 0.5) * height;
+    return { x, y, screenWidth: sMaxX - sMinX, selected: this.selected };
+  }
+
+  placeLabel(visible: boolean, x: number, y: number): void {
+    if (!visible) {
+      this.label.style.display = 'none';
+      return;
+    }
     this.label.style.display = 'block';
     this.label.style.transform = `translate(-50%, -100%) translate(${x}px, ${y}px)`;
   }
@@ -709,9 +769,20 @@ function buildMarker(marker: HallMarker, overlay: HTMLElement): THREE.Object3D |
     const world = new THREE.Vector3();
     anchor.getWorldPosition(world);
     const ndc = world.clone().project(camera);
-    if (ndc.z > 1) { label.style.display = 'none'; return; }
+    // Hide markers outside the viewport or behind the camera so they don't appear
+    // as clipped, floating names stuck to the edge of the overlay.
+    if (ndc.z > 1 || ndc.z < -1 || ndc.x < -1 || ndc.x > 1 || ndc.y < -1 || ndc.y > 1) {
+      label.style.display = 'none';
+      return;
+    }
     const x = (ndc.x * 0.5 + 0.5) * w;
     const y = (-ndc.y * 0.5 + 0.5) * h;
+    // Keep labels from spilling past the clipped overlay edges.
+    const margin = 24;
+    if (x < margin || x > w - margin || y < margin || y > h - margin) {
+      label.style.display = 'none';
+      return;
+    }
     label.style.display = 'block';
     label.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
   };

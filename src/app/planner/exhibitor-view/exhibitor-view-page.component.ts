@@ -93,6 +93,7 @@ export class ExhibitorViewPageComponent {
     .filter(k => k.count > 0));
 
   readonly viewMode = signal<'2d' | '3d'>('3d');
+  readonly showLabels = signal(true);
 
   readonly selectedId = signal<string | null>(null);
   readonly selected = computed(() => this.stalls().find(s => s.id === this.selectedId()) ?? null);
@@ -169,6 +170,10 @@ export class ExhibitorViewPageComponent {
 
   setViewMode(mode: '2d' | '3d'): void {
     this.viewMode.set(mode);
+  }
+
+  toggleLabels(): void {
+    this.showLabels.update(v => !v);
   }
 
   async loadQuote(id: string | null, number: string | null | undefined, pricing: PricingSnapshot | null, type: 'bare' | 'shell'): Promise<void> {

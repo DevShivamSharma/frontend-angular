@@ -56,6 +56,7 @@
                 [selectedId]="selectedId()"
                 [matches]="matchIds()"
                 [focus]="focus()"
+                [showLabels]="showLabels()"
                 (select)="choose($event)"
               />
             } @else {
@@ -70,21 +71,32 @@
               />
             }
           }
-          <div class="xv-view-toggle" role="group" aria-label="View mode">
-            <button type="button"
-                    class="xv-view-btn"
-                    [class.is-active]="viewMode() === '2d'"
-                    [attr.aria-pressed]="viewMode() === '2d'"
-                    (click)="setViewMode('2d')">
-              2D Map
-            </button>
-            <button type="button"
-                    class="xv-view-btn"
-                    [class.is-active]="viewMode() === '3d'"
-                    [attr.aria-pressed]="viewMode() === '3d'"
-                    (click)="setViewMode('3d')">
-              3D View
-            </button>
+          <div class="xv-map-controls">
+            <div class="xv-view-toggle" role="group" aria-label="View mode">
+              <button type="button"
+                      class="xv-view-btn"
+                      [class.is-active]="viewMode() === '2d'"
+                      [attr.aria-pressed]="viewMode() === '2d'"
+                      (click)="setViewMode('2d')">
+                2D Map
+              </button>
+              <button type="button"
+                      class="xv-view-btn"
+                      [class.is-active]="viewMode() === '3d'"
+                      [attr.aria-pressed]="viewMode() === '3d'"
+                      (click)="setViewMode('3d')">
+                3D View
+              </button>
+            </div>
+            @if (viewMode() === '3d') {
+              <button type="button"
+                      class="xv-label-toggle"
+                      [class.is-active]="showLabels()"
+                      [attr.aria-pressed]="showLabels()"
+                      (click)="toggleLabels()">
+                Labels
+              </button>
+            }
           </div>
           @if (!selected()) {
             <p class="xv-hint">
