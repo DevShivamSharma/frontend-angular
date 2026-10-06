@@ -43,10 +43,16 @@
   @if (session.busy()) { <div class="typing" role="status" aria-label="Planning your layout"><span></span><span></span><span></span><span class="sr-only">Planning your layout…</span></div> }
 </div>
 <div class="chat-composer">
+  @if (session.sellableZones().length) {
+    <label class="composer-zone">Zone<select class="control" [value]="zone()" (change)="onZone($event)" [disabled]="session.busy() || !session.rulesAgreed()"><option value="">All sellable zones · largest first</option>@for (z of session.sellableZones(); track z.id) {<option [value]="z.id" [selected]="z.id === zone()">{{ z.label }} · {{ z.eventType }}</option>}</select></label>
+  }
+  @if (session.hall() && !session.rulesAgreed()) {
+    <p class="composer-locked" role="status">The hall rules or zones changed, so typing is paused. <button type="button" class="btn-mini" (click)="showRules()">Review &amp; agree</button></p>
+  }
   <label class="sr-only" [for]="inputId">Layout request</label>
   <div class="composer-field">
     <textarea #input [id]="inputId" rows="2" maxlength="500" placeholder="Describe stalls, size and location, or a rule…" [value]="session.draft()" (input)="onInput($event)" (keydown)="onKey($event)" [disabled]="!session.hall() || !session.rulesAgreed()"></textarea>
-    <button type="button" class="chat-send" aria-label="Send layout request" title="Send request" [disabled]="!session.draft().trim() || session.busy() || !session.hall() || !session.rulesAgreed()" (click)="session.send()"><app-icon name="arrow-up" [size]="17" /></button>
+    <button type="button" class="chat-send" aria-label="Send layout request" title="Send request" [disabled]="!session.draft().trim() || session.busy() || !session.hall() || !session.rulesAgreed()" (click)="send()"><app-icon name="arrow-up" [size]="17" /></button>
   </div>
   <div class="composer-meta"><span>Enter to send · Shift + Enter for a new line</span>@if (session.draft().length > 400) { <span>{{ session.draft().length }}/500</span> }</div>
 </div>

@@ -25,7 +25,7 @@
 <div class="map-tools" [inert]="!loading.ready()" aria-label="View controls"><button #homeButton id="home-view" (click)="overview()" aria-label="Return to venue" title="Return to venue"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg></button><button id="globe-view" (click)="globe()" [class.active]="globeActive()" [disabled]="!globeAvailable()" aria-label="Explore globe" title="Explore globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button><button id="light-mode" (click)="toggleLight()" [class.active]="daylight()" [attr.aria-label]="daylight() ? 'Switch to evening' : 'Switch to daylight'" [title]="daylight() ? 'Switch to evening' : 'Switch to daylight'"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/></svg></button><div class="tool-gap"></div><button id="zoom-in" (click)="zoom(.74)" aria-label="Zoom in">+</button><button id="zoom-out" (click)="zoom(1.35)" aria-label="Zoom out">−</button></div>
 <footer [inert]="!loading.ready()"><span id="status" aria-live="polite">{{ status() }}</span><span class="interaction-hint">Drag to orbit · Right drag to pan · Scroll to zoom</span></footer>
 <div id="geo-credit" [hidden]="!geographyReady()" [inert]="!loading.ready()">
-  @if (appearance() === 'color' && satelliteReady() && !globeActive()) {
+  @if (appearance() === 'color' && scenery() === 'satellite' && satelliteReady() && !globeActive()) {
     <a id="satellite-credit" href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer" target="_blank" rel="noopener">Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community</a>
   } @else {
     <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>
@@ -41,5 +41,11 @@
     <button type="button" data-appearance="natural" [attr.aria-pressed]="appearance() === 'natural'" [disabled]="appearanceBusy()" (click)="setAppearance('natural')">Natural</button>
     <button type="button" data-appearance="color" [attr.aria-pressed]="appearance() === 'color'" [disabled]="appearanceBusy()" (click)="setAppearance('color')">Color</button>
   </div>
+  @if (appearance() === 'color') {
+    <div class="appearance-switch scenery-switch" role="group" aria-label="Scenery">
+      <button type="button" data-scenery="satellite" [attr.aria-pressed]="scenery() === 'satellite'" (click)="setScenery('satellite')">Satellite</button>
+      <button type="button" data-scenery="map" [attr.aria-pressed]="scenery() === 'map'" (click)="setScenery('map')">Map</button>
+    </div>
+  }
   <p id="appearance-status" role="status" [hidden]="!appearanceBusy() && !appearanceError()">{{ appearanceBusy() ? 'Preparing materials…' : appearanceError() }}</p>
 </div>

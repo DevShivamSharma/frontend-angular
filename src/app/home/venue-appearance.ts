@@ -3,6 +3,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createPavingTexture } from './venue-surface-detail';
 
 export type VenueAppearance = 'natural' | 'color';
+/** Ground context shown under the Color appearance. */
+export type VenueScenery = 'satellite' | 'map';
 
 /** The supplied palette has materials/textures only. Never attach a second scene.
  * Keep material instances stable for selection, clipping and the static batches.

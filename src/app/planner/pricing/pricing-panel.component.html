@@ -8,8 +8,11 @@
   <label for="master-picker">Price master</label>
   <select id="master-picker" class="control" [(ngModel)]="selectedId" [disabled]="busy()">
     <option value="">{{ masters().length ? 'Choose a price master' : 'No price masters yet' }}</option>
-    @for (master of masters(); track master.id) { <option [value]="master.id">{{ master.name }} · r{{ master.revision }}</option> }
+    @for (master of visibleMasters(); track master.id) { <option [value]="master.id">{{ master.name }} · r{{ master.revision }}</option> }
   </select>
+  @if (showAll() || hiddenMasters()) {
+    <label class="check"><input type="checkbox" [checked]="showAll()" (change)="showAll.set(!showAll())" [disabled]="busy()" /> Show all available pricing schemes ({{ masters().length }})</label>
+  }
   <div class="actions"><button type="button" class="btn-secondary" (click)="newMaster()" [disabled]="busy()">New master</button><button type="button" class="btn-secondary" (click)="edit()" [disabled]="busy() || !selectedId">Edit selected</button></div>
   @if (editing()) {
     <form #priceForm="ngForm" (ngSubmit)="save()">

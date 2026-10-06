@@ -5,7 +5,7 @@ import * as T from 'three';
 import { createVenueGlobeMarker } from './venue-globe-marker';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import type { VenueAppearance } from './venue-appearance';
+import type { VenueAppearance, VenueScenery } from './venue-appearance';
 import { createVenueSatellite } from './venue-satellite';
 
 
@@ -32,9 +32,9 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   groundGroup.add(mapFeatures);
   const satellite = createVenueSatellite(asset, renderer, signal);
   groundGroup.add(satellite.group);
-  let appearanceMode: VenueAppearance = 'natural', satelliteReady = false;
+  let appearanceMode: VenueAppearance = 'natural', scenery: VenueScenery = 'satellite', satelliteReady = false;
   function showContext() {
-    satellite.group.visible = appearanceMode === 'color' && satelliteReady;
+    satellite.group.visible = appearanceMode === 'color' && scenery === 'satellite' && satelliteReady;
     mapFeatures.visible = !satellite.group.visible;
   }
   const lat=28.6185*Math.PI/180,lon=77.2440*Math.PI/180;
@@ -105,6 +105,11 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     for (const kind of Object.keys(contextMaterials) as Kind[]) contextMaterials[kind].color.set(palette[kind]);
     earthSaturation.value = appearance === 'color' ? 1 : .36;
     if (appearance === 'color') localBackground.set('#b9c9cd'); else localBackground.copy(naturalBackground);
+    onInvalidate();
+  }
+  function setScenery(next: VenueScenery) {
+    scenery = next;
+    showContext();
     onInvalidate();
   }
   // Keep the existing OSM coordinates and road widths. Fade distant data into the
@@ -214,5 +219,5 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       else if(mode==='globe'&&distance<R*1.19&&camera.position.clone().sub(center).normalize().y>.72)goVenue();
     }
   }
-  return{update,goGlobe,goVenue,setAppearance,get isGlobe(){return mode==='globe'},get transitioning(){return!!transition},get mode(){return mode},group,center,radius:R,attribution:'Earth: NASA Earth Observatory · © OpenStreetMap contributors'};
+  return{update,goGlobe,goVenue,setAppearance,setScenery,get isGlobe(){return mode==='globe'},get transitioning(){return!!transition},get mode(){return mode},group,center,radius:R,attribution:'Earth: NASA Earth Observatory · © OpenStreetMap contributors'};
 }

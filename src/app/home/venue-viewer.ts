@@ -8,12 +8,12 @@ import { createVenueAmbientOcclusion } from './venue-ambient-occlusion';
 import { batchVenue } from './venue-batching';
 import { prepareVenueSurfaceDetail } from './venue-surface-detail';
 import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
-import { createVenueAppearance, VenueAppearance } from './venue-appearance';
+import { createVenueAppearance, VenueAppearance, VenueScenery } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; }
-export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; readonly isGlobe:boolean; dispose:()=>void; }
+export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; readonly isGlobe:boolean; dispose:()=>void; }
 /** Demand-rendered venue with identical shading during movement and at rest. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement): VenueViewer {
     const lifetime = new AbortController();
@@ -23,8 +23,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
     const listen = <K extends keyof WindowEventMap>(type: K, callback: (event: WindowEventMap[K]) => void) => window.addEventListener(type, callback, { signal });
     let viewCommand = (_id:string) => {}, levelCommand = (_level:number) => {}, globeCommand = () => {}, zoomCommand = (_factor:number) => {}, lightCommand = (_enabled:boolean) => {}, isGlobe = () => false;
     let appearanceCommand = async (_mode: VenueAppearance) => {};
+    let sceneryCommand = (_scenery: VenueScenery) => {};
     const ready = initializeVenue();
-    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setAppearance:mode=>appearanceCommand(mode), get isGlobe(){return isGlobe();}, dispose:()=>{lifetime.abort();for(const cleanup of cleanups.reverse())cleanup();} };
+    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), get isGlobe(){return isGlobe();}, dispose:()=>{lifetime.abort();for(const cleanup of cleanups.reverse())cleanup();} };
     async function initializeVenue() {
         signal.throwIfAborted();
         const scene = new T.Scene();
@@ -207,6 +208,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                     if (root) revealMappedRoads(root);
                     renderer.shadowMap.needsUpdate = true;
                 }});
+            sceneryCommand = scenery => globe?.setScenery(scenery);
             events.geographyReady(true);
         } catch(error) { if(!signal.aborted)console.warn('Geographic context unavailable',error);events.geographyReady(false); }
         signal.throwIfAborted();

@@ -7,7 +7,7 @@ import { VenueDetailsComponent } from './venue-details.component';
 import { FloorPlanDialogComponent } from './floor-plan-dialog.component';
 import { Destination, VenueDetail, VenueInformation } from './venue.models';
 import { VenueViewer, createVenueViewer } from './venue-viewer';
-import { VenueAppearance } from './venue-appearance';
+import { VenueAppearance, VenueScenery } from './venue-appearance';
 
 @Component({
   selector: 'app-home-page', standalone: true,
@@ -43,6 +43,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly daylight = signal(false);
   readonly appearance = signal<VenueAppearance>('natural');
   readonly appearanceBusy = signal(false);
+  readonly scenery = signal<VenueScenery>('satellite');
   readonly appearanceError = signal('');
   readonly globeActive = signal(false);
   readonly globeAvailable = signal(true);
@@ -121,6 +122,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
       if (!this.destroyed) this.appearanceError.set('Color materials could not load. Select Color to retry.');
     } finally { if (!this.destroyed) this.appearanceBusy.set(false); }
   }
+  setScenery(scenery: VenueScenery): void { this.scenery.set(scenery); this.zone.runOutsideAngular(() => this.viewer?.setScenery(scenery)); }
   retry(): void { if (this.loading.stages().venue.state === 'error') location.reload(); else void this.loading.retry(); }
   @HostListener('window:keydown', ['$event']) keyDown(event: KeyboardEvent): void { if (event.key === 'Escape' && !this.plan().isOpen) this.closeDetails(); }
   ngOnDestroy(): void { this.destroyed = true; this.loading.destroy(); this.zone.runOutsideAngular(() => this.viewer?.dispose()); }

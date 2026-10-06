@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, effect, inject, signal, untracked } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PlannerStore } from '../planner-store.service';
@@ -8,6 +8,9 @@ import { PricingApiService } from './pricing-api.service';
 import { PriceBreakdownComponent } from './price-breakdown.component';
 import { downloadPriceTemplate, emptyPriceMaster, readPrices } from './pricing-workbook';
 import type { PriceMaster, PriceMasterInput, PricingSnapshot, StallQuote } from './pricing.model';
+
+/** Name prefix the backend gives library-generated masters (backend-nest src/pricing/pricing-library.ts). */
+const LIBRARY_MASTER_PREFIX = 'DB demo ';
 
 @Component({ selector:'app-pricing-panel', imports:[FormsModule,CurrencyPipe,PriceBreakdownComponent],
   templateUrl:'./pricing-panel.component.html', styleUrl:'./pricing-panel.component.css', changeDetection:ChangeDetectionStrategy.OnPush })
@@ -19,6 +22,16 @@ export class PricingPanelComponent {
   private readonly api = inject(PricingApiService);
   private readonly layouts = inject(LayoutApiService);
   readonly masters = signal<PriceMaster[]>([]);
+  readonly showAll = signal(false);
+  /** Short list by default: masters generated from the pricing library are hidden until asked for. */
+  readonly visibleMasters = computed(() => {
+    const all=this.masters();
+    if(this.showAll()) return all;
+    const keep=new Set([this.selectedId,String(this.snapshot()?.masterId ?? '')]);
+    const short=all.filter(m=>!m.name.startsWith(LIBRARY_MASTER_PREFIX) || keep.has(String(m.id)));
+    return short.length ? short : all;
+  });
+  readonly hiddenMasters = computed(() => this.masters().length - this.visibleMasters().length);
   readonly busy = signal(false);
   readonly error = signal('');
   readonly notice = signal('');

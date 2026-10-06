@@ -29,6 +29,9 @@ button { cursor:pointer; transition:background var(--transition), transform var(
 .plan-state.is-applied { color:var(--success-text); background:var(--success-surface); padding:3px 8px; border-radius:var(--radius-sm); }
 details { margin-top:12px; } summary { cursor:pointer; } ul { max-height:120px; overflow:auto; padding-left:20px; }
 .chat-composer { border-top:1px solid var(--border-subtle); padding:12px 16px; background:var(--surface-card); }
+.composer-zone { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; color:var(--text-secondary); }
+.composer-locked { margin:0 0 8px; font-size:12px; color:var(--text-secondary); }
+.composer-zone .control { flex:1; min-width:0; }
 .composer-field { display:flex; align-items:flex-end; gap:8px; padding:8px; border:1px solid var(--border-default); border-radius:var(--radius-lg); }
 .composer-field:focus-within { border-color:var(--accent); }
 textarea { flex:1; min-width:0; box-sizing:border-box; padding:3px; border:0; background:transparent; resize:none; max-height:120px; outline:none; line-height:1.5; font-size:13px; }
