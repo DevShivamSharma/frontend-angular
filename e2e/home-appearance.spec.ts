@@ -1,7 +1,8 @@
 import { writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
-test.use({ trace: 'off', launchOptions: {
+// Compare static scene finishes; flowing water is verified separately.
+test.use({ reducedMotion: 'reduce', trace: 'off', launchOptions: {
   args: process.platform === 'win32' ? ['--use-angle=d3d11'] : ['--enable-unsafe-swiftshader']
 } });
 

@@ -10,8 +10,8 @@ const browserClock: FrameClock = {
   visible: () => !document.hidden
 };
 
-/** Render input and camera motion promptly, then release the GPU without changing the image.
- * update returns true while camera damping or a destination flight still needs frames.
+/** Render input promptly, then release the GPU whenever the scene stops animating.
+ * update returns true while camera motion or visible water still needs frames.
  */
 export function createVenueRenderLoop(
   update: () => boolean,

@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createPavingTexture } from './venue-surface-detail';
+import { createArchitecturalFinishes } from './venue-architectural-detail';
 
 export type VenueAppearance = 'natural' | 'color';
 /** Ground context shown under the Color appearance. */
@@ -15,6 +16,7 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
     const ownedMaterials = new Set<T.Material>(), textures = new Set<T.Texture>();
     let disposed = false;
     const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    const architecture = createArchitecturalFinishes(anisotropy);
     let naturalPaving: T.Texture | undefined;
     const own = (material: T.Material) => {
         ownedMaterials.add(material);
@@ -30,9 +32,11 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
                 material.color.setRGB(.20, .218, .213);
                 renderer.initTexture(naturalPaving);
             }
+            architecture.apply(material, true);
             const natural = material.clone(); surfaces.set(material, natural); own(natural);
         }
     });
+    for (const texture of architecture.textures) { textures.add(texture); renderer.initTexture(texture); }
     const wanted = new Set([...surfaces.values()]
         .filter(m => m.userData['architecturalCategory'] !== 'supplied_floor_plan').map(m => m.name));
     let pending: Promise<Map<string, T.MeshStandardMaterial>> | undefined;
@@ -96,6 +100,7 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
                 const { vertexColors, flatShading, clippingPlanes, side } = material;
                 material.copy(source);
                 Object.assign(material, { vertexColors, flatShading, clippingPlanes, side });
+                architecture.apply(material, mode === 'natural', architecture.finishOf(natural));
                 material.needsUpdate = true;
             }
         },

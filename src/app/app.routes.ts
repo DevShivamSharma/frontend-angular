@@ -9,6 +9,7 @@ import { HomePageComponent } from './home/home-page.component';
  * SPA fallback parity; no guards are added until authentication requirements exist.
  */
 export const routes: Routes = [
+  { path: 'hall14-detail', title: 'Hall 14 — detail study', loadComponent: () => import('./home/hall14-study.component').then(m => m.Hall14StudyComponent) },
   { path: 'planner/pricing', title: 'Hall pricing library', loadComponent: () => import('./planner/pricing/pricing-library.component').then(m => m.PricingLibraryComponent) },
   { path: '', component: HomePageComponent },
   // Step 3, the stall editor, full screen. Listed before the setup routes so `planner/editor`

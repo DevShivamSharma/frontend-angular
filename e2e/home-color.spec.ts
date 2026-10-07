@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-test.use({trace:'off', launchOptions:{args:process.platform==='win32'?['--use-angle=d3d11']:['--enable-unsafe-swiftshader']}});
+// Freeze decorative water for exact palette/pixel and idle-render comparisons.
+test.use({reducedMotion:'reduce',trace:'off', launchOptions:{args:process.platform==='win32'?['--use-angle=d3d11']:['--enable-unsafe-swiftshader']}});
 
 test('appearance: lazy palette, stable camera, selection, cached toggles and idle rendering', async ({page},info) => {
   test.setTimeout(150_000);

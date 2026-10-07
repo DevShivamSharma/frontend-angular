@@ -1,0 +1,36 @@
+<main class="study">
+  <canvas #canvas aria-label="Interactive Hall 14 model. Drag to orbit, scroll to zoom, right-drag to pan."></canvas>
+  <header>
+    <div>
+      <a routerLink="/" class="back">← Venue</a>
+      <h1>Hall 14<span>A closer look.</span></h1>
+      <p>One building. A richer material and facade study.</p>
+    </div>
+    <div class="compare" role="group" aria-label="Compare model detail">
+      <button type="button" [disabled]="!ready()" [class.active]="!detailed()" [attr.aria-pressed]="!detailed()" (click)="setDetailed(false)">Original</button>
+      <button type="button" [disabled]="!ready()" [class.active]="detailed()" [attr.aria-pressed]="detailed()" (click)="setDetailed(true)">Detailed</button>
+    </div>
+  </header>
+  @if (!ready()) {
+    <div class="loading" role="status">
+      @if (error()) {
+        <p>{{ error() }}</p><button type="button" (click)="retry()">Try again</button>
+      } @else {
+        <p>Preparing Hall 14…</p><progress [value]="progress()" max="100" aria-label="Model loading"></progress>
+      }
+    </div>
+  }
+  <aside aria-live="polite">
+    <strong>{{ detailed() ? 'Material & facade study' : 'Original model' }}</strong>
+    <p>{{ detailed() ? 'Panel joints · metal roof · reflective glazing · entrance canopy' : 'The existing Hall 14 geometry and materials, under the same lighting.' }}</p>
+  </aside>
+  <footer>
+    <nav aria-label="Camera views">
+      <button type="button" [disabled]="!ready()" [class.active]="angle() === 'exterior'" [attr.aria-pressed]="angle() === 'exterior'" (click)="setAngle('exterior')">Exterior</button>
+      <button type="button" [disabled]="!ready()" [class.active]="angle() === 'entrance'" [attr.aria-pressed]="angle() === 'entrance'" (click)="setAngle('entrance')">Entrance</button>
+      <button type="button" [disabled]="!ready()" [class.active]="angle() === 'roof'" [attr.aria-pressed]="angle() === 'roof'" (click)="setAngle('roof')">Roof</button>
+    </nav>
+    <p class="help">Drag to orbit · Scroll to zoom</p>
+    <p class="note">Source footprint retained. Added entrance details are illustrative.</p>
+  </footer>
+</main>

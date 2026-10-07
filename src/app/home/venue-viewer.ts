@@ -4,9 +4,11 @@ import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createGlobeContext } from './venue-globe';
 import { createVenueRenderLoop } from './venue-render-loop';
+import { createVenueWater, prepareVenueFountainJets } from './venue-water';
 import { createVenueAmbientOcclusion } from './venue-ambient-occlusion';
 import { batchVenue } from './venue-batching';
 import { prepareVenueSurfaceDetail } from './venue-surface-detail';
+import { prepareVenueArchitecturalDetail } from './venue-architectural-detail';
 import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
 import { createVenueAppearance, VenueAppearance, VenueScenery } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
@@ -14,7 +16,7 @@ type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandar
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; }
 export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; readonly isGlobe:boolean; dispose:()=>void; }
-/** Demand-rendered venue with identical shading during movement and at rest. */
+/** Render camera motion and visible fountain water with consistent scene shading. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement): VenueViewer {
     const lifetime = new AbortController();
     const { signal } = lifetime;
@@ -88,8 +90,11 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
         let prepared = false, localMapReady = false;
+        let water: ReturnType<typeof createVenueWater> | undefined;
+        const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
         const frames = createVenueRenderLoop(updateFrame, renderFrame);
         const invalidate = () => { if (prepared) frames.invalidate(); };
+        reducedMotion.addEventListener('change', invalidate, { signal });
         cleanups.push(() => frames.dispose());
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) frames.pause(); else invalidate();
@@ -220,6 +225,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }
         root = g.scene;
         prepareVenueSurfaceDetail(root);
+        prepareVenueArchitecturalDetail(root);
+        prepareVenueFountainJets(root);
         // Export is already metres, Y-up, east +X / south +Z. Do not rotate the
         // glTF a second time; W converts only the authored navigation coordinates.
         batchVenue(root, classify, o => [
@@ -254,8 +261,16 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         replacedMaterials.forEach(material => material.dispose());
         const appearance = createVenueAppearance(root, renderer, asset, signal);
         cleanups.push(() => appearance.dispose());
+        water = createVenueWater(root);
+        cleanups.push(() => water?.dispose());
+        // Selection must restore the finished baseline, including before the first palette switch.
+        for (const mesh of pickMeshes) {
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            originals.set(mesh, mats.map(m => ({color:m.color.clone(), emissive:m.emissive.clone(), emissiveIntensity:m.emissiveIntensity})));
+        }
         appearanceCommand = async mode => {
             await appearance.apply(mode);
+            water?.refreshMaterials();
             globe?.setAppearance(mode);
             // Refresh selection baselines once per explicit switch, never per frame.
             for (const mesh of pickMeshes) {
@@ -270,8 +285,19 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         events.status('Bharat Mandapam');
         const detailView = new URLSearchParams(location.search).get('view');
         const fitDetailWidth = (aspect: number) =>
-            ['itpo-office', 'gate9'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
-        if (new URLSearchParams(location.search).get('view') === 'cc-forecourt') {
+            ['itpo-office', 'gate9', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
+        const waterViews: Record<string, { position: Triple; target: Triple; label: string }> = {
+            'fountain': { position: [160, 78, 345], target: [67, 2, 250], label: 'Musical Fountain' },
+            'cc-cascade': { position: [-125, 67, 265], target: [-207, 3, 205], label: 'Convention Centre · Cascades' },
+            'hall6-basin': { position: [286, 6, -158], target: [265, .7, -182], label: 'Hall 6 · Water Garden' }
+        };
+        if (detailView && waterViews[detailView]) {
+            const waterView = waterViews[detailView];
+            camera.position.set(...waterView.position);
+            controls.target.set(...waterView.target);
+            controls.update();
+            events.status(waterView.label);
+        } else if (new URLSearchParams(location.search).get('view') === 'cc-forecourt') {
             camera.position.copy(W(10.685, 141.551, 220));
             controls.target.copy(W(-284.315, -123.449, 5));
             controls.update();
@@ -348,7 +374,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }
             const changed = !globe?.transitioning && controls.update();
             globe?.update();
-            return Boolean(changed || tween || globe?.transitioning);
+            const flowing = water?.update(performance.now(), camera,
+                !reducedMotion.matches && !globe?.isGlobe && camera.position.distanceTo(controls.target) < 3000);
+            return Boolean(changed || tween || globe?.transitioning || flowing);
         }
         function renderFrame() {
             // Use the same antialiased materials, lighting and cached shadows for every frame.
@@ -363,6 +391,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         globe?.update();
         prepared = true;
         if (!document.hidden) renderFrame();
+        invalidate();
         return information;
     }
 }
