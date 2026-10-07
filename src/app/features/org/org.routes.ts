@@ -45,6 +45,39 @@ export const ORG_ROUTES: Routes = [
           import('./org-home-page.component').then((m) => m.OrgHomePageComponent),
       },
       {
+        path: 'venues',
+        canActivate: [permissionGuard('venues.view')],
+        children: [
+          {
+            path: '',
+            title: 'Venues',
+            loadComponent: () =>
+              import('./venues/venues-page.component').then((m) => m.VenuesPageComponent),
+          },
+          {
+            path: ':venueId',
+            title: 'Venue',
+            loadComponent: () =>
+              import('./venues/venue-page.component').then((m) => m.VenuePageComponent),
+          },
+          {
+            path: ':venueId/import-plan',
+            title: 'Import a floor plan',
+            canActivate: [permissionGuard('halls.import')],
+            loadComponent: () =>
+              import('./venues/plan-import/plan-import-page.component').then(
+                (m) => m.PlanImportPageComponent,
+              ),
+          },
+          {
+            path: ':venueId/halls/:hallId',
+            title: 'Hall',
+            loadComponent: () =>
+              import('./venues/hall-page.component').then((m) => m.HallPageComponent),
+          },
+        ],
+      },
+      {
         path: 'team',
         title: 'Team',
         canActivate: [permissionGuard('team.view')],

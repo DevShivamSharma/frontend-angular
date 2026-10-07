@@ -101,6 +101,9 @@ export class OrgShellComponent {
   protected readonly nav = computed<NavItem[]>(() => {
     const slug = this.context.slug();
     const items: NavItem[] = [{ label: 'Home', icon: 'home', link: ['/', slug], exact: true }];
+    if (this.context.can('venues.view')) {
+      items.push({ label: 'Venues', icon: 'location_city', link: ['/', slug, 'venues'] });
+    }
     if (this.context.can('team.view')) {
       items.push({ label: 'Team', icon: 'group', link: ['/', slug, 'team'] });
     }

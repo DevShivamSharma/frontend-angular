@@ -352,7 +352,7 @@ export interface HallView {
 
 export interface FloorVersionView {
   version: number;
-  source: 'blank' | 'itpo' | 'restore';
+  source: 'blank' | 'itpo' | 'restore' | 'drawing';
   sourceRef: string | null;
   note: string | null;
   createdAt: string;
@@ -393,4 +393,108 @@ export interface ItpoImportResult {
   created: HallView[];
   updated: HallView[];
   unchanged: HallView[];
+}
+
+export interface ItpoImportPreview {
+  rows: ItpoImportRowView[];
+}
+
+/** What a text on an imported plan is. Mirrors the backend's `PlanTextKind`. */
+export type PlanTextKind =
+  | 'icon:toilet-male'
+  | 'icon:toilet-female'
+  | 'icon:toilet'
+  | 'icon:stairs'
+  | 'icon:lift'
+  | 'icon:emergency-exit'
+  | 'icon:entry'
+  | 'icon:cargo-truck'
+  | 'icon:drinking-water'
+  | 'icon:circulation'
+  | 'area:passage'
+  | 'area:fire_curtain'
+  | 'area:no_build'
+  | 'area:column'
+  | 'area:utility'
+  | 'area:unavailable'
+  | 'area:entry'
+  | 'label'
+  | 'stall_number'
+  | 'dimension'
+  | 'title'
+  | 'none';
+
+/** What a colour on the plan's floor becomes: a kind of area, or open floor for stalls. */
+export type DrawingGroupChoice = FloorAreaKind | 'floor';
+
+export interface DrawingPart {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  area: number;
+  selected: boolean;
+}
+
+export interface DrawingGroup {
+  id: number;
+  color: string;
+  family: string;
+  area: number;
+  choice: DrawingGroupChoice;
+  from: 'legend' | 'colour' | 'you';
+  legend: string | null;
+}
+
+export interface DrawingText {
+  index: number;
+  text: string;
+  kind: PlanTextKind;
+  by: 'rules' | 'model' | 'default' | 'you';
+  review: boolean;
+  source: 'file' | 'ocr';
+  x: number;
+  y: number;
+  used: boolean;
+}
+
+export interface DrawingFloorResult {
+  floor: HallFloor;
+  parts: DrawingPart[];
+  groups: DrawingGroup[];
+  texts: DrawingText[];
+  offset: { x: number; y: number };
+}
+
+export interface DrawingChoices {
+  parts?: number[];
+  groups?: Record<number, DrawingGroupChoice>;
+  texts?: Record<number, PlanTextKind>;
+}
+
+export interface DrawingJobView {
+  id: string;
+  fileName: string;
+  status: 'running' | 'done' | 'failed';
+  step: 'reading' | 'texts' | 'done';
+  message: string | null;
+  /** While the local model reads the texts. */
+  progress: { done: number; total: number } | null;
+  startedAt: string;
+  result: {
+    format: 'pdf-scan' | 'pdf-vector' | 'dxf' | 'image';
+    warnings: string[];
+    model: { used: boolean; name: string | null; note: string | null };
+    grid: { cells: number; regions: number; resolution: number };
+    preview: {
+      url: string;
+      originX: number;
+      originY: number;
+      pxPerMetre: number;
+      width: number;
+      height: number;
+    };
+    plan: DrawingFloorResult;
+  } | null;
 }
