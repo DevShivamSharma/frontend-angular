@@ -88,13 +88,6 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
               ><span class="muted">T_HALL_LAYOUTS export, CSV or JSON</span></span
             >
           </button>
-          <a mat-menu-item [routerLink]="['import-plan']">
-            <mat-icon>picture_as_pdf</mat-icon>
-            <span class="item"
-              ><b>Import a floor plan</b
-              ><span class="muted">PDF, DXF or image: the grid becomes the floor</span></span
-            >
-          </a>
         }
       </mat-menu>
 
@@ -107,13 +100,12 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
           <app-empty-state
             icon="grid_on"
             heading="No halls in this venue"
-            text="Import the hall's floor plan, draw it by its size when there is no plan, or import halls from ITPO."
+            text="Add a hall by its size or import halls from ITPO."
           >
             @if (canManage()) {
               <button mat-flat-button (click)="createHall()">Draw by size</button>
             }
             @if (canImport()) {
-              <a mat-stroked-button [routerLink]="['import-plan']">Import a floor plan</a>
               <button mat-stroked-button (click)="importItpo()">Import from ITPO</button>
             }
           </app-empty-state>
