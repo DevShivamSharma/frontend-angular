@@ -1,0 +1,98 @@
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 0;
+  background: var(--mat-sys-surface);
+}
+
+.org-select {
+  min-width: 300px;
+}
+
+.matrix-wrap {
+  overflow: auto;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--mat-sys-surface-container);
+    font: var(--mat-sys-title-small);
+  }
+}
+
+.permission-col {
+  min-width: 240px;
+  font-weight: normal;
+}
+
+.permission-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--mat-sys-body-medium);
+}
+
+.description {
+  display: block;
+  font: var(--mat-sys-body-small);
+}
+
+.soon {
+  padding: 0 6px;
+  border-radius: 4px;
+  font: var(--mat-sys-label-small);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.role-col {
+  min-width: 112px;
+  text-align: center !important;
+
+  a {
+    display: block;
+    color: inherit;
+  }
+
+  &.is-changed {
+    box-shadow: inset 0 -3px 0 var(--mat-sys-primary);
+  }
+}
+
+.role-meta {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 4px 0;
+}
+
+.count {
+  font: var(--mat-sys-body-small);
+}
+
+.group-row th {
+  background: var(--mat-sys-surface-container-low);
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-primary);
+}
+
+.cell {
+  text-align: center !important;
+}

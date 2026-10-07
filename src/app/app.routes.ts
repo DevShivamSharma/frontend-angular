@@ -1,59 +1,45 @@
 import { Routes } from '@angular/router';
 
-import { HomePageComponent } from './home/home-page.component';
+import { organisationGuard, platformThemeGuard } from './core/org/org.guards';
+
+const invalidLink = () =>
+  import('./features/invalid-link/invalid-link-page.component').then(
+    (m) => m.InvalidLinkPageComponent,
+  );
 
 /**
- * The root shows the 3D venue model. `/planner` is the stall-planner setup: step 1 selects (or
- * imports) a hall, step 2 sets its plotting rules, step 3 is the stall editor. The planner
- * screens are lazy-loaded so the venue page does not download them. The wildcard only provides
- * SPA fallback parity; no guards are added until authentication requirements exist.
+ * One domain for every organisation: `/<org>/...` is that organisation's app in its own look,
+ * `/admin` is the platform console, and anything that names no organisation (the bare domain
+ * included) is the invalid-link page, which lists nothing.
  */
 export const routes: Routes = [
-  { path: 'planner/pricing', title: 'Hall pricing library', loadComponent: () => import('./planner/pricing/pricing-library.component').then(m => m.PricingLibraryComponent) },
-  { path: '', component: HomePageComponent },
-  // Step 3, the stall editor, full screen. Listed before the setup routes so `planner/editor`
-  // is never taken for a setup step. Opened with `?hallId=` from "Start creating".
   {
-    path: 'planner/editor',
-    title: 'Stall planner',
-    loadComponent: () => import('./planner/planner-page.component').then(m => m.PlannerPageComponent)
-  },
-  // Step 3 for architects: the AutoCAD-like 2D drafting workspace. The 3D editor above stays as
-  // its preview. Opened with `?hallId=` or `?layoutId=`.
-  {
-    path: 'planner/draft',
-    title: 'Drafting · Stall planner',
-    loadComponent: () => import('./planner/drafting/drafting-page.component').then(m => m.DraftingPageComponent)
-  },
-  // The exhibitor-facing view of a saved layout: the stall map, availability and booking.
-  // Opened with `?layoutId=` from a saved layout's View button.
-  {
-    path: 'planner/view',
-    title: 'Stall map',
-    loadComponent: () => import('./planner/exhibitor-view/exhibitor-view-page.component').then(m => m.ExhibitorViewPageComponent)
+    path: '',
+    pathMatch: 'full',
+    title: 'Invalid link',
+    canActivate: [platformThemeGuard],
+    loadComponent: invalidLink,
   },
   {
-    path: 'planner',
-    loadComponent: () => import('./setup/setup-shell.component').then(m => m.SetupShellComponent),
-    children: [
-      // Keeps the venue map's `/planner?hall=11&floor=GF` links working: the query survives.
-      { path: '', pathMatch: 'full', redirectTo: 'halls' },
-      {
-        path: 'halls',
-        title: 'Select a hall · Stall planner',
-        loadComponent: () => import('./setup/hall-select-page.component').then(m => m.HallSelectPageComponent)
-      },
-      {
-        path: 'halls/import',
-        title: 'Import a hall · Stall planner',
-        loadComponent: () => import('./setup/hall-import-page.component').then(m => m.HallImportPageComponent)
-      },
-      {
-        path: 'rules',
-        title: 'Plotting rules · Stall planner',
-        loadComponent: () => import('./setup/rules-page.component').then(m => m.RulesPageComponent)
-      }
-    ]
+    path: 'invalid-link',
+    title: 'Invalid link',
+    canActivate: [platformThemeGuard],
+    loadComponent: invalidLink,
   },
-  { path: '**', redirectTo: '' }
+  {
+    path: 'admin',
+    canActivate: [platformThemeGuard],
+    loadChildren: () => import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
+  },
+  {
+    path: ':org',
+    canActivate: [organisationGuard],
+    loadChildren: () => import('./features/org/org.routes').then((m) => m.ORG_ROUTES),
+  },
+  {
+    path: '**',
+    title: 'Invalid link',
+    canActivate: [platformThemeGuard],
+    loadComponent: invalidLink,
+  },
 ];

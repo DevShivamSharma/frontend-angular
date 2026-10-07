@@ -1,0 +1,169 @@
+<div class="page">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">{{ today | date: 'EEEE, d MMMM' }}</p>
+      <h1>{{ greeting() }}</h1>
+      <p class="muted">Here is how the platform stands today.</p>
+    </div>
+    <a mat-flat-button routerLink="/admin/organisations/new"
+      ><mat-icon>add_business</mat-icon>New organisation</a
+    >
+  </header>
+
+  @if (overview(); as o) {
+    <section class="tiles" aria-label="Platform at a glance">
+      <app-stat-tile
+        icon="domain"
+        label="Organisations"
+        [value]="o.organisations.total"
+        [caption]="o.organisations.active + ' active · ' + o.organisations.suspended + ' suspended'"
+        link="/admin/organisations"
+      />
+      <app-stat-tile
+        icon="group"
+        label="People"
+        tone="secondary"
+        [value]="o.people.users"
+        [caption]="
+          o.people.memberships + (o.people.memberships === 1 ? ' membership' : ' memberships')
+        "
+      />
+      <app-stat-tile
+        icon="forward_to_inbox"
+        label="Open invitations"
+        tone="tertiary"
+        [value]="o.people.openInvitations"
+        caption="Waiting to be accepted"
+      />
+      <app-stat-tile
+        icon="shield_person"
+        label="Roles"
+        [value]="o.roles.platform + o.roles.custom"
+        [caption]="o.roles.platform + ' platform · ' + o.roles.custom + ' custom'"
+        link="/admin/roles"
+      />
+    </section>
+
+    <div class="columns">
+      <section class="panel latest" aria-labelledby="latest-title">
+        <header class="panel-head">
+          <h2 id="latest-title">Latest organisations</h2>
+          @if (o.latestOrganisations.length) {
+            <a mat-button routerLink="/admin/organisations">View all</a>
+          }
+        </header>
+        @if (o.latestOrganisations.length) {
+          <div class="org-grid">
+            @for (org of o.latestOrganisations; track org.id) {
+              <a class="org-card" [routerLink]="['/admin/organisations', org.id]">
+                <span class="band" [style.background]="org.primaryColor" aria-hidden="true"></span>
+                <span class="org-body">
+                  <app-brand-mark
+                    [name]="org.name"
+                    [logoUrl]="org.logoUrl"
+                    [color]="org.primaryColor"
+                    [size]="36"
+                    [showName]="false"
+                  />
+                  <span class="org-text">
+                    <span class="org-name">{{ org.name }}</span>
+                    <code class="muted">/{{ org.slug }}</code>
+                  </span>
+                </span>
+                <span class="org-meta">
+                  <span class="status-dot" [class.is-off]="org.status === 'suspended'">
+                    {{ org.status === 'active' ? 'Active' : 'Suspended' }}
+                  </span>
+                  <span class="muted"><mat-icon inline>group</mat-icon> {{ org.memberCount }}</span>
+                  <span class="muted">{{ org.createdAt | timeAgo }}</span>
+                </span>
+              </a>
+            }
+          </div>
+        } @else {
+          <app-empty-state
+            icon="add_business"
+            heading="No organisations yet"
+            text="Each exhibition centre becomes an organisation with its own link, look and team."
+          >
+            <a mat-flat-button routerLink="/admin/organisations/new">Create the first one</a>
+          </app-empty-state>
+        }
+      </section>
+
+      <div class="side">
+        <section class="panel" aria-labelledby="attention-title">
+          <header class="panel-head">
+            <h2 id="attention-title">Needs attention</h2>
+          </header>
+          @if (o.attention.length) {
+            <ul class="list">
+              @for (item of o.attention; track item.id) {
+                <li>
+                  <a class="list-item" [routerLink]="['/admin/organisations', item.id]">
+                    <span
+                      class="list-icon"
+                      [class.is-error]="item.reason === 'suspended'"
+                      aria-hidden="true"
+                    >
+                      <mat-icon>{{
+                        item.reason === 'suspended' ? 'block' : 'hourglass_top'
+                      }}</mat-icon>
+                    </span>
+                    <span class="list-text">
+                      <span class="strong">{{ item.name }}</span>
+                      <span class="muted small">
+                        {{ item.reason === 'suspended' ? 'Suspended' : 'Nobody has joined yet' }} ·
+                        {{ item.since | timeAgo }}
+                      </span>
+                    </span>
+                    <mat-icon class="chevron" aria-hidden="true">chevron_right</mat-icon>
+                  </a>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="all-good">
+              <mat-icon aria-hidden="true">verified</mat-icon> Every organisation is running.
+            </p>
+          }
+        </section>
+
+        <section class="panel" aria-labelledby="activity-title">
+          <header class="panel-head">
+            <h2 id="activity-title">Recent activity</h2>
+            <a mat-button routerLink="/admin/audit">Audit log</a>
+          </header>
+          @if (o.recentActivity.length) {
+            <ol class="timeline">
+              @for (entry of o.recentActivity; track entry.id) {
+                <li>
+                  <span
+                    class="list-icon"
+                    [class.is-error]="warning(entry.action)"
+                    aria-hidden="true"
+                  >
+                    <mat-icon>{{ icon(entry.action) }}</mat-icon>
+                  </span>
+                  <span class="list-text">
+                    <span>{{ label(entry.action) }}</span>
+                    <span
+                      class="muted small"
+                      [matTooltip]="(entry.createdAt | date: 'd MMM y, HH:mm') ?? ''"
+                    >
+                      {{ entry.actorEmail ?? 'System' }} · {{ entry.createdAt | timeAgo }}
+                    </span>
+                  </span>
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="muted empty-line">Nothing has happened yet.</p>
+          }
+        </section>
+      </div>
+    </div>
+  } @else {
+    <mat-progress-bar mode="indeterminate" />
+  }
+</div>

@@ -1,0 +1,24 @@
+.role-select {
+  width: 220px;
+  --mat-form-field-container-height: 40px;
+  --mat-form-field-container-vertical-padding: 8px;
+}
+
+.actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.resent {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.status-chip {
+  margin-left: 6px;
+}

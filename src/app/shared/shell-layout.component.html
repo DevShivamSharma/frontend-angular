@@ -1,0 +1,93 @@
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<mat-toolbar class="topbar">
+  <button
+    #navToggle
+    mat-icon-button
+    class="nav-toggle"
+    (click)="toggle()"
+    [attr.aria-label]="toggleLabel()"
+    [attr.aria-expanded]="expanded()"
+    aria-controls="app-nav"
+  >
+    <mat-icon>{{ expanded() && !compact() ? 'menu_open' : 'menu' }}</mat-icon>
+  </button>
+  <ng-content select="[brand]" />
+  <span class="spacer"></span>
+  <ng-content select="[account]" />
+</mat-toolbar>
+
+<div
+  class="frame"
+  [class.is-collapsed]="railCollapsed()"
+  [class.is-compact]="compact()"
+  [class.is-open]="drawerOpen()"
+>
+  <aside
+    id="app-nav"
+    class="rail"
+    [cdkTrapFocus]="compact() && drawerOpen()"
+    [cdkTrapFocusAutoCapture]="true"
+    (keydown.escape)="closeDrawer()"
+  >
+    <nav class="nav" aria-label="Main navigation">
+      @for (group of groups(); track $index) {
+        @if (group.label) {
+          @if (railCollapsed()) {
+            <hr class="nav-divider" />
+          } @else {
+            <p class="nav-section">{{ group.label }}</p>
+          }
+        }
+        @for (item of group.items; track item.label) {
+          <a
+            class="nav-item"
+            matRipple
+            [routerLink]="item.link"
+            routerLinkActive="is-active"
+            ariaCurrentWhenActive="page"
+            [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+            [matTooltip]="item.label"
+            [matTooltipDisabled]="!railCollapsed()"
+            matTooltipPosition="right"
+            [attr.aria-label]="railCollapsed() ? item.label : null"
+          >
+            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+            <span class="nav-label">{{ item.label }}</span>
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="rail-footer">
+      <ng-content select="[navFooter]" />
+      @if (!compact()) {
+        <button
+          type="button"
+          class="nav-item collapse-button"
+          matRipple
+          (click)="toggle()"
+          [attr.aria-label]="toggleLabel()"
+          [attr.aria-expanded]="expanded()"
+          aria-controls="app-nav"
+          [matTooltip]="toggleLabel()"
+          [matTooltipDisabled]="!railCollapsed()"
+          matTooltipPosition="right"
+        >
+          <mat-icon aria-hidden="true">{{
+            collapsed() ? 'left_panel_open' : 'left_panel_close'
+          }}</mat-icon>
+          <span class="nav-label">Collapse</span>
+        </button>
+      }
+    </div>
+  </aside>
+
+  @if (compact() && drawerOpen()) {
+    <div class="scrim" (click)="closeDrawer()" aria-hidden="true"></div>
+  }
+
+  <main id="main-content" class="content" tabindex="-1">
+    <router-outlet />
+  </main>
+</div>

@@ -1,0 +1,100 @@
+<div class="page">
+  <app-page-header
+    heading="Roles and permissions"
+    subheading="Permissions are fixed by the platform. Roles are yours: which permissions each one holds, and who can be given it."
+  >
+    <a
+      mat-flat-button
+      routerLink="new"
+      [queryParams]="organisationId() ? { organisationId: organisationId() } : {}"
+    >
+      <mat-icon>add</mat-icon>New role
+    </a>
+  </app-page-header>
+
+  <div class="row toolbar">
+    <mat-form-field class="inline-field org-select">
+      <mat-label>Roles shown</mat-label>
+      <mat-select [value]="organisationId()" (selectionChange)="selectOrganisation($event.value)">
+        <mat-option value="">Platform roles (every organisation)</mat-option>
+        @for (org of organisations(); track org.id) {
+          <mat-option [value]="org.id">As {{ org.name }} sees them</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <span class="spacer"></span>
+    @if (changedCount()) {
+      <span class="muted">{{ changedCount() }} role(s) changed</span>
+      <button mat-button (click)="discard()" [disabled]="saving()">Discard</button>
+      <button mat-flat-button (click)="save()" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : 'Save changes' }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th scope="col" class="permission-col">Permission</th>
+          @for (role of roles(); track role.id) {
+            <th scope="col" class="role-col" [class.is-changed]="changed(role)">
+              <a [routerLink]="[role.id]">{{ role.name }}</a>
+              <span class="role-meta">
+                @if (role.isLocked) {
+                  <span class="status-chip is-neutral" matTooltip="Always holds every permission"
+                    >Owner</span
+                  >
+                } @else if (role.organisation) {
+                  <span class="status-chip">{{ role.organisation.name }}</span>
+                }
+                <span class="status-chip is-neutral">{{
+                  role.scopeKind === 'event' ? 'Event' : 'Org-wide'
+                }}</span>
+              </span>
+              <span class="muted count"
+                >{{ role.memberCount }} {{ role.memberCount === 1 ? 'member' : 'members' }}</span
+              >
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (group of groups(); track group.key) {
+          <tr class="group-row">
+            <th scope="colgroup" [attr.colspan]="roles().length + 1">{{ group.label }}</th>
+          </tr>
+          @for (permission of group.permissions; track permission.key) {
+            <tr>
+              <th scope="row" class="permission-col">
+                <span class="permission-label">
+                  {{ permission.label }}
+                  @if (!permission.available) {
+                    <span class="soon" matTooltip="Takes effect when its module is built"
+                      >coming</span
+                    >
+                  }
+                </span>
+                <span class="muted description">{{ permission.description }}</span>
+              </th>
+              @for (role of roles(); track role.id) {
+                <td class="cell">
+                  <mat-checkbox
+                    [checked]="has(role, permission.key)"
+                    [disabled]="role.isLocked || saving()"
+                    (change)="toggle(role, permission.key, $event.checked)"
+                    [attr.aria-label]="role.name + ': ' + permission.label"
+                  />
+                </td>
+              }
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

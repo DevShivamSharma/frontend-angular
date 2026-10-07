@@ -1,0 +1,313 @@
+@if (organisation(); as org) {
+  <div class="page">
+    <a mat-button routerLink="/admin/organisations" class="back"
+      ><mat-icon>arrow_back</mat-icon>Organisations</a
+    >
+
+    <section #hero class="hero" aria-labelledby="org-title">
+      <div class="hero-band" aria-hidden="true"></div>
+      <div class="hero-body">
+        <app-brand-mark
+          class="hero-mark"
+          [name]="org.name"
+          [logoUrl]="org.config.branding.logoUrl"
+          [logoDarkUrl]="org.config.branding.logoDarkUrl"
+          [color]="org.config.branding.primaryColor"
+          [size]="72"
+          [showName]="false"
+        />
+        <div class="hero-text">
+          <h1 id="org-title">{{ org.name }}</h1>
+          <div class="hero-meta">
+            <code>/{{ org.slug }}</code>
+            <span
+              class="status-chip"
+              [class.is-positive]="org.status === 'active'"
+              [class.is-warning]="org.status === 'suspended'"
+            >
+              <span class="dot" aria-hidden="true"></span
+              >{{ org.status === 'active' ? 'Active' : 'Suspended' }}
+            </span>
+            <span class="muted">Created {{ org.createdAt | date: 'd MMM y' }}</span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <a mat-stroked-button [href]="'/' + org.slug" target="_blank" rel="noopener">
+            <mat-icon>open_in_new</mat-icon>Open its sign-in
+          </a>
+          @if (org.status === 'active') {
+            <button mat-stroked-button class="danger" (click)="suspend()" [disabled]="busy()">
+              <mat-icon>block</mat-icon>Suspend
+            </button>
+          } @else {
+            <button mat-flat-button (click)="activate()" [disabled]="busy()">
+              <mat-icon>check_circle</mat-icon>Re-activate
+            </button>
+          }
+        </div>
+      </div>
+      <dl class="hero-stats">
+        <div>
+          <dt>Members</dt>
+          <dd>
+            {{ org.members.length }}<span class="muted"> / {{ org.limits.users }}</span>
+          </dd>
+        </div>
+        <div>
+          <dt>Open invitations</dt>
+          <dd>{{ org.invitations.length }}</dd>
+        </div>
+        <div>
+          <dt>Settings version</dt>
+          <dd>v{{ org.configVersion }}</dd>
+        </div>
+        <div>
+          <dt>Booking</dt>
+          <dd class="text">{{ bookingLabel() }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    @if (org.status === 'suspended' && org.suspendedReason) {
+      <p class="banner" role="status">
+        <mat-icon>block</mat-icon> Suspended: {{ org.suspendedReason }}
+      </p>
+    }
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    <mat-tab-group mat-stretch-tabs="false" animationDuration="0">
+      <mat-tab label="Plan and link">
+        <div class="tab">
+          <mat-card appearance="outlined">
+            <mat-card-content>
+              <form [formGroup]="nameForm">
+                <mat-form-field class="full-width">
+                  <mat-label>Name</mat-label>
+                  <input matInput formControlName="name" />
+                  <mat-error>2 to 160 characters</mat-error>
+                </mat-form-field>
+              </form>
+              <app-plan-fields [group]="plan" />
+            </mat-card-content>
+            <mat-card-actions align="end">
+              <button
+                mat-flat-button
+                (click)="savePlan()"
+                [disabled]="busy() || (plan.pristine && nameForm.pristine)"
+              >
+                Save
+              </button>
+            </mat-card-actions>
+          </mat-card>
+
+          <mat-card appearance="outlined">
+            <mat-card-content>
+              <h2 class="section-title">Link</h2>
+              <app-copy-link [url]="origin + '/' + org.slug" />
+              <form [formGroup]="slugForm" (ngSubmit)="changeSlug()" class="row slug-form">
+                <mat-form-field class="grow">
+                  <mat-label>New link</mat-label>
+                  <span matTextPrefix>/</span>
+                  <input matInput formControlName="slug" />
+                  @if (slugForm.controls.slug.hasError('slugTaken')) {
+                    <mat-error>{{ slugForm.controls.slug.getError('slugTaken') }}</mat-error>
+                  } @else {
+                    <mat-error>3–40 lower-case letters, digits and single hyphens</mat-error>
+                  }
+                </mat-form-field>
+                <button
+                  mat-stroked-button
+                  type="submit"
+                  [disabled]="busy() || slugForm.pristine || slugForm.pending"
+                >
+                  Change
+                </button>
+              </form>
+              @if (org.aliases.length) {
+                <p class="muted">
+                  Old links that still lead here:
+                  @for (alias of org.aliases; track alias) {
+                    <code>/{{ alias }}</code
+                    >{{ $last ? '' : ', ' }}
+                  }
+                </p>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Branding and details">
+        <div class="tab">
+          <app-config-form
+            [config]="org.config"
+            [organisationName]="org.name"
+            [saving]="busy()"
+            (save)="saveConfig($event)"
+          />
+          <mat-card appearance="outlined">
+            <mat-card-content>
+              <h2 class="section-title">Versions</h2>
+              <ul class="versions">
+                @for (version of versions(); track version.version) {
+                  <li>
+                    <span class="version">v{{ version.version }}</span>
+                    <span
+                      class="swatch"
+                      [style.background]="version.config.branding.primaryColor"
+                      aria-hidden="true"
+                    ></span>
+                    <span
+                      >{{ version.createdAt | date: 'd MMM y, HH:mm' }} ·
+                      {{ version.changedBy?.name ?? 'Unknown' }}</span
+                    >
+                    <span class="spacer"></span>
+                    @if (version.current) {
+                      <span class="status-chip is-positive">Current</span>
+                    } @else {
+                      <button mat-button (click)="restore(version)" [disabled]="busy()">
+                        Restore
+                      </button>
+                    }
+                  </li>
+                }
+              </ul>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <mat-tab [label]="'People (' + org.members.length + ')'">
+        <div class="tab">
+          <mat-card appearance="outlined">
+            <mat-card-content>
+              <h2 class="section-title">Invite someone</h2>
+              <p class="muted">
+                Usually the Venue Admin builds the team. Invite here to replace an admin who left.
+              </p>
+              <form [formGroup]="inviteForm" (ngSubmit)="invite()" class="row invite-form">
+                <mat-form-field class="grow">
+                  <mat-label>Email</mat-label>
+                  <input matInput type="email" formControlName="email" />
+                  <mat-error>A valid email address</mat-error>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Role</mat-label>
+                  <mat-select formControlName="roleId">
+                    @for (role of invitableRoles(); track role.id) {
+                      <mat-option [value]="role.id">{{ role.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <button mat-flat-button type="submit" [disabled]="busy()">Invite</button>
+              </form>
+              @if (lastInvite()?.inviteUrl; as url) {
+                <p>
+                  Pass this link to <b>{{ lastInvite()!.email }}</b
+                  >:
+                </p>
+                <app-copy-link [url]="url" />
+              }
+            </mat-card-content>
+          </mat-card>
+
+          <h2 class="section-title">Members</h2>
+          <div class="table-wrap">
+            <table mat-table [dataSource]="org.members">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Person</th>
+                <td mat-cell *matCellDef="let m">
+                  <b>{{ m.user.name }}</b
+                  ><br /><span class="muted">{{ m.user.email }}</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="role">
+                <th mat-header-cell *matHeaderCellDef>Role</th>
+                <td mat-cell *matCellDef="let m">{{ m.role.name }}</td>
+              </ng-container>
+              <ng-container matColumnDef="lastLogin">
+                <th mat-header-cell *matHeaderCellDef>Last sign-in</th>
+                <td mat-cell *matCellDef="let m">
+                  {{ m.user.lastLoginAt ? (m.user.lastLoginAt | date: 'd MMM y, HH:mm') : 'Never' }}
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="memberColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: memberColumns"></tr>
+            </table>
+            @if (!org.members.length) {
+              <p class="empty-state">Nobody has joined yet.</p>
+            }
+          </div>
+
+          @if (org.invitations.length) {
+            <h2 class="section-title">Open invitations</h2>
+            <div class="table-wrap">
+              <table mat-table [dataSource]="org.invitations">
+                <ng-container matColumnDef="email">
+                  <th mat-header-cell *matHeaderCellDef>Email</th>
+                  <td mat-cell *matCellDef="let i">{{ i.email }}</td>
+                </ng-container>
+                <ng-container matColumnDef="role">
+                  <th mat-header-cell *matHeaderCellDef>Role</th>
+                  <td mat-cell *matCellDef="let i">{{ i.role.name }}</td>
+                </ng-container>
+                <ng-container matColumnDef="expires">
+                  <th mat-header-cell *matHeaderCellDef>Expires</th>
+                  <td mat-cell *matCellDef="let i">
+                    @if (i.expired) {
+                      <span class="status-chip is-warning">Expired</span>
+                    } @else {
+                      {{ i.expiresAt | date: 'd MMM y' }}
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="invitationColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: invitationColumns"></tr>
+              </table>
+            </div>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Roles">
+        <div class="tab">
+          <div class="row">
+            <p class="muted grow">
+              Platform roles are offered to every organisation; the ones below marked with its name
+              exist only here.
+            </p>
+            <a
+              mat-stroked-button
+              routerLink="/admin/roles/new"
+              [queryParams]="{ organisationId: org.id }"
+              ><mat-icon>add</mat-icon>Role for {{ org.name }}</a
+            >
+          </div>
+          <ul class="roles">
+            @for (role of roles(); track role.id) {
+              <li>
+                <a [routerLink]="['/admin/roles', role.id]">{{ role.name }}</a>
+                @if (role.organisation) {
+                  <span class="status-chip">Only {{ role.organisation.name }}</span>
+                }
+                @if (role.isLocked) {
+                  <span class="status-chip is-neutral" matTooltip="Always holds every permission"
+                    >Owner</span
+                  >
+                }
+                <span class="muted"
+                  >{{ role.permissions.length }} permissions · {{ role.memberCount }}
+                  {{ role.memberCount === 1 ? 'member' : 'members' }}</span
+                >
+              </li>
+            }
+          </ul>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+} @else {
+  <mat-progress-bar mode="indeterminate" />
+}

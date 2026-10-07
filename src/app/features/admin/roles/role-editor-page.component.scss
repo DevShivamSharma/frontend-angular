@@ -1,0 +1,61 @@
+.back {
+  justify-self: start;
+  margin-left: -12px;
+}
+
+form {
+  display: grid;
+  gap: 16px;
+}
+
+.scope {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 16px;
+
+  mat-radio-group {
+    display: grid;
+  }
+}
+
+.small {
+  font: var(--mat-sys-body-small);
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.group-toggle {
+  display: block;
+  margin-bottom: 8px;
+  font: var(--mat-sys-title-small);
+}
+
+.permission {
+  display: grid;
+  padding-left: 24px;
+}
+
+.description {
+  margin: -8px 0 6px 40px;
+  font: var(--mat-sys-body-small);
+}
+
+.soon {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font: var(--mat-sys-label-small);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.actions {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0;
+  background: var(--mat-sys-surface);
+}

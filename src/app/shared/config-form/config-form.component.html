@@ -1,0 +1,199 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="layout">
+  <div class="sections">
+    <section formGroupName="branding">
+      <h2 class="section-title">Branding</h2>
+      <div class="form-grid">
+        <div class="color-field">
+          <input
+            type="color"
+            [value]="brandPreview().primaryColor"
+            [disabled]="readonly()"
+            (input)="pickColor('primaryColor', $event)"
+            aria-label="Pick the primary colour"
+          />
+          <mat-form-field>
+            <mat-label>Primary colour</mat-label>
+            <input matInput formControlName="primaryColor" placeholder="#1f5fbf" />
+            <mat-hint>Every other colour is generated from it</mat-hint>
+            <mat-error>A colour like #1f5fbf</mat-error>
+          </mat-form-field>
+        </div>
+        <div class="color-field">
+          <input
+            type="color"
+            [value]="brandPreview().accentColor ?? '#ffffff'"
+            [disabled]="readonly()"
+            (input)="pickColor('accentColor', $event)"
+            aria-label="Pick the accent colour"
+          />
+          <mat-form-field>
+            <mat-label>Accent colour (optional)</mat-label>
+            <input matInput formControlName="accentColor" placeholder="#e07a1f" />
+            <mat-error>A colour like #e07a1f</mat-error>
+          </mat-form-field>
+        </div>
+        <mat-form-field>
+          <mat-label>Font</mat-label>
+          <mat-select formControlName="fontFamily">
+            @for (font of fonts; track font) {
+              <mat-option [value]="font"
+                ><span [style.font-family]="font">{{ font }}</span></mat-option
+              >
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <mat-form-field class="full-width">
+        <mat-label>Logo URL</mat-label>
+        <input matInput formControlName="logoUrl" placeholder="https://…/logo.svg" />
+        <mat-hint>https:// address, or a /path on this site</mat-hint>
+        <mat-error>An https:// address or a /path</mat-error>
+      </mat-form-field>
+      <div class="form-grid">
+        <mat-form-field>
+          <mat-label>Logo for dark backgrounds</mat-label>
+          <input matInput formControlName="logoDarkUrl" />
+          <mat-error>An https:// address or a /path</mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Favicon URL</mat-label>
+          <input matInput formControlName="faviconUrl" />
+          <mat-error>An https:// address or a /path</mat-error>
+        </mat-form-field>
+      </div>
+    </section>
+
+    <section formGroupName="locale">
+      <h2 class="section-title">Language and region</h2>
+      <div class="form-grid">
+        <mat-form-field>
+          <mat-label>Languages offered</mat-label>
+          <mat-select formControlName="languages" multiple>
+            @for (language of languages; track language.code) {
+              <mat-option [value]="language.code">{{ language.label }}</mat-option>
+            }
+          </mat-select>
+          @if (form.controls.locale.controls.languages.hasError('missingDefault')) {
+            <mat-error>Include the default language</mat-error>
+          } @else {
+            <mat-error>Choose at least one</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Default language</mat-label>
+          <mat-select formControlName="defaultLanguage">
+            @for (language of languages; track language.code) {
+              <mat-option [value]="language.code">{{ language.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Currency</mat-label>
+          <mat-select formControlName="currency">
+            @for (currency of currencies; track currency) {
+              <mat-option [value]="currency">{{ currency }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Time zone</mat-label>
+          <input matInput formControlName="timezone" [matAutocomplete]="zones" />
+          <mat-autocomplete #zones="matAutocomplete">
+            @for (zone of timezoneOptions(); track zone) {
+              <mat-option [value]="zone">{{ zone }}</mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
+      </div>
+    </section>
+
+    <section formGroupName="legal">
+      <h2 class="section-title">Invoice details</h2>
+      <div class="form-grid">
+        <mat-form-field>
+          <mat-label>Legal name</mat-label>
+          <input matInput formControlName="legalName" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>GSTIN</mat-label>
+          <input matInput formControlName="gstin" placeholder="07AAACI1681G1ZN" />
+          <mat-error>15 characters, as on the GST certificate</mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Invoice number prefix</mat-label>
+          <input matInput formControlName="invoicePrefix" placeholder="ITPO-" />
+          <mat-error>Up to 12 capital letters, digits, / or -</mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Support email</mat-label>
+          <input matInput type="email" formControlName="supportEmail" />
+          <mat-error>A valid email address</mat-error>
+        </mat-form-field>
+      </div>
+      <mat-form-field class="full-width">
+        <mat-label>Registered address</mat-label>
+        <textarea matInput formControlName="address" rows="2"></textarea>
+      </mat-form-field>
+    </section>
+
+    <section formGroupName="email">
+      <h2 class="section-title">Email</h2>
+      <div class="form-grid">
+        <mat-form-field>
+          <mat-label>Sender name</mat-label>
+          <input matInput formControlName="senderName" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Reply-to address</mat-label>
+          <input matInput type="email" formControlName="replyTo" />
+          <mat-error>A valid email address</mat-error>
+        </mat-form-field>
+      </div>
+      <mat-form-field class="full-width">
+        <mat-label>Footer on every email</mat-label>
+        <textarea matInput formControlName="footer" rows="2"></textarea>
+      </mat-form-field>
+    </section>
+
+    @if (!readonly()) {
+      <div class="row actions">
+        <button mat-flat-button type="submit" [disabled]="saving() || form.pristine">
+          {{ saving() ? 'Saving…' : 'Save as a new version' }}
+        </button>
+        <button mat-button type="button" [disabled]="saving() || form.pristine" (click)="discard()">
+          Discard changes
+        </button>
+      </div>
+    }
+  </div>
+
+  <aside class="preview-column" aria-label="Preview">
+    <div #preview class="preview">
+      <div class="preview-bar">
+        <app-brand-mark
+          [name]="organisationName()"
+          [logoUrl]="brandPreview().logoUrl"
+          [logoDarkUrl]="brandPreview().logoDarkUrl"
+          [size]="28"
+        />
+      </div>
+      <div class="preview-body">
+        <p class="preview-title">Hall 5 · IITF 2026</p>
+        <p class="muted">How pages look with these settings.</p>
+        <div class="row">
+          <button mat-flat-button type="button" tabindex="-1">Book a stall</button>
+          <button mat-stroked-button type="button" tabindex="-1">View plan</button>
+        </div>
+        <mat-chip-set aria-hidden="true">
+          <mat-chip highlighted>Available</mat-chip>
+          <mat-chip>Corner</mat-chip>
+        </mat-chip-set>
+        <div class="swatches" aria-hidden="true">
+          <span class="swatch primary">Primary</span>
+          <span class="swatch secondary">Secondary</span>
+          <span class="swatch tertiary">Accent</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+</form>

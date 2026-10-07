@@ -1,0 +1,154 @@
+<div class="page">
+  <app-page-header
+    heading="Organisations"
+    subheading="Every exhibition centre on the platform, with its own link, look and team."
+  >
+    <a mat-flat-button routerLink="new"><mat-icon>add_business</mat-icon>New organisation</a>
+  </app-page-header>
+
+  <section class="panel panel-flush" aria-label="Organisations">
+    <div class="toolbar">
+      <mat-form-field class="inline-field search">
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-label>Search by name or link</mat-label>
+        <input matInput [formControl]="search" />
+        @if (search.value) {
+          <button
+            mat-icon-button
+            matSuffix
+            (click)="search.setValue('')"
+            aria-label="Clear the search"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+      <mat-button-toggle-group
+        [value]="status()"
+        (change)="setStatus($event.value)"
+        aria-label="Filter by status"
+        hideSingleSelectionIndicator
+      >
+        <mat-button-toggle value="">All</mat-button-toggle>
+        <mat-button-toggle value="active">Active</mat-button-toggle>
+        <mat-button-toggle value="suspended">Suspended</mat-button-toggle>
+      </mat-button-toggle-group>
+      <span class="count muted" aria-live="polite"
+        >{{ total() }} {{ total() === 1 ? 'organisation' : 'organisations' }}</span
+      >
+    </div>
+
+    <div class="progress">
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </div>
+
+    @if (rows().length) {
+      <div class="table-wrap">
+        <table mat-table [dataSource]="rows()">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Organisation</th>
+            <td mat-cell *matCellDef="let org">
+              <span class="org">
+                <app-brand-mark
+                  [name]="org.name"
+                  [logoUrl]="org.logoUrl"
+                  [color]="org.primaryColor"
+                  [size]="40"
+                  [showName]="false"
+                />
+                <span class="org-text">
+                  <a class="org-name" [routerLink]="[org.id]">{{ org.name }}</a>
+                  <code class="muted">/{{ org.slug }}</code>
+                </span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let org">
+              <span
+                class="status-chip"
+                [class.is-positive]="org.status === 'active'"
+                [class.is-warning]="org.status === 'suspended'"
+              >
+                <span class="dot" aria-hidden="true"></span
+                >{{ org.status === 'active' ? 'Active' : 'Suspended' }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="booking">
+            <th mat-header-cell *matHeaderCellDef>Booking</th>
+            <td mat-cell *matCellDef="let org">
+              <span class="outline-chip">{{ bookingLabel(org.bookingMode) }}</span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="people">
+            <th mat-header-cell *matHeaderCellDef>People</th>
+            <td mat-cell *matCellDef="let org">
+              <span class="people">
+                <mat-icon aria-hidden="true">group</mat-icon>{{ org.memberCount }}
+                @if (org.openInvitationCount) {
+                  <span
+                    class="invited"
+                    [matTooltip]="org.openInvitationCount + ' open invitation(s)'"
+                    >+{{ org.openInvitationCount }} invited</span
+                  >
+                }
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="created">
+            <th mat-header-cell *matHeaderCellDef>Created</th>
+            <td mat-cell *matCellDef="let org">
+              <span class="created">
+                {{ org.createdAt | date: 'd MMM y' }}
+                <span class="muted">{{ org.createdAt | timeAgo }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="open">
+            <th mat-header-cell *matHeaderCellDef><span class="cdk-visually-hidden">Open</span></th>
+            <td mat-cell *matCellDef="let org" class="chevron-cell">
+              <mat-icon aria-hidden="true">chevron_right</mat-icon>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: columns"
+            class="clickable"
+            (click)="open(row, $event)"
+          ></tr>
+        </table>
+      </div>
+      <mat-paginator
+        [length]="total()"
+        [pageIndex]="page() - 1"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="[10, 25, 50]"
+        (page)="onPage($event)"
+        aria-label="Pages of organisations"
+      />
+    } @else if (loaded()) {
+      @if (filtered) {
+        <app-empty-state
+          icon="search_off"
+          heading="Nothing matches"
+          text="Try another name or link, or show every status."
+        >
+          <button mat-stroked-button (click)="clearFilters()">Clear filters</button>
+        </app-empty-state>
+      } @else {
+        <app-empty-state
+          icon="add_business"
+          heading="No organisations yet"
+          text="Create one for each exhibition centre. Its first Venue Admin is invited at the same time."
+        >
+          <a mat-flat-button routerLink="new">Create the first organisation</a>
+        </app-empty-state>
+      }
+    }
+  </section>
+</div>

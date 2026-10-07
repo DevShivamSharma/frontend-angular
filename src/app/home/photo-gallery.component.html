@@ -1,9 +1,0 @@
-<span class="room-photo-placeholder" [hidden]="loaded() && !failed()">{{ !photos.length ? 'Photos not available' : failed() ? 'Photo unavailable' : 'Loading photo…' }}</span>
-@if (photos.length) {
-  <img loading="lazy" decoding="async" referrerpolicy="no-referrer" [src]="photos[index()]" [alt]="name + ' · photo ' + (index() + 1) + ' of ' + photos.length" [hidden]="failed()" (load)="loaded.set(true)" (error)="failed.set(true)">
-  @if (photos.length > 1) {
-    <button type="button" class="room-photo-arrow previous" [attr.aria-label]="'Previous photo of ' + name" (click)="move(-1)">‹</button>
-    <button type="button" class="room-photo-arrow next" [attr.aria-label]="'Next photo of ' + name" (click)="move(1)">›</button>
-    <span class="room-photo-count" aria-live="polite">{{ index() + 1 }} / {{ photos.length }}</span>
-  }
-}

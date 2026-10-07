@@ -1,0 +1,115 @@
+<div class="page page-narrow">
+  <a mat-button routerLink="/admin/roles" class="back"
+    ><mat-icon>arrow_back</mat-icon>Roles and permissions</a
+  >
+  <app-page-header
+    [heading]="isNew() ? 'New role' : (role()?.name ?? 'Role')"
+    [subheading]="
+      role()?.isLocked
+        ? 'The owner role always holds every permission, including ones added later.'
+        : 'Choose what anyone with this role may do.'
+    "
+  >
+    @if (role() && !role()!.isSystem) {
+      <button mat-stroked-button class="danger" (click)="remove()" [disabled]="busy() || inUse()">
+        Delete
+      </button>
+    }
+  </app-page-header>
+
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <div class="form-grid">
+          <mat-form-field>
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" placeholder="Hall Operations" />
+            <mat-error>2 to 80 characters</mat-error>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Key</mat-label>
+            <input matInput formControlName="key" />
+            <mat-hint>Stable identifier; cannot change later</mat-hint>
+            <mat-error>Lower-case letters, digits and _</mat-error>
+          </mat-form-field>
+        </div>
+        <mat-form-field class="full-width">
+          <mat-label>Description</mat-label>
+          <input matInput formControlName="description" />
+        </mat-form-field>
+        <div class="form-grid">
+          <mat-form-field>
+            <mat-label>Offered to</mat-label>
+            <mat-select formControlName="organisationId">
+              <mat-option value="">Every organisation</mat-option>
+              @for (org of organisations(); track org.id) {
+                <mat-option [value]="org.id">Only {{ org.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <div class="scope">
+            <span class="muted">Applies to</span>
+            <mat-radio-group formControlName="scopeKind" aria-label="Applies to">
+              <mat-radio-button value="organisation">The whole organisation</mat-radio-button>
+              <mat-radio-button value="event">One event and its halls</mat-radio-button>
+            </mat-radio-group>
+            @if (inUse() && !locked()) {
+              <span class="muted small">Fixed while people hold the role.</span>
+            }
+          </div>
+        </div>
+        @if (role(); as r) {
+          <p class="muted">
+            {{ r.memberCount }} member(s) and {{ r.openInvitationCount }} open invitation(s) hold
+            this role.
+          </p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <h2 class="section-title">Permissions</h2>
+    <div class="groups">
+      @for (group of groups(); track group.key) {
+        <mat-card appearance="outlined" class="group">
+          <mat-card-content>
+            <mat-checkbox
+              class="group-toggle"
+              [checked]="groupState(group) === 'all'"
+              [indeterminate]="groupState(group) === 'some'"
+              [disabled]="locked()"
+              (change)="toggleGroup(group, $event.checked)"
+            >
+              {{ group.label }}
+            </mat-checkbox>
+            @for (permission of group.permissions; track permission.key) {
+              <div class="permission">
+                <mat-checkbox
+                  [checked]="selected().has(permission.key)"
+                  [disabled]="locked()"
+                  (change)="toggle(permission.key, $event.checked)"
+                >
+                  {{ permission.label }}
+                  @if (!permission.available) {
+                    <span class="soon">coming</span>
+                  }
+                </mat-checkbox>
+                <span class="muted description">{{ permission.description }}</span>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    <div class="row actions">
+      <button mat-flat-button type="submit" [disabled]="busy() || form.pristine">
+        {{ isNew() ? 'Create role' : 'Save' }}
+      </button>
+      <a mat-button routerLink="/admin/roles">Cancel</a>
+    </div>
+  </form>
+</div>

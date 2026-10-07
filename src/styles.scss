@@ -1,0 +1,260 @@
+@use '@angular/material' as mat;
+
+/*
+ * The platform look, in Material 3 tokens. An organisation's colours replace the
+ * --mat-sys-* colour tokens at runtime (ThemeService), and its font replaces
+ * --app-font-family; every component below reads only these tokens.
+ */
+html {
+  color-scheme: light dark;
+  --app-font-family: 'Inter', system-ui, sans-serif;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$orange-palette,
+        theme-type: color-scheme,
+      ),
+      typography: (
+        plain-family: var(--app-font-family),
+        brand-family: var(--app-font-family),
+      ),
+      density: 0,
+    )
+  );
+
+  // A calmer, business look than stock Material: tighter corners, no pill buttons.
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 8px,
+      outlined-container-shape: 8px,
+      protected-container-shape: 8px,
+      text-container-shape: 8px,
+      tonal-container-shape: 8px,
+    )
+  );
+  @include mat.card-overrides(
+    (
+      elevated-container-shape: 12px,
+      outlined-container-shape: 12px,
+    )
+  );
+  @include mat.dialog-overrides(
+    (
+      container-shape: 16px,
+    )
+  );
+  @include mat.chips-overrides(
+    (
+      container-shape-radius: 8px,
+    )
+  );
+  @include mat.sidenav-overrides(
+    (
+      container-shape: 0,
+    )
+  );
+  @include mat.table-overrides(
+    (
+      background-color: transparent,
+      header-headline-color: var(--mat-sys-on-surface-variant),
+      header-headline-font: var(--app-font-family),
+      header-headline-size: 12px,
+      header-headline-weight: 600,
+      row-item-outline-color: var(--mat-sys-outline-variant),
+    )
+  );
+  @include mat.paginator-overrides(
+    (
+      container-background-color: transparent,
+    )
+  );
+  @include mat.tabs-overrides(
+    (
+      divider-color: var(--mat-sys-outline-variant),
+    )
+  );
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+a {
+  color: var(--mat-sys-primary);
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+/* Keyboard focus is always visible. */
+:focus-visible {
+  outline-color: var(--mat-sys-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- Layout helpers shared by pages --------------------------------------- */
+
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 32px 48px;
+  display: grid;
+  /* A shrinkable column: wide content (tables) scrolls inside its own box, never the page. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+
+/* A raised surface for a group of content: a table, a list, a form section. */
+.panel {
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-lowest);
+  min-width: 0;
+}
+
+.panel-flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+/*
+ * Form fields. The hint or error under a field takes its real height (subscriptSizing is
+ * 'dynamic' app-wide), and every field keeps a gap below it, so neither a long hint nor the
+ * next field's floating label can overlap. Fields in toolbars and table cells opt out.
+ */
+.mat-mdc-form-field {
+  margin-bottom: 16px;
+
+  &.inline-field {
+    margin-bottom: 0;
+  }
+}
+
+/* Table header labels, quieter than the data. */
+.mat-mdc-header-cell {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.page-narrow {
+  max-width: 760px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 16px;
+}
+
+.section-title {
+  font: var(--mat-sys-title-medium);
+  margin: 8px 0 12px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.empty-state {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* ---- Component touches ------------------------------------------------------ */
+
+.mat-mdc-button-base.danger {
+  --mat-button-filled-container-color: var(--mat-sys-error);
+  --mat-button-filled-label-text-color: var(--mat-sys-on-error);
+  --mat-button-text-label-text-color: var(--mat-sys-error);
+  --mat-button-outlined-label-text-color: var(--mat-sys-error);
+}
+
+.app-snackbar-error {
+  --mat-snack-bar-container-color: var(--mat-sys-error-container);
+  --mat-snack-bar-supporting-text-color: var(--mat-sys-on-error-container);
+  --mat-snack-bar-button-color: var(--mat-sys-on-error-container);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-medium);
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  white-space: nowrap;
+
+  &.is-positive {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  &.is-warning {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &.is-neutral {
+    background: var(--mat-sys-surface-container-highest);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 16px 16px 32px;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+}
