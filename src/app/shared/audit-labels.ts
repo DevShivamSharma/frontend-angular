@@ -18,6 +18,7 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   'role.created': { label: 'Created role', icon: 'add_moderator' },
   'role.updated': { label: 'Changed role permissions', icon: 'shield_person' },
   'role.deleted': { label: 'Deleted role', icon: 'remove_moderator' },
+  'rules.updated': { label: 'Changed rules', icon: 'rule' },
 };
 
 export function auditLabel(action: string): string {

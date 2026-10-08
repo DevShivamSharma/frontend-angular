@@ -78,6 +78,13 @@ export const ORG_ROUTES: Routes = [
         ],
       },
       {
+        path: 'rules',
+        title: 'Rules',
+        canActivate: [permissionGuard('rules.view')],
+        loadComponent: () =>
+          import('./rules/rules-page.component').then((m) => m.RulesPageComponent),
+      },
+      {
         path: 'team',
         title: 'Team',
         canActivate: [permissionGuard('team.view')],
