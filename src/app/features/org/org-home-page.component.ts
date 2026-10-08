@@ -23,12 +23,6 @@ const UPCOMING: ModuleCard[] = [
     permission: 'venues.view',
   },
   {
-    title: 'Events',
-    icon: 'event',
-    text: 'Events, the halls they book and their dates; internal or external.',
-    permission: 'events.view',
-  },
-  {
     title: 'Stall layouts',
     icon: 'grid_view',
     text: 'Draft stalls with CAD tools, import an architect’s PDF, review and publish.',
@@ -63,6 +57,32 @@ const UPCOMING: ModuleCard[] = [
         </header>
 
         <div class="quick">
+          @if (context.eventScoped()) {
+            <mat-card appearance="outlined">
+              <mat-card-content>
+                <mat-icon>event</mat-icon>
+                <h2>My events</h2>
+                <p class="muted">The halls you plan stalls on, and the rules for each hall.</p>
+              </mat-card-content>
+              <mat-card-actions
+                ><a mat-button [routerLink]="['events']">Open my events</a></mat-card-actions
+              >
+            </mat-card>
+          } @else if (context.can('events.view')) {
+            <mat-card appearance="outlined">
+              <mat-card-content>
+                <mat-icon>event</mat-icon>
+                <h2>Events</h2>
+                <p class="muted">
+                  Your own events, and organisers’ events on the halls they booked.
+                </p>
+              </mat-card-content>
+              <mat-card-actions>
+                <a mat-button [routerLink]="['events', 'internal']">Internal</a>
+                <a mat-button [routerLink]="['events', 'external']">External</a>
+              </mat-card-actions>
+            </mat-card>
+          }
           @if (context.can('team.view')) {
             <mat-card appearance="outlined">
               <mat-card-content>

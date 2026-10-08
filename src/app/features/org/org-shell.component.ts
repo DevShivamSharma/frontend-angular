@@ -101,6 +101,20 @@ export class OrgShellComponent {
   protected readonly nav = computed<NavItem[]>(() => {
     const slug = this.context.slug();
     const items: NavItem[] = [{ label: 'Home', icon: 'home', link: ['/', slug], exact: true }];
+    if (this.context.eventScoped()) {
+      items.push({ label: 'My events', icon: 'event', link: ['/', slug, 'events'] });
+      return items;
+    }
+    if (this.context.can('events.view')) {
+      items.push(
+        { label: 'Internal events', icon: 'event', link: ['/', slug, 'events', 'internal'] },
+        {
+          label: 'External events',
+          icon: 'event_available',
+          link: ['/', slug, 'events', 'external'],
+        },
+      );
+    }
     if (this.context.can('venues.view')) {
       items.push({ label: 'Venues', icon: 'location_city', link: ['/', slug, 'venues'] });
     }

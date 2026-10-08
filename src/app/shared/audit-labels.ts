@@ -19,6 +19,16 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   'role.updated': { label: 'Changed role permissions', icon: 'shield_person' },
   'role.deleted': { label: 'Deleted role', icon: 'remove_moderator' },
   'rules.updated': { label: 'Changed rules', icon: 'rule' },
+  'event.created': { label: 'Created event', icon: 'event' },
+  'event.updated': { label: 'Changed event', icon: 'event' },
+  'event.deleted': { label: 'Deleted event', icon: 'delete' },
+  'event.halls_added': { label: 'Added halls to event', icon: 'meeting_room' },
+  'event.hall_removed': { label: 'Removed hall from event', icon: 'meeting_room' },
+  'event.hall_rules_changed': { label: 'Switched rules for event hall', icon: 'rule' },
+  'event.hall_rules_reset': { label: 'Copied rules to event hall again', icon: 'rule' },
+  'event.person_added': { label: 'Gave organiser an event', icon: 'person_add' },
+  'event.person_removed': { label: 'Removed organiser from event', icon: 'person_remove' },
+  'event.invitation_revoked': { label: 'Cancelled organiser invitation', icon: 'cancel' },
 };
 
 export function auditLabel(action: string): string {

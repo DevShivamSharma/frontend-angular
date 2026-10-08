@@ -9,6 +9,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -116,7 +117,11 @@ export class OrganisationDetailPageComponent {
   });
 
   constructor() {
-    effect(() => void this.load(this.id()));
+    // Only the route inputs restart the load: the request itself reads the session signal.
+    effect(() => {
+      const id = this.id();
+      untracked(() => void this.load(id));
+    });
     // The header shows the organisation in its own colours; the console keeps the platform's.
     effect(() => {
       const element = this.hero()?.nativeElement;

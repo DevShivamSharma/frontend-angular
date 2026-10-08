@@ -78,6 +78,45 @@ export const ORG_ROUTES: Routes = [
         ],
       },
       {
+        path: 'events',
+        canActivate: [permissionGuard('events.view')],
+        children: [
+          {
+            // An organiser's own events; the venue's team uses the two lists below.
+            path: '',
+            title: 'My events',
+            loadComponent: () =>
+              import('./events/events-page.component').then((m) => m.EventsPageComponent),
+          },
+          {
+            path: 'internal',
+            title: 'Internal events',
+            data: { kind: 'internal' },
+            loadComponent: () =>
+              import('./events/events-page.component').then((m) => m.EventsPageComponent),
+          },
+          {
+            path: 'external',
+            title: 'External events',
+            data: { kind: 'external' },
+            loadComponent: () =>
+              import('./events/events-page.component').then((m) => m.EventsPageComponent),
+          },
+          {
+            path: ':eventId',
+            title: 'Event',
+            loadComponent: () =>
+              import('./events/event-page.component').then((m) => m.EventPageComponent),
+          },
+          {
+            path: ':eventId/halls/:hallId',
+            title: 'Event hall',
+            loadComponent: () =>
+              import('./events/event-hall-page.component').then((m) => m.EventHallPageComponent),
+          },
+        ],
+      },
+      {
         path: 'rules',
         title: 'Rules',
         canActivate: [permissionGuard('rules.view')],

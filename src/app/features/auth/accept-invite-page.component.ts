@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -127,7 +135,11 @@ export class AcceptInvitePageComponent {
   );
 
   constructor() {
-    effect(() => void this.load(this.token()));
+    // Only the route inputs restart the load: the request itself reads the session signal.
+    effect(() => {
+      const token = this.token();
+      untracked(() => void this.load(token));
+    });
   }
 
   private async load(token: string | undefined): Promise<void> {

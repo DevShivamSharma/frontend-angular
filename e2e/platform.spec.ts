@@ -79,5 +79,8 @@ test('a failed sign-in explains itself', async ({ page }) => {
   await page.getByLabel('Email').fill('someone@itpo.test');
   await page.getByLabel('Password', { exact: true }).fill('not-the-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Email or password is incorrect.');
+  // API errors arrive as a toast, from the error interceptor.
+  await expect(page.locator('mat-snack-bar-container')).toContainText(
+    'Email or password is incorrect.',
+  );
 });

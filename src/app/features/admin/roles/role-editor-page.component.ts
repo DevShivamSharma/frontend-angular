@@ -7,6 +7,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -106,7 +107,11 @@ export class RoleEditorPageComponent {
           this.form.controls.key.setValue(roleKey(name));
         }
       });
-    effect(() => void this.load(this.id(), this.organisationId()));
+    // Only the route inputs restart the load: the request itself reads the session signal.
+    effect(() => {
+      const [id, organisationId] = [this.id(), this.organisationId()];
+      untracked(() => void this.load(id, organisationId));
+    });
   }
 
   private async load(id: string | undefined, organisationId: string | undefined): Promise<void> {

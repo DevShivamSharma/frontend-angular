@@ -238,7 +238,8 @@ export interface OrgContext {
     bookingMode: BookingMode;
     features: OrganisationFeatures;
   };
-  membership: { id: string; role: RoleRef; scope: MembershipScope };
+  /** `eventScoped`: an organiser, who sees only the events in `scope`. */
+  membership: { id: string; role: RoleRef; scope: MembershipScope; eventScoped: boolean };
   permissions: string[];
 }
 
