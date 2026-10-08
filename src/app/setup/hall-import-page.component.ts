@@ -14,6 +14,7 @@ import { AMENITY_GROUPS, AMENITY_KINDS, amenityIcon, amenityInfo } from './ameni
 import { boundsOf, draftFromArea, openingsFor, outlineProblem, polygonArea } from './custom-hall';
 import { CanvasAmenity, CanvasTool, PlanCanvasComponent } from './plan-canvas.component';
 import { SetupApiService } from './setup-api.service';
+import { PdfImportNavigation } from '../planner/pdf-workspace/pdf-import-navigation.service';
 import type { HallDraft, HallImportResult, ImportedAmenity, RoomOutline } from './setup.models';
 
 type Phase = 'pick' | 'uploading' | 'analysing' | 'review' | 'saving';
@@ -60,6 +61,7 @@ const IMAGE_START_WIDTH_M = 100;
 export class HallImportPageComponent implements OnInit {
   private readonly api = inject(SetupApiService);
   private readonly router = inject(Router);
+  private readonly pdfNavigation = inject(PdfImportNavigation);
   private readonly notify = inject(NotifyService);
   private upload?: Subscription;
 
@@ -271,6 +273,10 @@ export class HallImportPageComponent implements OnInit {
     const limit = ext === 'pdf' ? MAX_PDF_MB : MAX_DXF_MB;
     if (file.size > limit * 1024 * 1024) {
       this.error.set(`This ${ext.toUpperCase()} is ${(file.size / 1048576).toFixed(0)} MB; the limit is ${limit} MB. Export only this hall's floor and try again.`);
+      return;
+    }
+    if (ext === 'pdf') {
+      void this.pdfNavigation.open(file).catch(e => this.error.set(extractErrorMessage(e)));
       return;
     }
     this.file.set(file);

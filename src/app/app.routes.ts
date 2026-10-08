@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { Router, Routes } from '@angular/router';
+import { inject } from '@angular/core';
 
 import { HomePageComponent } from './home/home-page.component';
 
@@ -9,6 +10,12 @@ import { HomePageComponent } from './home/home-page.component';
  * SPA fallback parity; no guards are added until authentication requirements exist.
  */
 export const routes: Routes = [
+  {
+    path: 'planner/pdf',
+    redirectTo: ({ queryParams }) => inject(Router).createUrlTree(['/planner/editor'], {
+      queryParams: { ...queryParams, import: 'pdf' }
+    })
+  },
   { path: 'hall14-detail', title: 'Hall 14 — detail study', loadComponent: () => import('./home/hall14-study.component').then(m => m.Hall14StudyComponent) },
   { path: 'planner/pricing', title: 'Hall pricing library', loadComponent: () => import('./planner/pricing/pricing-library.component').then(m => m.PricingLibraryComponent) },
   { path: '', component: HomePageComponent },
@@ -17,7 +24,8 @@ export const routes: Routes = [
   {
     path: 'planner/editor',
     title: 'Stall planner',
-    loadComponent: () => import('./planner/planner-page.component').then(m => m.PlannerPageComponent)
+    loadComponent: () => import('./planner/planner-page.component').then(m => m.PlannerPageComponent),
+    canDeactivate: [(component: { canLeave(): boolean }) => component.canLeave()]
   },
   // Step 3 for architects: the AutoCAD-like 2D drafting workspace. The 3D editor above stays as
   // its preview. Opened with `?hallId=` or `?layoutId=`.

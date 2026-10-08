@@ -18,6 +18,9 @@ import { GridSystem } from '../geometry/grid-system';
 import { effectiveRules, Point, Rect } from '../geometry/placement-rules';
 import { hallSize } from '../geometry/planner-geometry';
 import { EventType, Hall } from '../models/hall.model';
+import type { PdfPlanTexture, PdfFloorPlan } from '../pdf-workspace/pdf-hall-plan';
+import { buildPdfFloorPlan } from './pdf-floor-renderer';
+import type { PdfDrawingSurface } from './pdf-drawing-surface';
 import { GateSide, Stall } from '../models/stall.model';
 import type { EditorMode, EditorOverlay, FocusTarget } from '../planner-store.service';
 import { buildFreeSpace, buildPreview, buildProposals, buildViolations } from './editor-overlay-renderer';
@@ -71,7 +74,12 @@ const DRAG_THRESHOLD = 0.05;
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Scene3dComponent implements AfterViewInit {
+  readonly pdfImportActive = input(false);
+  readonly drawingSurface = output<PdfDrawingSurface>();
+  private pdfCamera: THREE.OrthographicCamera | null = null;
   readonly hall = input<Hall | undefined>(undefined);
+  readonly pdfReference = input<PdfPlanTexture | null>(null);
+  readonly pdfFloorPlan = input<PdfFloorPlan | null>(null);
   readonly stalls = input<ReadonlyArray<Stall>>([]);
   readonly selectedStallIds = input<readonly string[]>([]);
   readonly toggleStall = output<string | number>();
@@ -175,6 +183,8 @@ export class Scene3dComponent implements AfterViewInit {
     // Rebuild the hall whenever its shape or size changes.
     effect(() => {
       const hall = this.hall();
+      this.pdfReference();
+      this.pdfFloorPlan();
       if (!this.ready) return;
       this.syncHall(hall);
     });
@@ -192,8 +202,9 @@ export class Scene3dComponent implements AfterViewInit {
     // Orbit controls are disabled while a stall is being dragged. App.js:475.
     effect(() => {
       const dragging = this.dragging();
+      const importing = this.pdfImportActive();
       if (!this.ready) return;
-      this.controls.enabled = !dragging;
+      this.controls.enabled = !dragging && !importing;
     });
 
     // Clearance bands and opening access areas depend on the rules view, not only the hall.
@@ -307,6 +318,13 @@ export class Scene3dComponent implements AfterViewInit {
     this.controls.enabled = !this.dragging();
     this.updateCursor();
 
+    this.drawingSurface.emit({
+      renderer: this.renderer,
+      scene: this.scene,
+      host,
+      useCamera: camera => { this.pdfCamera = camera; }
+    });
+    this.controls.enabled = !this.dragging() && !this.pdfImportActive();
     this.zone.runOutsideAngular(() => {
       this.resizeObserver = new ResizeObserver(() => this.resize());
       this.resizeObserver.observe(host);
@@ -324,13 +342,18 @@ export class Scene3dComponent implements AfterViewInit {
     disposeLayer(this.markerGroup);
     disposeLayer(this.amenityGroup);
     this.hideTooltip();
-    if (!hall) return;
+    if (!hall) { this.framedHallId = null; return; }
 
     const { width, length } = hallSize(hall);
     const grid = GridSystem.forHall(hall);
     const floor = hallFloor(hall);
+    const pdfPlan = this.pdfFloorPlan()?.hallId === String(hall.id) ? this.pdfFloorPlan() : null;
+    const sourceVisible = !!this.pdfReference()?.canvas && this.pdfReference()?.hallId === String(hall.id);
 
-    if (floor.length) {
+    if (pdfPlan) {
+      // Reviewed regions only. The overview's camera window is never drawn as a floor.
+      this.hallGroup.add(buildPdfFloorPlan(pdfPlan, !sourceVisible));
+    } else if (floor.length) {
       // A hall with a source plan: every floor region the plan draws (a foyer below the main
       // floor, floor past the breadth), the plan's own walls and coloured areas, grid on the floor
       // only. The rectangles are the source of truth, whatever `boundary` the hall stores.
@@ -339,13 +362,35 @@ export class Scene3dComponent implements AfterViewInit {
       this.blockedAreasGroup.add(buildPlanAreas(hall.blockedAreas ?? [], { drawOutside: false }));
     } else if (hall.boundary && hall.boundary.length >= 3) {
       // Real outline without plan rectangles: the floor IS the polygon, the grid is clipped to it.
-      this.hallGroup.add(buildHallBoundary(hall.boundary));
+      this.hallGroup.add(buildHallBoundary(hall.boundary, this.pdfReference()?.hallId !== String(hall.id)));
       this.gridGroup.add(buildHallGrid(width, length, hall.shape, grid, hall.boundary));
       this.blockedAreasGroup.add(buildPlanAreas(hall.blockedAreas ?? [], { drawOutside: false }));
     } else {
       this.hallGroup.add(buildPlainFloor(width, length, hall.shape));
       this.gridGroup.add(buildHallGrid(width, length, hall.shape, grid));
       this.blockedAreasGroup.add(buildPlanAreas(hall.blockedAreas ?? [], { drawOutside: true }));
+    }
+
+    const reference = this.pdfReference();
+    if (reference?.canvas && reference.hallId === String(hall.id)) {
+      const texture = new THREE.CanvasTexture(reference.canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(reference.width, reference.length),
+        new THREE.MeshBasicMaterial({ map: texture, toneMapped: false, side: THREE.DoubleSide }),
+      );
+      plane.name = 'pdf-hall-reference';
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.y = 0.025;
+      plane.position.x = reference.centre?.x ?? 0;
+      plane.position.z = reference.centre?.z ?? 0;
+      this.hallGroup.add(plane);
+      if (hall.boundary?.length && !pdfPlan) {
+        const outline = new THREE.BufferGeometry().setFromPoints(hall.boundary.map(p => new THREE.Vector3(p.x, 0.035, p.z)));
+        this.hallGroup.add(new THREE.LineLoop(outline, new THREE.LineBasicMaterial({ color: '#2563eb' })));
+      }
+      disposeLayer(this.gridGroup);
+      // The PDF crop includes the original outline; no wall height is inferred from it.
     }
 
     if (hall.planningZones?.length) this.restrictedGroup.add(buildPlanningZones(hall.planningZones));
@@ -387,7 +432,7 @@ export class Scene3dComponent implements AfterViewInit {
 
   /** Fit a large irregular hall into view once, when it is first shown. */
   private frameHall(hall: Hall): void {
-    const key = String(hall.id);
+    const key = String(hall.id) + JSON.stringify(this.pdfFloorPlan()?.regions ?? []);
     if (this.framedHallId === key) return;
     this.framedHallId = key;
     this.focusOn({ rect: this.planRect(hall), seq: 0 }, 0.9);
@@ -395,6 +440,12 @@ export class Scene3dComponent implements AfterViewInit {
 
   /** The hall's plan with its icon cards, captions and compass. */
   private planRect(hall: Hall): Rect {
+    const pdfPlan = this.pdfFloorPlan();
+    if (pdfPlan?.hallId === String(hall.id) && pdfPlan.regions.length) {
+      const points = pdfPlan.regions.flatMap(r => r.boundary);
+      return { minX: Math.min(...points.map(p => p.x)), maxX: Math.max(...points.map(p => p.x)),
+        minZ: Math.min(...points.map(p => p.z)), maxZ: Math.max(...points.map(p => p.z)) };
+    }
     const plan = planBounds(hall);
     const notes = annotationBounds(hall);
     return notes
@@ -527,6 +578,7 @@ export class Scene3dComponent implements AfterViewInit {
   // --- pointer interaction -------------------------------------------------
 
   private readonly onPointerDown = (event: PointerEvent): void => {
+    if (this.pdfImportActive()) return;
     // The suggested spot of a rejected placement can be clicked in either mode.
     if (event.button === 0 && this.pickSuggestion(event)) {
       this.pointerDownHit = true;
@@ -578,6 +630,7 @@ export class Scene3dComponent implements AfterViewInit {
   };
 
   private readonly onPointerMove = (event: PointerEvent): void => {
+    if (this.pdfImportActive()) return;
     this.updateCursor(event);
     if ((this.mode() === 'draw' || this.mode() === 'zone')) {
       const point = this.intersectDragPlane(event);
@@ -615,6 +668,7 @@ export class Scene3dComponent implements AfterViewInit {
   };
 
   private readonly onPointerUp = (event: PointerEvent): void => {
+    if (this.pdfImportActive()) return;
     if (this.drawPointerId !== null && this.drawPointerId === event.pointerId) {
       this.drawPointerId = null;
       this.controls.enabled = !this.dragging();
@@ -647,11 +701,13 @@ export class Scene3dComponent implements AfterViewInit {
 
   /** Clicking empty space clears the selection. React's `onPointerMissed`. */
   private readonly onClick = (): void => {
+    if (this.pdfImportActive()) return;
     if (this.pointerDownHit) return;
     this.selectStall.emit(null);
   };
 
   private readonly onPointerLeave = (): void => {
+    if (this.pdfImportActive()) return;
     this.hideTooltip();
     this.updateCursor();
     if ((this.mode() === 'draw' || this.mode() === 'zone') && this.drawPointerId === null) this.draftLeave.emit();
@@ -745,11 +801,11 @@ export class Scene3dComponent implements AfterViewInit {
 
   private readonly animate = (): void => {
     this.frameId = requestAnimationFrame(this.animate);
-    this.controls.update();
+    if (!this.pdfImportActive()) this.controls.update();
 
     const { clientWidth, clientHeight } = this.host().nativeElement;
 
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.pdfCamera ?? this.camera);
 
     const showLabels = this.showLabels();
     for (const object of this.stallObjects.values()) {

@@ -15,8 +15,8 @@ import { PlannerStore } from '../planner-store.service';
         CAD plan (PDF)
       </h3>
       <div class="panel-hint">
-        Read the stalls of an AutoCAD hall plan, L-shapes included. You review and place them
-        before anything changes.
+        Open the original PDF, calibrate its scale and review a hall boundary before bringing
+        it into this planner. Stall recognition is not automatic.
       </div>
       <button type="button" class="btn-secondary is-block" (click)="store.openPdfImport()">
         <app-icon name="upload" [size]="14" />

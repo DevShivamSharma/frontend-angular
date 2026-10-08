@@ -6,9 +6,22 @@
   <app-pdf-import-dialog />
 }
 <div class="planner" [class.is-sidebar-collapsed]="!sidebarOpen()"
+  (window:resize)="fitPreviewOnResize()"
+  [class.pdf-importing]="pdfImportMode()"
+  [class.pdf-overview]="previewOverview()"
+  [class.pdf-prepared]="!!preparedPreviewKey()"
   [class.tour-active]="tourStep() !== null" [class.tour-position]="tourStep()?.id === 'position'"
   [style.--tour-card-height.px]="tourCardHeight()">
   <!-- `inert` while hidden: its controls leave the tab order and the accessibility tree. -->
+  @if (pdfImportMode()) {
+    <aside class="sidebar pdf-import-sidebar" aria-label="Hall Layout PDF import">
+      <header class="pdf-import-heading"><h1 class="app-title">3D Floor Planner</h1><p>Hall Layout · Import plan</p></header>
+      @if (pdfSurface(); as surface) {
+        <app-pdf-workspace [embedded]="true" [surface]="surface"
+          (hallOpened)="onPdfHallSaved($event)" />
+      } @else { <p role="status">Preparing the planner canvas…</p> }
+    </aside>
+  } @else {
   <aside class="sidebar" id="planner-sidebar" aria-label="Planner controls" [inert]="!sidebarOpen()">
     <header class="sidebar-header">
       <div class="brand">
@@ -42,8 +55,8 @@
         type="button"
         class="btn-primary planner-save"
         data-tour="save-layout"
-        [disabled]="store.busy() || !currentHall()"
-        [title]="selectedSavedId() === null ? 'Save this layout' : 'Save changes to the open layout'"
+        [disabled]="store.busy() || !currentHall() || !!preparedPreviewKey()"
+        [title]="preparedPreviewKey() ? 'Local preview: stall edits last until reload' : selectedSavedId() === null ? 'Save this layout' : 'Save changes to the open layout'"
         (click)="saveCurrentLayout()"
       >
         <app-icon name="save" [size]="16" />
@@ -53,9 +66,27 @@
       @if (sidebarOpen() && !tourStep()) { <button type="button" class="btn-secondary planner-tour-help" (click)="startTour()"
         [disabled]="hallsStatus() === 'loading'" lang="en">Help / Restart tour</button> }
 
+      @if (preparedPreviewKey()) {
+        <section class="pdf-preview-picker" aria-label="Imported PDF halls">
+          <h2>Imported PDF halls</h2>
+          <p role="status">{{ previewStatus() }}</p>
+          @if (preparedPreview(); as preview) {
+            <div class="pdf-preview-options">
+              <button class="btn-secondary" [attr.aria-pressed]="previewOverview()" (click)="choosePreviewHall(null)">All halls</button>
+              @for (hall of preview.halls; track hall.id) {
+                <button class="btn-secondary" [attr.aria-pressed]="!previewOverview() && currentHall()?.id === hall.id" (click)="choosePreviewHall(hall)">{{ hall.name }}</button>
+              }
+            </div>
+            <p>{{ previewOverview() ? 'All halls are shown in their PDF positions. Choose a hall above to add or draw stalls.' : 'Use Add Shop or Draw stall. Preview stall edits last until reload.' }}</p>
+            <p>Foyers show the connecting floor areas. Stall placement stays inside the selected hall. Use “Show original drawing” for PDF markings and details.</p>
+            <p>Floor outlines only; columns, doors and services remain in the original drawing. Architectural heights are unconfirmed.</p>
+          }
+        </section>
+      }
       <!-- The hall picker and its two Excel buttons read as one control, not three loose ones. -->
       <div class="hall-card">
-        <app-working-hall-panel />
+        @if (!preparedPreviewKey()) { <app-working-hall-panel /> }
+        <app-pdf-hall-reference [hall]="displayHall()" [floorPlan]="previewFloorPlan()" [initiallyVisible]="!preparedPreviewKey()" (reference)="pdfReference.set($event)" />
       </div>
 
       <!-- What the tabs used to make you count by hand. -->
@@ -107,11 +138,13 @@
     <div class="sidebar-body" #sidebarBody>
       <!-- Stays until the server answers: the sample hall must never pass for real data.
            One line, because it is a standing condition rather than news. -->
-      @if (offline()) {
+      @if (offline() && !preparedPreviewKey()) {
         <div class="banner" role="status">
           <app-icon name="cloud-off" [size]="14" />
           <span class="banner-text">
-            @if (hallsStatus() === 'unavailable') {
+            @if (localPdfPreview()) {
+              Local PDF hall preview — saving needs the server.
+            } @else if (hallsStatus() === 'unavailable') {
               Local sample hall — saving needs the server.
             } @else {
               No halls on the server — this is a local sample hall.
@@ -196,23 +229,28 @@
       </div>
     </div>
   </aside>
+  }
 
   <main class="stage" aria-label="3D hall view">
-    <app-ai-chat-launcher />
+    @if (!pdfImportMode() && !preparedPreviewKey()) { <app-ai-chat-launcher /> }
     <app-scene3d data-tour="position"
-      [hall]="currentHall()"
-      [stalls]="stalls()"
+        [hall]="pdfImportMode() ? undefined : displayHall()"
+        [pdfReference]="pdfImportMode() ? null : pdfReference()"
+        [pdfFloorPlan]="pdfImportMode() ? null : previewFloorPlan()"
+        [pdfImportActive]="pdfImportMode()"
+        (drawingSurface)="pdfSurface.set($event)"
+      [stalls]="pdfImportMode() || previewOverview() ? [] : stalls()"
       [selectedStallId]="selectedStallId()"
       [selectedStallIds]="store.selectedIds()"
       (toggleStall)="store.selectStall($event,true)"
-      [dragging]="dragging()"
-      [mode]="mode()"
-      [editorOverlay]="overlay()"
-      [showClearances]="showClearances()"
+      [dragging]="pdfImportMode() ? false : dragging()"
+      [mode]="pdfImportMode() || previewOverview() ? 'select' : mode()"
+      [editorOverlay]="pdfImportMode() || previewOverview() ? null : overlay()"
+      [showClearances]="!previewOverview() && showClearances()"
       [showLabels]="showLabels()"
       [eventType]="eventType()"
-      [focusTarget]="focusTarget()"
-      [viewCommand]="viewCommand()"
+      [focusTarget]="pdfImportMode() || previewOverview() ? null : focusTarget()"
+      [viewCommand]="pdfImportMode() ? null : viewCommand()"
       (selectStall)="onSelectStall($event)"
       (moveStall)="onMoveStall($event)"
       (dragState)="onDragState($event)"
@@ -225,6 +263,9 @@
       (draftLeave)="store.draftLeave()"
       (acceptSuggestion)="store.acceptSuggestion()"
     />
+    @if (pdfImportMode()) {
+      <div class="pdf-import-stage-note">PDF drawing · select, trace and calibrate using Hall Layout controls</div>
+    } @else {
 
     <!-- One flex row for everything along the top edge, so the toolbar and the two panels
          share the width instead of overlapping at narrow sizes. -->
@@ -261,9 +302,11 @@
         [disabled]="hallsStatus() === 'loading'" lang="en">Help / Restart tour</button> }
 
       <div class="hud hud-left">
-        <div class="hud-title">{{ currentHall()?.name }}</div>
+        <div class="hud-title">{{ displayHall()?.name }}</div>
         <div class="hud-meta">
-          @if (mode() === 'zone') {
+          @if (previewOverview()) {
+            Choose a hall to start its stall layout
+          } @else if (mode() === 'zone') {
             Drag a rectangle to draw a planning zone
           } @else if (mode() === 'draw') {
             Drag on the grid to draw a stall · right-drag to orbit
@@ -295,7 +338,7 @@
             } @else {
               <div>
                 <dt>Size</dt>
-                <dd>{{ hall.width }} × {{ hall.length }} m</dd>
+                <dd>{{ hall.width | number:'1.0-3' }} × {{ hall.length | number:'1.0-3' }} m</dd>
               </div>
             }
             <div>
@@ -449,6 +492,7 @@
         </div>
       }
     </div>
+    }
   </main>
 </div>
 

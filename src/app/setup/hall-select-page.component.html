@@ -1,7 +1,8 @@
 <div class="su-head">
   <div>
     <h2>Which hall are you planning?</h2>
-    <p>Choose a hall to plan its stalls, or import a new one from its floor plan. Imported halls keep their toilets, lifts, gates and legend.</p>
+    <p>Choose a hall to plan its stalls, or import a new one from its floor plan. PDF imports preserve the source drawing while you review the hall geometry.</p>
+    <p><a routerLink="/planner/editor" [queryParams]="{import: 'pdf'}">Import PDF in planner</a> — view the drawing in Hall Layout, set its scale and choose a hall.</p>
   </div>
   @if (status() === 'ready' && halls().length) {
     <label class="search">
@@ -15,6 +16,9 @@
         (input)="query.set($any($event.target).value)"
       />
     </label>
+  }
+  @if (status() !== 'ready') {
+    <a class="su-btn su-btn-secondary" routerLink="/planner/halls/import">Import a floor plan</a>
   }
 </div>
 
@@ -46,7 +50,7 @@
         </span>
         <span class="card-kicker">New hall</span>
         <span class="import-title">Import a floor plan</span>
-        <span class="import-sub">Upload a DXF, PDF or image. We'll find the outline, toilets, lifts, gates and legend for you to check, or you trace them.</span>
+          <span class="import-sub">Choose a PDF, DXF or image. Review the drawing, calibrate its scale and confirm the hall outline.</span>
         <span class="round-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></span>
       </a>
 

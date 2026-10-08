@@ -17,7 +17,7 @@ const WALL_THICKNESS = 0.5;
  * polygon is ever drawn, so there is no rectangle to hide. Walls sit OUTSIDE the polygon, so the
  * polygon stays the usable floor that validation measures against.
  */
-export function buildHallBoundary(boundary: Point[]): THREE.Group {
+export function buildHallBoundary(boundary: Point[], drawWalls = true): THREE.Group {
   const group = new THREE.Group();
   group.name = 'hall-boundary';
 
@@ -33,8 +33,10 @@ export function buildHallBoundary(boundary: Point[]): THREE.Group {
   floor.name = 'hall-floor';
   group.add(floor);
 
-  const wallMaterial = new THREE.MeshStandardMaterial({ color: WALL_COLOR, roughness: 0.85 });
-  forEachEdge(boundary, (a, b) => group.add(buildWall(a, b, boundary, wallMaterial)));
+  if (drawWalls) {
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: WALL_COLOR, roughness: 0.85 });
+    forEachEdge(boundary, (a, b) => group.add(buildWall(a, b, boundary, wallMaterial)));
+  }
 
   return group;
 }

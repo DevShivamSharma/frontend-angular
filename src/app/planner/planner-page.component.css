@@ -34,6 +34,16 @@
   min-height: 0;
   /* Sidebar width changes instantly, avoiding a layout animation on the 3D canvas. */
 }
+.pdf-import-sidebar { overflow-y: auto; overflow-x: hidden; }
+.pdf-import-heading { padding: 16px 12px 0; }
+.pdf-import-heading p { margin: 4px 0 0; color: var(--text-secondary); font-size: 13px; }
+.pdf-import-stage-note { position: absolute; top: 12px; left: 12px; right: 12px; pointer-events: none; color: #334155; font-size: 13px; }
+.planner.pdf-importing .sidebar { margin-left: 0; }
+@media (max-width: 900px) {
+  .planner.pdf-importing { display: flex; flex-direction: column-reverse; height: 100dvh; }
+  .planner.pdf-importing .stage { min-height: 35dvh; height: 42dvh; flex: 0 0 42dvh; }
+  .planner.pdf-importing .pdf-import-sidebar { width: 100%; flex: 1 1 0; min-height: 0; }
+}
 
 /* Hidden sidebar: slid out by its own width, so the stage (flex: 1) takes the space. The 3D view
    follows by itself - Scene3dComponent resizes on its ResizeObserver. No `visibility: hidden`:
@@ -277,3 +287,17 @@
 /* The Help tour reserves space for its current action and explanatory card. */
 .tour-active .utilization, .tour-active .publication-actions, .tour-active .publication-record { display: none; }
 .tour-active .sidebar-body { scroll-padding-block: 8px; }
+.planner.pdf-importing .pdf-import-sidebar { overflow-y: auto; overflow-x: hidden; }
+.pdf-preview-picker { margin: 12px 0; }
+.pdf-preview-picker h2 { margin: 0; font-size: 16px; }
+.pdf-preview-picker p { margin: 8px 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.pdf-preview-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.pdf-preview-options button { min-height: 40px; }
+.pdf-preview-options button[aria-pressed="true"] { color: white; background: var(--accent-solid); }
+.pdf-overview .sidebar-body, .pdf-overview .stat-strip, .pdf-overview .utilization,
+.pdf-overview .sidebar-tabs, .pdf-overview app-editor-toolbar, .pdf-overview .hud-info,
+.pdf-overview .stage-bottom, .pdf-prepared .publication-actions,
+.pdf-prepared .planner-save, .pdf-prepared .planner-tour-help { display: none; }
+@media (max-width: 900px) {
+  .pdf-prepared .stage { order: -1; height: 52dvh; min-height: 280px; }
+}

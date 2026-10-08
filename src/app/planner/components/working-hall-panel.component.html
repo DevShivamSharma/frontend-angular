@@ -2,7 +2,9 @@
   <!-- Keep loading/offline status separate from the picker label. -->
   <div class="hall-context-label">
     <label for="working-hall">Working hall</label>
-    @if (hallsStatus() === 'loading') {
+    @if (localPdfPreview()) {
+      <span class="hall-context-status is-offline">Local PDF preview</span>
+    } @else if (hallsStatus() === 'loading') {
       <span class="hall-context-status">
         <span class="spinner" aria-hidden="true"></span>
         Loading…

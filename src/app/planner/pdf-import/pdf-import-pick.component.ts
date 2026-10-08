@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { IconComponent } from '../components/icon.component';
 
 /** The first step of the PDF import: choose or drop a file, and what the import will do. */
 @Component({
   selector: 'app-pdf-import-pick',
-  imports: [IconComponent],
+  imports: [IconComponent, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -30,6 +31,7 @@ import { IconComponent } from '../components/icon.component';
     @if (error()) {
       <p class="error" role="alert"><app-icon name="alert" [size]="16" /> {{ error() }}</p>
     }
+    <p><a routerLink="/planner/pdf">Open the local PDF reference workspace</a> to preserve the original drawing, calibrate its scale or trace unsupported outlines.</p>
     <div class="explain">
       <section>
         <h3><app-icon name="sparkles" [size]="16" /> Read automatically</h3>

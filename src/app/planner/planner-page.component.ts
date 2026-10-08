@@ -1,4 +1,5 @@
 import { PlanningZonesComponent } from './components/planning-zones.component';
+import { DecimalPipe } from '@angular/common';
 import { BatchStallsComponent } from './components/batch-stalls.component';
 import { PublishDialogComponent } from './components/publish-dialog.component';
 import {
@@ -31,6 +32,11 @@ import { IconComponent, IconName } from './components/icon.component';
 import { SavedLayoutsPanelComponent } from './components/saved-layouts-panel.component';
 import { SelfcareImportComponent } from './components/selfcare-import.component';
 import { PdfImportCardComponent } from './pdf-import/pdf-import-card.component';
+import { PdfHallReferenceComponent } from './pdf-workspace/pdf-hall-reference.component';
+import { PdfWorkspaceComponent } from './pdf-workspace/pdf-workspace.component';
+import type { PdfDrawingSurface } from './three/pdf-drawing-surface';
+import { preparePdfHall, type PdfPlanTexture } from './pdf-workspace/pdf-hall-plan';
+import { hashPdf, loadWorkspace, saveHallBinding } from './pdf-workspace/pdf-workspace.storage';
 import { PdfImportDialogComponent } from './pdf-import/pdf-import-dialog.component';
 import { ShopsListComponent } from './components/shops-list.component';
 import { ViolationsPanelComponent } from './components/violations-panel.component';
@@ -45,6 +51,8 @@ import { AiChatSession } from './ai-chat-session.service';
 import { legendEntries } from './geometry/legend-content';
 import { stallArea } from './geometry/footprint-view';
 import { PlannerStore } from './planner-store.service';
+import type { Hall } from './models/hall.model';
+import { loadLocalPdfPreview } from './pdf-workspace/pdf-local-preview';
 import { Scene3dComponent, StallMove, StallOpenSide, ViewCommand } from './three/scene3d.component';
 
 /** Sidebar sections. UI only: which group of panels is visible. */
@@ -84,6 +92,9 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
     PlannerTourComponent,
     SelfcareImportComponent,
     PdfImportCardComponent,
+    PdfHallReferenceComponent,
+    PdfWorkspaceComponent,
+    DecimalPipe,
     PdfImportDialogComponent,
     WorkingHallPanelComponent,
     CreateHallFormComponent,
@@ -105,11 +116,25 @@ const LEADING_EMOJI = /^(?:❌|⚠️?)\s*/;
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PlannerPageComponent implements OnInit {
+  readonly pdfReference = signal<PdfPlanTexture | null>(null);
   /** Public so the template can hand the draw-mode pointer events straight to the store. */
   readonly store = inject(PlannerStore);
   private readonly notify = inject(NotifyService);
   private readonly venueParams = toSignal(inject(ActivatedRoute).queryParamMap);
+  readonly pdfImportMode = computed(() => this.venueParams()?.get('import') === 'pdf');
+  readonly pdfSurface = signal<PdfDrawingSurface | null>(null);
+  private readonly pdfWorkspace = viewChild(PdfWorkspaceComponent);
+  canLeave(): boolean { return this.pdfWorkspace()?.canLeave() ?? true; }
   private appliedVenueRequest: string | undefined;
+  readonly localPdfPreview = computed(() => String(this.currentHall()?.id).startsWith('pdf-local-'));
+  readonly preparedPreviewKey = computed(() => this.venueParams()?.get('pdfPreview'));
+  readonly preparedPreview = signal<Awaited<ReturnType<typeof loadLocalPdfPreview>> | null>(null);
+  readonly previewOverview = signal(false);
+  readonly previewStatus = signal('');
+  readonly displayHall = computed(() => this.preparedPreviewKey() && !this.preparedPreview()
+    ? undefined : this.previewOverview() ? this.preparedPreview()?.overview : this.currentHall());
+  readonly previewFloorPlan = computed(() => this.preparedPreview()?.floorPlans[String(this.displayHall()?.id)] ?? null);
+  private previewGeneration = 0;
 
   readonly error = this.store.error;
   readonly stalls = this.store.stalls;
@@ -266,6 +291,16 @@ export class PlannerPageComponent implements OnInit {
   readonly viewCommand = signal<ViewCommand | null>(null);
 
   constructor() {
+    effect(() => {
+      const key = this.preparedPreviewKey();
+      if (key) untracked(() => void this.openPreparedPreview(key));
+    });
+    effect(() => {
+      const params = this.venueParams();
+      if (!this.pdfImportMode() && params?.get('pdfDocument') && params?.get('pdfObject')) {
+        untracked(() => void this.openLocalPdfPreview());
+      }
+    });
     // Opened from the setup steps with the chosen hall's id (`?hallId=`): select it once the
     // real halls are in, exactly like a venue deep link.
     effect(() => {
@@ -274,6 +309,7 @@ export class PlannerPageComponent implements OnInit {
       const request = 'id:' + hallId;
       if (this.appliedVenueRequest === request) return;
       this.appliedVenueRequest = request;
+      if (String(this.currentHall()?.id) === hallId) return;
       const hall = this.store.halls().find(h => String(h.id) === hallId);
       untracked(() => {
         if (hall) this.store.setActiveHall(hall.id);
@@ -296,7 +332,7 @@ export class PlannerPageComponent implements OnInit {
     // its own saved rules.
     effect(() => {
       const status = this.store.plannerRulesStatus();
-      if (this.landingDialogShown || status === 'loading') return;
+      if (this.pdfImportMode() || this.preparedPreviewKey() || this.landingDialogShown || status === 'loading') return;
       this.landingDialogShown = true;
       const pick = status === 'ready' && this.store.plannerRules().length > 0 && !this.venueParams()?.get('layoutId');
       untracked(() => afterNextRender(() => (pick ? this.rulePicker() : this.rulesGuide()).open(), { injector: this.injector }));
@@ -349,9 +385,61 @@ export class PlannerPageComponent implements OnInit {
     });
   }
 
+  onPdfHallSaved(hall: Hall): void {
+    this.store.applyPdfImport(hall, [], hall.name);
+    // The first imported hall makes a previously empty server list obsolete.
+    // Refresh only after a successful API save; local previews keep their local status.
+    void this.store.loadHalls();
+  }
+
+  private async openPreparedPreview(key: string): Promise<void> {
+    const generation = ++this.previewGeneration;
+    this.previewStatus.set('Loading the local PDF halls…');
+    try {
+      const preview = await loadLocalPdfPreview(key);
+      if (generation !== this.previewGeneration || this.preparedPreviewKey() !== key) return;
+      this.store.halls.set(preview.halls);
+      this.store.setActiveHall(preview.halls[0].id);
+      this.store.showClearances.set(false);
+      this.preparedPreview.set(preview);
+      this.previewOverview.set(true);
+      this.previewStatus.set('Clean floor view · blue areas are foyers. Scale follows the PDF grid; dimensions still need verification.');
+    } catch (error) {
+      if (generation === this.previewGeneration)
+        this.previewStatus.set(error instanceof Error ? error.message : 'The PDF preview could not be opened.');
+    }
+  }
+
+  choosePreviewHall(hall: Hall | null): void {
+    this.store.setMode('select');
+    this.previewOverview.set(hall === null);
+    if (hall) this.store.setActiveHall(hall.id);
+  }
+
+  fitPreviewOnResize(): void {
+    if (this.previewOverview()) requestAnimationFrame(() => this.setView('fit'));
+  }
+
+  private async openLocalPdfPreview(): Promise<void> {
+    const params = this.venueParams(), documentId = params?.get('pdfDocument'), objectId = params?.get('pdfObject');
+    if (!documentId || !objectId) return;
+    try {
+      const doc = await loadWorkspace(documentId);
+      if (!doc || await hashPdf(doc.pdf) !== doc.sha256) throw new Error('The local PDF is missing or failed its integrity check. Reopen it in the PDF workspace.');
+      const object = doc.objects.find(o => o.id === objectId);
+      if (!object) throw new Error('This PDF hall outline no longer exists. Select it again in the PDF workspace.');
+      const { hall, binding } = preparePdfHall(doc, object);
+      hall.id = `pdf-local-${doc.id}-${object.id}`;
+      await saveHallBinding({ ...binding, hallId: String(hall.id) });
+      this.store.applyPdfImport(hall, [], hall.name);
+    } catch (e) {
+      this.notify.error('PDF hall could not be opened', e instanceof Error ? e.message : 'Return to the PDF workspace and try again.');
+    }
+  }
+
   /** Keep the current layout's save action available while editing any panel. */
   async saveCurrentLayout(): Promise<void> {
-    if (this.store.busy() || !this.currentHall()) return;
+    if (this.preparedPreviewKey() || this.store.busy() || !this.currentHall()) return;
     this.saving.set(true);
     try {
       if (this.selectedSavedId() === null) await this.store.saveLayout();
@@ -439,6 +527,11 @@ export class PlannerPageComponent implements OnInit {
   }
 
   loadFromServer(): void {
+    if (this.preparedPreviewKey()) {
+      // A self-contained local preview must not depend on a particular backend branch.
+      this.store.hallsStatus.set('empty');
+      return;
+    }
     // The rule library decides what the visit opens with (see the constructor).
     void this.store.loadPlannerRules();
 

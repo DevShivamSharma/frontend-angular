@@ -92,6 +92,7 @@ export class WorkingHallPanelComponent {
   readonly activeHallId = this.store.activeHallId;
   readonly hallsStatus = this.store.hallsStatus;
   readonly currentHall = this.store.currentHall;
+  readonly localPdfPreview = computed(() => String(this.currentHall()?.id).startsWith('pdf-local-'));
   readonly filteredHalls = computed(() => {
     const words = this.query().trim().toLowerCase().split(/\s+/).filter(Boolean);
     return this.halls().filter(hall => words.every(word => hall.name.toLowerCase().includes(word)));

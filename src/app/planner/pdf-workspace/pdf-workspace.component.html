@@ -1,0 +1,663 @@
+<main>
+  <header class="workspace-header">
+    <div>
+      <a routerLink="/planner/halls">Back to halls</a>
+      <h1>{{ embedded() ? 'Import hall layout' : 'PDF hall importer' }}</h1>
+    </div>
+    <div class="actions">
+      <label class="file-button"
+        >Open PDF<input
+          type="file"
+          accept=".pdf,application/pdf"
+          [disabled]="!!busy()"
+          (change)="choose($event)"
+          aria-label="Open PDF"
+      /></label>
+      <label class="file-button secondary"
+        >Open backup<input
+          type="file"
+          accept=".pdfplan"
+          [disabled]="!!busy()"
+          (change)="importBackup($event)"
+          aria-label="Open backup"
+      /></label>
+      <button type="button" (click)="save()" [disabled]="!doc() || saving() || !!busy()">
+        {{ saving() ? 'Saving…' : 'Save locally' }}
+      </button>
+      @if (doc()) {
+        <button type="button" (click)="downloadBackup()">Download backup</button
+        ><button type="button" (click)="downloadReport()">Download report</button>
+      }
+    </div>
+  </header>
+  @if (doc()) {
+    <section class="planner-handoff" aria-label="Continue to main planner">
+      <div>
+        <strong>{{ embedded() ? 'Prepare this hall for stalls' : 'Next: main 3D planner' }}</strong>
+        <p>
+          Choose a hall boundary, set its scale and confirm the outline to place and edit stalls.
+        </p>
+      </div>
+      @if (halls().length > 1) {
+        <label
+          >Hall to open<select [ngModel]="selectedId()" (ngModelChange)="selectById($event)">
+            <option value="">Choose a hall</option>
+            @for (hall of halls(); track hall.id) {
+              <option [value]="hall.id">{{ hall.name }}</option>
+            }
+          </select></label
+        >
+      }
+      <button
+        class="continue-planner"
+        type="button"
+        [disabled]="!!busy() || saving()"
+        (click)="continueToPlanner()"
+      >
+        {{ embedded() ? 'Start stall layout' : 'Continue to planner' }}
+      </button>
+      <small>Opens a local hall draft; saving to the hall list is a separate action below.</small>
+    </section>
+  }
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+  @if (busy()) {
+    <p class="status" role="status">{{ busy() }}</p>
+  }
+  @if (message()) {
+    <p class="status" role="status">{{ message() }}</p>
+  }
+  @if (doc(); as document) {
+    <div class="document-bar">
+      <strong>{{ document.name }}</strong>
+      <span>{{ dirty() ? 'Unsaved changes' : 'Saved on this browser' }}</span>
+      <label
+        >Page
+        <input
+          aria-label="Page number"
+          type="number"
+          min="1"
+          [max]="pageCount()"
+          [value]="document.page"
+          [disabled]="!!busy()"
+          (change)="changePage($any($event.target).value)"
+        />
+        of {{ pageCount() }}</label
+      >
+      <button type="button" (click)="downloadOriginal()">Download original</button>
+    </div>
+  }
+  @if (inspection(); as page) {
+    <div class="workspace" [inert]="!!busy()">
+      <section class="drawing" aria-label="PDF drawing" tabindex="-1">
+        <div class="toolbar tools" role="group" aria-label="Drawing renderer">
+          <button
+            type="button"
+            [attr.aria-pressed]="engine() === 'three'"
+            (click)="setEngine('three')"
+          >
+            Three.js workspace
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="engine() === 'reference'"
+            (click)="setEngine('reference')"
+          >
+            2D reference
+          </button>
+          <span class="note">Select, trace and calibrate in either view.</span>
+        </div>
+        <div class="toolbar">
+          <div class="segments" role="group" aria-label="Drawing view">
+            <button
+              type="button"
+              [attr.aria-pressed]="view() === 'original'"
+              (click)="setView('original')"
+            >
+              Original
+            </button>
+            <button
+              type="button"
+              [attr.aria-pressed]="view() === 'compare'"
+              (click)="setView('compare')"
+            >
+              Compare
+            </button>
+            <button
+              type="button"
+              [attr.aria-pressed]="view() === 'edited'"
+              (click)="setView('edited')"
+            >
+              Edited objects
+            </button>
+          </div>
+          <div class="actions">
+            <button type="button" (click)="setZoom(0.8)" aria-label="Zoom out">Zoom out</button>
+            <span
+              >{{ (engine() === 'three' ? threeZoom() : zoom()) * 100 | number: '1.0-0' }}%</span
+            >
+            <button type="button" (click)="setZoom(1.25)" aria-label="Zoom in">Zoom in</button>
+            <button type="button" (click)="fit()">Fit page</button>
+          </div>
+        </div>
+        <div class="toolbar tools" role="group" aria-label="Drawing tools">
+          <button
+            type="button"
+            [attr.aria-pressed]="tool() === 'select'"
+            (click)="setTool('select')"
+          >
+            Select
+          </button>
+          <button type="button" [attr.aria-pressed]="tool() === 'trace'" (click)="setTool('trace')">
+            Trace outline
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="tool() === 'calibrate'"
+            (click)="setTool('calibrate')"
+          >
+            Calibrate scale
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="tool() === 'measure'"
+            [disabled]="!activeCalibration()"
+            (click)="setTool('measure')"
+          >
+            Measure
+          </button>
+          <button type="button" [disabled]="!history().length" (click)="undo()">Undo</button>
+          <button type="button" [disabled]="!future().length" (click)="redo()">Redo</button>
+        </div>
+        <p class="hint" aria-live="polite">
+          @switch (tool()) {
+            @case ('trace') {
+              Click each boundary corner, including diagonal edges. Finish the outline when all
+              corners are placed.
+            }
+            @case ('calibrate') {
+              Click the two ends of a known dimension, then enter its length in metres.
+            }
+            @case ('measure') {
+              Click two points to check an independent dimension using the active scale.
+            }
+            @default {
+              @if (view() === 'original') {
+                Original PDF only. Switch to Compare to select or trace objects.
+              } @else if (view() === 'edited') {
+                Only your editable objects are shown. Original PDF content has not been erased or
+                modified.
+              } @else {
+                Click an outline to inspect it, or trace a boundary. The original drawing stays
+                visible underneath edits.
+              }
+            }
+          }
+        </p>
+        @if (engine() === 'three') {
+          <app-pdf-three-scene
+            [surface]="surface()"
+            [page]="page"
+            [document]="doc()!"
+            [renderTile]="renderThreeTile"
+            [objects]="objects()"
+            [selectedId]="selectedId()"
+            [selectedPath]="selectedPath()"
+            [points]="points()"
+            [tool]="tool()"
+            [view]="view()"
+            [busy]="!!busy()"
+            (picked)="pickPoint($event.point, $event.tolerance)"
+            (selected)="selectById($event)"
+            (zoomChanged)="threeZoom.set($event)"
+            (fallback)="setEngine('reference')"
+          />
+        } @else {
+          <div
+            #viewport
+            class="viewport"
+            tabindex="0"
+            aria-label="Scrollable PDF drawing"
+            (scroll)="scheduleRender()"
+          >
+            <div
+              class="sheet"
+              [style.width.px]="page.width * zoom()"
+              [style.height.px]="page.height * zoom()"
+            >
+              <canvas
+                #canvas
+                [hidden]="view() === 'edited'"
+                aria-label="Original PDF rendering"
+              ></canvas>
+              <svg
+                #overlay
+                [attr.viewBox]="'0 0 ' + page.width + ' ' + page.height"
+                (click)="click($event)"
+                [class.drawing-tool]="tool() !== 'select'"
+                aria-label="Selectable PDF overlays"
+              >
+                @if (view() !== 'original') {
+                  @for (object of objects(); track object.id) {
+                    @if (view() === 'compare' && selectedId() === object.id) {
+                      <polygon
+                        class="source-outline"
+                        [attr.points]="pointsAttribute(object.sourcePoints)"
+                      />
+                    }
+                    <polygon
+                      class="object"
+                      [class.selected]="selectedId() === object.id"
+                      [class.reviewed]="object.reviewed"
+                      [attr.points]="pointsAttribute(object.points)"
+                    />
+                  }
+                  @if (selectedPath(); as path) {
+                    <path class="candidate" [attr.d]="path.d" />
+                  }
+                  @if (points().length) {
+                    <polyline class="draft" [attr.points]="pointsAttribute(points())" />
+                    @for (point of points(); track $index) {
+                      <circle
+                        [attr.cx]="point.x"
+                        [attr.cy]="point.y"
+                        [attr.r]="4 / zoom()"
+                        class="anchor"
+                      />
+                    }
+                  }
+                }
+              </svg>
+            </div>
+          </div>
+        }
+        <footer class="drawing-footer">
+          <span
+            >{{ page.paths.length | number }} paths · {{ page.texts.length | number }} text runs ·
+            {{ page.layers.length }} layers</span
+          ><span>{{
+            activeCalibration() ? 'Calibrated — verify another dimension' : 'Scale unknown'
+          }}</span>
+        </footer>
+      </section>
+      <aside aria-label="PDF review and editing">
+        @if (tool() === 'trace') {
+          <section>
+            <h2>Trace boundary</h2>
+            <p>{{ points().length }} vertices. No snapping or automatic repositioning.</p>
+            <div class="actions">
+              <button type="button" [disabled]="points().length < 3" (click)="finishTrace()">
+                Finish outline</button
+              ><button
+                type="button"
+                [disabled]="!points().length"
+                (click)="points.set(points().slice(0, -1))"
+              >
+                Remove last point
+              </button>
+            </div>
+            <details>
+              <summary>Enter outline coordinates</summary>
+              <label
+                >Outline coordinates: x, y per line<textarea
+                  rows="5"
+                  [(ngModel)]="traceText"
+                ></textarea>
+              </label>
+              <p class="note">
+                Page coordinates, with the origin at the top left. This also supports tracing
+                without a mouse.
+              </p>
+              <button type="button" (click)="enterTrace()">Create outline from coordinates</button>
+            </details>
+          </section>
+        }
+        @if (tool() === 'calibrate') {
+          <section>
+            <h2>Set drawing scale</h2>
+            <details>
+              <summary>Enter precise reference points</summary>
+              <label
+                >Reference coordinates: x, y per line<textarea
+                  rows="2"
+                  [(ngModel)]="referenceText"
+                ></textarea>
+              </label>
+              <button type="button" (click)="enterReference()">Use reference coordinates</button>
+            </details>
+            <p>
+              {{ points().length }} of 2 reference points selected. Use a labelled dimension or a
+              grid spacing you have verified.
+            </p>
+            <label
+              >Known distance (m)<input
+                type="number"
+                min="0.001"
+                step="any"
+                [(ngModel)]="knownMetres"
+            /></label>
+            <button
+              type="button"
+              [disabled]="points().length !== 2 || !knownMetres"
+              (click)="applyCalibration('page')"
+            >
+              Apply to this page
+            </button>
+            @if (selected()?.kind === 'hall') {
+              <button
+                type="button"
+                [disabled]="points().length !== 2 || !knownMetres"
+                (click)="applyCalibration('hall')"
+              >
+                Apply only to selected hall
+              </button>
+            }
+            <p class="note">
+              Different scales on one page: give each hall its own calibration and assign its
+              objects to that hall.
+            </p>
+          </section>
+        }
+        @if (tool() === 'measure') {
+          <section>
+            <h2>Check a dimension</h2>
+            <p>{{ points().length }} of 2 points selected.</p>
+            @if (measured(); as length) {
+              <p class="measurement">{{ length | number: '1.3-3' }} m</p>
+              <label
+                >Expected distance (m)<input
+                  type="number"
+                  min="0.001"
+                  step="any"
+                  [(ngModel)]="measurementExpected"
+              /></label>
+              @if (measurementExpected && measurementExpected > 0) {
+                <p>
+                  Difference: {{ length - measurementExpected | number: '1.3-3' }} m ({{
+                    ((length - measurementExpected) / measurementExpected) * 100 | number: '1.2-2'
+                  }}%).
+                </p>
+              }
+            }
+          </section>
+        }
+        <section>
+          <h2>Source geometry</h2>
+          <label
+            >Layer for selection<select
+              [value]="layer()"
+              (change)="layer.set($any($event.target).value); selectedPath.set(null)"
+            >
+              <option value="">All layers</option>
+              @for (name of page.layers; track name) {
+                <option [value]="name">{{ name }}</option>
+              }
+            </select></label
+          >
+          <p class="note">This filter changes selection only. The original PDF remains complete.</p>
+          @if (selectedPath(); as path) {
+            <p>
+              {{ path.layer }} · {{ path.closed ? 'closed' : 'open' }} path
+              @if (path.curved) {
+                · curved
+              }
+              @if (path.clipped) {
+                · clipped
+              }
+              @if (path.compound) {
+                · multiple subpaths
+              }
+            </p>
+            <button
+              id="pdf-use-source-path"
+              type="button"
+              [disabled]="!sourcePathConvertible()"
+              (click)="usePath()"
+            >
+              Create editable outline
+            </button>
+            @if (!sourcePathConvertible()) {
+              <p class="note">
+                This path cannot become a reliable polygon automatically. Trace the intended
+                boundary; its source appearance stays intact.
+              </p>
+              @if (engine() === 'three' && (path.curved || path.compound || path.clipped)) {
+                <p class="note">
+                  Three.js highlights this path's bounding box only. Its exact appearance remains in
+                  the PDF; 2D reference can show the path highlight.
+                </p>
+              }
+            }
+          }
+        </section>
+        <section>
+          <h2>
+            Objects on page {{ page.page }} <span>({{ objects().length }})</span>
+          </h2>
+          <ul class="object-list">
+            @for (object of objects(); track object.id) {
+              <li>
+                <button
+                  type="button"
+                  [attr.aria-pressed]="selectedId() === object.id"
+                  (click)="select(object)"
+                >
+                  <span>{{ object.name }}</span
+                  ><small
+                    >{{ object.kind }} · {{ object.reviewed ? 'reviewed' : 'needs review' }}</small
+                  >
+                </button>
+              </li>
+            } @empty {
+              <li class="note">
+                No editable objects yet. Select a closed source path or trace an outline.
+              </li>
+            }
+          </ul>
+          <button type="button" (click)="selectedId.set(''); selectedPath.set(null)">
+            Clear selection / use page scale
+          </button>
+        </section>
+        @if (selected(); as object) {
+          <section class="properties">
+            <h2>Edit selected object</h2>
+            <label
+              >Name<input
+                [value]="object.name"
+                maxlength="200"
+                (change)="
+                  updateObject({ name: $any($event.target).value.trim() || 'Unnamed outline' })
+                "
+            /></label>
+            <label
+              >Object type<select
+                id="pdf-object-kind"
+                [ngModel]="object.kind"
+                (ngModelChange)="setKind($event)"
+              >
+                @for (kind of kinds; track kind) {
+                  <option [value]="kind">{{ kind }}</option>
+                }
+              </select></label
+            >
+            @if (object.kind !== 'hall') {
+              <label
+                >Hall / scale region<select
+                  [value]="object.regionId || ''"
+                  (change)="updateObject({ regionId: $any($event.target).value || undefined })"
+                >
+                  <option value="">Page scale</option>
+                  @for (hall of halls(); track hall.id) {
+                    <option [value]="hall.id">{{ hall.name }}</option>
+                  }
+                </select></label
+              >
+            }
+            @if (object.kind === 'symbol') {
+              <label
+                >Legend association<select
+                  [value]="object.legendId || ''"
+                  (change)="updateObject({ legendId: $any($event.target).value || undefined })"
+                >
+                  <option value="">Unknown meaning</option>
+                  @for (legend of legends(); track legend.id) {
+                    <option [value]="legend.id">{{ legend.name }}</option>
+                  }
+                </select></label
+              >
+              <p class="note">
+                Trace a legend sample, classify it as “legend”, then associate matching symbols
+                after review.
+              </p>
+            }
+            @if (selectedArea() !== null) {
+              <p>
+                Area: <strong>{{ selectedArea() | number: '1.3-3' }} m²</strong>
+              </p>
+            }
+            <label
+              >Confirmed height (m)<input
+                type="number"
+                step="any"
+                min="0.001"
+                placeholder="Unknown"
+                [value]="object.heightMetres ?? ''"
+                (change)="setHeight($any($event.target).value)"
+            /></label>
+            @if (object.heightMetres && activeCalibration()) {
+              <app-pdf-object-preview [points]="metricPoints()" [height]="object.heightMetres" />
+            }
+            <label class="check"
+              ><input
+                id="pdf-object-reviewed"
+                type="checkbox"
+                [checked]="object.reviewed"
+                (change)="updateObject({ reviewed: $any($event.target).checked })"
+              />
+              I reviewed this outline and its meaning</label
+            >
+            <details>
+              <summary>Move or edit vertices</summary>
+              <p class="note">
+                X increases right; Y increases down. Moving preserves the original source outline.
+              </p>
+              <div class="pair">
+                <label>Move X (m)<input type="number" step="any" [(ngModel)]="moveX" /></label
+                ><label>Move Y (m)<input type="number" step="any" [(ngModel)]="moveY" /></label>
+              </div>
+              <button type="button" [disabled]="!activeCalibration()" (click)="move()">
+                Move object
+              </button>
+              <label
+                >Vertices: x, y in page coordinates<textarea
+                  rows="6"
+                  [(ngModel)]="vertexText"
+                ></textarea>
+              </label>
+              <button type="button" (click)="applyVertices()">Apply vertices</button>
+              <button type="button" (click)="restore()">Restore source outline</button>
+            </details>
+            <button type="button" class="danger" (click)="remove()">Remove object</button>
+          </section>
+        }
+        <section aria-label="Import into hall planner">
+          <h2>Use in Hall Layout</h2>
+          <p class="note">
+            Select or trace the hall boundary, set its type to hall, calibrate its scale and confirm
+            your review.
+          </p>
+          @if (hallImportIssue()) {
+            <p class="note">{{ hallImportIssue() }}</p>
+          }
+          <button
+            type="button"
+            [disabled]="!!hallImportIssue() || !!busy() || saving()"
+            (click)="openInPlanner()"
+          >
+            Save hall &amp; open planner
+          </button>
+          <button
+            type="button"
+            [disabled]="!!hallImportIssue() || !!busy() || saving()"
+            (click)="previewInPlanner()"
+          >
+            Preview in main planner
+          </button>
+          <p class="note">
+            Preview works without the backend and does not create a server hall. Save hall requires
+            your planner server.
+          </p>
+          <p class="note">
+            Saves this hall boundary to your planner. Its PDF crop stays linked in this browser.
+            Other outlines and legend mappings stay in the PDF workspace; stalls are not created
+            automatically. Repeat for each hall.
+          </p>
+        </section>
+        <section>
+          <h2>Review report</h2>
+          <p>{{ reviewItems().length }} objects need attention across this document.</p>
+          <details>
+            <summary>Extraction limitations ({{ page.issues.length }})</summary>
+            <ul>
+              @for (issue of page.issues; track $index) {
+                <li>{{ issue }}</li>
+              }
+            </ul>
+          </details>
+          <details>
+            <summary>Objects to review</summary>
+            <ul>
+              @for (item of reviewItems(); track item.id) {
+                <li>
+                  <strong>{{ item.name }}</strong> (page {{ item.page }}): {{ item.reasons }}
+                </li>
+              } @empty {
+                <li>
+                  No unresolved properties on the objects you created. This does not certify
+                  automatic extraction completeness.
+                </li>
+              }
+            </ul>
+          </details>
+          <details>
+            <summary>Extracted text ({{ page.texts.length }})</summary>
+            <ul class="text-list">
+              @for (text of page.texts; track $index) {
+                <li>{{ text.text }}</li>
+              }
+            </ul>
+          </details>
+          <p class="note">
+            Save locally keeps all PDF objects here. “Save hall &amp; open planner” saves only the
+            reviewed hall boundary. The 3D object preview requires a height you provide.
+          </p>
+        </section>
+      </aside>
+    </div>
+  } @else if (!busy()) {
+    <section class="empty">
+      <h2>Keep the drawing. Review the geometry.</h2>
+      <p>
+        Open a PDF to preserve its original appearance, calibrate a known dimension, and trace or
+        select editable boundaries. Single and multiple pages are supported.
+      </p>
+      <p class="note">
+        PDFs are processed in this browser. Up to 25 MB. No external processing or generative AI.
+        Saved drafts stay in this browser and can be lost if browser data is cleared.
+      </p>
+    </section>
+  }
+  @if (library().length) {
+    <section class="library">
+      <h2>Saved on this browser</h2>
+      <div class="actions">
+        @for (item of library(); track item.id) {
+          <button type="button" [disabled]="!!busy()" (click)="reopen(item.id)">
+            {{ item.name }}
+          </button>
+        }
+      </div>
+    </section>
+  }
+</main>

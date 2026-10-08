@@ -4,6 +4,7 @@ import { planningZoneGeometryError, utilization, footprintArea, type PlanningZon
 import { prepublishReport, emptySpaceSuggestions } from './geometry/publish-check';
 import type { Publication } from './models/layout.model';
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { PdfImportNavigation } from './pdf-workspace/pdf-import-navigation.service';
 
 import { extractErrorMessage, extractViolations } from '../core/http-error.util';
 import { NotifyService } from '../core/notify.service';
@@ -187,6 +188,7 @@ function fallbackHalls(): Hall[] {
  */
 @Injectable()
 export class PlannerStore {
+  private readonly pdfNavigation = inject(PdfImportNavigation);
   private readonly api = inject(LayoutApiService);
   private readonly notify = inject(NotifyService);
   private readonly destroyRef = inject(DestroyRef);
@@ -1057,9 +1059,9 @@ export class PlannerStore {
     this.layoutName.set(layoutName);
   }
 
-  /** Open the PDF plan import dialog; with a file, it starts reading it straight away. */
+  /** Open local PDF review; an already selected file is carried across without an upload. */
   openPdfImport(file: File | null = null): void {
-    this.pdfImport.set({ file });
+    void this.pdfNavigation.open(file).catch(e => this.error.set(extractErrorMessage(e)));
   }
 
   // --- saved layout workflow ----------------------------------------------
