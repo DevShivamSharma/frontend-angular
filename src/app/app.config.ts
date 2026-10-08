@@ -19,6 +19,7 @@ import {
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api/api-base.token';
+import { errorToastInterceptor } from './core/api/error-toast.interceptor';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { AppTitleStrategy } from './core/ui/app-title.strategy';
@@ -34,7 +35,7 @@ export const appConfig: ApplicationConfig = {
       withRouterConfig({ paramsInheritanceStrategy: 'always' }),
       withInMemoryScrolling({ scrollPositionRestoration: 'top' }),
     ),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([errorToastInterceptor, authInterceptor])),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
     { provide: TitleStrategy, useClass: AppTitleStrategy },
     // A hint or error takes its real height instead of a fixed one-line slot, so long text

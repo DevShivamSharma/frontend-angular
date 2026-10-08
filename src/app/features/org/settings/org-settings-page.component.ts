@@ -130,8 +130,8 @@ export class OrgSettingsPageComponent {
       ]);
       this.settings.set(settings);
       this.versions.set(versions);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -176,8 +176,8 @@ export class OrgSettingsPageComponent {
       this.theme.applyBranding(saved.config.branding);
       this.notifier.success(message);
       this.versions.set(await firstValueFrom(this.api.configVersions(this.context.slug())));
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

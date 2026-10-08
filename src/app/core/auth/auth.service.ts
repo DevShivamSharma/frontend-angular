@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
 import type { Me, MembershipSummary, Session, UserView } from '../api/api.models';
+import { quiet } from '../api/error-toast.interceptor';
 import { httpStatus } from '../api/http-error';
 
 /** Refresh this long before the access token expires, so requests rarely meet a 401. */
@@ -75,7 +76,7 @@ export class AuthService {
 
   async logout(): Promise<void> {
     this.end();
-    await firstValueFrom(this.http.post<void>(`${this.api}/auth/logout`, {})).catch(
+    await firstValueFrom(this.http.post<void>(`${this.api}/auth/logout`, {}, quiet())).catch(
       () => undefined,
     );
   }
@@ -88,13 +89,15 @@ export class AuthService {
   }
 
   async reloadMemberships(): Promise<void> {
-    const me = await firstValueFrom(this.http.get<Me>(`${this.api}/auth/me`));
+    const me = await firstValueFrom(this.http.get<Me>(`${this.api}/auth/me`, quiet()));
     this.membershipList.set(me.memberships);
   }
 
   private async doRefresh(attempt = 0): Promise<boolean> {
     try {
-      const session = await firstValueFrom(this.http.post<Session>(`${this.api}/auth/refresh`, {}));
+      const session = await firstValueFrom(
+        this.http.post<Session>(`${this.api}/auth/refresh`, {}, quiet()),
+      );
       await this.start(session);
       return true;
     } catch (error) {

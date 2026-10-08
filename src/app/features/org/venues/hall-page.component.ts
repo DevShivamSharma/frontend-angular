@@ -294,8 +294,8 @@ export class HallPageComponent implements OnInit {
     try {
       this.hall.set(await firstValueFrom(this.api.hall(this.slug(), this.hallId())));
       this.other.set(null);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
     }
@@ -316,8 +316,8 @@ export class HallPageComponent implements OnInit {
     }
     try {
       this.other.set(await firstValueFrom(this.api.floorVersion(this.slug(), hall.id, version)));
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -336,8 +336,8 @@ export class HallPageComponent implements OnInit {
       );
       this.other.set(null);
       this.notifier.success(`Version ${version.version} restored.`);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -371,8 +371,8 @@ export class HallPageComponent implements OnInit {
       await firstValueFrom(this.api.deleteHall(this.slug(), hall.id));
       this.notifier.success(`${hall.name} deleted.`);
       void this.router.navigate(['/', this.slug(), 'venues', hall.venue.id]);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 }

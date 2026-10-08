@@ -19,7 +19,6 @@ import type {
   JsonHallRow,
   ItpoImportResult,
 } from '../../../core/api/api.models';
-import { errorMessage } from '../../../core/api/http-error';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
 import { ThreePlanComponent } from '../../../shared/floor/three-plan.component';
 import { ImportTourComponent } from '../../../shared/import-tour/import-tour.component';
@@ -650,8 +649,8 @@ export class CsvImportDialogComponent {
       this.activeId.set(p.rows.find((r) => !r.error)?.externalId ?? p.rows[0]?.externalId ?? '');
       this.mappingOpen.set(p.rows.some((r) => !!r.error));
       this.mappingDirty.set(false);
-    } catch (e) {
-      this.error.set(errorMessage(e));
+    } catch {
+      // The error interceptor has shown it.
       this.mappingDirty.set(true);
       this.mappingOpen.set(true);
     } finally {
@@ -724,8 +723,8 @@ export class CsvImportDialogComponent {
           ),
         ),
       );
-    } catch (e) {
-      this.error.set(errorMessage(e));
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

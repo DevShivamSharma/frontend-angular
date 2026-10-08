@@ -22,7 +22,6 @@ import { firstValueFrom, map, startWith } from 'rxjs';
 import type { CreatedInvitation, OrganisationView } from '../../../core/api/api.models';
 import { AdminApi } from '../../../core/admin/admin-api.service';
 import { ThemeService } from '../../../core/theme/theme.service';
-import { Notifier } from '../../../core/ui/notifier.service';
 import { BrandMarkComponent } from '../../../shared/brand-mark.component';
 import { CopyLinkComponent } from '../../../shared/copy-link.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
@@ -56,7 +55,6 @@ const DEFAULT_COLOR = '#1f5fbf';
 })
 export class OrganisationCreatePageComponent {
   private readonly api = inject(AdminApi);
-  private readonly notifier = inject(Notifier);
   private readonly theme = inject(ThemeService);
   private readonly fb = inject(NonNullableFormBuilder);
 
@@ -137,8 +135,8 @@ export class OrganisationCreatePageComponent {
           }),
         ),
       );
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.saving.set(false);
     }

@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
+import { quiet } from '../api/error-toast.interceptor';
 import type {
   AdminOverview,
   AdminRoleView,
@@ -69,7 +70,11 @@ export class AdminApi {
   slugCheck(slug: string, organisationId?: string): Observable<SlugCheck> {
     let params = new HttpParams().set('slug', slug);
     if (organisationId) params = params.set('organisationId', organisationId);
-    return this.http.get<SlugCheck>(`${this.base}/organisations/slug-check`, { params });
+    // Checked while typing; a failure just skips the hint.
+    return this.http.get<SlugCheck>(`${this.base}/organisations/slug-check`, {
+      params,
+      ...quiet(),
+    });
   }
 
   createOrganisation(

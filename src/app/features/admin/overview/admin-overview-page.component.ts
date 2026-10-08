@@ -9,7 +9,6 @@ import { RouterLink } from '@angular/router';
 import type { AdminOverview } from '../../../core/api/api.models';
 import { AdminApi } from '../../../core/admin/admin-api.service';
 import { AuthService } from '../../../core/auth/auth.service';
-import { Notifier } from '../../../core/ui/notifier.service';
 import { auditIcon, auditIsWarning, auditLabel } from '../../../shared/audit-labels';
 import { BrandMarkComponent } from '../../../shared/brand-mark.component';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
@@ -37,7 +36,6 @@ import { TimeAgoPipe } from '../../../shared/time-ago.pipe';
 })
 export class AdminOverviewPageComponent {
   private readonly api = inject(AdminApi);
-  private readonly notifier = inject(Notifier);
   private readonly user = inject(AuthService).user;
 
   protected readonly overview = signal<AdminOverview | null>(null);
@@ -56,7 +54,7 @@ export class AdminOverviewPageComponent {
   constructor() {
     this.api.overview().subscribe({
       next: (overview) => this.overview.set(overview),
-      error: (error: unknown) => this.notifier.error(error),
+      error: () => undefined, // The error interceptor has shown it.
     });
   }
 }

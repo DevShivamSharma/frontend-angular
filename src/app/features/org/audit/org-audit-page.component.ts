@@ -6,7 +6,6 @@ import { firstValueFrom } from 'rxjs';
 import type { AuditEntry } from '../../../core/api/api.models';
 import { OrgApi } from '../../../core/org/org-api.service';
 import { OrgContextStore } from '../../../core/org/org.stores';
-import { Notifier } from '../../../core/ui/notifier.service';
 import { AuditTableComponent } from '../../../shared/audit-table.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 
@@ -37,7 +36,6 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
 export class OrgAuditPageComponent {
   private readonly api = inject(OrgApi);
   private readonly context = inject(OrgContextStore);
-  private readonly notifier = inject(Notifier);
 
   protected readonly pageSize = 50;
   protected readonly entries = signal<AuditEntry[]>([]);
@@ -62,8 +60,8 @@ export class OrgAuditPageComponent {
       );
       this.entries.set(result.items);
       this.total.set(result.total);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
     }

@@ -152,8 +152,8 @@ export class VenuesPageComponent {
     this.loading.set(true);
     try {
       this.venues.set(await firstValueFrom(this.api.venues(this.context.slug())));
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
     }

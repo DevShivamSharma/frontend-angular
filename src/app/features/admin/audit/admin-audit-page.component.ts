@@ -8,7 +8,6 @@ import { firstValueFrom } from 'rxjs';
 
 import type { AuditEntry, OrganisationSummary } from '../../../core/api/api.models';
 import { AdminApi } from '../../../core/admin/admin-api.service';
-import { Notifier } from '../../../core/ui/notifier.service';
 import { AuditTableComponent } from '../../../shared/audit-table.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 
@@ -77,7 +76,6 @@ const ACTION_FILTERS = [
 })
 export class AdminAuditPageComponent {
   private readonly api = inject(AdminApi);
-  private readonly notifier = inject(Notifier);
 
   protected readonly filters = ACTION_FILTERS;
   protected readonly pageSize = 50;
@@ -95,7 +93,7 @@ export class AdminAuditPageComponent {
   constructor() {
     this.api.organisations({ page: 1, pageSize: 100 }).subscribe({
       next: (result) => this.organisations.set(result.items),
-      error: (error: unknown) => this.notifier.error(error),
+      error: () => undefined, // The error interceptor has shown it.
     });
     void this.load();
   }
@@ -123,8 +121,8 @@ export class AdminAuditPageComponent {
       );
       this.entries.set(result.items);
       this.total.set(result.total);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
     }

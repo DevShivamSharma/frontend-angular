@@ -70,8 +70,8 @@ export class RolesPageComponent {
       this.groups.set(groups);
       this.organisations.set(organisations.items);
       await this.loadRoles();
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
     }
@@ -141,8 +141,8 @@ export class RolesPageComponent {
       );
       this.drafts.set(new Map());
       await this.loadRoles();
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.saving.set(false);
     }

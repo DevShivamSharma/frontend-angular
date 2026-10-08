@@ -136,8 +136,8 @@ export class RoleEditorPageComponent {
       } else {
         this.form.reset({ organisationId: organisationId ?? '', scopeKind: 'organisation' });
       }
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -208,8 +208,8 @@ export class RoleEditorPageComponent {
         this.form.markAsPristine();
         this.notifier.success('Saved. Members get the change on their next request.');
       }
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }
@@ -234,8 +234,8 @@ export class RoleEditorPageComponent {
       await firstValueFrom(this.api.deleteRole(role.id));
       this.notifier.success(`${role.name} deleted.`);
       await this.router.navigate(['/admin/roles']);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

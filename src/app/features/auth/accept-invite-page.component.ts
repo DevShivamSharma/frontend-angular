@@ -8,7 +8,6 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import type { InvitationPreview } from '../../core/api/api.models';
-import { errorMessage } from '../../core/api/http-error';
 import { AuthService } from '../../core/auth/auth.service';
 import { OrgApi } from '../../core/org/org-api.service';
 import { AuthLayoutComponent } from './auth-layout.component';
@@ -80,9 +79,6 @@ import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rul
               <p class="error">The two passwords differ.</p>
             }
           }
-          @if (error()) {
-            <p class="error" role="alert">{{ error() }}</p>
-          }
           @if (busy()) {
             <mat-progress-bar mode="indeterminate" />
           }
@@ -125,7 +121,6 @@ export class AcceptInvitePageComponent {
   protected readonly preview = signal<InvitationPreview | null>(null);
   protected readonly loadError = signal<string | null>(null);
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
   protected readonly form = this.fb.group(
     { name: [''], password: [''], confirm: [''] },
     { validators: passwordsMatch },
@@ -144,8 +139,9 @@ export class AcceptInvitePageComponent {
       const invite = await firstValueFrom(this.api.invitationPreview(token));
       this.applyValidators(invite.accountExists);
       this.preview.set(invite);
-    } catch (error) {
-      this.loadError.set(errorMessage(error));
+    } catch {
+      // The error interceptor has shown why.
+      this.loadError.set('Ask whoever invited you to send a new invitation.');
     }
   }
 
@@ -168,7 +164,6 @@ export class AcceptInvitePageComponent {
       return;
     }
     this.busy.set(true);
-    this.error.set(null);
     try {
       const { name, password } = this.form.getRawValue();
       const slug = await this.auth.acceptInvitation(
@@ -176,8 +171,8 @@ export class AcceptInvitePageComponent {
         invite.accountExists ? { password } : { name: name.trim(), password },
       );
       await this.router.navigate(['/', slug], { replaceUrl: true });
-    } catch (error) {
-      this.error.set(errorMessage(error));
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

@@ -20,7 +20,6 @@ import {
   OrganisationSummary,
 } from '../../../core/api/api.models';
 import { AdminApi } from '../../../core/admin/admin-api.service';
-import { Notifier } from '../../../core/ui/notifier.service';
 import { BrandMarkComponent } from '../../../shared/brand-mark.component';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
@@ -53,7 +52,6 @@ import { TimeAgoPipe } from '../../../shared/time-ago.pipe';
 export class OrganisationsPageComponent {
   private readonly api = inject(AdminApi);
   private readonly router = inject(Router);
-  private readonly notifier = inject(Notifier);
 
   protected readonly columns = ['name', 'status', 'booking', 'people', 'created', 'open'];
   protected readonly search = new FormControl('', { nonNullable: true });
@@ -124,10 +122,8 @@ export class OrganisationsPageComponent {
           this.loading.set(false);
           this.loaded.set(true);
         },
-        error: (error: unknown) => {
-          this.loading.set(false);
-          this.notifier.error(error);
-        },
+        // The error interceptor has shown it.
+        error: () => this.loading.set(false),
       });
   }
 }

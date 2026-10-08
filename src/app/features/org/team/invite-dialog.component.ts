@@ -8,7 +8,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { firstValueFrom } from 'rxjs';
 
 import type { AssignableRoleView, CreatedInvitation } from '../../../core/api/api.models';
-import { errorMessage } from '../../../core/api/http-error';
 import { OrgApi } from '../../../core/org/org-api.service';
 import { CopyLinkComponent } from '../../../shared/copy-link.component';
 
@@ -68,9 +67,6 @@ export interface InviteDialogData {
             </mat-select>
             <mat-error>Choose a role</mat-error>
           </mat-form-field>
-          @if (error()) {
-            <p class="error" role="alert">{{ error() }}</p>
-          }
         </mat-dialog-content>
         <mat-dialog-actions align="end">
           <button mat-button type="button" [mat-dialog-close]="invitedAny()">Cancel</button>
@@ -84,9 +80,6 @@ export interface InviteDialogData {
       display: grid;
       gap: 4px;
       min-width: min(420px, 80vw);
-    }
-    .error {
-      color: var(--mat-sys-error);
     }
   `,
 })
@@ -103,7 +96,6 @@ export class InviteDialogComponent {
     ],
   });
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
   protected readonly created = signal<CreatedInvitation | null>(null);
   /** Closing after any invitation was made tells the page to refresh. */
   protected readonly invitedAny = signal(false);
@@ -118,13 +110,12 @@ export class InviteDialogComponent {
       return;
     }
     this.busy.set(true);
-    this.error.set(null);
     try {
       const { email, roleId } = this.form.getRawValue();
       this.created.set(await firstValueFrom(this.api.invite(this.data.slug, email.trim(), roleId)));
       this.invitedAny.set(true);
-    } catch (error) {
-      this.error.set(errorMessage(error));
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

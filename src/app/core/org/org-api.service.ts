@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
+import { quiet } from '../api/error-toast.interceptor';
 import type {
   AssignableRoleView,
   AuditEntry,
@@ -28,12 +29,14 @@ export class OrgApi {
     return `${this.api}/orgs/${encodeURIComponent(slug)}`;
   }
 
+  /** A 404 is the invalid-link page, shown by the organisation guard. */
   publicConfig(slug: string): Observable<PublicConfig> {
-    return this.http.get<PublicConfig>(`${this.org(slug)}/public-config`);
+    return this.http.get<PublicConfig>(`${this.org(slug)}/public-config`, quiet(404));
   }
 
+  /** 403 and 404 become the no-access and invalid-link pages, by the member guard. */
   context(slug: string): Observable<OrgContext> {
-    return this.http.get<OrgContext>(`${this.org(slug)}/context`);
+    return this.http.get<OrgContext>(`${this.org(slug)}/context`, quiet(403, 404));
   }
 
   members(slug: string): Observable<MemberView[]> {

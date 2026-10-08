@@ -30,7 +30,6 @@ import type {
 } from '../../../core/rules/rules.models';
 import type { MultiPolygon } from '../../../core/venues/floor-plan.models';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
-import { Notifier } from '../../../core/ui/notifier.service';
 import { AREA_COLORS } from '../../../shared/floor/floor-view.component';
 
 const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
@@ -540,7 +539,6 @@ export class RulesTryComponent {
 
   private readonly rules = inject(RulesApi);
   private readonly venuesApi = inject(VenuesApi);
-  private readonly notifier = inject(Notifier);
   private readonly context = inject(OrgContextStore);
 
   protected readonly sides = SIDES;
@@ -594,8 +592,8 @@ export class RulesTryComponent {
       const venues = await firstValueFrom(this.venuesApi.venues(this.context.slug()));
       this.venues.set(venues);
       if (venues.length) await this.pickVenue(venues[0].id);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -607,8 +605,8 @@ export class RulesTryComponent {
       const halls = await firstValueFrom(this.venuesApi.halls(this.context.slug(), id));
       this.halls.set(halls);
       if (halls.length) await this.pickHall(halls[0].id);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -617,8 +615,8 @@ export class RulesTryComponent {
     this.clear();
     try {
       this.hall.set(await firstValueFrom(this.venuesApi.hall(this.context.slug(), id)));
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -727,9 +725,8 @@ export class RulesTryComponent {
       (result) => {
         if (token === this.runToken) this.result.set(result);
       },
-      (error) => {
-        if (token === this.runToken) this.notifier.error(error);
-      },
+      // The error interceptor has shown it.
+      () => undefined,
     );
   }
 

@@ -141,8 +141,8 @@ export class OrganisationDetailPageComponent {
       if (owner && !this.inviteForm.controls.roleId.value) {
         this.inviteForm.controls.roleId.setValue(owner.id);
       }
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -254,8 +254,8 @@ export class OrganisationDetailPageComponent {
     try {
       await change();
       await this.load(this.id());
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

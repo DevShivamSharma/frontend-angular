@@ -7,7 +7,6 @@ import { firstValueFrom } from 'rxjs';
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { RulesApi } from '../../../core/rules/rules-api.service';
 import type { RuleCatalogue, RulesView } from '../../../core/rules/rules.models';
-import { Notifier } from '../../../core/ui/notifier.service';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { RulesEditorComponent } from './rules-editor.component';
 import { RulesSummaryComponent } from './rules-summary.component';
@@ -77,7 +76,6 @@ import { RulesTryComponent } from './rules-try.component';
 })
 export class RulesPageComponent {
   private readonly api = inject(RulesApi);
-  private readonly notifier = inject(Notifier);
   private readonly context = inject(OrgContextStore);
 
   protected readonly rules = signal<RulesView | null>(null);
@@ -104,8 +102,8 @@ export class RulesPageComponent {
       ]);
       this.catalogue.set(catalogue);
       this.rules.set(rules);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
     }

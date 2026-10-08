@@ -7,7 +7,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router, RouterLink } from '@angular/router';
 
-import { errorMessage } from '../../core/api/http-error';
 import { AuthService } from '../../core/auth/auth.service';
 import { PublicOrgStore } from '../../core/org/org.stores';
 import { AuthLayoutComponent } from './auth-layout.component';
@@ -58,9 +57,6 @@ import { safeReturnUrl } from './safe-return-url';
           </button>
           <mat-error>Enter your password</mat-error>
         </mat-form-field>
-        @if (error()) {
-          <p class="error" role="alert">{{ error() }}</p>
-        }
         @if (busy()) {
           <mat-progress-bar mode="indeterminate" />
         }
@@ -94,7 +90,6 @@ export class LoginPageComponent {
     password: ['', Validators.required],
   });
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
   protected readonly showPassword = signal(false);
   protected readonly subheading = computed(() =>
     this.org() ? `Use the account ${this.org()!.name} invited you with.` : 'Super Admin only.',
@@ -106,7 +101,6 @@ export class LoginPageComponent {
       return;
     }
     this.busy.set(true);
-    this.error.set(null);
     try {
       const { email, password } = this.form.getRawValue();
       await this.auth.login(email, password);
@@ -115,8 +109,8 @@ export class LoginPageComponent {
         ? safeReturnUrl(this.returnUrl() ?? null, `/${org.slug}`)
         : safeReturnUrl(this.returnUrl() ?? null, '/admin');
       await this.router.navigateByUrl(target, { replaceUrl: true });
-    } catch (error) {
-      this.error.set(errorMessage(error));
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

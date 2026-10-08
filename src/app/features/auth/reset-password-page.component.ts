@@ -6,7 +6,6 @@ import { MatInputModule } from '@angular/material/input';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
-import { errorMessage } from '../../core/api/http-error';
 import { OrgApi } from '../../core/org/org-api.service';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rules';
@@ -49,9 +48,6 @@ import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rul
           @if (form.hasError('mismatch') && form.controls.confirm.touched) {
             <p class="error">The two passwords differ.</p>
           }
-          @if (error()) {
-            <p class="error" role="alert">{{ error() }}</p>
-          }
           <button mat-flat-button type="submit" [disabled]="busy()">Save the password</button>
         </form>
       }
@@ -80,7 +76,6 @@ export class ResetPasswordPageComponent {
   );
   protected readonly busy = signal(false);
   protected readonly done = signal(false);
-  protected readonly error = signal<string | null>(null);
 
   protected async submit(): Promise<void> {
     if (this.form.invalid) {
@@ -88,12 +83,11 @@ export class ResetPasswordPageComponent {
       return;
     }
     this.busy.set(true);
-    this.error.set(null);
     try {
       await firstValueFrom(this.api.resetPassword(this.token()!, this.form.getRawValue().password));
       this.done.set(true);
-    } catch (error) {
-      this.error.set(errorMessage(error));
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

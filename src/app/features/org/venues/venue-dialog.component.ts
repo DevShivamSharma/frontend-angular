@@ -7,7 +7,6 @@ import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
 
 import type { VenueView } from '../../../core/api/api.models';
-import { errorMessage } from '../../../core/api/http-error';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
 
 export interface VenueDialogData {
@@ -45,9 +44,6 @@ export interface VenueDialogData {
           <mat-label>Address</mat-label>
           <textarea matInput formControlName="address" rows="2" maxlength="300"></textarea>
         </mat-form-field>
-        @if (error()) {
-          <p class="error" role="alert">{{ error() }}</p>
-        }
       </mat-dialog-content>
       <mat-dialog-actions align="end">
         <button mat-button type="button" mat-dialog-close>Cancel</button>
@@ -63,9 +59,6 @@ export interface VenueDialogData {
       gap: 4px;
       min-width: min(420px, 80vw);
     }
-    .error {
-      color: var(--mat-sys-error);
-    }
   `,
 })
 export class VenueDialogComponent {
@@ -79,7 +72,6 @@ export class VenueDialogComponent {
     address: [this.data.venue?.address ?? ''],
   });
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
 
   protected async submit(): Promise<void> {
     if (this.form.invalid) {
@@ -87,7 +79,6 @@ export class VenueDialogComponent {
       return;
     }
     this.busy.set(true);
-    this.error.set(null);
     const value = this.form.getRawValue();
     const input = {
       name: value.name.trim(),
@@ -101,8 +92,8 @@ export class VenueDialogComponent {
           : this.api.createVenue(this.data.slug, input),
       );
       this.ref.close(saved);
-    } catch (error) {
-      this.error.set(errorMessage(error));
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

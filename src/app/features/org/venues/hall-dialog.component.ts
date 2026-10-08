@@ -15,7 +15,6 @@ import {
   HallAnnotations,
   HallAnnotationsEditorComponent,
 } from '../../../shared/floor/hall-annotations-editor.component';
-import { errorMessage } from '../../../core/api/http-error';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
 
 export interface HallDialogData {
@@ -124,9 +123,6 @@ const MAX_SIDE = 2000;
           <mat-checkbox formControlName="horseshoe">Horseshoe stalls</mat-checkbox>
           <mat-checkbox formControlName="openArea">Open area</mat-checkbox>
         </fieldset>
-        @if (error()) {
-          <p class="error" role="alert">{{ error() }}</p>
-        }
       </mat-dialog-content>
       <mat-dialog-actions align="end">
         <button mat-button type="button" mat-dialog-close>Cancel</button>
@@ -269,7 +265,6 @@ export class HallDialogComponent {
     return floor ? { ...floor, ...this.annotations() } : null;
   });
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
 
   constructor() {
     if (this.data.hall) {
@@ -284,7 +279,6 @@ export class HallDialogComponent {
       return;
     }
     this.busy.set(true);
-    this.error.set(null);
     const value = this.form.getRawValue();
     const details = {
       name: value.name.trim(),
@@ -309,8 +303,8 @@ export class HallDialogComponent {
             }),
       );
       this.ref.close(saved);
-    } catch (error) {
-      this.error.set(errorMessage(error));
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

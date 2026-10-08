@@ -16,7 +16,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { firstValueFrom } from 'rxjs';
 
-import { errorMessage } from '../../../core/api/http-error';
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { RulesApi } from '../../../core/rules/rules-api.service';
 import type {
@@ -78,7 +77,6 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
                 [aria-label]="r.label"
               />
               <div class="rule">
-
                 <span class="muted small">{{ r.description }}</span>
                 @if (!r.available) {
                   <span class="small waiting-for"
@@ -170,11 +168,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
     </section>
 
     <div class="save row">
-      @if (error()) {
-        <p class="error grow" role="alert">{{ error() }}</p>
-      } @else {
-        <span class="grow"></span>
-      }
+      <span class="grow"></span>
       <button mat-button (click)="reset()" [disabled]="busy()">Undo changes</button>
       <button mat-flat-button (click)="save()" [disabled]="busy()">Save</button>
     </div>
@@ -243,9 +237,6 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       padding: 12px 0;
       background: var(--mat-sys-surface);
     }
-    .error {
-      color: var(--mat-sys-error);
-    }
   `,
 })
 export class RulesEditorComponent {
@@ -259,7 +250,6 @@ export class RulesEditorComponent {
 
   protected readonly groups = GROUPS;
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
 
   // The form, as plain fields and signals.
   protected profile = 'free';
@@ -283,7 +273,6 @@ export class RulesEditorComponent {
     this.switches.set({ ...rules.switches });
     this.values = structuredClone(rules.values);
     this.references.set(rules.references.map((r) => ({ ...r })));
-    this.error.set(null);
   }
 
   protected rulesOf(group: RuleGroup): RuleDefinition[] {
@@ -335,7 +324,6 @@ export class RulesEditorComponent {
   protected async save(): Promise<void> {
     if (!this.values) return;
     this.busy.set(true);
-    this.error.set(null);
     try {
       const saved = await firstValueFrom(
         this.api.update(this.context.slug(), {
@@ -353,8 +341,8 @@ export class RulesEditorComponent {
       );
       this.saved.emit(saved);
       this.notifier.success('Rules saved.');
-    } catch (error) {
-      this.error.set(errorMessage(error));
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.busy.set(false);
     }

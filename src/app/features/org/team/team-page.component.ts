@@ -94,8 +94,8 @@ export class TeamPageComponent {
       this.members.set(members);
       this.invitations.set(invitations);
       this.roles.set(roles);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
     }
@@ -129,8 +129,8 @@ export class TeamPageComponent {
     try {
       await firstValueFrom(this.api.changeRole(this.slug, member.id, roleId));
       this.notifier.success(`${member.user.name} is now ${this.rolesById().get(roleId)?.name}.`);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
     await this.load();
   }
@@ -149,8 +149,8 @@ export class TeamPageComponent {
       await firstValueFrom(this.api.removeMember(this.slug, member.id));
       this.notifier.success(`${member.user.name} removed.`);
       await this.load();
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -162,8 +162,8 @@ export class TeamPageComponent {
         `A new link was made for ${invitation.email}; the old one no longer works.`,
       );
       await this.load();
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
@@ -180,8 +180,8 @@ export class TeamPageComponent {
     try {
       await firstValueFrom(this.api.revokeInvitation(this.slug, invitation.id));
       await this.load();
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 }

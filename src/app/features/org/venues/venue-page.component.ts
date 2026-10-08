@@ -351,8 +351,8 @@ export class VenuePageComponent implements OnInit {
       ]);
       this.venue.set(venue);
       this.halls.set(halls);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
     }
@@ -398,8 +398,8 @@ export class VenuePageComponent implements OnInit {
       this.notifier.success(`${deleted} ${deleted === 1 ? 'hall' : 'halls'} deleted.`);
       this.stopSelecting();
       await this.load();
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it; show what is left.
       await this.load();
       this.selected.update(
         (s) => new Set([...s].filter((id) => this.halls().some((h) => h.id === id))),
@@ -462,8 +462,8 @@ export class VenuePageComponent implements OnInit {
       await firstValueFrom(this.api.deleteVenue(this.context.slug(), venue.id));
       this.notifier.success(`${venue.name} deleted.`);
       void this.router.navigate(['/', this.context.slug(), 'venues']);
-    } catch (error) {
-      this.notifier.error(error);
+    } catch {
+      // The error interceptor has shown it.
     }
   }
 
