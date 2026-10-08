@@ -40,6 +40,8 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
   itpo: 'Imported from ITPO',
   restore: 'Restored',
   drawing: 'Imported from a plan',
+  json: 'Imported from JSON',
+  csv: 'Imported from CSV',
 };
 
 /** One hall: its floor to scale, what blocks stalls on it, and its floor versions. */
@@ -72,17 +74,9 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
               <span class="status-chip is-neutral">{{ h.level }}</span>
             }
             @if (h.source) {
-              <span class="status-chip">ITPO hall {{ h.source.externalId }}</span>
+              <span class="status-chip">{{ h.source.system.toUpperCase() }} import</span>
             }
           </span>
-          @if (canImport()) {
-            <a
-              mat-stroked-button
-              [routerLink]="['/', slug(), 'venues', h.venue.id, 'import-plan']"
-              [queryParams]="{ hallId: h.id }"
-              ><mat-icon>upload_file</mat-icon>Import new plan</a
-            >
-          }
           @if (canManage()) {
             <button mat-stroked-button (click)="edit(h)">
               <mat-icon>edit</mat-icon>Edit details
@@ -273,7 +267,6 @@ export class HallPageComponent implements OnInit {
   protected readonly loading = signal(false);
   protected readonly labels = signal(true);
   protected readonly canManage = computed(() => this.context.can('venues.manage'));
-  protected readonly canImport = computed(() => this.context.can('halls.import'));
 
   protected readonly viewing = computed(
     () => this.other()?.version ?? this.hall()?.currentVersion ?? 0,
@@ -281,7 +274,7 @@ export class HallPageComponent implements OnInit {
   protected readonly shown = computed(() => this.other()?.floor ?? this.hall()!.floor);
   protected readonly kinds = computed(() => {
     const counts = new Map<FloorAreaKind, number>();
-    for (const area of this.shown().areas) {
+    for (const area of this.shown().geometry?.objects ?? this.shown().areas) {
       if (area.kind !== 'outside') counts.set(area.kind, (counts.get(area.kind) ?? 0) + 1);
     }
     return [...counts].map(([kind, count]) => ({
@@ -349,9 +342,17 @@ export class HallPageComponent implements OnInit {
   }
 
   protected edit(hall: HallDetailView): void {
-    const data: HallDialogData = { slug: this.slug(), venueId: hall.venue.id, hall };
+    const manual =
+      hall.floor.geometry?.source.documentId === 'manual' ||
+      hall.versions.find((v) => v.current)?.source === 'blank';
+    const data: HallDialogData = {
+      slug: this.slug(),
+      venueId: hall.venue.id,
+      hall,
+      ...(manual ? { floor: hall.floor } : {}),
+    };
     this.dialog
-      .open(HallDialogComponent, { data })
+      .open(HallDialogComponent, { data, ...(manual ? { width: '1100px', maxWidth: '95vw' } : {}) })
       .afterClosed()
       .subscribe((saved?: HallView) => {
         if (saved) void this.load();

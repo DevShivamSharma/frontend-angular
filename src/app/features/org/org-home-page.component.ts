@@ -19,7 +19,7 @@ const UPCOMING: ModuleCard[] = [
   {
     title: 'Venues and halls',
     icon: 'map',
-    text: 'Digitize halls from floor plans: grid floor, foyers, gates and facilities.',
+    text: 'Manage venues and halls, draw halls by size, or import venue JSON files.',
     permission: 'venues.view',
   },
   {

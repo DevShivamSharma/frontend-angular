@@ -61,12 +61,12 @@ export const ORG_ROUTES: Routes = [
               import('./venues/venue-page.component').then((m) => m.VenuePageComponent),
           },
           {
-            path: ':venueId/import-plan',
-            title: 'Import a floor plan',
+            path: ':venueId/import-floor-plan',
+            title: 'Import floor plan',
             canActivate: [permissionGuard('halls.import')],
             loadComponent: () =>
-              import('./venues/plan-import/plan-import-page.component').then(
-                (m) => m.PlanImportPageComponent,
+              import('./venues/floor-plan/floor-plan-page.component').then(
+                (m) => m.FloorPlanPageComponent,
               ),
           },
           {

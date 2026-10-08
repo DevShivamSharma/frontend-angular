@@ -1,0 +1,119 @@
+<h2 mat-dialog-title>Hall import tour</h2>
+<mat-dialog-content>
+  <div class="options">
+    <div class="tabs" aria-label="Tour import method">
+      <button [class.active]="mode() === 'pdf'" (click)="changeMode('pdf')">
+        PDF / floor plan
+      </button>
+      <button [class.active]="mode() === 'csv'" (click)="changeMode('csv')">CSV</button>
+    </div>
+    <div class="tabs" aria-label="Tour language">
+      <button [class.active]="language() === 0" (click)="language.set(0)">English</button>
+      <button [class.active]="language() === 1" (click)="language.set(1)">Hinglish</button>
+    </div>
+  </div>
+  <p class="intro">
+    {{
+      language()
+        ? 'Har topic step-by-step samjhata hai. Show on page se current screen ka control dekho, phir apne plan par action karo.'
+        : 'Follow each topic step by step. Use Show on page to find a control in your current import, then perform the action on your plan.'
+    }}
+  </p>
+  <div class="tour-layout">
+    <nav aria-label="Import tour topics">
+      @for (item of lessons; track item.id; let i = $index) {
+        <button
+          [class.active]="index() === i"
+          [attr.aria-current]="index() === i ? 'step' : null"
+          (click)="index.set(i)"
+        >
+          <span>{{ i + 1 }}</span
+          >{{ item.title[language()] }}
+        </button>
+      }
+    </nav>
+    <section aria-live="polite">
+      <p class="progress">
+        {{ language() ? 'Topic' : 'Topic' }} {{ index() + 1 }} / {{ lessons.length }}
+      </p>
+      <h3>{{ lesson.title[language()] }}</h3>
+      @if (lesson.id === 'foyers' || lesson.id === 'preview' || lesson.id === 'choose') {
+        <figure>
+          <svg
+            viewBox="0 0 320 132"
+            role="img"
+            aria-label="A hall in green and its separate linked foyer in blue"
+          >
+            <defs>
+              <pattern id="tour-grid" width="12" height="12" patternUnits="userSpaceOnUse">
+                <path d="M12 0H0V12" fill="none" stroke="#456857" stroke-width=".5" />
+              </pattern>
+            </defs>
+            <path d="M12 12H202V108H12Z" fill="#d3ebdc" stroke="#28734b" stroke-width="2" />
+            <path d="M212 36H300V108H212Z" fill="#d8eefb" stroke="#2285b5" stroke-width="2" />
+            <path d="M12 12H202V108H12ZM212 36H300V108H212Z" fill="url(#tour-grid)" />
+            <rect x="60" y="44" width="105" height="26" rx="5" fill="white" />
+            <text x="112" y="62" text-anchor="middle" font-size="12" fill="#173349">
+              Hall / green
+            </text>
+            <rect x="218" y="62" width="77" height="22" rx="5" fill="white" />
+            <text x="256" y="77" text-anchor="middle" font-size="11" fill="#173349">
+              Foyer / blue
+            </text>
+            <path d="M202 92H212" stroke="#173349" stroke-width="3" />
+            <text x="160" y="127" text-anchor="middle" font-size="10" fill="#173349">
+              One hall + linked foyer · example only
+            </text>
+          </svg>
+          <figcaption>
+            {{
+              language()
+                ? 'Dono mein grid ho sakti hai; foyer ko alag hall save nahi karna.'
+                : 'Both may contain a grid; the foyer stays a zone linked to the hall.'
+            }}
+          </figcaption>
+        </figure>
+      }
+      <ol class="tasks">
+        @for (task of lesson.tasks[language()]; track $index) {
+          <li>{{ task }}</li>
+        }
+      </ol>
+      <p class="tip">{{ lesson.tip[language()] }}</p>
+      @if (canShow) {
+        <button class="primary" (click)="show()">Show on page →</button>
+      } @else if (context.mode !== 'choose') {
+        <p class="muted">
+          {{
+            language()
+              ? 'Is topic ka control us workflow step par dikhega. Back to import se current kaam continue karo.'
+              : 'This control appears at that workflow step. Return to your import to continue the current task.'
+          }}
+        </p>
+      }
+    </section>
+  </div>
+  @if (context.blockers.length) {
+    <aside class="pending">
+      <b>{{ language() ? 'Abhi kya pending hai' : 'Pending in your current import' }}</b>
+      <ul>
+        @for (item of context.blockers; track $index) {
+          <li>{{ item }}</li>
+        }
+      </ul>
+    </aside>
+  }
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button (click)="index.set(index() - 1)" [disabled]="index() === 0">Previous topic</button>
+  @if (index() < lessons.length - 1) {
+    <button (click)="index.set(index() + 1)">Next topic →</button>
+  }
+  <span></span>
+  @if (context.mode === 'choose') {
+    <button class="primary" (click)="openImporter()">
+      Open {{ mode() === 'pdf' ? 'floor plan' : 'CSV' }} importer
+    </button>
+  }
+  <button mat-dialog-close>Back to import</button>
+</mat-dialog-actions>

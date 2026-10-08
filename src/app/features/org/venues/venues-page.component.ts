@@ -43,7 +43,7 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
           <app-empty-state
             icon="location_city"
             heading="No venues yet"
-            text="Add a venue, then create its halls by hand or import their floor plans."
+            text="Add a venue, then draw its halls by size or import a venue JSON file."
           >
             @if (canManage()) {
               <button mat-flat-button (click)="create()">New venue</button>

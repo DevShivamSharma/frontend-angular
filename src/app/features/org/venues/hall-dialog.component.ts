@@ -9,7 +9,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
 
-import type { HallView } from '../../../core/api/api.models';
+import type { HallFloor, HallView } from '../../../core/api/api.models';
+import type { MultiPolygon } from '../../../core/venues/floor-plan.models';
+import {
+  HallAnnotations,
+  HallAnnotationsEditorComponent,
+} from '../../../shared/floor/hall-annotations-editor.component';
 import { errorMessage } from '../../../core/api/http-error';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
 
@@ -18,15 +23,15 @@ export interface HallDialogData {
   venueId: string;
   /** The hall to edit; absent to draw a new, empty one. */
   hall?: HallView;
+  floor?: HallFloor;
 }
 
 /** Mirrors the server's limit on one side of a hall. */
 const MAX_SIDE = 2000;
 
 /**
- * Creates a hall by hand, without a floor plan: an empty floor of the given width and depth,
- * all of it open for stalls. Also edits a hall's name and details (its floor is changed by
- * importing or editing the plan, not here).
+ * Creates an empty hall of the given width and depth, all of it open for stalls.
+ * Also edits an existing hall's name and details, without changing its floor.
  */
 @Component({
   selector: 'app-hall-dialog',
@@ -38,16 +43,16 @@ const MAX_SIDE = 2000;
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
+    HallAnnotationsEditorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>{{ data.hall ? 'Edit hall' : 'New hall without a floor plan' }}</h2>
+    <h2 mat-dialog-title>{{ data.hall ? 'Edit hall' : 'New hall by size' }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
       <mat-dialog-content>
         @if (!data.hall) {
           <p class="muted intro">
-            The hall starts as an empty rectangle with a 1 m grid. You can import its floor plan
-            later; the import becomes a new version of this hall.
+            The hall starts as an empty rectangle with a 1 m grid, open for stalls.
           </p>
         }
         <mat-form-field class="full-width">
@@ -97,15 +102,19 @@ const MAX_SIDE = 2000;
             </mat-form-field>
           </div>
           @if (preview(); as p) {
-            <div class="preview" aria-hidden="true">
-              <svg [attr.viewBox]="'0 0 ' + p.w + ' ' + p.d" preserveAspectRatio="xMidYMid meet">
-                <rect [attr.width]="p.w" [attr.height]="p.d" class="floor" />
-              </svg>
-            </div>
             <p class="muted area">
               {{ p.w | number: '1.0-2' }} × {{ p.d | number: '1.0-2' }} m ·
               {{ p.w * p.d | number: '1.0-0' }} m² of floor
             </p>
+          }
+        }
+        @if (floorPreview(); as floor) {
+          <app-hall-annotations-editor
+            [floor]="floor"
+            (annotationsChange)="annotations.set($event)"
+          />
+          @if (!annotationsValid()) {
+            <p class="error" role="alert">Give each helper and legend a name before saving.</p>
           }
         }
         <fieldset formGroupName="uses">
@@ -121,7 +130,7 @@ const MAX_SIDE = 2000;
       </mat-dialog-content>
       <mat-dialog-actions align="end">
         <button mat-button type="button" mat-dialog-close>Cancel</button>
-        <button mat-flat-button type="submit" [disabled]="busy()">
+        <button mat-flat-button type="submit" [disabled]="busy() || !annotationsValid()">
           {{ data.hall ? 'Save' : 'Create hall' }}
         </button>
       </mat-dialog-actions>
@@ -129,7 +138,7 @@ const MAX_SIDE = 2000;
   `,
   styles: `
     mat-dialog-content {
-      min-width: min(480px, 80vw);
+      min-width: 0;
     }
     .intro {
       margin: 0 0 16px;
@@ -138,22 +147,6 @@ const MAX_SIDE = 2000;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 0 12px;
-    }
-    .preview {
-      height: 120px;
-      padding: 8px;
-      border-radius: 12px;
-      background: var(--mat-sys-surface-container);
-    }
-    .preview svg {
-      width: 100%;
-      height: 100%;
-    }
-    .preview .floor {
-      fill: var(--mat-sys-primary-container);
-      stroke: var(--mat-sys-primary);
-      vector-effect: non-scaling-stroke;
-      stroke-width: 2;
     }
     .area {
       margin: 6px 0 12px;
@@ -186,6 +179,21 @@ export class HallDialogComponent {
   private readonly api = inject(VenuesApi);
   private readonly ref = inject(MatDialogRef<HallDialogComponent, HallView>);
   protected readonly maxSide = MAX_SIDE;
+  protected readonly annotations = signal<HallAnnotations>(
+    structuredClone({
+      labels: this.data.floor?.labels ?? [],
+      iconGroups: this.data.floor?.iconGroups ?? [],
+      legend: this.data.floor?.legend ?? [],
+    }),
+  );
+  protected readonly annotationsValid = computed(() => {
+    const a = this.annotations();
+    return (
+      a.labels.every((l) => !!l.text.trim()) &&
+      a.iconGroups.every((g) => g.icons.every((i) => !!i.label.trim())) &&
+      a.legend.every((l) => !!l.label.trim())
+    );
+  });
 
   private readonly side = [Validators.required, Validators.min(1), Validators.max(MAX_SIDE)];
   protected readonly form = inject(NonNullableFormBuilder).group({
@@ -208,6 +216,58 @@ export class HallDialogComponent {
     const ok = (n: unknown): n is number => typeof n === 'number' && n >= 1 && n <= MAX_SIDE;
     return ok(width) && ok(depth) ? { w: width, d: depth } : null;
   });
+  private readonly baseFloor = computed<HallFloor | null>(() => {
+    if (this.data.hall && !this.data.floor) return null;
+    if (this.data.floor?.geometry) return this.data.floor;
+    const size = this.data.floor
+      ? { w: this.data.floor.width, d: this.data.floor.depth }
+      : this.preview();
+    if (!size) return null;
+    const boundary: MultiPolygon = [
+      [
+        [
+          [0, 0],
+          [size.w, 0],
+          [size.w, size.d],
+          [0, size.d],
+          [0, 0],
+        ],
+      ],
+    ];
+    return {
+      ...(this.data.floor ?? {
+        schema: 'floor/1',
+        areas: [],
+        labels: [],
+        iconGroups: [],
+        north: null,
+        legend: [],
+      }),
+      width: size.w,
+      depth: size.d,
+      geometry: {
+        schema: 'geometry/1',
+        unit: 'm',
+        boundary,
+        hallBoundary: boundary,
+        grid: { x: 0, y: 0, width: 1, height: 1, rotation: 0 },
+        objects: [],
+        zones: [],
+        source: {
+          documentId: 'manual',
+          page: 1,
+          regionId: 'hall',
+          origin: [0, 0],
+          metresPerUnit: 1,
+        },
+        review: { revision: 1, checks: [], acknowledgements: [] },
+      },
+    };
+  });
+  protected readonly floorPreview = computed(() => {
+    const floor = this.baseFloor();
+    return floor ? { ...floor, ...this.annotations() } : null;
+  });
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -219,7 +279,7 @@ export class HallDialogComponent {
   }
 
   protected async submit(): Promise<void> {
-    if (this.form.invalid) {
+    if (this.form.invalid || !this.annotationsValid()) {
       this.form.markAllAsTouched();
       return;
     }
@@ -231,6 +291,12 @@ export class HallDialogComponent {
       code: value.code.trim() || null,
       level: value.level.trim() || null,
       uses: value.uses,
+      ...(this.floorPreview()
+        ? {
+            annotations: this.annotations(),
+            ...(this.data.hall ? { expectedVersion: this.data.hall.currentVersion } : {}),
+          }
+        : {}),
     };
     try {
       const saved = await firstValueFrom(

@@ -1,3 +1,4 @@
+import { ThreePlanComponent } from './three-plan.component';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 import type { FloorArea, FloorAreaKind, HallFloor } from '../../core/api/api.models';
@@ -14,6 +15,8 @@ export const AREA_COLORS: Record<FloorAreaKind, string> = {
   entry: '#2e8b57',
   unavailable: '#f2c200',
   marking: '#9e9e9e',
+  void: '#151e29',
+  facility: '#5681ad',
 };
 
 export const AREA_LABELS: Record<FloorAreaKind, string> = {
@@ -27,6 +30,8 @@ export const AREA_LABELS: Record<FloorAreaKind, string> = {
   entry: 'Entry / exit',
   unavailable: 'Not available',
   marking: 'Marking',
+  void: 'Void / opening',
+  facility: 'Facility',
 };
 
 /** Extra room around the hall so labels placed just outside it stay in view (metres). */
@@ -38,53 +43,58 @@ const MARGIN = 4;
  */
 @Component({
   selector: 'app-floor-view',
+  imports: [ThreePlanComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let f = floor();
-    <svg
-      [attr.viewBox]="viewBox()"
-      preserveAspectRatio="xMidYMid meet"
-      role="img"
-      [attr.aria-label]="'Floor plan, ' + f.width + ' by ' + f.depth + ' metres'"
-    >
-      <defs>
-        <pattern id="floor-grid-1m" width="1" height="1" patternUnits="userSpaceOnUse">
-          <path d="M 1 0 L 0 0 0 1" fill="none" class="grid-line" />
-        </pattern>
-        <pattern id="floor-grid-10m" width="10" height="10" patternUnits="userSpaceOnUse">
-          <path d="M 10 0 L 0 0 0 10" fill="none" class="grid-line-major" />
-        </pattern>
-      </defs>
-      <rect [attr.width]="f.width" [attr.height]="f.depth" class="floor" />
-      <rect [attr.width]="f.width" [attr.height]="f.depth" fill="url(#floor-grid-1m)" />
-      <rect [attr.width]="f.width" [attr.height]="f.depth" fill="url(#floor-grid-10m)" />
-      @for (area of shownAreas(); track $index) {
-        <rect
-          [attr.x]="area.x"
-          [attr.y]="area.y"
-          [attr.width]="area.width"
-          [attr.height]="area.height"
-          [attr.fill]="fill(area)"
-          [attr.fill-opacity]="opacity(area)"
-          [class.dashed]="area.hidden"
-          class="area"
-        >
-          <title>{{ area.label || kindLabel(area.kind) }}</title>
-        </rect>
-      }
-      <rect [attr.width]="f.width" [attr.height]="f.depth" class="outline" />
-      @if (showLabels()) {
-        @for (label of f.labels; track $index) {
-          <text [attr.x]="label.x" [attr.y]="label.y" class="label">{{ label.text }}</text>
+    @if (f.geometry; as geometry) {
+      <app-three-plan [floor]="geometry" [floorInfo]="showLabels() ? f : null" [editable]="false" />
+    } @else {
+      <svg
+        [attr.viewBox]="viewBox()"
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        [attr.aria-label]="'Floor plan, ' + f.width + ' by ' + f.depth + ' metres'"
+      >
+        <defs>
+          <pattern id="floor-grid-1m" width="1" height="1" patternUnits="userSpaceOnUse">
+            <path d="M 1 0 L 0 0 0 1" fill="none" class="grid-line" />
+          </pattern>
+          <pattern id="floor-grid-10m" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" class="grid-line-major" />
+          </pattern>
+        </defs>
+        <rect [attr.width]="f.width" [attr.height]="f.depth" class="floor" />
+        <rect [attr.width]="f.width" [attr.height]="f.depth" fill="url(#floor-grid-1m)" />
+        <rect [attr.width]="f.width" [attr.height]="f.depth" fill="url(#floor-grid-10m)" />
+        @for (area of shownAreas(); track $index) {
+          <rect
+            [attr.x]="area.x"
+            [attr.y]="area.y"
+            [attr.width]="area.width"
+            [attr.height]="area.height"
+            [attr.fill]="fill(area)"
+            [attr.fill-opacity]="opacity(area)"
+            [class.dashed]="area.hidden"
+            class="area"
+          >
+            <title>{{ area.label || kindLabel(area.kind) }}</title>
+          </rect>
         }
-        @for (group of f.iconGroups; track $index) {
-          <g [attr.transform]="'translate(' + group.x + ' ' + group.y + ')'">
-            <circle r="0.9" class="icon-dot" />
-            <title>{{ iconTitle(group.icons) }}</title>
-          </g>
+        <rect [attr.width]="f.width" [attr.height]="f.depth" class="outline" />
+        @if (showLabels()) {
+          @for (label of f.labels; track $index) {
+            <text [attr.x]="label.x" [attr.y]="label.y" class="label">{{ label.text }}</text>
+          }
+          @for (group of f.iconGroups; track $index) {
+            <g [attr.transform]="'translate(' + group.x + ' ' + group.y + ')'">
+              <circle r="0.9" class="icon-dot" />
+              <title>{{ iconTitle(group.icons) }}</title>
+            </g>
+          }
         }
-      }
-    </svg>
+      </svg>
+    }
   `,
   styles: `
     :host {

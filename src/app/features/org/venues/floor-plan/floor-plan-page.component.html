@@ -1,0 +1,813 @@
+<div class="plan-page">
+  <header class="page-heading">
+    <div>
+      <a class="back" [routerLink]="['..']">← Back to venue</a>
+      <h1>Import from floor plan</h1>
+      <p>Choose your halls, check the result, then save.</p>
+    </div>
+    @if (doc && step > 0) {
+      <div>
+        <label class="file-change" data-import-guide="upload"
+          >Choose another file<input
+            type="file"
+            accept=".pdf,.dxf,.png,.jpg,.jpeg"
+            (change)="upload($event)"
+            [disabled]="busy"
+        /></label>
+        <label class="check"
+          ><input type="checkbox" [(ngModel)]="freshReview" /> Start a new review when
+          re-uploading</label
+        >
+      </div>
+    }
+  </header>
+  <ol class="steps" aria-label="Import progress">
+    <li [class.current]="step === 0" [class.complete]="step > 0"><span>1</span>Upload</li>
+    <li [class.current]="step === 1" [class.complete]="step > 1"><span>2</span>Choose halls</li>
+    <li [class.current]="step === 2" [class.complete]="step > 2"><span>3</span>Review</li>
+    <li [class.current]="step === 3"><span>4</span>Save</li>
+  </ol>
+  <app-import-tour
+    mode="pdf"
+    [autoOpen]="true"
+    [autoOpenReady]="guideReady"
+    [stage]="step"
+    [blockers]="guideBlockers"
+    (locate)="showGuideTopic($event)"
+  />
+  @if (error) {
+    <div role="alert" class="message error">{{ error }}</div>
+  }
+  @if (notice) {
+    <div role="status" class="message">{{ notice }}</div>
+  }
+
+  @if (step === 0) {
+    <section
+      data-import-guide="upload"
+      class="upload-card"
+      (dragover)="allowDrop($event)"
+      (drop)="drop($event)"
+    >
+      @if (doc?.status === 'reading') {
+        <div class="loading-ring" aria-hidden="true"></div>
+        <h2>Reading your floor plan</h2>
+        <p role="status">
+          {{ doc?.fileName }} · {{ doc?.pages?.length || 0 }} page(s) read · Finding halls and their
+          foyers…
+        </p>
+      } @else {
+        <span class="upload-icon" aria-hidden="true">↥</span>
+        <h2>Upload your floor plan</h2>
+        <p>Drop a file here or choose one from your computer.</p>
+        <label class="primary file-picker"
+          >Choose file<input
+            type="file"
+            aria-label="Choose floor plan file"
+            accept=".pdf,.dxf,.png,.jpg,.jpeg"
+            (change)="upload($event)"
+            [disabled]="busy"
+        /></label>
+        <p class="muted">PDF, DXF, PNG or JPEG · up to 20 MB</p>
+      }
+    </section>
+    <details class="upload-options">
+      <summary>Upload options</summary>
+      <label class="check"
+        ><input type="checkbox" [(ngModel)]="freshReview" /> Start a new review if this file has
+        already been imported</label
+      >
+      <p class="muted">
+        A vector PDF or DXF gives the clearest result. Scans may need a known measurement to set
+        their size.
+      </p>
+    </details>
+  }
+
+  @if (doc; as d) {
+    @if (step > 0) {
+      <div class="document-bar">
+        <span class="document-icon" aria-hidden="true">▤</span><b>{{ d.fileName }}</b
+        ><span>{{ d.halls.length }} {{ d.halls.length === 1 ? 'hall' : 'halls' }} found</span>
+      </div>
+    }
+    @if (detectionNotice && step > 0 && step < 3) {
+      <p class="attention" role="status">{{ detectionNotice }}</p>
+    }
+    @if (step === 1 && page; as p) {
+      <div class="selection-layout">
+        <section class="plan-card">
+          <div class="card-heading">
+            <h2>Your plan</h2>
+            @if (d.pages.length > 1) {
+              <label
+                >Page<select
+                  aria-label="Plan page"
+                  [ngModel]="pageIndex"
+                  (ngModelChange)="selectPage(+$event)"
+                  [disabled]="busy"
+                >
+                  @for (pg of d.pages; track pg.number; let i = $index) {
+                    <option [ngValue]="i">{{ pg.number }}</option>
+                  }
+                </select></label
+              >
+            }
+          </div>
+          @if (!p.preview) {
+            <p role="alert" class="error">
+              This page could not be rendered. Choose a readable page or re-export this page
+              separately.
+            </p>
+          }
+          <app-three-plan
+            [page]="p"
+            [selected]="selected"
+            [editable]="false"
+            (selectShape)="pickShape($event)"
+          />
+          <p class="canvas-hint">Scroll to zoom. Drag to move around the plan.</p>
+        </section>
+        <section class="hall-selection" data-import-guide="choose">
+          <h2>Which halls do you want to import?</h2>
+          <p class="muted">Each selected hall will be saved separately.</p>
+          @if (d.halls.length) {
+            <label class="check select-all"
+              ><input
+                type="checkbox"
+                [checked]="allChosen"
+                (change)="chooseAll($any($event.target).checked)"
+              />
+              Select all available halls</label
+            >
+          }
+          @for (h of d.halls; track h.key) {
+            <div class="hall-option" [class.selected]="chosen[h.key]" [class.saved]="h.savedHallId">
+              <input
+                type="checkbox"
+                [(ngModel)]="chosen[h.key]"
+                [disabled]="!!h.savedHallId"
+                [attr.aria-label]="'Include ' + h.name"
+              /><svg [attr.viewBox]="thumbnailBox(h)" aria-hidden="true">
+                <path [attr.d]="thumbnailPath(h)" fill-rule="evenodd" />
+              </svg>
+              <div>
+                <button class="text-button" (click)="viewCandidate(h)">{{ h.name }}</button>
+                <p class="muted">
+                  Page {{ h.page }} ·
+                  @if (h.width) {
+                    {{ h.hallArea | number: '1.0-0' }} m²
+                  } @else {
+                    Size needs review
+                  }
+                </p>
+                @if (h.savedHallId) {
+                  <a [routerLink]="['..', 'halls', h.savedHallId]">Already saved</a>
+                }
+              </div>
+            </div>
+          }
+          @if (!d.halls.length) {
+            <p>No hall boundary was found. You can outline the hall on the plan.</p>
+          }
+          <button class="text-button" (click)="addHall()" [disabled]="busy">
+            + Add a missing hall
+          </button>
+        </section>
+      </div>
+      <footer class="step-footer">
+        <span>{{ selectedHalls.length }} selected</span
+        ><button class="primary" (click)="startReview()" [disabled]="busy || !selectedHalls.length">
+          Review selected halls →
+        </button>
+      </footer>
+    }
+
+    @if (step === 2 && page; as p) {
+      <div class="review-heading">
+        <div>
+          <h2>{{ activeHall ? (names[activeHall.key] ?? activeHall.name) : 'Add a hall' }}</h2>
+          @if (activeHall) {
+            <p class="muted">
+              Hall {{ activeIndex + 1 }} of {{ selectedHalls.length }} · Page {{ activeHall.page }}
+            </p>
+          }
+        </div>
+        <button class="text-button" (click)="backToSelection()" [disabled]="busy || dirty">
+          Change hall selection
+        </button>
+      </div>
+      <div class="review-layout">
+        <section class="plan-card">
+          <div class="viewer-toolbar">
+            <div class="view-tabs" aria-label="Plan view">
+              <button [class.active]="viewMode === 'source'" (click)="discardPreview()">
+                Original + outline</button
+              ><button
+                data-import-guide="preview"
+                [class.active]="viewMode === 'floor'"
+                (click)="showPreview()"
+                [disabled]="busy || !activeHall"
+              >
+                Imported hall
+              </button>
+            </div>
+            <div class="zoom-controls">
+              <button aria-label="Zoom out" (click)="canvas?.zoom(1 / 1.5)">−</button
+              ><button aria-label="Zoom in" (click)="canvas?.zoom(1.5)">+</button
+              ><button (click)="canvas?.fit()">Fit</button>
+            </div>
+          </div>
+          @if (mode !== 'select') {
+            <div class="drawing-help" role="status">
+              <b>{{ drawingInstruction }}</b
+              ><span
+                >{{ draft.length }}
+                {{ mode === 'calibrate' || mode === 'dimension' ? 'endpoints' : 'corners' }}
+                selected</span
+              >
+              @if (mode === 'calibrate' || mode === 'dimension') {
+                <label
+                  >Distance shown on plan (metres)<input
+                    type="number"
+                    aria-label="Known distance in metres"
+                    min=".001"
+                    step="any"
+                    [(ngModel)]="knownDistance"
+                /></label>
+              }
+              <div class="button-row">
+                <button class="primary" (click)="finish()" [disabled]="!canFinishDrawing">
+                  {{
+                    mode === 'calibrate'
+                      ? 'Set size'
+                      : mode === 'dimension'
+                        ? 'Add measurement'
+                        : 'Finish outline'
+                  }}</button
+                ><button (click)="draft = draft.slice(0, -1)" [disabled]="!draft.length">
+                  Undo point</button
+                ><button (click)="setMode('select')">Cancel</button>
+              </div>
+            </div>
+          }
+          @if (viewMode === 'floor' && preview) {
+            <app-three-plan
+              [floor]="preview.floor?.geometry ?? null"
+              [floorInfo]="preview.floor"
+              [extra]="extra"
+              [editable]="false"
+            />
+          } @else {
+            <app-three-plan
+              [page]="p"
+              [selected]="selected"
+              [sourceOpacity]="opacity"
+              [draw]="mode !== 'select'"
+              [draft]="draft"
+              [editable]="correctionsOpen && !busy"
+              (selectShape)="pickShape($event)"
+              (point)="addPoint($event)"
+              (geometryChange)="move($event)"
+            />
+          }
+          <div class="canvas-footer">
+            <p class="canvas-hint">Scroll to zoom · drag to pan</p>
+            @if (viewMode === 'source') {
+              <label class="source-slider"
+                >Original image<input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step=".05"
+                  [(ngModel)]="opacity"
+                  aria-label="Original image visibility"
+              /></label>
+            }
+          </div>
+          <div class="colour-key">
+            <span><i class="hall-colour"></i>Hall</span
+            ><span><i class="foyer-colour"></i>Foyer</span
+            ><span><i class="unknown-colour"></i>Needs a meaning</span>
+          </div>
+          @if (preview?.diff; as diff) {
+            <div class="diff-summary">
+              <span class="added">+{{ diff.addedArea | number: '1.0-2' }} m² added</span
+              ><span class="removed">−{{ diff.removedArea | number: '1.0-2' }} m² removed</span>
+              <p class="muted">
+                Compare the outlines if the old and new plans have different positions or rotations.
+              </p>
+            </div>
+          }
+        </section>
+        <aside class="review-panel">
+          @if (activeHall; as h) {
+            <label
+              >Hall name<input
+                aria-label="Hall name"
+                [ngModel]="names[h.key] ?? h.name"
+                (ngModelChange)="names[h.key] = $event"
+                maxlength="120"
+                [disabled]="!!targets[h.key]"
+            /></label>
+            @if (h.existing.length) {
+              <details class="save-options">
+                <summary>Save as a new hall or update an existing one</summary>
+                <label
+                  >Save to<select
+                    aria-label="Save destination"
+                    [(ngModel)]="targets[h.key]"
+                    (ngModelChange)="targetChanged(h)"
+                  >
+                    <option [ngValue]="undefined">New hall</option>
+                    @for (e of h.existing; track e.id) {
+                      <option [value]="e.id">Update {{ e.name }}</option>
+                    }
+                  </select></label
+                >
+              </details>
+            }
+            @if (viewMode === 'floor' && preview) {
+              <section class="final-check">
+                <h3>Check the imported hall</h3>
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    [checked]="inspected[h.key] && inspectionStamps[h.key] === stampFor(h)"
+                    (change)="inspectHall($any($event.target).checked)"
+                  />
+                  The imported hall looks correct</label
+                >
+              </section>
+            }
+            @if (activeRegion; as r) {
+              <section class="review-section" data-import-guide="outline">
+                <h3>Check the outline</h3>
+                <p class="muted">Compare the green hall outline with the original plan.</p>
+                <label class="check"
+                  ><input type="checkbox" [(ngModel)]="r.confirmed" (ngModelChange)="changed()" />
+                  Hall outline is correct</label
+                ><button class="text-button" (click)="editShape(r.id)">Adjust outline</button>
+                <div data-import-guide="foyers">
+                  @for (z of linkedFoyers; track z.id) {
+                    <div class="foyer-check">
+                      <label class="check"
+                        ><input
+                          type="checkbox"
+                          [(ngModel)]="z.confirmed"
+                          (ngModelChange)="changed()"
+                        />
+                        {{ z.name }} outline and hall links are correct</label
+                      >
+                      <p class="muted">Linked to {{ ownerNames(z) }}</p>
+                      <button class="text-button" (click)="editShape(z.id)">Adjust foyer</button>
+                    </div>
+                  }
+                  @if (!linkedFoyers.length) {
+                    <p class="muted">No foyer is linked to this hall.</p>
+                  }
+                  <button class="text-button" (click)="editShape(r.id)">Add or link a foyer</button>
+                </div>
+              </section>
+              <section class="review-section" data-import-guide="restrictions">
+                <h3>Check the usable floor</h3>
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    [(ngModel)]="r.restrictionsConfirmed"
+                    (ngModelChange)="confirmRestrictions($event)"
+                  />
+                  Columns, exits and restricted areas are correct</label
+                ><button class="text-button" (click)="editShape(r.id)">Correct an area</button>
+                @for (o of pendingObjects; track o.id) {
+                  <div class="area-question">
+                    <span class="swatch" [style.background]="o.color"></span
+                    ><label
+                      >{{ o.label
+                      }}<select
+                        [attr.aria-label]="'Meaning of ' + o.label"
+                        [(ngModel)]="o.kind"
+                        (ngModelChange)="confirmObjectKind(o)"
+                      >
+                        <option value="unknown">Choose a meaning</option>
+                        @for (k of kinds; track k) {
+                          <option [value]="k">{{ kindLabel(k) }}</option>
+                        }
+                      </select></label
+                    ><button class="text-button" (click)="editShape(o.id)">Show</button>
+                  </div>
+                }
+              </section>
+              @if (helperAnnotations.length) {
+                <details class="review-section">
+                  <summary>Labels and facility cards ({{ helperAnnotations.length }})</summary>
+                  <p class="muted">
+                    Detected from source text or CAD symbols. Included cards are arranged outside
+                    the imported grid.
+                  </p>
+                  @for (a of helperAnnotations; track a.id) {
+                    <label class="check" [title]="a.evidence.detail">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="a.confirmed"
+                        (ngModelChange)="changed()"
+                        [attr.aria-label]="'Show ' + a.text + ' on imported plan'"
+                      />
+                      {{ a.text }}
+                    </label>
+                    <label
+                      >Card or label text<input
+                        [(ngModel)]="a.text"
+                        (ngModelChange)="changed()"
+                        maxlength="200"
+                    /></label>
+                  }
+                </details>
+              }
+              <section class="review-section" data-import-guide="size">
+                <h3>Hall size</h3>
+                @if (sizeKnown) {
+                  @if (dirty || !h.width || !h.depth) {
+                    <p class="muted">The updated size will be calculated in the preview.</p>
+                  } @else {
+                    <p>
+                      {{ h.width | number: '1.0-2' }} × {{ h.depth | number: '1.0-2' }} m
+                      <span class="status good">Size detected</span>
+                    </p>
+                  }
+                  <button class="text-button" (click)="setMode('calibrate'); discardPreview()">
+                    Correct size
+                  </button>
+                } @else {
+                  <p class="muted">
+                    The plan’s size is unclear. Use a measurement printed on the plan.
+                  </p>
+                  @if (metricGrid) {
+                    <label
+                      >Width of one grid square (metres)<input
+                        type="number"
+                        aria-label="Grid square width in metres"
+                        min=".001"
+                        step="any"
+                        [(ngModel)]="gridCellMetres"
+                        placeholder="e.g. 1" /></label
+                    ><button
+                      (click)="setCellSize()"
+                      [disabled]="!gridCellMetres || gridCellMetres <= 0"
+                    >
+                      Use this grid size
+                    </button>
+                  }
+                  <button class="text-button" (click)="setMode('calibrate'); discardPreview()">
+                    Measure a known distance
+                  </button>
+                }
+                @if (sizeKnown) {
+                  @if (metricGrid) {
+                    <p class="muted">
+                      To correct a square grid, set the spacing printed on the plan. This changes
+                      the grid, preserving the outline and grid origin.
+                    </p>
+                  }
+                  <label
+                    >Grid spacing (metres)<input
+                      type="number"
+                      aria-label="Grid spacing in metres"
+                      min=".001"
+                      step="any"
+                      [(ngModel)]="designGridMetres" /></label
+                  ><button
+                    (click)="setDesignGrid()"
+                    [disabled]="!designGridMetres || designGridMetres <= 0"
+                  >
+                    Set grid spacing
+                  </button>
+                }
+              </section>
+            }
+            <div data-import-guide="checks">
+              @if (missingChecks(h).length) {
+                <section class="attention">
+                  <h3>Measurements need confirmation</h3>
+                  <p class="muted">These measurements have not been linked to the source:</p>
+                  <ul>
+                    @for (c of missingChecks(h); track c.id) {
+                      <li>
+                        {{
+                          checkCode(c) === 'area' ? 'Printed hall area' : 'Dimension on the plan'
+                        }}
+                      </li>
+                    }
+                  </ul>
+                  <button class="text-button" (click)="editShape()">Add a measurement</button
+                  ><label class="check"
+                    ><input
+                      type="checkbox"
+                      [checked]="missingAccepted(h)"
+                      (change)="acceptMissing(h, $any($event.target).checked)"
+                    />
+                    I checked the source and these measurements are unavailable</label
+                  >
+                </section>
+              }
+              @for (c of issues(h); track c.id) {
+                <section class="attention">
+                  <h3>{{ checkLabel(c) }}</h3>
+                  @if (c.expected !== undefined) {
+                    <p>
+                      Plan: {{ c.expected | number: '1.0-2' }} · Measured:
+                      {{ c.measured | number: '1.0-2' }}
+                    </p>
+                  }
+                  <p class="muted">{{ c.detail }}</p>
+                  <button class="text-button" (click)="editShape()">Correct on plan</button>
+                  @if (c.overridable) {
+                    <label class="check"
+                      ><input type="checkbox" [(ngModel)]="ack[c.id]" /> I checked this difference
+                      and accept the result</label
+                    >
+                  }
+                </section>
+              }
+              <details class="passed-checks">
+                <summary>{{ passedCount(h) }} automatic checks passed</summary>
+                <ul>
+                  @for (c of h.checks; track c.id) {
+                    @if (c.status === 'pass') {
+                      <li>✓ {{ c.label }}</li>
+                    }
+                  }
+                </ul>
+              </details>
+            </div>
+          } @else {
+            <h3>Outline the missing hall</h3>
+            <p>Click around the hall’s boundary, then choose Finish outline.</p>
+            <button class="primary" (click)="apply()" [disabled]="busy || !dirty">
+              Use this hall
+            </button>
+          }
+        </aside>
+      </div>
+
+      @if (correctionsOpen) {
+        <section class="corrections">
+          <div class="card-heading">
+            <div>
+              <h2>Make a correction</h2>
+              <p class="muted">Select a shape, then drag its corners or redraw its outline.</p>
+            </div>
+            <button (click)="apply()" [disabled]="busy">Done</button>
+          </div>
+          <div class="correction-fields">
+            <label
+              >Shape<select
+                aria-label="Shape to correct"
+                [ngModel]="selected"
+                (ngModelChange)="select($event)"
+              >
+                @for (r of p.regions; track r.id) {
+                  <option [value]="r.id">{{ r.name }}</option>
+                }
+                @for (o of p.objects; track o.id) {
+                  <option [value]="o.id">{{ o.label }}</option>
+                }
+              </select></label
+            >
+            @if (region; as r) {
+              <label
+                >Shape type<select
+                  aria-label="Shape type"
+                  [ngModel]="r.role"
+                  (ngModelChange)="setRegionRole(r, $event)"
+                  [disabled]="!!d.committed[p.number + ':' + r.id]"
+                >
+                  <option value="hall">Hall</option>
+                  <option value="foyer">Foyer</option>
+                  <option value="circulation">Circulation</option>
+                  <option value="exclude">Exclude from floor</option>
+                </select></label
+              >
+              <label
+                >Name<input
+                  aria-label="Shape name"
+                  [(ngModel)]="r.name"
+                  (ngModelChange)="changed()"
+              /></label>
+              @if (r.role === 'foyer' || r.role === 'circulation') {
+                <fieldset>
+                  <legend>Foyer belongs to</legend>
+                  @for (h of halls; track h.id) {
+                    <label class="check"
+                      ><input
+                        type="checkbox"
+                        [checked]="r.hallIds.includes(h.id)"
+                        (change)="toggleOwner(r, h.id, $any($event.target).checked)"
+                      />{{ h.name }}</label
+                    >
+                  }
+                </fieldset>
+              }
+            }
+            @if (object; as o) {
+              <label
+                >Area label<input [(ngModel)]="o.label" (ngModelChange)="objectChanged()" /></label
+              ><label
+                >Meaning<select [(ngModel)]="o.kind" (ngModelChange)="confirmObjectKind(o)">
+                  <option value="unknown">Choose a meaning</option>
+                  @for (k of kinds; track k) {
+                    <option [value]="k">{{ kindLabel(k) }}</option>
+                  }
+                </select></label
+              >
+            }
+          </div>
+          <div class="button-row">
+            @if (region) {
+              <button (click)="setMode('replace')">Redraw selected outline</button>
+            }
+            <button (click)="setMode('foyer')">Add foyer</button
+            ><button (click)="setMode('object')">Add restricted area / facility</button
+            ><button (click)="setMode('hall')">Add hall</button
+            ><button class="danger" (click)="remove()" [disabled]="!selected">
+              Remove selected shape
+            </button>
+          </div>
+          @if (otherFoyers.length && activeHall) {
+            <div class="foyer-links">
+              <h3>Other foyers on this page</h3>
+              @for (z of otherFoyers; track z.id) {
+                <button (click)="linkFoyer(z)">Link {{ z.name }} to this hall</button>
+              }
+            </div>
+          }
+          <details class="advanced">
+            <summary>Advanced settings</summary>
+            <div class="correction-fields">
+              @if (region; as r) {
+                <label
+                  >Area printed on plan (m²)<input
+                    type="number"
+                    min=".01"
+                    [(ngModel)]="r.printedArea"
+                    (ngModelChange)="changed()"
+                /></label>
+              }
+              <label
+                >Scale: metres per source unit<input
+                  type="number"
+                  min=".000001"
+                  step="any"
+                  [(ngModel)]="p.calibration.metresPerUnit"
+                  (ngModelChange)="p.calibration.confirmed = false; changed()" /></label
+              ><label class="check"
+                ><input
+                  type="checkbox"
+                  [(ngModel)]="p.calibration.confirmed"
+                  (ngModelChange)="changed()"
+                />
+                Scale verified</label
+              >
+              @if (activeGrid; as g) {
+                @for (field of ['x', 'y', 'width', 'height', 'rotation']; track field) {
+                  <label
+                    >Grid {{ field
+                    }}<input
+                      type="number"
+                      step="any"
+                      [ngModel]="$any(g)[field]"
+                      (ngModelChange)="setGrid($any(field), +$event)"
+                  /></label>
+                }
+              }
+              @if (object; as o) {
+                <label
+                  >Area colour<input
+                    type="color"
+                    [(ngModel)]="o.color"
+                    (ngModelChange)="changed()" /></label
+                ><label class="check"
+                  ><input type="checkbox" [(ngModel)]="o.confirmed" (ngModelChange)="changed()" />
+                  Meaning verified</label
+                >
+              }
+            </div>
+            <div class="button-row">
+              <button (click)="setMode('dimension')">Check a dimension</button>
+              @if (region) {
+                <button (click)="setMode('hole')">Add a hole in the floor</button>
+              }
+            </div>
+            @for (dim of p.dimensions; track dim.id) {
+              <p>
+                {{ dim.label }}
+                <button class="text-button" (click)="removeDimension(dim.id)">Remove</button>
+              </p>
+            }
+            <details>
+              <summary>Source notes</summary>
+              @for (w of p.warnings; track $index) {
+                <p class="muted">{{ w }}</p>
+              }
+              @for (l of p.legend; track $index) {
+                <p class="muted">{{ l.label }}</p>
+              }
+            </details>
+          </details>
+        </section>
+      }
+      <footer class="step-footer">
+        <div>
+          @if (dirty) {
+            <span class="muted">Corrections will be saved when you preview.</span>
+          } @else if (activeHall && !ready(activeHall)) {
+            <span class="muted">{{
+              viewMode === 'floor'
+                ? 'Check the imported preview and resolve any issues shown to continue.'
+                : 'Review the outline and any issues shown, then preview the hall.'
+            }}</span>
+          }
+        </div>
+        <div class="button-row">
+          @if (activeIndex > 0) {
+            <button (click)="focusHall(selectedHalls[activeIndex - 1])" [disabled]="busy">
+              Previous hall
+            </button>
+          }
+          @if (viewMode === 'source' || dirty) {
+            <button class="primary" (click)="showPreview()" [disabled]="busy || !activeHall">
+              Preview imported hall →
+            </button>
+          } @else {
+            <button
+              class="primary"
+              (click)="nextHall()"
+              [disabled]="busy || !activeHall || !ready(activeHall)"
+            >
+              {{ activeIndex < selectedHalls.length - 1 ? 'Next hall →' : 'Continue to save →' }}
+            </button>
+          }
+        </div>
+      </footer>
+    }
+
+    @if (step === 3) {
+      <section class="save-card" data-import-guide="save">
+        <h2>{{ selectedHalls.length ? 'Ready to save your halls' : 'Your halls are saved' }}</h2>
+        <p>Each hall is stored separately. You can open it from the venue afterwards.</p>
+        @for (h of d.halls; track h.key) {
+          @if (chosen[h.key] || h.savedHallId) {
+            <div class="save-row">
+              <svg [attr.viewBox]="thumbnailBox(h)" aria-hidden="true">
+                <path [attr.d]="thumbnailPath(h)" fill-rule="evenodd" />
+              </svg>
+              <div>
+                <b>{{ names[h.key] ?? h.name }}</b>
+                <p class="muted">
+                  {{ h.width | number: '1.0-2' }} × {{ h.depth | number: '1.0-2' }} m · Foyer
+                  {{ h.foyerArea | number: '1.0-0' }} m²
+                </p>
+              </div>
+              @if (h.savedHallId) {
+                <a [routerLink]="['..', 'halls', h.savedHallId]">Open saved hall</a>
+              } @else {
+                <button class="text-button" (click)="step = 2; focusHall(h)">
+                  {{ ready(h) ? 'Review again' : 'Finish review' }}</button
+                ><span class="status" [class.good]="ready(h)">{{
+                  ready(h) ? 'Ready' : 'Needs review'
+                }}</span>
+              }
+            </div>
+          }
+        }
+        @for (result of results; track result.key) {
+          @if (result.error) {
+            <p role="alert" class="error">{{ resultName(result.key) }}: {{ result.error }}</p>
+          }
+        }
+        @if (preview?.config) {
+          <details class="export-option">
+            <summary>Need a copy of the hall configuration?</summary>
+            <button (click)="download()">Download configuration</button>
+          </details>
+        }
+      </section>
+      <footer class="step-footer">
+        <button (click)="backToSelection()" [disabled]="busy">Back to hall selection</button>
+        @if (selectedHalls.length) {
+          <button class="primary" (click)="save()" [disabled]="busy || !canSaveAll">
+            {{
+              busy
+                ? 'Saving…'
+                : selectedHalls.length === 1
+                  ? 'Save hall'
+                  : 'Save ' + selectedHalls.length + ' halls'
+            }}
+          </button>
+        } @else {
+          <a class="primary button-link" [routerLink]="['..']">Go to venue</a>
+        }
+      </footer>
+    }
+  }
+</div>

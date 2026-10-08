@@ -25,8 +25,9 @@ import { VenuesApi } from '../../../core/venues/venues-api.service';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { HallDialogComponent, HallDialogData } from './hall-dialog.component';
-import { ItpoImportDialogComponent, ItpoImportDialogData } from './itpo-import-dialog.component';
+import { CsvImportDialogComponent, CsvImportDialogData } from './csv-import-dialog.component';
 import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component';
+import { ImportTourComponent } from '../../../shared/import-tour/import-tour.component';
 
 /** One venue and its halls, with the ways to add a hall. */
 @Component({
@@ -43,6 +44,7 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
     MatProgressBarModule,
     EmptyStateComponent,
     PageHeaderComponent,
+    ImportTourComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -50,6 +52,14 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
       <a mat-button class="back" [routerLink]="['..']"><mat-icon>arrow_back</mat-icon>Venues</a>
       @if (venue(); as v) {
         <app-page-header [heading]="v.name" [subheading]="v.address ?? ''">
+          @if (canImport()) {
+            <app-import-tour
+              mode="choose"
+              [compact]="true"
+              [canLocate]="false"
+              (launch)="startImport($event)"
+            />
+          }
           @if (canManage()) {
             <button mat-stroked-button (click)="editVenue(v)"><mat-icon>edit</mat-icon>Edit</button>
             <button
@@ -75,26 +85,25 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
           <button mat-menu-item (click)="createHall()">
             <mat-icon>crop_free</mat-icon>
             <span class="item"
-              ><b>Draw by size</b
-              ><span class="muted">No floor plan: width × depth in metres</span></span
+              ><b>Draw by size</b><span class="muted">Width × depth in metres</span></span
             >
           </button>
         }
         @if (canImport()) {
-          <button mat-menu-item (click)="importItpo()">
+          <a mat-menu-item [routerLink]="['import-floor-plan']"
+            ><mat-icon>map</mat-icon
+            ><span class="item"
+              ><b>Import from floor plan</b
+              ><span class="muted">PDF, DXF or scanned image · review in Three.js</span></span
+            ></a
+          >
+          <button mat-menu-item (click)="importCsv()">
             <mat-icon>table_view</mat-icon>
             <span class="item"
-              ><b>Import from ITPO</b
-              ><span class="muted">T_HALL_LAYOUTS export, CSV or JSON</span></span
+              ><b>Import from CSV</b
+              ><span class="muted">Convert a venue CSV file into halls</span></span
             >
           </button>
-          <a mat-menu-item [routerLink]="['import-plan']">
-            <mat-icon>picture_as_pdf</mat-icon>
-            <span class="item"
-              ><b>Import a floor plan</b
-              ><span class="muted">PDF, DXF or image: the grid becomes the floor</span></span
-            >
-          </a>
         }
       </mat-menu>
 
@@ -107,14 +116,13 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
           <app-empty-state
             icon="grid_on"
             heading="No halls in this venue"
-            text="Import the hall's floor plan, draw it by its size when there is no plan, or import halls from ITPO."
+            text="Draw a hall by its size or import halls from a venue CSV file."
           >
             @if (canManage()) {
               <button mat-flat-button (click)="createHall()">Draw by size</button>
             }
             @if (canImport()) {
-              <a mat-stroked-button [routerLink]="['import-plan']">Import a floor plan</a>
-              <button mat-stroked-button (click)="importItpo()">Import from ITPO</button>
+              <button mat-stroked-button (click)="importCsv()">Import from CSV</button>
             }
           </app-empty-state>
         </div>
@@ -204,7 +212,7 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
           </span>
           <span class="muted small">
             @if (hall.source) {
-              ITPO hall {{ hall.source.externalId }} ·
+              {{ hall.source.system.toUpperCase() }} import ·
             }
             Version {{ hall.currentVersion }} · updated
             {{ hall.updatedAt | date: 'd MMM y' }}
@@ -404,7 +412,7 @@ export class VenuePageComponent implements OnInit {
   protected createHall(): void {
     const data: HallDialogData = { slug: this.context.slug(), venueId: this.venueId() };
     this.dialog
-      .open(HallDialogComponent, { data })
+      .open(HallDialogComponent, { data, width: '1100px', maxWidth: '95vw' })
       .afterClosed()
       .subscribe((hall?: HallView) => {
         if (hall) {
@@ -414,14 +422,18 @@ export class VenuePageComponent implements OnInit {
       });
   }
 
-  protected importItpo(): void {
-    const data: ItpoImportDialogData = {
+  protected startImport(mode: 'pdf' | 'csv'): void {
+    if (mode === 'csv') this.importCsv();
+    else void this.router.navigate([...this.venueLink(), 'import-floor-plan']);
+  }
+  protected importCsv(): void {
+    const data: CsvImportDialogData = {
       slug: this.context.slug(),
       venueId: this.venueId(),
       venueName: this.venue()?.name ?? 'this venue',
     };
     this.dialog
-      .open(ItpoImportDialogComponent, { data, maxWidth: '760px', width: '95vw' })
+      .open(CsvImportDialogComponent, { data, maxWidth: '1100px', width: '95vw' })
       .afterClosed()
       .subscribe((saved?: boolean) => {
         if (saved) void this.load();

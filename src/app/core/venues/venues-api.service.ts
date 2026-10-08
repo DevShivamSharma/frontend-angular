@@ -4,9 +4,8 @@ import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
 import type {
-  DrawingChoices,
-  DrawingFloorResult,
-  DrawingJobView,
+  JsonHallPreview,
+  JsonHallMapping,
   HallDetailView,
   HallFloor,
   HallUses,
@@ -27,6 +26,8 @@ export interface HallDetailsInput {
   code: string | null;
   level: string | null;
   uses: HallUses;
+  annotations?: Pick<HallFloor, 'labels' | 'iconGroups' | 'legend'>;
+  expectedVersion?: number;
 }
 
 /** A hall drawn from nothing: an empty floor of the given size, in metres. */
@@ -138,57 +139,23 @@ export class VenuesApi {
       { ...file, halls },
     );
   }
-
-  /** Uploads a plan (PDF, DXF or image) to be read; poll `drawingJob` for the result. */
-  startDrawing(
-    slug: string,
-    venueId: string,
-    file: File,
-    options: { instructions: string; gridMetres: number; readText: boolean },
-  ): Observable<DrawingJobView> {
-    const form = new FormData();
-    form.append('file', file, file.name);
-    if (options.instructions.trim()) form.append('instructions', options.instructions.trim());
-    form.append('gridMetres', String(options.gridMetres));
-    form.append('readText', String(options.readText));
-    return this.http.post<DrawingJobView>(
-      `${this.org(slug)}/venues/${venueId}/halls/import/drawing`,
-      form,
+  previewCsv(slug: string, venueId: string, content: string, mapping: JsonHallMapping) {
+    return this.http.post<JsonHallPreview>(
+      `${this.org(slug)}/venues/${venueId}/halls/import/csv/preview`,
+      { content, mapping },
     );
   }
-
-  drawingJob(slug: string, venueId: string, jobId: string): Observable<DrawingJobView> {
-    return this.http.get<DrawingJobView>(
-      `${this.org(slug)}/venues/${venueId}/halls/import/drawing/${jobId}`,
-    );
-  }
-
-  drawingFloor(
+  importCsv(
     slug: string,
     venueId: string,
-    jobId: string,
-    choices: DrawingChoices,
-  ): Observable<DrawingFloorResult> {
-    return this.http.post<DrawingFloorResult>(
-      `${this.org(slug)}/venues/${venueId}/halls/import/drawing/${jobId}/floor`,
-      choices,
-    );
-  }
-
-  commitDrawing(
-    slug: string,
-    venueId: string,
-    jobId: string,
-    body: DrawingChoices & {
-      name: string;
-      code: string | null;
-      level: string | null;
-      hallId?: string;
-    },
-  ): Observable<HallView> {
-    return this.http.post<HallView>(
-      `${this.org(slug)}/venues/${venueId}/halls/import/drawing/${jobId}/commit`,
-      body,
+    content: string,
+    mapping: JsonHallMapping,
+    halls: ItpoImportHall[],
+    previewToken: string,
+  ) {
+    return this.http.post<ItpoImportResult>(
+      `${this.org(slug)}/venues/${venueId}/halls/import/csv`,
+      { content, mapping, halls, previewToken, reviewed: true },
     );
   }
 }

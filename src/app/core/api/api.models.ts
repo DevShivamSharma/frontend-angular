@@ -1,3 +1,4 @@
+import type { FloorGeometry } from '../venues/floor-plan.models';
 /** Response shapes of the platform API. They mirror the backend's view interfaces. */
 
 export type FontFamily = 'Inter' | 'Roboto' | 'Poppins' | 'Noto Sans' | 'Lato' | 'Source Sans 3';
@@ -294,6 +295,8 @@ export type FloorAreaKind =
   | 'utility'
   | 'entry'
   | 'unavailable'
+  | 'void'
+  | 'facility'
   | 'marking';
 
 export interface FloorArea {
@@ -312,12 +315,19 @@ export interface FloorArea {
  * `width` x `depth`; labels and icons often sit outside the hall.
  */
 export interface HallFloor {
+  geometry?: FloorGeometry;
   schema: 'floor/1';
   width: number;
   depth: number;
   areas: FloorArea[];
-  labels: { text: string; x: number; y: number }[];
-  iconGroups: { x: number; y: number; icons: { kind: string; label: string }[] }[];
+  labels: { text: string; x: number; y: number; width?: number; height?: number }[];
+  iconGroups: {
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    icons: { kind: string; label: string }[];
+  }[];
   north: { x: number; y: number; size: number; rotation: number; label: string } | null;
   legend: {
     label: string;
@@ -346,13 +356,14 @@ export interface HallView {
   depth: number;
   floorArea: number;
   currentVersion: number;
-  source: { system: 'itpo'; externalId: string } | null;
+  source: { system: 'itpo' | 'json' | 'csv'; externalId: string } | null;
   updatedAt: string;
 }
 
 export interface FloorVersionView {
   version: number;
-  source: 'blank' | 'itpo' | 'restore' | 'drawing';
+  /** `drawing` is retained for previously imported floor versions. */
+  source: 'blank' | 'itpo' | 'restore' | 'drawing' | 'json' | 'csv';
   sourceRef: string | null;
   note: string | null;
   createdAt: string;
@@ -399,102 +410,37 @@ export interface ItpoImportPreview {
   rows: ItpoImportRowView[];
 }
 
-/** What a text on an imported plan is. Mirrors the backend's `PlanTextKind`. */
-export type PlanTextKind =
-  | 'icon:toilet-male'
-  | 'icon:toilet-female'
-  | 'icon:toilet'
-  | 'icon:stairs'
-  | 'icon:lift'
-  | 'icon:emergency-exit'
-  | 'icon:entry'
-  | 'icon:cargo-truck'
-  | 'icon:drinking-water'
-  | 'icon:circulation'
-  | 'area:passage'
-  | 'area:fire_curtain'
-  | 'area:no_build'
-  | 'area:column'
-  | 'area:utility'
-  | 'area:unavailable'
-  | 'area:entry'
-  | 'label'
-  | 'stall_number'
-  | 'dimension'
-  | 'title'
-  | 'none';
-
-/** What a colour on the plan's floor becomes: a kind of area, or open floor for stalls. */
-export type DrawingGroupChoice = FloorAreaKind | 'floor';
-
-export interface DrawingPart {
-  id: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  area: number;
-  selected: boolean;
+export interface JsonHallMapping {
+  halls?: string;
+  name?: string;
+  width?: string;
+  depth?: string;
+  boundary?: string;
+  areas?: string;
+  zones?: string;
+  unit?: string;
+  metresPerUnit?: number;
+  kinds?: Record<string, string>;
+  yAxis?: 'down' | 'up';
+  areaFields?: Partial<
+    Record<'x' | 'y' | 'width' | 'height' | 'kind' | 'label' | 'geometry', string>
+  >;
 }
-
-export interface DrawingGroup {
-  id: number;
-  color: string;
-  family: string;
-  area: number;
-  choice: DrawingGroupChoice;
-  from: 'legend' | 'colour' | 'you';
-  legend: string | null;
+export interface JsonHallRow {
+  externalId: string;
+  name: string;
+  floor: HallFloor | null;
+  width: number | null;
+  depth: number | null;
+  floorArea: number | null;
+  warnings: string[];
+  error: string | null;
+  existing: { hallId: string; name: string; version: number; sameFloor: boolean } | null;
 }
-
-export interface DrawingText {
-  index: number;
-  text: string;
-  kind: PlanTextKind;
-  by: 'rules' | 'model' | 'default' | 'you';
-  review: boolean;
-  source: 'file' | 'ocr';
-  x: number;
-  y: number;
-  used: boolean;
-}
-
-export interface DrawingFloorResult {
-  floor: HallFloor;
-  parts: DrawingPart[];
-  groups: DrawingGroup[];
-  texts: DrawingText[];
-  offset: { x: number; y: number };
-}
-
-export interface DrawingChoices {
-  parts?: number[];
-  groups?: Record<number, DrawingGroupChoice>;
-  texts?: Record<number, PlanTextKind>;
-}
-
-export interface DrawingJobView {
-  id: string;
-  fileName: string;
-  status: 'running' | 'done' | 'failed';
-  step: 'reading' | 'texts' | 'done';
-  message: string | null;
-  /** While the local model reads the texts. */
-  progress: { done: number; total: number } | null;
-  startedAt: string;
-  result: {
-    format: 'pdf-scan' | 'pdf-vector' | 'dxf' | 'image';
-    warnings: string[];
-    model: { used: boolean; name: string | null; note: string | null };
-    grid: { cells: number; regions: number; resolution: number };
-    preview: {
-      url: string;
-      originX: number;
-      originY: number;
-      pxPerMetre: number;
-      width: number;
-      height: number;
-    };
-    plan: DrawingFloorResult;
-  } | null;
+export interface JsonHallPreview {
+  rows: JsonHallRow[];
+  fields: string[];
+  collectionPaths: string[];
+  areaTypes: string[];
+  previewToken: string;
 }
