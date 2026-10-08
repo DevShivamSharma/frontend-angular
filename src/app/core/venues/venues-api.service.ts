@@ -7,6 +7,7 @@ import type {
   JsonHallPreview,
   JsonHallMapping,
   HallDetailView,
+  HallFloor,
   HallUses,
   HallView,
   ItpoImportPreview,
@@ -101,6 +102,16 @@ export class VenuesApi {
 
   deleteHall(slug: string, hallId: string): Observable<void> {
     return this.http.delete<void>(`${this.org(slug)}/halls/${hallId}`);
+  }
+
+  floorVersion(
+    slug: string,
+    hallId: string,
+    version: number,
+  ): Observable<{ version: number; floor: HallFloor }> {
+    return this.http.get<{ version: number; floor: HallFloor }>(
+      `${this.org(slug)}/halls/${hallId}/versions/${version}`,
+    );
   }
 
   restoreVersion(slug: string, hallId: string, version: number): Observable<HallDetailView> {
