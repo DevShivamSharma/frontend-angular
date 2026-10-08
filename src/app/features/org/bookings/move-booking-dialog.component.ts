@@ -4,6 +4,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { firstValueFrom } from 'rxjs';
@@ -34,6 +35,7 @@ interface FreeStalls {
     MatButtonModule,
     MatDialogModule,
     MatFormFieldModule,
+    MatIconModule,
     MatProgressBarModule,
     MatSelectModule,
   ],
@@ -43,16 +45,18 @@ interface FreeStalls {
     <mat-dialog-content class="stack">
       <p class="muted">
         {{ data.booking.exhibitor.name }} moves to another free stall of
-        {{ data.booking.event.name }}; stall {{ data.booking.stall.number }} becomes free.
+        {{ data.booking.event.name }}. Stall {{ data.booking.stall.number }} becomes free.
       </p>
       @if (loading()) {
         <mat-progress-bar mode="indeterminate" />
         <p class="muted">Finding free stalls…</p>
       } @else if (loadError(); as message) {
         <p class="error" role="alert">{{ message }}</p>
-        <button mat-stroked-button type="button" (click)="load()">Try again</button>
+        <button mat-stroked-button type="button" (click)="load()">
+          <mat-icon>refresh</mat-icon>Try again
+        </button>
       } @else if (!freeCount()) {
-        <p class="notice" role="status">No other stall of this event is free.</p>
+        <p class="notice" role="status">No other stall of this event is free right now.</p>
       } @else {
         <mat-form-field>
           <mat-label>New stall</mat-label>

@@ -99,7 +99,11 @@ import { ExhibitorDialogComponent, ExhibitorDialogData } from './exhibitor-dialo
                 <th mat-header-cell *matHeaderCellDef>Contact</th>
                 <td mat-cell *matCellDef="let x">
                   <span class="contact">
-                    <span>{{ x.contactName ?? '—' }}</span>
+                    @if (x.contactName) {
+                      <span>{{ x.contactName }}</span>
+                    } @else {
+                      <span class="muted">No contact name</span>
+                    }
                     @if (x.email) {
                       <span class="muted">{{ x.email }}</span>
                     }
@@ -139,7 +143,7 @@ import { ExhibitorDialogComponent, ExhibitorDialogData } from './exhibitor-dialo
                     mat-icon-button
                     [matMenuTriggerFor]="rowMenu"
                     [matMenuTriggerData]="{ x: x }"
-                    [attr.aria-label]="'More for ' + x.name"
+                    [attr.aria-label]="'Actions for ' + x.name"
                   >
                     <mat-icon>more_vert</mat-icon>
                   </button>
@@ -161,16 +165,20 @@ import { ExhibitorDialogComponent, ExhibitorDialogData } from './exhibitor-dialo
           @if (eventFilter()) {
             <app-empty-state
               icon="filter_alt_off"
-              heading="No exhibitor is registered for this event"
-              text="Show every event to see the others."
+              heading="No exhibitors registered for this event"
+              text="Clear the filter to see exhibitors for every event."
             >
-              <button mat-stroked-button (click)="setEvent('')">Every event</button>
+              <button mat-stroked-button (click)="setEvent('')">Show all events</button>
             </app-empty-state>
           } @else {
             <app-empty-state
               icon="storefront"
               heading="No exhibitors yet"
-              text="Add the companies that take stalls, then register them for events."
+              [text]="
+                canManage()
+                  ? 'Add the first company that takes stalls, then register it for events.'
+                  : 'Exhibitors appear here once they are added.'
+              "
             >
               @if (canManage()) {
                 <button mat-flat-button (click)="create()">New exhibitor</button>
@@ -194,7 +202,7 @@ import { ExhibitorDialogComponent, ExhibitorDialogData } from './exhibitor-dialo
           }
           @if (wholeOrganisation()) {
             <span
-              [matTooltip]="x.eventIds.length ? 'Remove it from its events first' : ''"
+              [matTooltip]="x.eventIds.length ? 'Unregister it from its events first' : ''"
               matTooltipPosition="left"
             >
               <button
@@ -214,7 +222,7 @@ import { ExhibitorDialogComponent, ExhibitorDialogData } from './exhibitor-dialo
           @for (event of registrable(x); track event.id) {
             <button mat-menu-item (click)="register(x, event)">{{ event.name }}</button>
           } @empty {
-            <button mat-menu-item disabled>No other draft or scheduled event</button>
+            <button mat-menu-item disabled>No other draft or scheduled events</button>
           }
         </ng-template>
       </mat-menu>
@@ -226,8 +234,8 @@ import { ExhibitorDialogComponent, ExhibitorDialogData } from './exhibitor-dialo
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--card-border);
     }
     .event-filter {
       flex: 0 1 320px;
@@ -247,6 +255,13 @@ import { ExhibitorDialogComponent, ExhibitorDialogData } from './exhibitor-dialo
       gap: 2px;
       padding: 6px 0;
     }
+    /* The company name leads its row, in the display face. */
+    .company b {
+      font-family: var(--app-display-font);
+      font-size: 1.0625rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
     code {
       font-size: 12px;
     }
@@ -257,9 +272,13 @@ import { ExhibitorDialogComponent, ExhibitorDialogData } from './exhibitor-dialo
     }
     a.status-chip {
       text-decoration: none;
+      transition:
+        border-color 150ms ease-out,
+        color 150ms ease-out;
     }
     a.status-chip:hover {
-      text-decoration: underline;
+      border-color: var(--mat-sys-primary);
+      color: var(--mat-sys-primary);
     }
     .actions-cell {
       width: 56px;
@@ -361,7 +380,7 @@ export class ExhibitorsPageComponent {
       slug: this.slug(),
       events: this.openEvents(),
       eventId: this.eventFilter() || undefined,
-      eventRequired: scoped ? 'You add exhibitors to your own events' : undefined,
+      eventRequired: scoped ? 'You can add exhibitors to your own events only' : undefined,
     };
     this.dialog
       .open(ExhibitorDialogComponent, { data, maxWidth: '95vw' })
@@ -400,7 +419,7 @@ export class ExhibitorsPageComponent {
   protected async remove(exhibitor: ExhibitorView): Promise<void> {
     const confirmed = await this.confirm.confirm({
       title: `Delete ${exhibitor.name}?`,
-      message: 'The exhibitor is registered for no event. This cannot be undone.',
+      message: 'The company and its contact details are removed. This cannot be undone.',
       confirmLabel: 'Delete',
       destructive: true,
     });

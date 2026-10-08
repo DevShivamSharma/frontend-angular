@@ -175,7 +175,7 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
                   />
                 </label>
               } @else {
-                <a class="hall panel" [routerLink]="['halls', hall.id]">
+                <a class="hall panel card-link" [routerLink]="['halls', hall.id]">
                   <ng-container
                     [ngTemplateOutlet]="hallCard"
                     [ngTemplateOutletContext]="{ $implicit: hall }"
@@ -239,13 +239,16 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
       margin: 0;
       padding: 0;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
     }
+    /* A hall card: the hall's own outline as its picture, then its name and facts. */
     .hall {
-      display: flex;
+      position: relative;
+      display: grid;
+      grid-template-rows: auto 1fr;
       gap: 16px;
-      align-items: center;
+      padding: 14px 14px 20px;
       color: inherit;
       text-decoration: none;
       height: 100%;
@@ -267,42 +270,91 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
     }
     label.hall {
       cursor: pointer;
+      transition: border-color 150ms ease-out;
+    }
+    label.hall:hover {
+      border-color: var(--card-hover-border);
+    }
+    /* While selecting, the checkbox sits on the corner of the hall's picture. */
+    label.hall mat-checkbox {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 1;
     }
     .hall.checked {
       border-color: var(--mat-sys-primary);
       box-shadow: inset 0 0 0 1px var(--mat-sys-primary);
       background: var(--mat-sys-surface-container-high);
     }
-    .hall:hover,
-    .hall:focus-visible {
-      border-color: var(--mat-sys-primary);
-    }
+    /* The picture: the outline on a blueprint grid, lit from one corner. */
     .shape {
-      flex: none;
-      width: 72px;
-      height: 56px;
+      display: grid;
+      place-items: center;
+      height: 132px;
+      padding: 18px;
+      box-sizing: border-box;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      background:
+        linear-gradient(
+            to right,
+            color-mix(in srgb, var(--mat-sys-primary) 10%, transparent) 1px,
+            transparent 1px
+          )
+          0 0 / 16px 16px,
+        linear-gradient(
+            to bottom,
+            color-mix(in srgb, var(--mat-sys-primary) 10%, transparent) 1px,
+            transparent 1px
+          )
+          0 0 / 16px 16px,
+        radial-gradient(
+          120% 100% at 0% 0%,
+          color-mix(in srgb, var(--mat-sys-primary) 12%, transparent),
+          transparent 60%
+        ),
+        var(--mat-sys-surface-container);
     }
     .shape svg {
       width: 100%;
       height: 100%;
+      transition: transform 700ms ease-out;
+    }
+    a.hall:hover .shape svg,
+    a.hall:focus-visible .shape svg {
+      transform: scale(1.05);
     }
     .shape rect {
-      fill: var(--mat-sys-primary-container);
+      fill: color-mix(in srgb, var(--mat-sys-primary-container) 75%, transparent);
       stroke: var(--mat-sys-primary);
       stroke-width: 2;
       vector-effect: non-scaling-stroke;
     }
     .body {
       display: grid;
-      gap: 2px;
+      gap: 4px;
       min-width: 0;
+      padding: 0 6px;
     }
     .name {
-      font: var(--mat-sys-title-medium);
+      font-family: var(--app-display-font);
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.015em;
       display: flex;
       gap: 8px;
       align-items: center;
       flex-wrap: wrap;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .shape svg {
+        transition: none;
+      }
+      a.hall:hover .shape svg,
+      a.hall:focus-visible .shape svg {
+        transform: none;
+      }
     }
     .facts {
       font-variant-numeric: tabular-nums;

@@ -126,14 +126,51 @@ const LEGEND: Record<StallMapViewer, { look: StallLook; label: string }[]> = {
     </svg>
     <p class="muted small key">
       @for (k of legend(); track k.look) {
-        <span class="k" [class]="k.look"></span> {{ k.label }}
+        <span class="item"><span class="k" [class]="k.look"></span>{{ k.label }}</span>
       }
-      <span class="hint">Open sides are drawn white.</span>
+      <span class="item hint"><span class="k open-key"></span>Dashed edges are open sides</span>
     </p>
   `,
   styles: `
+    /*
+     * Stall states, from theme tokens only so light, dark and organisation themes all work.
+     * Each look sets a fill, a text colour on that fill, and an edge:
+     *   free    primary-container   / on-primary-container   / primary
+     *   held    tertiary-container  / on-tertiary-container  / tertiary
+     *   booked  error-container     / on-error-container     / error
+     *   own     primary             / on-primary             / primary
+     *   taken   surface-container-highest / on-surface-variant / outline
+     * The legend swatches read the same properties, so they always match the map.
+     */
     :host {
       display: block;
+      /* AREA_COLORS.outside reads this, as on the venue floor view. */
+      --floor-outside: var(--mat-sys-surface-container);
+    }
+    .free {
+      --stall-fill: var(--mat-sys-primary-container);
+      --stall-ink: var(--mat-sys-on-primary-container);
+      --stall-edge: var(--mat-sys-primary);
+    }
+    .held {
+      --stall-fill: var(--mat-sys-tertiary-container);
+      --stall-ink: var(--mat-sys-on-tertiary-container);
+      --stall-edge: var(--mat-sys-tertiary);
+    }
+    .booked {
+      --stall-fill: var(--mat-sys-error-container);
+      --stall-ink: var(--mat-sys-on-error-container);
+      --stall-edge: var(--mat-sys-error);
+    }
+    .own {
+      --stall-fill: var(--mat-sys-primary);
+      --stall-ink: var(--mat-sys-on-primary);
+      --stall-edge: var(--mat-sys-primary);
+    }
+    .taken {
+      --stall-fill: var(--mat-sys-surface-container-highest);
+      --stall-ink: var(--mat-sys-on-surface-variant);
+      --stall-edge: var(--mat-sys-outline);
     }
     svg {
       display: block;
@@ -162,7 +199,8 @@ const LEGEND: Record<StallMapViewer, { look: StallLook; label: string }[]> = {
     }
     .object {
       fill-opacity: 0.6;
-      stroke: rgb(0 0 0 / 0.25);
+      stroke: var(--mat-sys-outline);
+      stroke-opacity: 0.5;
       stroke-width: 0.05;
     }
     .stall {
@@ -170,75 +208,69 @@ const LEGEND: Record<StallMapViewer, { look: StallLook; label: string }[]> = {
       outline: none;
     }
     .stall rect {
-      fill-opacity: 0.85;
-      stroke: rgb(0 0 0 / 0.45);
+      fill: var(--stall-fill);
+      stroke: var(--stall-edge);
       stroke-width: 0.08;
+      transition:
+        stroke 150ms ease-out,
+        stroke-width 150ms ease-out;
     }
-    .free rect,
-    .k.free {
-      fill: #2e7d32;
-      background: #2e7d32;
-    }
-    .held rect,
-    .k.held {
-      fill: #f9a825;
-      background: #f9a825;
-    }
-    .booked rect,
-    .k.booked {
-      fill: #c62828;
-      background: #c62828;
-    }
-    .own rect,
-    .k.own {
-      fill: #1e63c4;
-      background: #1e63c4;
-    }
-    .taken rect,
-    .k.taken {
-      fill: #757575;
-      background: #757575;
-    }
-    .stall:hover rect,
-    .stall:focus-visible rect {
+    .stall:hover rect {
       stroke: var(--mat-sys-on-surface);
       stroke-width: 0.15;
     }
-    /* Dark on every stall colour, held (amber) included. */
+    /* Keyboard focus: a heavier edge than hover, so it is never mistaken for it. */
+    .stall:focus-visible rect {
+      stroke: var(--mat-sys-on-surface);
+      stroke-width: 0.22;
+    }
     .stall.selected rect {
       stroke: var(--mat-sys-on-surface);
       stroke-width: 0.3;
     }
     .stall .open {
-      stroke: #fff;
-      stroke-width: 0.25;
+      stroke: var(--stall-ink);
+      stroke-width: 0.2;
+      stroke-dasharray: 0.4 0.25;
       pointer-events: none;
     }
     .stall text {
-      fill: #fff;
+      fill: var(--stall-ink);
       text-anchor: middle;
       dominant-baseline: middle;
       pointer-events: none;
     }
-    .stall.held text {
-      fill: #212121;
-    }
     .key {
       display: flex;
       flex-wrap: wrap;
+      gap: 8px 16px;
+      align-items: center;
+      margin: 12px 0 0;
+    }
+    .item {
+      display: inline-flex;
       gap: 6px;
       align-items: center;
-      margin: 8px 0 0;
     }
     .k {
       display: inline-block;
       width: 12px;
       height: 12px;
+      box-sizing: border-box;
       border-radius: 3px;
-      margin-left: 8px;
+      border: 1px solid var(--stall-edge);
+      background: var(--stall-fill);
     }
-    .hint {
-      margin-left: 12px;
+    .k.open-key {
+      border: none;
+      border-radius: 0;
+      height: 0;
+      border-top: 2px dashed var(--mat-sys-on-surface-variant);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .stall rect {
+        transition: none;
+      }
     }
   `,
 })
@@ -281,7 +313,7 @@ export class StallMapComponent {
   }
 
   protected areaColor(kind: string): string {
-    return (AREA_COLORS as Record<string, string>)[kind] ?? '#9e9e9e';
+    return (AREA_COLORS as Record<string, string>)[kind] ?? 'var(--mat-sys-outline)';
   }
 
   protected areaFill(a: FloorArea): string {

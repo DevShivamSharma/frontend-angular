@@ -59,7 +59,8 @@ export interface InviteDialogData {
         }
         @if (invitation.inviteUrl) {
           <p class="muted">
-            Email is not connected yet: pass this link on yourself. It works once, for 7 days.
+            Email sending is not set up yet, so share this link yourself. It works once and expires
+            in 7 days.
           </p>
           <app-copy-link [url]="invitation.inviteUrl" />
         }
@@ -74,7 +75,7 @@ export interface InviteDialogData {
           <mat-form-field>
             <mat-label>Email</mat-label>
             <input matInput type="email" formControlName="email" cdkFocusInitial />
-            <mat-error>A valid email address</mat-error>
+            <mat-error>Enter a valid email address</mat-error>
           </mat-form-field>
           <mat-form-field>
             <mat-label>Role</mat-label>
@@ -83,13 +84,13 @@ export interface InviteDialogData {
                 <mat-option [value]="role.id" [disabled]="!role.assignable">
                   {{ role.name }}
                   @if (!role.assignable) {
-                    <span class="muted"> — {{ role.reason }}</span>
+                    <span class="muted"> ({{ role.reason }})</span>
                   }
                 </mat-option>
               }
             </mat-select>
             @if (eventRole()) {
-              <mat-hint>An event role: the person works only on the events chosen below</mat-hint>
+              <mat-hint>An event role. The person works only on the events chosen below.</mat-hint>
             }
             <mat-error>Choose a role</mat-error>
           </mat-form-field>
@@ -102,9 +103,9 @@ export interface InviteDialogData {
                 }
               </mat-select>
               @if (!data.canSeeEvents) {
-                <mat-hint>Giving an event role needs permission to see events</mat-hint>
+                <mat-hint>You need permission to view events to give an event role</mat-hint>
               } @else if (!eventOptions().length) {
-                <mat-hint>There is no event to choose</mat-hint>
+                <mat-hint>No events are available to choose</mat-hint>
               }
               <mat-error>Choose the events this person works on</mat-error>
             </mat-form-field>
@@ -118,13 +119,13 @@ export interface InviteDialogData {
                 }
               </mat-select>
               @if (!data.canSeeExhibitors) {
-                <mat-hint>Choosing the exhibitor needs permission to see bookings</mat-hint>
+                <mat-hint>You need permission to view bookings to choose an exhibitor</mat-hint>
               } @else if (!chosenEvents().length) {
                 <mat-hint>Choose the events first</mat-hint>
               } @else if (!exhibitorOptions().length) {
-                <mat-hint>No exhibitor is registered for every chosen event</mat-hint>
+                <mat-hint>No exhibitor is registered for all the chosen events</mat-hint>
               } @else {
-                <mat-hint>This role books stalls for one exhibitor of the chosen events</mat-hint>
+                <mat-hint>This role books stalls on behalf of one exhibitor</mat-hint>
               }
               <mat-error>Choose the exhibitor this person books stalls for</mat-error>
             </mat-form-field>

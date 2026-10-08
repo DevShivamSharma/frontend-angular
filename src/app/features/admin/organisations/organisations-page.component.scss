@@ -3,8 +3,8 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--card-border);
 }
 
 .search {
@@ -34,7 +34,10 @@
 }
 
 .org-name {
-  font: var(--mat-sys-title-small);
+  font-family: var(--app-display-font);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--mat-sys-on-surface);
   text-decoration: none;
 
@@ -102,14 +105,37 @@ code {
 .chevron-cell {
   width: 40px;
   color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    transition:
+      transform 200ms ease-out,
+      color 200ms ease-out;
+  }
 }
 
+/* A row that opens its organisation: a wash of the colour, the chevron leans in. */
 .clickable {
   cursor: pointer;
-  transition: background-color 120ms ease;
+  transition: background-color 150ms ease-out;
 
   &:hover {
-    background: var(--mat-sys-surface-container-low);
+    background: color-mix(in srgb, var(--mat-sys-primary) 6%, transparent);
+
+    .chevron-cell mat-icon {
+      transform: translateX(3px);
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clickable,
+  .chevron-cell mat-icon {
+    transition: none;
+  }
+
+  .clickable:hover .chevron-cell mat-icon {
+    transform: none;
   }
 }
 

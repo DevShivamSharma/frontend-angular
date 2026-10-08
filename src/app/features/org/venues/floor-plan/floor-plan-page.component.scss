@@ -12,11 +12,18 @@
   padding: 24px;
 }
 h1 {
-  font: var(--mat-sys-headline-small);
+  font-family: var(--app-display-font);
+  font-size: clamp(1.875rem, 1.3rem + 1.5vw, 2.625rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
   margin: 14px 0 8px;
 }
 h2 {
   font: var(--mat-sys-title-large);
+  font-family: var(--app-display-font);
+  font-weight: 600;
+  letter-spacing: -0.015em;
   margin: 0 0 10px;
 }
 h3 {
@@ -58,9 +65,11 @@ summary {
   list-style: none;
   gap: 28px;
   margin: 24px 0;
-  padding: 16px 20px;
-  background: var(--fp-c);
-  border-radius: 12px;
+  padding: 16px 22px;
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  background: var(--card-surface);
+  box-shadow: var(--card-highlight);
 }
 .steps li {
   display: flex;
@@ -153,18 +162,35 @@ summary:focus-visible,
   height: 1px;
   clip-path: inset(50%);
 }
+/* The drop zone: a dashed card lit from its centre, whose edge answers the pointer. */
 .upload-card {
-  border: 2px dashed var(--fp-b);
-  border-radius: 16px;
-  background: var(--fp-s);
+  border: 2px dashed color-mix(in srgb, var(--fp-p) 35%, var(--fp-b));
+  border-radius: var(--card-radius);
+  background:
+    radial-gradient(
+      60% 70% at 50% 0%,
+      color-mix(in srgb, var(--fp-p) 10%, transparent),
+      transparent 70%
+    ),
+    var(--card-base);
   padding: 68px 24px;
   text-align: center;
+  transition: border-color 200ms ease-out;
+}
+.upload-card:hover {
+  border-color: var(--fp-p);
 }
 .upload-icon {
-  display: block;
-  font-size: 38px;
-  margin-bottom: 20px;
-  color: var(--fp-p);
+  display: inline-grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  border-radius: 22px;
+  font-size: 34px;
+  background: var(--card-icon-fill);
+  color: var(--mat-sys-on-primary-container);
+  box-shadow: var(--card-highlight);
 }
 .upload-card .file-picker {
   margin: 12px 0;
@@ -198,15 +224,17 @@ summary {
   gap: 20px;
   align-items: start;
 }
+/* The shared card surface (styles.scss). */
 .plan-card,
 .hall-selection,
 .review-panel,
 .save-card,
 .corrections {
-  border: 1px solid var(--fp-b);
-  border-radius: 12px;
-  background: var(--fp-s);
-  padding: 18px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  box-shadow: var(--card-highlight);
+  padding: 22px;
   min-width: 0;
 }
 .hall-option,
@@ -214,14 +242,24 @@ summary {
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid var(--fp-b);
-  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
   padding: 14px;
   margin: 12px 0;
 }
+.hall-option {
+  background: var(--card-base);
+  transition: border-color 150ms ease-out;
+}
+.hall-option:hover {
+  border-color: var(--card-hover-border);
+}
+/* A chosen hall: its edge and a soft wash in the organisation's colour. */
 .hall-option.selected {
   border-color: var(--fp-p);
-  background: var(--fp-c);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--fp-p) 10%, transparent), transparent 70%),
+    var(--card-base);
 }
 .hall-option svg,
 .save-row svg {

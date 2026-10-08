@@ -357,7 +357,7 @@ test('a hall with no plan yet invites the first stall', async ({ page }) => {
     plan: planView({ id: null, revision: 0, stalls: [] }),
   });
   await page.goto(PLAN_URL);
-  await expect(page.getByText('No stalls yet — add the first one', { exact: true })).toBeVisible();
+  await expect(page.getByText('No stalls yet. Add the first one.', { exact: true })).toBeVisible();
   await expect(page.getByText('Not saved yet', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Delete draft', exact: true })).toHaveCount(0);

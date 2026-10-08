@@ -55,23 +55,26 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
       <ul class="cards">
         @for (venue of venues(); track venue.id) {
           <li>
-            <a class="card panel" [routerLink]="[venue.id]">
-              <span class="icon" aria-hidden="true"><mat-icon>location_city</mat-icon></span>
+            <a class="card panel card-link" [routerLink]="[venue.id]">
+              <span class="card-top">
+                <span class="card-icon" aria-hidden="true"><mat-icon>location_city</mat-icon></span>
+                @if (venue.code) {
+                  <span class="status-chip is-neutral">{{ venue.code }}</span>
+                }
+              </span>
               <span class="body">
-                <span class="name">
-                  {{ venue.name }}
-                  @if (venue.code) {
-                    <span class="status-chip is-neutral">{{ venue.code }}</span>
-                  }
-                </span>
+                <span class="name">{{ venue.name }}</span>
                 @if (venue.address) {
                   <span class="muted address">{{ venue.address }}</span>
                 }
-                <span class="muted"
-                  >{{ venue.hallCount }} {{ venue.hallCount === 1 ? 'hall' : 'halls' }}</span
-                >
               </span>
-              <mat-icon class="chevron" aria-hidden="true">chevron_right</mat-icon>
+              <span class="card-foot">
+                <span class="count"
+                  >{{ venue.hallCount }}
+                  <span class="muted">{{ venue.hallCount === 1 ? 'hall' : 'halls' }}</span></span
+                >
+                <mat-icon class="go" aria-hidden="true">arrow_forward</mat-icon>
+              </span>
             </a>
           </li>
         }
@@ -79,58 +82,97 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
     </div>
   `,
   styles: `
+    /* A gapless grid: with an odd count the first venue takes the whole first row. */
     .cards {
       list-style: none;
       margin: 0;
       padding: 0;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: minmax(0, 1fr);
+      grid-auto-flow: dense;
       gap: 16px;
     }
+    @media (min-width: 760px) {
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .cards > li:first-child:nth-last-child(odd) {
+        grid-column: 1 / -1;
+      }
+    }
+    /* Lift, edge and corner glow on hover come from the shared card-link class. */
     .card {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      color: inherit;
-      text-decoration: none;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      min-height: 210px;
       height: 100%;
       box-sizing: border-box;
-      transition: border-color 120ms;
     }
-    .card:hover,
-    .card:focus-visible {
-      border-color: var(--mat-sys-primary);
-    }
-    .icon {
-      display: grid;
-      place-items: center;
-      width: 44px;
-      height: 44px;
-      flex: none;
-      border-radius: 12px;
-      background: var(--mat-sys-secondary-container);
-      color: var(--mat-sys-on-secondary-container);
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
     .body {
       display: grid;
-      gap: 2px;
+      gap: 4px;
       min-width: 0;
-      flex: 1;
     }
     .name {
-      font: var(--mat-sys-title-medium);
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
+      font-family: var(--app-display-font);
+      font-size: 1.5rem;
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      overflow-wrap: anywhere;
     }
     .address {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .chevron {
+    .card-foot {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    /* The number of halls, large, in the display face. */
+    .count {
+      font-family: var(--app-display-font);
+      font-size: 2rem;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .count .muted {
+      margin-left: 4px;
+      font: var(--mat-sys-body-large);
+      letter-spacing: 0;
+    }
+    .go {
+      align-self: center;
       color: var(--mat-sys-on-surface-variant);
+      transition:
+        transform 200ms ease-out,
+        color 200ms ease-out;
+    }
+    .card:hover .go,
+    .card:focus-visible .go {
+      transform: translateX(4px);
+      color: var(--mat-sys-primary);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .go {
+        transition: none;
+      }
+      .card:hover .go,
+      .card:focus-visible .go {
+        transform: none;
+      }
     }
   `,
 })

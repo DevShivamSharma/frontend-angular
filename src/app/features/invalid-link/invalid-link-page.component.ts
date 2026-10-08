@@ -20,29 +20,49 @@ import { MatIconModule } from '@angular/material/icon';
     </main>
   `,
   styles: `
+    /* A quiet stage: a soft glow of the platform's colour above a wide, calm message. */
     .frame {
       min-height: 100dvh;
       display: grid;
       align-content: center;
       justify-items: center;
-      gap: 12px;
+      gap: 16px;
       padding: 24px;
       text-align: center;
-      background: var(--mat-sys-surface-container-low);
+      background:
+        radial-gradient(
+          70% 50% at 50% 0%,
+          color-mix(in srgb, var(--mat-sys-primary) 12%, transparent),
+          transparent 70%
+        ),
+        var(--mat-sys-surface-container-low);
       box-sizing: border-box;
     }
+    /* The icon in a large lit tile, like the cards' own. */
     .icon {
-      width: 56px;
-      height: 56px;
-      font-size: 56px;
-      color: var(--mat-sys-primary);
+      width: 88px;
+      height: 88px;
+      margin-bottom: 8px;
+      font-size: 44px;
+      line-height: 88px;
+      text-align: center;
+      border-radius: 28px;
+      background: var(--card-icon-fill);
+      color: var(--mat-sys-on-primary-container);
+      box-shadow: var(--card-highlight);
     }
     h1 {
-      font: var(--mat-sys-headline-small);
+      font-family: var(--app-display-font);
+      font-size: clamp(1.875rem, 1.3rem + 1.8vw, 2.75rem);
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      text-wrap: balance;
     }
     p {
-      max-width: 440px;
+      max-width: 46ch;
       margin: 0;
+      font: var(--mat-sys-body-large);
     }
   `,
 })

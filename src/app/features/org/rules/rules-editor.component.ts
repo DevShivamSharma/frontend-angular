@@ -190,12 +190,21 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       margin: 0;
       padding: 0;
       display: grid;
-      gap: 14px;
+      gap: 10px;
     }
+    /* Each rule as a small tile of the shared card language. */
     .rules li {
       display: flex;
       gap: 14px;
       align-items: flex-start;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      background: var(--card-base);
+      transition: border-color 150ms ease-out;
+    }
+    .rules li:hover {
+      border-color: var(--card-hover-border);
     }
     .rules li.waiting {
       opacity: 0.8;

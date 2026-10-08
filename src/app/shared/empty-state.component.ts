@@ -21,30 +21,43 @@ import { MatIconModule } from '@angular/material/icon';
       display: grid;
       justify-items: center;
       gap: 8px;
-      padding: 40px 16px;
+      padding: 48px 16px;
       text-align: center;
     }
+    /* The icon sits in a tile lit from one corner by the organisation's colour. */
     .icon {
       display: grid;
       place-items: center;
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
-      background: var(--mat-sys-surface-container-high);
+      width: 72px;
+      height: 72px;
+      border-radius: 24px;
+      border: 1px solid
+        color-mix(in srgb, var(--mat-sys-primary) 14%, var(--mat-sys-outline-variant));
+      background:
+        radial-gradient(
+          circle at 30% 20%,
+          color-mix(in srgb, var(--mat-sys-primary) 20%, transparent),
+          transparent 70%
+        ),
+        var(--mat-sys-surface-container-high);
       color: var(--mat-sys-primary);
     }
     .icon mat-icon {
-      width: 32px;
-      height: 32px;
-      font-size: 32px;
+      width: 34px;
+      height: 34px;
+      font-size: 34px;
     }
     p {
       margin: 0;
-      max-width: 420px;
+      max-width: 46ch;
     }
     .title {
-      margin-top: 8px;
-      font: var(--mat-sys-title-medium);
+      margin-top: 12px;
+      font-family: var(--app-display-font);
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
     }
     .text {
       color: var(--mat-sys-on-surface-variant);

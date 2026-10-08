@@ -344,7 +344,7 @@ test('the event page schedules the event and books a free hall, not a taken one'
   await expect(page.getByRole('menuitem', { name: /Hall 1/ })).toHaveCount(0);
   await page.getByRole('menuitem', { name: /Hall 3/ }).click();
 
-  await expect(page.getByText('Hall 3 booked for India Book Fair.')).toBeVisible();
+  await expect(page.getByText('Hall 3 added to India Book Fair.')).toBeVisible();
   expect(calls.some((c) => c.method === 'PUT' && c.path.endsWith('/halls/hall-3'))).toBe(true);
   await expect(page.getByRole('heading', { name: 'Halls (2)' })).toBeVisible();
   await expect(page.getByRole('row').filter({ hasText: 'Hall 3' })).toContainText('Not started');

@@ -96,11 +96,11 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
           heading="Bookings"
           [subheading]="
             e.name +
-            ' · ' +
+            ' at ' +
             e.venue.name +
-            ' · ' +
+            ', ' +
             (e.startsOn | date: 'd MMM y') +
-            ' – ' +
+            ' - ' +
             (e.endsOn | date: 'd MMM y')
           "
         >
@@ -108,7 +108,8 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
             <span
               class="status-chip"
               [class.is-positive]="e.status === 'scheduled'"
-              [class.is-neutral]="e.status !== 'scheduled'"
+              [class.is-neutral]="e.status === 'draft'"
+              [class.is-warning]="e.status === 'cancelled'"
               >{{ eventStatusLabels[e.status] }}</span
             >
           </span>
@@ -121,7 +122,7 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
         <mat-progress-bar mode="indeterminate" />
         <div class="skeleton-layout" aria-busy="true" aria-label="Loading bookings">
           <div class="panel skeleton tall"></div>
-          <div class="panel skeleton"></div>
+          <div class="panel skeleton side-skeleton"></div>
           <div class="panel skeleton wide"></div>
         </div>
       } @else if (loadError(); as message) {
@@ -132,7 +133,9 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
         </div>
       } @else if (event(); as e) {
         @if (closedReason(); as reason) {
-          <p class="notice" role="status"><mat-icon>info</mat-icon>{{ reason }}</p>
+          <p class="notice" role="status">
+            <mat-icon>info</mat-icon><span>{{ reason }}</span>
+          </p>
         }
 
         @if (!e.halls.length) {
@@ -176,7 +179,7 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
                   } @else if (map(); as m) {
                     <div class="row bar">
                       <span class="muted small">
-                        {{ counts().free }} free · {{ counts().held }} held ·
+                        {{ counts().free }} free, {{ counts().held }} held,
                         {{ counts().booked }} booked
                       </span>
                       <span class="spacer"></span>
@@ -221,12 +224,15 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
                       >
                     </div>
                     <p class="muted small">
-                      {{ s.area | number: '1.0-2' }} m² · {{ s.width | number: '1.0-2' }} ×
-                      {{ s.depth | number: '1.0-2' }} m · {{ s.openSides.length }}
-                      {{ s.openSides.length === 1 ? 'side' : 'sides' }} open
-                      @if (s.stallType) {
-                        · {{ s.stallType === 'shell' ? 'shell scheme' : 'bare space' }}
-                      }
+                      {{ s.area | number: '1.0-2' }} m², {{ s.width | number: '1.0-2' }} ×
+                      {{ s.depth | number: '1.0-2' }} m, {{ s.openSides.length }}
+                      {{ s.openSides.length === 1 ? 'side' : 'sides' }} open{{
+                        s.stallType
+                          ? s.stallType === 'shell'
+                            ? ', shell scheme'
+                            : ', bare space'
+                          : ''
+                      }}
                     </p>
                     @if (selectedBooking(); as b) {
                       <dl class="facts">
@@ -243,7 +249,7 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
                           <dd>{{ b.note }}</dd>
                         }
                         @if (b.externalRef) {
-                          <dt>Venue ref.</dt>
+                          <dt>Venue reference</dt>
                           <dd>{{ b.externalRef }}</dd>
                         }
                         <dt>Created</dt>
@@ -280,8 +286,8 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
                       }
                     } @else if (s.booking) {
                       <p>
-                        {{ stallStateLabels[s.state] }} for {{ s.booking.exhibitor }}. Its details
-                        are not loaded yet.
+                        {{ stallStateLabels[s.state] }} for {{ s.booking.exhibitor }}. The booking
+                        details have not loaded yet.
                       </p>
                       <button mat-stroked-button (click)="refresh()">
                         <mat-icon>refresh</mat-icon>Reload
@@ -291,7 +297,7 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
                         <p class="muted">{{ reason }}</p>
                       } @else {
                         <p class="muted">
-                          Free. Book it for an exhibitor registered for the event.
+                          This stall is free. Book it for an exhibitor registered for the event.
                         </p>
                         <button mat-flat-button (click)="book(s)" [disabled]="busy()">
                           <mat-icon>add</mat-icon>Book this stall
@@ -299,7 +305,7 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
                       }
                     } @else {
                       <p class="muted">
-                        Free. Booking stalls needs the "Manage bookings" permission.
+                        This stall is free. Booking stalls needs the Manage bookings permission.
                       </p>
                     }
                   } @else {
@@ -495,34 +501,46 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
     }
     .notice {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       align-items: center;
       margin: 0;
       padding: 12px 16px;
       border-radius: 12px;
       background: var(--mat-sys-surface-container-high);
     }
+    .notice mat-icon {
+      flex: none;
+    }
+    .notice span {
+      max-width: 72ch;
+    }
     .layout {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 320px;
-      gap: 16px;
-      padding: 16px;
+      gap: 20px;
+      padding: 20px;
       align-items: start;
     }
     .bar {
       margin-bottom: 8px;
       min-height: 24px;
     }
+    /* The selected stall, as a card of the shared language beside the map. */
     .side {
       display: grid;
-      gap: 8px;
+      gap: 10px;
       align-content: start;
-      padding: 16px;
-      border-radius: 12px;
-      background: var(--mat-sys-surface-container-low);
+      padding: 20px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      background: var(--card-surface);
+      box-shadow: var(--card-highlight);
     }
     .side p {
       margin: 0;
+    }
+    .side .actions {
+      margin-top: 4px;
     }
     .hint {
       display: flex;
@@ -541,6 +559,8 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
     .facts dd {
       margin: 0;
       overflow-wrap: anywhere;
+      font-family: var(--app-display-font);
+      font-weight: 500;
     }
     .actions {
       display: flex;
@@ -555,9 +575,10 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
     }
     .unpublished {
       margin: -8px 0 0;
+      max-width: 72ch;
     }
     .list-bar {
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     .filter {
       width: 180px;
@@ -580,22 +601,17 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
       grid-column: 1 / -1;
       height: 160px;
     }
+    /* Static placeholders: the progress bar above shows that loading is under way. */
     .skeleton {
       background: var(--mat-sys-surface-container);
       border-color: transparent;
-      animation: pulse 1.2s ease-in-out infinite alternate;
+    }
+    .side-skeleton {
+      height: 200px;
     }
     .map-skeleton {
       height: 360px;
       border-radius: 12px;
-    }
-    @keyframes pulse {
-      from {
-        opacity: 0.5;
-      }
-      to {
-        opacity: 1;
-      }
     }
     @media (max-width: 1000px) {
       .layout,

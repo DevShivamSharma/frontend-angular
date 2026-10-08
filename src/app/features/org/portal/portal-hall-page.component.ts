@@ -84,14 +84,16 @@ import { StallMapComponent } from '../bookings/stall-map.component';
         </div>
       } @else if (map(); as m) {
         @if (closedReason(); as reason) {
-          <p class="notice" role="status"><mat-icon>lock</mat-icon>{{ reason }}</p>
+          <p class="notice" role="status">
+            <mat-icon>lock</mat-icon><span>{{ reason }}</span>
+          </p>
         }
 
         <div class="layout">
           <section class="panel stage" aria-label="Stall map">
             <div class="row bar">
               <span class="muted small"
-                >{{ freeCount() }} free of {{ m.stalls.length }} stalls</span
+                >{{ freeCount() }} of {{ m.stalls.length }} stalls free</span
               >
               <span class="spacer"></span>
               @if (refreshing()) {
@@ -129,12 +131,11 @@ import { StallMapComponent } from '../bookings/stall-map.component';
             @if (selected(); as s) {
               <h2 class="section-title">Stall {{ s.number }}</h2>
               <p class="muted small">
-                {{ s.area | number: '1.0-2' }} m² · {{ s.width | number: '1.0-2' }} ×
-                {{ s.depth | number: '1.0-2' }} m · {{ s.openSides.length }}
-                {{ s.openSides.length === 1 ? 'side' : 'sides' }} open
-                @if (s.stallType) {
-                  · {{ s.stallType === 'shell' ? 'shell scheme' : 'bare space' }}
-                }
+                {{ s.area | number: '1.0-2' }} m², {{ s.width | number: '1.0-2' }} ×
+                {{ s.depth | number: '1.0-2' }} m, {{ s.openSides.length }}
+                {{ s.openSides.length === 1 ? 'side' : 'sides' }} open{{
+                  s.stallType ? (s.stallType === 'shell' ? ', shell scheme' : ', bare space') : ''
+                }}
               </p>
               @if (s.booking?.own) {
                 @if (ownBooking(s); as b) {
@@ -161,8 +162,8 @@ import { StallMapComponent } from '../bookings/stall-map.component';
                     }
                   } @else if (b.status === 'confirmed') {
                     <p class="muted small">
-                      This booking is confirmed. A confirmed booking is cancelled by the organiser;
-                      contact them to change it.
+                      This booking is confirmed. Only the organiser can change or cancel it, so
+                      contact them if you need to.
                     </p>
                   }
                 } @else {
@@ -172,8 +173,8 @@ import { StallMapComponent } from '../bookings/stall-map.component';
                 <p>Taken by another exhibitor.</p>
               } @else if (m.bookable) {
                 <p class="muted small">
-                  Free. Holding it keeps it for you until it is confirmed; you can let go of a hold
-                  yourself.
+                  This stall is free. A hold keeps it for you until it is confirmed, and you can
+                  cancel your hold yourself.
                 </p>
                 <mat-form-field>
                   <mat-label>Note for the organiser</mat-label>
@@ -217,13 +218,19 @@ import { StallMapComponent } from '../bookings/stall-map.component';
     }
     .notice {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       align-items: center;
       margin: 0;
       padding: 12px 16px;
       border-radius: 12px;
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
+    }
+    .notice mat-icon {
+      flex: none;
+    }
+    .notice span {
+      max-width: 72ch;
     }
     .layout {
       display: grid;
@@ -250,13 +257,15 @@ import { StallMapComponent } from '../bookings/stall-map.component';
       gap: 8px;
       align-items: center;
     }
+    /* The held confirmation, in a lit tile of the organisation's colour. */
     .done {
       display: flex;
       gap: 12px;
-      padding: 12px;
-      border-radius: 12px;
-      background: var(--mat-sys-primary-container);
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--card-icon-fill);
       color: var(--mat-sys-on-primary-container);
+      box-shadow: var(--card-highlight);
     }
     .done mat-icon {
       flex: none;
@@ -274,22 +283,14 @@ import { StallMapComponent } from '../bookings/stall-map.component';
       margin: 0;
       overflow-wrap: anywhere;
     }
+    /* Static placeholders: the progress bar above shows that loading is under way. */
     .skeleton {
       height: 200px;
       background: var(--mat-sys-surface-container);
       border-color: transparent;
-      animation: pulse 1.2s ease-in-out infinite alternate;
     }
     .skeleton.tall {
       height: 420px;
-    }
-    @keyframes pulse {
-      from {
-        opacity: 0.5;
-      }
-      to {
-        opacity: 1;
-      }
     }
     @media (max-width: 1000px) {
       .layout {
@@ -342,13 +343,13 @@ export class PortalHallPageComponent implements OnInit {
       case 'cancelled':
         return `${map.event.name} is cancelled.`;
       default:
-        return 'Stalls cannot be held here right now.';
+        return 'Stalls cannot be held in this hall right now.';
     }
   });
   /** Who confirms a hold, as the organisation's booking mode says. */
   protected readonly confirmText = computed(() =>
     this.portal()?.bookingMode === 'hybrid_hold'
-      ? "The venue's own booking system takes the payment; once it reports the payment, the booking is confirmed. This platform takes no payment."
+      ? "The venue's own booking system takes the payment. Once it reports the payment, the booking is confirmed. This platform takes no payment."
       : 'The organiser confirms the booking. No payment is taken here.',
   );
 
@@ -440,8 +441,8 @@ export class PortalHallPageComponent implements OnInit {
 
   protected async cancel(b: BookingView): Promise<void> {
     const confirmed = await this.confirm.confirm({
-      title: `Let go of stall ${b.stall.number}?`,
-      message: `Your hold on stall ${b.stall.number} is cancelled and the stall is free for others. This cannot be undone.`,
+      title: `Cancel your hold on stall ${b.stall.number}?`,
+      message: `Stall ${b.stall.number} becomes free for other exhibitors. This cannot be undone.`,
       confirmLabel: 'Cancel my hold',
       destructive: true,
     });

@@ -67,20 +67,20 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
           <p class="notice" role="status">
             <mat-icon>lock</mat-icon>
             <span
-              >{{ p.closedReason }} You can see your events and bookings here; contact the organiser
-              to change a booking.</span
+              >{{ p.closedReason }} Your events and bookings stay visible here. To change a booking,
+              contact the organiser.</span
             >
           </p>
         }
 
         <section>
-          <h2 class="section-title">Your events</h2>
+          <h2 class="section-title">My events</h2>
           @if (!p.events.length) {
             <div class="panel">
               <app-empty-state
                 icon="event"
                 heading="You are not registered for an event yet"
-                text="Once the organiser registers your company for an event, its halls appear here."
+                text="The event organiser registers your company for their events. Once they do, each event and its halls appear here. If you expected one, contact the organiser."
               />
             </div>
           } @else {
@@ -92,16 +92,19 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
                     <span
                       class="status-chip"
                       [class.is-positive]="e.status === 'scheduled'"
-                      [class.is-neutral]="e.status !== 'scheduled'"
+                      [class.is-neutral]="e.status === 'draft'"
+                      [class.is-warning]="e.status === 'cancelled'"
                       >{{ eventStatusLabels[e.status] }}</span
                     >
                   </div>
                   <p class="muted">
-                    {{ e.venue }} · {{ e.startsOn | date: 'd MMM y' }} –
+                    {{ e.venue }} · {{ e.startsOn | date: 'd MMM y' }} -
                     {{ e.endsOn | date: 'd MMM y' }}
                   </p>
                   @if (e.status === 'draft') {
-                    <p class="muted small">Stalls can be held once the organiser schedules it.</p>
+                    <p class="muted small">
+                      Stalls can be held once the organiser schedules this event.
+                    </p>
                   }
                   @if (e.halls.length) {
                     <ul class="halls">
@@ -109,7 +112,7 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
                         <li>
                           @if (h.published) {
                             <a
-                              class="hall"
+                              class="hall card-link"
                               [routerLink]="[
                                 '/',
                                 slug(),
@@ -120,7 +123,9 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
                                 h.hallId,
                               ]"
                             >
-                              <mat-icon aria-hidden="true">grid_on</mat-icon>
+                              <span class="card-icon hall-icon" aria-hidden="true"
+                                ><mat-icon>grid_on</mat-icon></span
+                              >
                               <span class="hall-name">{{ h.name }}</span>
                               <span class="muted"
                                 >{{ h.freeStalls }} free
@@ -157,7 +162,7 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
                 [text]="
                   p.closedReason
                     ? 'Stalls the organiser books for you appear here.'
-                    : 'Open a hall above and hold a free stall; it appears here.'
+                    : 'Open a hall above and hold a free stall. Your holds and bookings appear here.'
                 "
               />
             </div>
@@ -207,7 +212,7 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
                         [disabled]="busy()"
                         [attr.aria-label]="'Cancel my hold on stall ' + b.stall.number"
                       >
-                        Cancel
+                        Cancel my hold
                       </button>
                     } @else if (b.status === 'confirmed') {
                       <span class="muted small">The organiser cancels confirmed bookings</span>
@@ -229,13 +234,19 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
     }
     .notice {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       align-items: center;
       margin: 0;
       padding: 12px 16px;
       border-radius: 12px;
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
+    }
+    .notice mat-icon {
+      flex: none;
+    }
+    .notice span {
+      max-width: 72ch;
     }
     .events {
       list-style: none;
@@ -248,43 +259,71 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
       margin: 4px 0 0;
     }
     .event-name {
-      font: var(--mat-sys-title-medium);
+      font-family: var(--app-display-font);
+      font-size: 1.375rem;
+      font-weight: 600;
+      letter-spacing: -0.015em;
       margin: 0;
     }
     .halls {
       list-style: none;
-      margin: 12px 0 0;
+      margin: 16px 0 0;
       padding: 0;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 8px;
+      gap: 12px;
     }
+    /* A hall to open: a small card; lift, edge and glow on hover come from card-link. */
     .hall {
       display: flex;
-      gap: 12px;
+      gap: 14px;
       align-items: center;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid var(--mat-sys-outline-variant);
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--card-border);
+      background: var(--card-base);
+      box-shadow: var(--card-highlight);
       color: inherit;
       text-decoration: none;
       height: 100%;
       box-sizing: border-box;
     }
-    a.hall:hover,
-    a.hall:focus-visible {
-      border-color: var(--mat-sys-primary);
+    .hall-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
     }
     .hall.off {
       border-style: dashed;
+      background: transparent;
+      box-shadow: none;
       color: var(--mat-sys-on-surface-variant);
     }
     .hall-name {
-      font: var(--mat-sys-title-small);
+      font-family: var(--app-display-font);
+      font-size: 1.0625rem;
+      font-weight: 600;
       flex: 1 1 auto;
     }
     .chevron {
       color: var(--mat-sys-on-surface-variant);
+      transition:
+        transform 200ms ease-out,
+        color 200ms ease-out;
+    }
+    a.hall:hover .chevron,
+    a.hall:focus-visible .chevron {
+      transform: translateX(3px);
+      color: var(--mat-sys-primary);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .chevron {
+        transition: none;
+      }
+      a.hall:hover .chevron,
+      a.hall:focus-visible .chevron {
+        transform: none;
+      }
     }
     .actions-cell {
       text-align: right;
@@ -294,19 +333,11 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
       display: grid;
       gap: 16px;
     }
+    /* Static placeholders: the progress bar above shows that loading is under way. */
     .skeleton {
       height: 120px;
       background: var(--mat-sys-surface-container);
       border-color: transparent;
-      animation: pulse 1.2s ease-in-out infinite alternate;
-    }
-    @keyframes pulse {
-      from {
-        opacity: 0.5;
-      }
-      to {
-        opacity: 1;
-      }
     }
   `,
 })
@@ -361,8 +392,8 @@ export class PortalPageComponent implements OnInit {
 
   protected async cancel(b: BookingView): Promise<void> {
     const confirmed = await this.confirm.confirm({
-      title: `Let go of stall ${b.stall.number}?`,
-      message: `Your hold on stall ${b.stall.number} (${b.hall.name}, ${b.event.name}) is cancelled and the stall is free for others. This cannot be undone.`,
+      title: `Cancel your hold on stall ${b.stall.number}?`,
+      message: `Stall ${b.stall.number} (${b.hall.name}, ${b.event.name}) becomes free for other exhibitors. This cannot be undone.`,
       confirmLabel: 'Cancel my hold',
       destructive: true,
     });

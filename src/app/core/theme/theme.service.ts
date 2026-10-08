@@ -14,6 +14,7 @@ export const PLATFORM_BRANDING: OrganisationBranding = {
 };
 
 const FONT_LINK_ID = 'org-font';
+const DISPLAY_FONT_LINK_ID = 'display-font';
 const DEFAULT_FAVICON = 'favicon.ico';
 
 /**
@@ -36,6 +37,7 @@ export class ThemeService {
     const root = this.document.documentElement;
     this.applyTo(root, branding);
     this.loadFont(branding.fontFamily);
+    this.loadDisplayFont();
     this.setFavicon(branding.faviconUrl);
   }
 
@@ -77,6 +79,22 @@ export class ThemeService {
     if (link.href !== href) {
       link.href = href;
     }
+  }
+
+  /**
+   * The display face of page and section titles, `--app-display-font`. Loaded once, with the
+   * first branding, beside the organisation's own font, which it never replaces; text it lacks
+   * falls back to the organisation's font.
+   */
+  private loadDisplayFont(): void {
+    if (this.document.getElementById(DISPLAY_FONT_LINK_ID)) {
+      return;
+    }
+    const link = this.document.createElement('link');
+    link.id = DISPLAY_FONT_LINK_ID;
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap';
+    this.document.head.appendChild(link);
   }
 
   private setFavicon(url: string | null): void {

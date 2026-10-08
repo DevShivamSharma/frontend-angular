@@ -12,7 +12,7 @@ export type StatTone = 'primary' | 'secondary' | 'tertiary' | 'error';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (link()) {
-      <a class="tile" [routerLink]="link()" [attr.aria-label]="label() + ': ' + value()">
+      <a class="tile card-link" [routerLink]="link()" [attr.aria-label]="label() + ': ' + value()">
         <ng-container [ngTemplateOutlet]="body" />
       </a>
     } @else {
@@ -38,52 +38,56 @@ export type StatTone = 'primary' | 'secondary' | 'tertiary' | 'error';
     :host {
       display: block;
     }
+    /* The shared card surface (styles.scss); a link tile also gets the card-link lift. */
     .tile {
       display: flex;
       align-items: flex-start;
       gap: 16px;
       height: 100%;
-      padding: 20px;
+      padding: 22px;
       box-sizing: border-box;
-      border-radius: 16px;
-      border: 1px solid var(--mat-sys-outline-variant);
-      background: var(--mat-sys-surface-container-lowest);
+      border-radius: var(--card-radius);
+      border: 1px solid var(--card-border);
+      background: var(--card-surface);
+      box-shadow: var(--card-highlight);
       color: inherit;
       text-decoration: none;
-      transition:
-        border-color 150ms ease,
-        box-shadow 150ms ease;
-    }
-    a.tile:hover {
-      border-color: var(--mat-sys-outline);
-      box-shadow: var(--mat-sys-level1);
-    }
-    a.tile:focus-visible {
-      outline: 2px solid var(--mat-sys-primary);
-      outline-offset: 2px;
     }
     .icon {
       display: grid;
       place-items: center;
       flex: none;
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      box-shadow: var(--card-highlight);
     }
     .tone-primary {
-      background: var(--mat-sys-primary-container);
+      background: var(--card-icon-fill);
       color: var(--mat-sys-on-primary-container);
     }
     .tone-secondary {
-      background: var(--mat-sys-secondary-container);
+      background: linear-gradient(
+        135deg,
+        var(--mat-sys-secondary-container),
+        color-mix(in srgb, var(--mat-sys-secondary-container) 60%, var(--mat-sys-primary-container))
+      );
       color: var(--mat-sys-on-secondary-container);
     }
     .tone-tertiary {
-      background: var(--mat-sys-tertiary-container);
+      background: linear-gradient(
+        135deg,
+        var(--mat-sys-tertiary-container),
+        color-mix(in srgb, var(--mat-sys-tertiary-container) 65%, var(--mat-sys-primary-container))
+      );
       color: var(--mat-sys-on-tertiary-container);
     }
     .tone-error {
-      background: var(--mat-sys-error-container);
+      background: linear-gradient(
+        135deg,
+        var(--mat-sys-error-container),
+        color-mix(in srgb, var(--mat-sys-error-container) 70%, var(--mat-sys-tertiary-container))
+      );
       color: var(--mat-sys-on-error-container);
     }
     .text {
@@ -96,8 +100,14 @@ export type StatTone = 'primary' | 'secondary' | 'tertiary' | 'error';
       font: var(--mat-sys-label-large);
       color: var(--mat-sys-on-surface-variant);
     }
+    /* The number is the point of the tile: large, in the display face. */
     .value {
-      font: var(--mat-sys-headline-medium);
+      margin: 6px 0 4px;
+      font-family: var(--app-display-font);
+      font-size: clamp(2rem, 1.6rem + 1vw, 2.75rem);
+      font-weight: 600;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
       font-variant-numeric: tabular-nums;
       color: var(--mat-sys-on-surface);
     }
@@ -108,6 +118,21 @@ export type StatTone = 'primary' | 'secondary' | 'tertiary' | 'error';
     .go {
       align-self: center;
       color: var(--mat-sys-on-surface-variant);
+      transition: transform 200ms ease-out;
+    }
+    a.tile:hover .go,
+    a.tile:focus-visible .go {
+      transform: translateX(4px);
+      color: var(--mat-sys-primary);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .go {
+        transition: none;
+      }
+      a.tile:hover .go,
+      a.tile:focus-visible .go {
+        transform: none;
+      }
     }
   `,
 })

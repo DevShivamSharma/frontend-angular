@@ -42,7 +42,7 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
     <div class="page">
       <app-page-header
         heading="Events"
-        subheading="Events, the halls they book and their dates; internal or external."
+        subheading="Your organisation's events, with their dates, venue and halls."
       >
         @if (canCreate()) {
           <button mat-flat-button (click)="create()"><mat-icon>add</mat-icon>New event</button>
@@ -113,7 +113,7 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
                 <td mat-cell *matCellDef="let e" class="dates">
                   {{ e.startsOn | date: 'd MMM y' }}
                   @if (e.endsOn !== e.startsOn) {
-                    – {{ e.endsOn | date: 'd MMM y' }}
+                    - {{ e.endsOn | date: 'd MMM y' }}
                   }
                 </td>
               </ng-container>
@@ -155,9 +155,9 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
             <app-empty-state
               icon="filter_alt_off"
               [heading]="'No ' + statusLabels[s].toLowerCase() + ' events'"
-              text="Show every status to see the others."
+              text="Clear the filter to see events with any status."
             >
-              <button mat-stroked-button (click)="setStatus('')">Show all</button>
+              <button mat-stroked-button (click)="setStatus('')">Show all events</button>
             </app-empty-state>
           } @else {
             <app-empty-state
@@ -165,8 +165,8 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
               heading="No events yet"
               [text]="
                 canCreate()
-                  ? 'Create an event, then book the halls of its venue for its dates.'
-                  : 'Events you work on appear here.'
+                  ? 'Create the first event, then add halls from its venue.'
+                  : 'Events you are assigned to will appear here.'
               "
             >
               @if (canCreate()) {
@@ -184,8 +184,8 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--card-border);
     }
     .count {
       margin-left: auto;
@@ -200,7 +200,10 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
       padding: 6px 0;
     }
     .event-name {
-      font: var(--mat-sys-title-small);
+      font-family: var(--app-display-font);
+      font-size: 1.0625rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
       color: var(--mat-sys-on-surface);
       text-decoration: none;
     }
@@ -236,12 +239,31 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
       width: 40px;
       color: var(--mat-sys-on-surface-variant);
     }
+    .chevron-cell mat-icon {
+      transition:
+        transform 200ms ease-out,
+        color 200ms ease-out;
+    }
     .clickable {
       cursor: pointer;
-      transition: background-color 120ms ease;
+      transition: background-color 150ms ease-out;
     }
+    /* A row that opens its event: a wash of the organisation's colour, the chevron leans in. */
     .clickable:hover {
-      background: var(--mat-sys-surface-container-low);
+      background: color-mix(in srgb, var(--mat-sys-primary) 6%, transparent);
+    }
+    .clickable:hover .chevron-cell mat-icon {
+      transform: translateX(3px);
+      color: var(--mat-sys-primary);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .clickable,
+      .chevron-cell mat-icon {
+        transition: none;
+      }
+      .clickable:hover .chevron-cell mat-icon {
+        transform: none;
+      }
     }
     .mat-mdc-cell:first-child,
     .mat-mdc-header-cell:first-child {

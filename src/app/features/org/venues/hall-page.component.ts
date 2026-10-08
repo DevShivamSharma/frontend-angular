@@ -204,19 +204,26 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
     }
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 300px;
-      gap: 16px;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 20px;
       align-items: start;
     }
     .plan-bar {
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
     .facts {
       font-variant-numeric: tabular-nums;
     }
+    /* The hall's size is the headline of its plan: large, in the display face. */
+    .facts b {
+      font-family: var(--app-display-font);
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
     .side {
       display: grid;
-      gap: 16px;
+      gap: 20px;
     }
     .kinds,
     .versions {
@@ -243,18 +250,34 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
     }
     .subtitle {
       font: var(--mat-sys-title-small);
-      margin: 16px 0 8px;
+      font-family: var(--app-display-font);
+      font-weight: 600;
+      margin: 18px 0 8px;
     }
     .swatch.zone {
       background: #4aa9db;
     }
     .versions li {
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid var(--mat-sys-outline-variant);
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      background: var(--card-base);
+      box-shadow: var(--card-highlight);
+      transition: border-color 150ms ease-out;
     }
+    .versions li:hover {
+      border-color: var(--card-hover-border);
+    }
+    /* The version on screen: its edge and a soft wash in the organisation's colour. */
     .versions li.active {
       border-color: var(--mat-sys-primary);
+      background:
+        linear-gradient(
+          135deg,
+          color-mix(in srgb, var(--mat-sys-primary) 10%, transparent),
+          transparent 70%
+        ),
+        var(--card-base);
     }
     .v-head {
       display: flex;

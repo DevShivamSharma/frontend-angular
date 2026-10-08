@@ -61,6 +61,13 @@ const STATUS_LABELS: Record<StallPlanStatus, string> = {
 
 const TYPE_LABELS: Record<StallType, string> = { shell: 'Shell scheme', bare: 'Bare space' };
 
+const SIDE_LABELS: Record<StallSide, string> = {
+  top: 'Top',
+  bottom: 'Bottom',
+  left: 'Left',
+  right: 'Right',
+};
+
 const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
   approve: 'Plan approved.',
   publish: 'Plan published: its stalls are open for booking.',
@@ -150,24 +157,41 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
           @if (actions().edit && dirty()) {
             <button mat-button (click)="discard()" [disabled]="busy()">Discard changes</button>
           }
+          <!-- One filled action: Save while there is something to save, else Approve. -->
           @if (actions().edit) {
-            <button
-              mat-flat-button
-              (click)="save()"
-              [disabled]="!dirty() || problems().length > 0 || busy()"
-            >
-              <mat-icon>save</mat-icon>Save
-            </button>
+            @if (dirty() || !actions().approve) {
+              <button
+                mat-flat-button
+                (click)="save()"
+                [disabled]="!dirty() || problems().length > 0 || busy()"
+              >
+                <mat-icon>save</mat-icon>Save
+              </button>
+            } @else {
+              <button
+                mat-stroked-button
+                (click)="save()"
+                [disabled]="!dirty() || problems().length > 0 || busy()"
+              >
+                <mat-icon>save</mat-icon>Save
+              </button>
+            }
           }
           @if (actions().approve) {
-            <button
-              mat-stroked-button
-              (click)="step('approve')"
-              [disabled]="dirty() || busy()"
-              [title]="dirty() ? 'Save your changes first' : ''"
-            >
-              <mat-icon>task_alt</mat-icon>Approve
-            </button>
+            @if (dirty()) {
+              <button
+                mat-stroked-button
+                (click)="step('approve')"
+                [disabled]="dirty() || busy()"
+                [title]="dirty() ? 'Save your changes first' : ''"
+              >
+                <mat-icon>task_alt</mat-icon>Approve
+              </button>
+            } @else {
+              <button mat-flat-button (click)="step('approve')" [disabled]="busy()">
+                <mat-icon>task_alt</mat-icon>Approve
+              </button>
+            }
           }
           @if (actions().publish) {
             <button mat-flat-button (click)="step('publish')" [disabled]="busy()">
@@ -217,7 +241,7 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
                   <span class="muted small">
                     @if (actions().edit) {
                       Click the floor to place a {{ newStall().width }} × {{ newStall().depth }} m
-                      stall; click a stall to change it.
+                      stall. Click a stall to change it.
                     } @else {
                       Click a stall to see it.
                     }
@@ -232,11 +256,11 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
                 <app-empty-state
                   class="stage-empty"
                   icon="grid_view"
-                  [heading]="actions().edit ? 'No stalls yet — add the first one' : 'No stalls yet'"
+                  [heading]="actions().edit ? 'No stalls yet. Add the first one.' : 'No stalls yet'"
                   [text]="
                     actions().edit
-                      ? 'Click the floor where it stands, or give its position under New stall.'
-                      : 'This plan has no stalls.'
+                      ? 'Click the floor where it should stand, or enter its position under New stall.'
+                      : 'Nobody has drawn stalls on this plan yet.'
                   "
                 />
               }
@@ -342,9 +366,12 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
                 }
               </svg>
               <p class="muted small key">
-                <span class="k stall-k"></span> stall (open side drawn white)
-                <span class="k bad-k"></span> breaks a rule <span class="k aside-k"></span> set
-                aside with a reason
+                <span class="key-item"><span class="k stall-k"></span>Stall</span>
+                <span class="key-item"><span class="k bad-k"></span>Breaks a rule</span>
+                <span class="key-item"><span class="k aside-k"></span>Rule set aside</span>
+                <span class="key-item"
+                  ><span class="k open-k"></span>Dashed edges are open sides</span
+                >
               </p>
             </section>
 
@@ -522,7 +549,7 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
                     aria-label="Open sides"
                   >
                     @for (side of sides; track side) {
-                      <mat-button-toggle [value]="side">{{ side }}</mat-button-toggle>
+                      <mat-button-toggle [value]="side">{{ sideLabels[side] }}</mat-button-toggle>
                     }
                   </mat-button-toggle-group>
                 } @else {
@@ -535,7 +562,7 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
                       {{ s.width * s.depth | number: '1.0-2' }} m²
                     </dd>
                     <dt>Open sides</dt>
-                    <dd>{{ s.openSides.length ? s.openSides.join(', ') : 'None' }}</dd>
+                    <dd>{{ s.openSides.length ? sideList(s.openSides) : 'None' }}</dd>
                     <dt>Type</dt>
                     <dd>{{ s.stallType ? typeLabels[s.stallType] : 'Not set' }}</dd>
                   </dl>
@@ -586,6 +613,11 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
     </div>
   `,
   styles: `
+    :host {
+      display: block;
+      /* AREA_COLORS.outside reads this, as on the venue floor view and the booking map. */
+      --floor-outside: var(--mat-sys-surface-container);
+    }
     .back {
       justify-self: start;
       margin-bottom: -16px;
@@ -620,12 +652,18 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
       align-items: center;
       margin: -8px 0;
     }
+    .read-only span {
+      max-width: 65ch;
+    }
     .problems {
       margin: -8px 0;
-      padding: 10px 16px 10px 32px;
+      padding: 12px 16px 12px 32px;
       border-radius: 12px;
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
+    }
+    .problems li {
+      max-width: 65ch;
     }
     .layout {
       display: grid;
@@ -674,46 +712,75 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
     }
     .object {
       fill-opacity: 0.6;
-      stroke: rgb(0 0 0 / 0.25);
+      stroke: var(--mat-sys-outline);
+      stroke-opacity: 0.5;
       stroke-width: 0.05;
     }
+    /* Theme tokens only, so the floor reads the same in light and dark mode. */
     .violation {
-      fill: #e53935;
-      fill-opacity: 0.35;
-      stroke: #b71c1c;
+      fill: var(--mat-sys-error);
+      fill-opacity: 0.3;
+      stroke: var(--mat-sys-error);
       stroke-width: 0.08;
       pointer-events: none;
     }
     .violation.aside {
-      fill: #f9a825;
-      stroke: #f57f17;
+      fill: var(--mat-sys-tertiary);
+      stroke: var(--mat-sys-tertiary);
     }
     .violation.focused {
-      stroke: #ffb300;
+      stroke: var(--mat-sys-on-surface);
       stroke-width: 0.25;
     }
-    .stall rect {
-      fill: #1e63c4;
-      fill-opacity: 0.8;
-      stroke: #0d3a78;
-      stroke-width: 0.08;
+    /*
+     * Stall looks, the same tokens as the booking stall map (bookings/stall-map.component.ts):
+     * a stall as "own" there (primary), a stall breaking a rule as "booked" (error-container),
+     * a rule set aside as "held" (tertiary-container). Each sets a fill, ink and edge.
+     */
+    .stall,
+    .stall-k {
+      --stall-fill: var(--mat-sys-primary);
+      --stall-ink: var(--mat-sys-on-primary);
+      --stall-edge: var(--mat-sys-primary);
+    }
+    .stall.bad,
+    .bad-k {
+      --stall-fill: var(--mat-sys-error-container);
+      --stall-ink: var(--mat-sys-on-error-container);
+      --stall-edge: var(--mat-sys-error);
+    }
+    .aside-k {
+      --stall-fill: var(--mat-sys-tertiary-container);
+      --stall-edge: var(--mat-sys-tertiary);
+    }
+    .stall {
       cursor: pointer;
     }
-    .stall.bad rect {
-      fill: #c62828;
+    .stall rect {
+      fill: var(--stall-fill);
+      stroke: var(--stall-edge);
+      stroke-width: 0.08;
+      transition:
+        stroke 150ms ease-out,
+        stroke-width 150ms ease-out;
+    }
+    .stall:hover rect {
+      stroke: var(--mat-sys-on-surface);
+      stroke-width: 0.15;
     }
     .stall.selected rect {
-      stroke: #ffb300;
-      stroke-width: 0.2;
+      stroke: var(--mat-sys-on-surface);
+      stroke-width: 0.3;
     }
     .stall .open {
-      stroke: #fff;
-      stroke-width: 0.25;
+      stroke: var(--stall-ink);
+      stroke-width: 0.2;
+      stroke-dasharray: 0.4 0.25;
       pointer-events: none;
     }
     .stall text {
       font-size: 0.9px;
-      fill: #fff;
+      fill: var(--stall-ink);
       text-anchor: middle;
       dominant-baseline: middle;
       pointer-events: none;
@@ -721,25 +788,29 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
     .key {
       display: flex;
       flex-wrap: wrap;
+      gap: 8px 16px;
+      align-items: center;
+      margin: 12px 0 0;
+    }
+    .key-item {
+      display: inline-flex;
       gap: 6px;
       align-items: center;
-      margin: 8px 0 0;
     }
     .k {
       display: inline-block;
       width: 12px;
       height: 12px;
+      box-sizing: border-box;
       border-radius: 3px;
-      margin-left: 8px;
+      border: 1px solid var(--stall-edge);
+      background: var(--stall-fill);
     }
-    .stall-k {
-      background: #1e63c4;
-    }
-    .bad-k {
-      background: #e53935;
-    }
-    .aside-k {
-      background: #f9a825;
+    .k.open-k {
+      border: none;
+      border-radius: 0;
+      height: 0;
+      border-top: 2px dashed var(--mat-sys-on-surface-variant);
     }
     .side {
       display: grid;
@@ -792,34 +863,28 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
       font: inherit;
       text-align: left;
       cursor: pointer;
+      transition:
+        background-color 150ms ease-out,
+        border-color 150ms ease-out;
     }
     .stall-item:hover,
     .stall-item:focus-visible {
       background: var(--mat-sys-surface-container-high);
     }
+    .stall-item:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 1px;
+    }
     .stall-item.selected {
-      border-color: #ffb300;
+      border-color: var(--mat-sys-primary);
     }
     .stall-item.bad b {
       color: var(--mat-sys-error);
     }
+    /* Static placeholders: the progress bar above already shows the page is loading. */
     .skeleton {
-      position: relative;
-      overflow: hidden;
       background: var(--mat-sys-surface-container-high);
       border-color: transparent;
-    }
-    .skeleton::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        var(--mat-sys-surface-container-highest),
-        transparent
-      );
-      animation: shimmer 1.4s infinite;
     }
     .skeleton-header {
       display: grid;
@@ -845,17 +910,15 @@ const DONE: Record<'approve' | 'publish' | 'reopen', string> = {
     .skeleton.block.tall {
       height: 280px;
     }
-    @keyframes shimmer {
-      from {
-        transform: translateX(-100%);
-      }
-      to {
-        transform: translateX(100%);
-      }
-    }
     @media (max-width: 1100px) {
       .layout {
         grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .stall rect,
+      .stall-item {
+        transition: none;
       }
     }
   `,
@@ -876,6 +939,7 @@ export class StallPlanPageComponent implements OnInit {
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly eventStatusLabels = EVENT_STATUS_LABELS;
   protected readonly typeLabels = TYPE_LABELS;
+  protected readonly sideLabels = SIDE_LABELS;
   protected readonly slug = this.context.slug;
 
   /** The plan as the server last returned it. */
@@ -1176,7 +1240,12 @@ export class StallPlanPageComponent implements OnInit {
   }
 
   protected areaColor(kind: string): string {
-    return (AREA_COLORS as Record<string, string>)[kind] ?? '#9e9e9e';
+    return (AREA_COLORS as Record<string, string>)[kind] ?? 'var(--mat-sys-outline)';
+  }
+
+  /** The open sides in words, e.g. "Bottom, Left". */
+  protected sideList(sides: readonly StallSide[]): string {
+    return sides.map((side) => SIDE_LABELS[side]).join(', ');
   }
 
   protected areaFill(a: FloorArea): string {

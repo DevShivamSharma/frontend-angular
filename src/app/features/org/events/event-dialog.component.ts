@@ -53,7 +53,7 @@ function daysInOrder(group: AbstractControl): ValidationErrors | null {
     <form [formGroup]="form" (ngSubmit)="submit()">
       <mat-dialog-content>
         @if (!data.event) {
-          <p class="muted intro">A new event starts as a draft. Book its halls next.</p>
+          <p class="muted intro">A new event starts as a draft. You can add its halls next.</p>
         }
         <mat-form-field class="full-width">
           <mat-label>Name</mat-label>
@@ -76,7 +76,7 @@ function daysInOrder(group: AbstractControl): ValidationErrors | null {
           <mat-form-field>
             <mat-label>Code</mat-label>
             <input matInput formControlName="code" maxlength="40" />
-            <mat-hint>Optional short name, e.g. IITF</mat-hint>
+            <mat-hint>Optional short name, for example IITF</mat-hint>
           </mat-form-field>
         </div>
         <div class="pair">
@@ -95,7 +95,7 @@ function daysInOrder(group: AbstractControl): ValidationErrors | null {
               <mat-option value="B2B">B2B</mat-option>
               <mat-option value="B2C">B2C</mat-option>
             </mat-select>
-            <mat-hint>The rules check stalls by it</mat-hint>
+            <mat-hint>Stall rules are checked against it</mat-hint>
           </mat-form-field>
         </div>
         <div class="pair">
@@ -123,7 +123,7 @@ function daysInOrder(group: AbstractControl): ValidationErrors | null {
             <mat-form-field>
               <mat-label>Organiser email</mat-label>
               <input matInput type="email" formControlName="organiserEmail" maxlength="254" />
-              <mat-error>A valid email address</mat-error>
+              <mat-error>Enter a valid email address</mat-error>
             </mat-form-field>
             <mat-form-field>
               <mat-label>Organiser phone</mat-label>
@@ -199,8 +199,8 @@ export class EventDialogComponent {
       return this.venuesLoaded() && !this.venues().length ? 'Add a venue first' : null;
     }
     return this.data.canChangeVenue
-      ? 'The venue can change only while the event books no hall'
-      : 'Only a member of the whole organisation changes the venue';
+      ? 'Remove the event’s halls to change the venue'
+      : 'Only whole-organisation members can change the venue';
   });
 
   protected readonly form = inject(NonNullableFormBuilder).group(

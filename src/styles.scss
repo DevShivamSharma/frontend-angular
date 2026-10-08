@@ -8,6 +8,46 @@
 html {
   color-scheme: light dark;
   --app-font-family: 'Inter', system-ui, sans-serif;
+  /* Page and section titles; ThemeService loads it with the branding. Body text keeps the org's. */
+  --app-display-font: 'Outfit', var(--app-font-family);
+
+  /*
+   * The card language, shared by every panel, tile and card: a lit corner in the organisation's
+   * colour, a faint sheen, a hairline highlight on the top edge, and on hover a lift with a
+   * shadow tinted by the same colour. Cards sit a step above the page in both themes.
+   */
+  --card-radius: 24px;
+  --card-border: color-mix(in srgb, var(--mat-sys-outline-variant) 85%, transparent);
+  --card-base: light-dark(
+    var(--mat-sys-surface-container-lowest),
+    var(--mat-sys-surface-container-low)
+  );
+  --card-surface:
+    radial-gradient(
+      120% 90% at 100% 0%,
+      color-mix(in srgb, var(--mat-sys-primary) 8%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--mat-sys-on-surface) 3%, transparent),
+      transparent 45%
+    ),
+    var(--card-base);
+  --card-highlight: inset 0 1px 0 color-mix(in srgb, var(--mat-sys-on-surface) 7%, transparent);
+  --card-hover-border: color-mix(
+    in srgb,
+    var(--mat-sys-primary) 45%,
+    var(--mat-sys-outline-variant)
+  );
+  --card-hover-shadow: 0 24px 48px -30px color-mix(in srgb, var(--mat-sys-primary) 60%, transparent);
+  /* Segmented filters (button toggles) as pills. */
+  --mat-button-toggle-shape: 999px;
+  --card-icon-fill: linear-gradient(
+    135deg,
+    var(--mat-sys-primary-container),
+    color-mix(in srgb, var(--mat-sys-primary-container) 55%, var(--mat-sys-tertiary-container))
+  );
 
   @include mat.theme(
     (
@@ -36,13 +76,14 @@ html {
   );
   @include mat.card-overrides(
     (
-      elevated-container-shape: 12px,
-      outlined-container-shape: 12px,
+      elevated-container-shape: 24px,
+      outlined-container-shape: 24px,
+      outlined-outline-color: var(--card-border),
     )
   );
   @include mat.dialog-overrides(
     (
-      container-shape: 16px,
+      container-shape: 24px,
     )
   );
   @include mat.chips-overrides(
@@ -123,20 +164,131 @@ a {
 .page {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 28px 32px 48px;
+  padding: 32px 32px 64px;
   display: grid;
   /* A shrinkable column: wide content (tables) scrolls inside its own box, never the page. */
   grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+  gap: 28px;
+  /* A soft glow of the organisation's colour behind the title; painted once, never animated. */
+  background: radial-gradient(
+      ellipse 55% 280px at 0% 0%,
+      color-mix(in srgb, var(--mat-sys-primary) 9%, transparent),
+      transparent 100%
+    )
+    no-repeat;
+}
+
+/*
+ * Each section of a page rises into place once, in a short stagger, as the page opens.
+ * Transform and opacity only; "backwards" lets go when it ends, so nothing stays transformed.
+ */
+@keyframes page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.page > * {
+  animation: page-rise 380ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+.page > :nth-child(2) {
+  animation-delay: 50ms;
+}
+.page > :nth-child(3) {
+  animation-delay: 100ms;
+}
+.page > :nth-child(4) {
+  animation-delay: 150ms;
+}
+.page > :nth-child(n + 5) {
+  animation-delay: 200ms;
 }
 
 /* A raised surface for a group of content: a table, a list, a form section. */
 .panel {
-  padding: 20px;
-  border-radius: 16px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface-container-lowest);
+  padding: 24px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface);
+  box-shadow: var(--card-highlight);
   min-width: 0;
+}
+
+/*
+ * A card that opens something: it lifts, its edge takes the organisation's colour, and a glow
+ * swells slowly from its corner (the ::after layer). Transform and opacity only.
+ */
+.card-link {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 200ms ease-out,
+    border-color 200ms ease-out,
+    box-shadow 200ms ease-out;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -30%;
+    width: 80%;
+    aspect-ratio: 1;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, var(--mat-sys-primary) 16%, transparent),
+      transparent
+    );
+    opacity: 0;
+    transform: scale(0.8);
+    transition:
+      opacity 500ms ease-out,
+      transform 700ms ease-out;
+  }
+
+  /* The doubled class outranks a card component's own border and shadow rules. */
+  &.card-link:hover,
+  &.card-link:focus-visible {
+    transform: translateY(-3px);
+    border-color: var(--card-hover-border);
+    box-shadow: var(--card-highlight), var(--card-hover-shadow);
+  }
+
+  &:hover::after,
+  &:focus-visible::after {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Material's own cards wear the same surface as panels. */
+.mat-mdc-card.mat-mdc-card-outlined {
+  background: var(--card-surface);
+  box-shadow: var(--card-highlight);
+}
+
+/* An icon in its own lit tile, the way cards and empty states show them. */
+.card-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--card-icon-fill);
+  color: var(--mat-sys-on-primary-container);
+  box-shadow: var(--card-highlight);
 }
 
 .panel-flush {
@@ -161,6 +313,14 @@ a {
 .mat-mdc-header-cell {
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* Rows answer the pointer; rows that open something add their own cursor. */
+.mat-mdc-row {
+  transition: background-color 150ms ease-out;
+}
+.mat-mdc-row:hover {
+  background: color-mix(in srgb, var(--mat-sys-on-surface) 4%, transparent);
 }
 
 .page-narrow {
@@ -194,6 +354,10 @@ a {
 
 .section-title {
   font: var(--mat-sys-title-medium);
+  font-family: var(--app-display-font);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 8px 0 12px;
 }
 
@@ -226,9 +390,12 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 10px;
+  padding: 3px 11px;
   border-radius: 999px;
+  /* A hairline in the chip's own text colour keeps it crisp on any surface. */
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
   font: var(--mat-sys-label-medium);
+  font-weight: 600;
   background: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
   white-space: nowrap;
@@ -256,5 +423,21 @@ a {
 
   .panel {
     padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page > * {
+    animation: none;
+  }
+
+  .card-link,
+  .card-link::after {
+    transition: none;
+  }
+
+  .card-link.card-link:hover,
+  .card-link.card-link:focus-visible {
+    transform: none;
   }
 }

@@ -63,7 +63,7 @@ const GSTIN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
           <mat-form-field>
             <mat-label>Email</mat-label>
             <input matInput type="email" formControlName="email" maxlength="254" />
-            <mat-error>A valid email address</mat-error>
+            <mat-error>Enter a valid email address</mat-error>
           </mat-form-field>
           <mat-form-field>
             <mat-label>GSTIN</mat-label>
@@ -89,7 +89,7 @@ const GSTIN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
             @if (data.eventRequired) {
               <mat-hint>{{ data.eventRequired }}</mat-hint>
             } @else {
-              <mat-hint>Optional; it can be registered for events later</mat-hint>
+              <mat-hint>Optional. You can register it for events later.</mat-hint>
             }
             <mat-error>Choose the event it takes part in</mat-error>
           </mat-form-field>

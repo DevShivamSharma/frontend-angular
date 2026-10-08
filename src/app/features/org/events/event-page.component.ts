@@ -143,7 +143,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
             <dd>
               {{ e.startsOn | date: 'EEE d MMM y' }}
               @if (e.endsOn !== e.startsOn) {
-                – {{ e.endsOn | date: 'EEE d MMM y' }}
+                - {{ e.endsOn | date: 'EEE d MMM y' }}
               }
             </dd>
           </div>
@@ -169,7 +169,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                   <br /><span class="muted">{{ e.organiser.phone }}</span>
                 }
               } @else {
-                <span class="muted">Not given</span>
+                <span class="muted">Not set</span>
               }
             </dd>
           </div>
@@ -181,7 +181,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
           }
           @if (e.status === 'cancelled') {
             <div class="wide">
-              <dt>Why it was cancelled</dt>
+              <dt>Reason for cancelling</dt>
               <dd>{{ e.cancelledReason ?? 'No reason given.' }}</dd>
             </div>
           }
@@ -244,7 +244,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                     @if (hall.currentVersion > hall.floorVersion) {
                       <span class="floor-note small">
                         <mat-icon aria-hidden="true">info</mat-icon>
-                        The hall's floor is now version {{ hall.currentVersion }}; this event's
+                        The hall's floor is now version {{ hall.currentVersion }}. This event's
                         stalls stay on version {{ hall.floorVersion }}.
                       </span>
                     }
@@ -255,7 +255,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                       [disabled]="busy()"
                       (click)="removeHall(e, hall)"
                       [attr.aria-label]="'Remove ' + hall.name"
-                      matTooltip="Remove the hall from the event"
+                      matTooltip="Remove from this event"
                     >
                       <mat-icon>remove_circle_outline</mat-icon>
                     </button>
@@ -267,11 +267,11 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
             <div class="panel">
               <app-empty-state
                 icon="grid_on"
-                heading="No halls booked"
+                heading="No halls yet"
                 [text]="
                   canManageHalls()
-                    ? 'Book halls of ' + e.venue.name + ' for the event’s days.'
-                    : 'The event books no hall yet.'
+                    ? 'Add halls from ' + e.venue.name + ' for the event’s dates.'
+                    : 'No hall has been added to this event yet.'
                 "
               />
             </div>
@@ -292,7 +292,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                   <span class="muted"
                     >Booked by
                     @for (c of option.conflicts; track c.eventId) {
-                      {{ c.name }} ({{ c.startsOn | date: 'd MMM' }} –
+                      {{ c.name }} ({{ c.startsOn | date: 'd MMM' }} -
                       {{ c.endsOn | date: 'd MMM y' }}){{ $last ? '' : ', ' }}
                     }
                   </span>
@@ -307,7 +307,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                 !hallOptionsLoaded()
                   ? 'Loading the venue’s halls…'
                   : hallOptions().length
-                    ? 'Every hall of the venue is booked'
+                    ? 'Every hall in the venue is already on this event'
                     : 'The venue has no halls'
               }}
             </button>
@@ -317,7 +317,9 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
         @if (context.can('layouts.view')) {
           <section aria-labelledby="plans-title">
             <h2 class="section-title" id="plans-title">Stall plans</h2>
-            @if (plans().length) {
+            @if (plansLoading() && !plans().length) {
+              <p class="empty-state">Loading the stall plans…</p>
+            } @else if (plans().length) {
               <div class="table-wrap panel panel-flush">
                 <table mat-table [dataSource]="plans()" aria-labelledby="plans-title">
                   <ng-container matColumnDef="hall">
@@ -343,7 +345,11 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                   </ng-container>
                   <ng-container matColumnDef="revision">
                     <th mat-header-cell *matHeaderCellDef>Revision</th>
-                    <td mat-cell *matCellDef="let p">{{ p.planId ? p.revision : '—' }}</td>
+                    <td mat-cell *matCellDef="let p">
+                      @if (p.planId) {
+                        {{ p.revision }}
+                      }
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="stalls">
                     <th mat-header-cell *matHeaderCellDef>Stalls</th>
@@ -376,7 +382,9 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                 <button mat-button (click)="loadPlans()">Try again</button>
               </p>
             } @else {
-              <p class="empty-state">Each hall the event books gets its own stall plan.</p>
+              <p class="empty-state">
+                No stall plans yet. Each hall added to the event gets its own plan.
+              </p>
             }
           </section>
         }
@@ -404,7 +412,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                   <mat-icon>storefront</mat-icon>{{ x.name }}
                 </button>
               } @empty {
-                <button mat-menu-item disabled>Every exhibitor is registered</button>
+                <button mat-menu-item disabled>Every exhibitor is already registered</button>
               }
             </mat-menu>
             @if (exhibitors().length) {
@@ -414,7 +422,7 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                     <span class="body">
                       <b>{{ x.name }}</b>
                       <span class="muted small">
-                        {{ x.contactName ?? 'No contact' }}
+                        {{ x.contactName ?? 'No contact name' }}
                         @if (x.email) {
                           · {{ x.email }}
                         }
@@ -437,8 +445,21 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
                   </li>
                 }
               </ul>
+            } @else if (exhibitorsLoading()) {
+              <p class="empty-state">Loading the exhibitors…</p>
+            } @else if (exhibitorsFailed()) {
+              <p class="empty-state">
+                The exhibitors could not be loaded.
+                <button mat-button (click)="loadExhibitors()">Try again</button>
+              </p>
             } @else {
-              <p class="empty-state">No exhibitor is registered for this event yet.</p>
+              <p class="empty-state">
+                {{
+                  canRegister()
+                    ? 'No exhibitors yet. Register an existing exhibitor or create a new one.'
+                    : 'No exhibitors are registered for this event yet.'
+                }}
+              </p>
             }
           </section>
         }
@@ -464,11 +485,31 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
       font: var(--mat-sys-label-medium);
       white-space: nowrap;
     }
+    /*
+     * The facts as a gapless bento of tiles rather than one panel: three across on wide screens,
+     * the description and the cancel reason across the whole row.
+     */
     .facts {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 16px 24px;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
       margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      box-shadow: none;
+    }
+    @media (min-width: 900px) {
+      .facts {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    .facts > div {
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      background: var(--card-surface);
+      box-shadow: var(--card-highlight);
     }
     .facts .wide {
       grid-column: 1 / -1;
@@ -476,10 +517,21 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
     dt {
       font: var(--mat-sys-label-medium);
       color: var(--mat-sys-on-surface-variant);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     dd {
       margin: 0;
+      font-family: var(--app-display-font);
+      font-size: 1.0625rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+    dd .muted,
+    dd a[href^='mailto'] {
+      font-family: var(--app-font-family);
+      font-size: 0.875rem;
+      font-weight: 400;
+      letter-spacing: 0;
     }
     .description {
       white-space: pre-line;
@@ -518,7 +570,10 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
       min-width: 0;
     }
     .name {
-      font: var(--mat-sys-title-medium);
+      font-family: var(--app-display-font);
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.015em;
       display: flex;
       gap: 8px;
       align-items: center;
@@ -526,6 +581,11 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
     }
     .name a {
       color: inherit;
+      text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+      text-underline-offset: 4px;
+    }
+    .name a:hover {
+      color: var(--mat-sys-primary);
     }
     .figures {
       font-variant-numeric: tabular-nums;
@@ -567,7 +627,11 @@ const PLAN_STATUS_LABELS: Record<StallPlanStatus, string> = {
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 12px 20px;
+      padding: 14px 22px;
+      transition: background-color 150ms ease-out;
+    }
+    .exhibitors li:hover {
+      background: color-mix(in srgb, var(--mat-sys-on-surface) 4%, transparent);
     }
     .exhibitors li + li {
       border-top: 1px solid var(--mat-sys-outline-variant);
@@ -599,7 +663,10 @@ export class EventPageComponent implements OnInit {
   private readonly allExhibitors = signal<ExhibitorView[]>([]);
   protected readonly loading = signal(false);
   protected readonly failed = signal(false);
+  protected readonly plansLoading = signal(false);
   protected readonly plansFailed = signal(false);
+  protected readonly exhibitorsLoading = signal(false);
+  protected readonly exhibitorsFailed = signal(false);
   protected readonly busy = signal(false);
 
   protected readonly slug = computed(() => this.context.slug());
@@ -668,17 +735,22 @@ export class EventPageComponent implements OnInit {
 
   protected async loadPlans(): Promise<void> {
     if (!this.context.can('layouts.view')) return;
+    this.plansLoading.set(true);
     this.plansFailed.set(false);
     try {
       this.plans.set(await firstValueFrom(this.api.plans(this.slug(), this.eventId())));
     } catch {
       // The error interceptor has shown it.
       this.plansFailed.set(true);
+    } finally {
+      this.plansLoading.set(false);
     }
   }
 
-  private async loadExhibitors(): Promise<void> {
+  protected async loadExhibitors(): Promise<void> {
     if (!this.context.can('bookings.view')) return;
+    this.exhibitorsLoading.set(true);
+    this.exhibitorsFailed.set(false);
     try {
       const [registered, all] = await Promise.all([
         firstValueFrom(this.exhibitorsApi.exhibitors(this.slug(), this.eventId())),
@@ -690,6 +762,9 @@ export class EventPageComponent implements OnInit {
       this.allExhibitors.set(all);
     } catch {
       // The error interceptor has shown it.
+      this.exhibitorsFailed.set(true);
+    } finally {
+      this.exhibitorsLoading.set(false);
     }
   }
 
@@ -725,7 +800,7 @@ export class EventPageComponent implements OnInit {
   protected async complete(event: EventDetailView): Promise<void> {
     const confirmed = await this.confirm.confirm({
       title: `Complete ${event.name}?`,
-      message: 'A completed event no longer changes. This cannot be undone.',
+      message: 'A completed event can no longer be edited. This cannot be undone.',
       confirmLabel: 'Complete',
     });
     if (confirmed) await this.changeStatus(event, 'completed');
@@ -739,7 +814,7 @@ export class EventPageComponent implements OnInit {
         'Its active bookings must be cancelled first.',
       confirmLabel: 'Cancel event',
       destructive: true,
-      reasonLabel: 'Why is it cancelled?',
+      reasonLabel: 'Reason for cancelling',
     });
     if (reason !== null) await this.changeStatus(event, 'cancelled', reason);
   }
@@ -766,7 +841,7 @@ export class EventPageComponent implements OnInit {
   protected async remove(event: EventDetailView): Promise<void> {
     const confirmed = await this.confirm.confirm({
       title: `Delete ${event.name}?`,
-      message: 'The draft and the halls it books are released. This cannot be undone.',
+      message: 'The draft is deleted and its halls become free again. This cannot be undone.',
       confirmLabel: 'Delete',
       destructive: true,
     });
@@ -787,7 +862,7 @@ export class EventPageComponent implements OnInit {
     this.busy.set(true);
     try {
       this.event.set(await firstValueFrom(this.api.addHall(this.slug(), event.id, option.hallId)));
-      this.notifier.success(`${option.name} booked for ${event.name}.`);
+      this.notifier.success(`${option.name} added to ${event.name}.`);
       await Promise.all([this.loadHallOptions(), this.loadPlans()]);
     } catch {
       // The error interceptor has shown it; show what is free now.
@@ -799,8 +874,8 @@ export class EventPageComponent implements OnInit {
 
   protected async removeHall(event: EventDetailView, hall: EventHallView): Promise<void> {
     const confirmed = await this.confirm.confirm({
-      title: `Remove ${hall.name}?`,
-      message: `${event.name} no longer books it; the hall is free for other events on these days.`,
+      title: `Remove ${hall.name} from ${event.name}?`,
+      message: 'The hall becomes free for other events on these dates.',
       confirmLabel: 'Remove',
       destructive: true,
     });
@@ -822,7 +897,7 @@ export class EventPageComponent implements OnInit {
       slug: this.slug(),
       events: [event],
       eventId: event.id,
-      eventRequired: `Registered for ${event.name} at once`,
+      eventRequired: `Registered for ${event.name} when created`,
     };
     this.dialog
       .open(ExhibitorDialogComponent, { data, maxWidth: '95vw' })
@@ -851,7 +926,7 @@ export class EventPageComponent implements OnInit {
   protected async unregister(event: EventDetailView, exhibitor: ExhibitorView): Promise<void> {
     const confirmed = await this.confirm.confirm({
       title: `Unregister ${exhibitor.name}?`,
-      message: `${exhibitor.name} no longer takes part in ${event.name}. Not possible once it has bookings there.`,
+      message: `${exhibitor.name} will no longer take part in ${event.name}. This is not possible while it has bookings for this event.`,
       confirmLabel: 'Unregister',
       destructive: true,
     });

@@ -69,7 +69,7 @@ import type { EditStall } from './stall-plan-editing';
             }
           </li>
         } @empty {
-          <li class="muted">No rule is broken.</li>
+          <li class="muted">Every checked rule passes.</li>
         }
       </ul>
       @if (offRules().length) {
@@ -79,7 +79,9 @@ import type { EditStall } from './stall-plan-editing';
 
     <section class="panel" aria-label="Rules set aside">
       <h3 class="section-title">Rules set aside</h3>
-      <p class="muted small">Each is saved with the plan and shown with its reason at approval.</p>
+      <p class="muted small">
+        A rule set aside is saved with the plan, and its reason is shown at approval.
+      </p>
       <ul class="overrides">
         @for (o of overrides(); track $index) {
           <li>
@@ -127,7 +129,7 @@ import type { EditStall } from './stall-plan-editing';
                 <mat-option [value]="s.id">{{ s.number }}</mat-option>
               }
             </mat-select>
-            <mat-hint>None chosen: every stall. New stalls can be named once saved.</mat-hint>
+            <mat-hint>Leave empty for every stall. New stalls can be chosen once saved.</mat-hint>
           </mat-form-field>
           <mat-form-field>
             <mat-label>Reason (shown at approval)</mat-label>
@@ -191,13 +193,18 @@ import type { EditStall } from './stall-plan-editing';
       border-radius: 10px;
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
+      transition: box-shadow 150ms ease-out;
     }
     .violations li.aside {
       background: var(--mat-sys-surface-container-high);
       color: inherit;
     }
-    .violations li.focused {
-      box-shadow: inset 0 0 0 2px #ffb300;
+    .violations li:not(.muted):hover {
+      box-shadow: inset 0 0 0 1px currentColor;
+    }
+    /* Same weight as the hover rule above, so a picked row keeps its outline on hover. */
+    .violations li.focused:not(.muted) {
+      box-shadow: inset 0 0 0 2px var(--mat-sys-primary);
     }
     .violations li.muted,
     .overrides li.muted {
@@ -216,13 +223,16 @@ import type { EditStall } from './stall-plan-editing';
       text-align: left;
       cursor: pointer;
     }
+    .pick:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
     .aside-button {
       justify-self: start;
     }
     .ref {
-      font: var(--mat-sys-label-small);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font: var(--mat-sys-label-medium);
     }
     .overrides li {
       display: flex;
@@ -242,6 +252,11 @@ import type { EditStall } from './stall-plan-editing';
     }
     .override-form button {
       justify-self: start;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .violations li {
+        transition: none;
+      }
     }
   `,
 })

@@ -84,23 +84,36 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
       list-style: none;
       margin: 0;
       padding: 0;
+      display: grid;
+      gap: 8px;
     }
+    /* Each saved version as a small tile; the current one carries its chip. */
     .versions li {
       display: flex;
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      padding: 10px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      background: var(--card-base);
+      transition: border-color 150ms ease-out;
+    }
+    .versions li:hover {
+      border-color: var(--card-hover-border);
     }
     .version {
-      font: var(--mat-sys-label-large);
+      font-family: var(--app-display-font);
+      font-size: 1.0625rem;
+      font-weight: 600;
       min-width: 36px;
     }
+    /* That version's brand colour, as a pill with a hairline ring. */
     .swatch {
-      width: 16px;
+      width: 28px;
       height: 16px;
-      border-radius: 4px;
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px var(--card-border);
     }
   `,
 })

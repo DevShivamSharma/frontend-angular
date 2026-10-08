@@ -39,15 +39,15 @@ const WHOLE = /^[0-9]+$/;
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>SelfCare export · stall {{ data.booking.stall.number }}</h2>
+    <h2 mat-dialog-title>SelfCare export for stall {{ data.booking.stall.number }}</h2>
     @if (rows(); as payload) {
       <mat-dialog-content class="stack">
         <p class="muted">
           The held booking of {{ data.booking.exhibitor.name }} as SelfCare rows, in SelfCare's
-          pre-payment state. Copy them to the venue's system; nothing was sent or stored.
+          pre-payment state. Copy them into the venue's system. Nothing was sent or stored.
         </p>
         <div class="json-bar row">
-          <span class="muted small">T_STALLS · T_STALL_BOOKING · T_STALL_BOOKING_DETAIL</span>
+          <span class="muted small">T_STALLS, T_STALL_BOOKING and T_STALL_BOOKING_DETAIL</span>
           <span class="spacer"></span>
           <button mat-stroked-button type="button" (click)="copy()">
             <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon
@@ -64,8 +64,8 @@ const WHOLE = /^[0-9]+$/;
       <form [formGroup]="form" (ngSubmit)="submit()">
         <mat-dialog-content class="stack">
           <p class="muted">
-            Enter SelfCare's own ids and its price-master values when you have them. Every field is
-            optional and starts empty: without prices, the amounts stay empty in the rows.
+            Enter SelfCare's own ids and its price-master values if you have them. Every field is
+            optional and starts empty. Without prices, the amounts in the rows stay empty.
           </p>
 
           <h3 class="group">SelfCare ids</h3>
@@ -141,6 +141,7 @@ const WHOLE = /^[0-9]+$/;
     }
     p {
       margin: 0 0 12px;
+      max-width: 72ch;
     }
     .group {
       font: var(--mat-sys-title-small);

@@ -60,7 +60,7 @@ import { safeReturnUrl } from './safe-return-url';
         @if (busy()) {
           <mat-progress-bar mode="indeterminate" />
         }
-        <button mat-flat-button type="submit" [disabled]="busy()">Sign in</button>
+        <button mat-flat-button type="submit" class="submit" [disabled]="busy()">Sign in</button>
         <a mat-button [routerLink]="['..', 'forgot-password']">Forgot your password?</a>
       </form>
     </app-auth-layout>
@@ -70,10 +70,24 @@ import { safeReturnUrl } from './safe-return-url';
       display: grid;
       gap: 4px;
     }
-    .error,
     .notice {
-      margin: 0 0 8px;
-      color: var(--mat-sys-error);
+      margin: 0 0 24px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+    }
+    mat-progress-bar {
+      margin-bottom: 8px;
+      border-radius: 4px;
+    }
+    .submit {
+      width: 100%;
+      margin-top: 4px;
+    }
+    .stack > a {
+      justify-self: center;
+      margin-top: 8px;
     }
   `,
 })

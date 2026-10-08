@@ -49,8 +49,7 @@ export interface NewBookingDialogData {
     <form [formGroup]="form" (ngSubmit)="submit()">
       <mat-dialog-content class="stack">
         <p class="muted">
-          {{ data.hallName }} · {{ data.stall.area | number: '1.0-2' }} m² ·
-          {{ data.eventName }}
+          {{ data.eventName }}, {{ data.hallName }}, {{ data.stall.area | number: '1.0-2' }} m²
         </p>
         @if (data.exhibitors.length) {
           <mat-form-field>
@@ -60,13 +59,13 @@ export interface NewBookingDialogData {
                 <mat-option [value]="x.id">{{ x.name }}</mat-option>
               }
             </mat-select>
-            <mat-hint>Only exhibitors registered for this event can be booked for.</mat-hint>
+            <mat-hint>Only exhibitors registered for this event are listed.</mat-hint>
             <mat-error>Choose the exhibitor</mat-error>
           </mat-form-field>
         } @else {
           <p class="notice" role="status">
-            No exhibitor is registered for this event yet. Register the exhibitor for the event
-            first, then book the stall for it.
+            No exhibitor is registered for this event yet. Register the exhibitor for this event
+            first, then book the stall.
           </p>
         }
         <mat-form-field>
@@ -77,9 +76,9 @@ export interface NewBookingDialogData {
         <mat-checkbox formControlName="confirm">Confirm now</mat-checkbox>
         <p class="muted small">
           @if (form.controls.confirm.value) {
-            The stall is booked for the exhibitor at once.
+            The stall is booked for the exhibitor straight away.
           } @else {
-            The stall is held for the exhibitor until someone confirms or cancels it.
+            The stall is held for the exhibitor until the hold is confirmed or cancelled.
           }
           No payment is taken or recorded here.
         </p>

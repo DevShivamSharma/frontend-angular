@@ -55,7 +55,7 @@
         @if (o.latestOrganisations.length) {
           <div class="org-grid">
             @for (org of o.latestOrganisations; track org.id) {
-              <a class="org-card" [routerLink]="['/admin/organisations', org.id]">
+              <a class="org-card card-link" [routerLink]="['/admin/organisations', org.id]">
                 <span class="band" [style.background]="org.primaryColor" aria-hidden="true"></span>
                 <span class="org-body">
                   <app-brand-mark
