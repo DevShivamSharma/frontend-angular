@@ -104,6 +104,16 @@ export class OrgShellComponent {
     if (this.context.can('venues.view')) {
       items.push({ label: 'Venues', icon: 'location_city', link: ['/', slug, 'venues'] });
     }
+    if (this.context.can('events.view')) {
+      items.push({ label: 'Events', icon: 'event', link: ['/', slug, 'events'] });
+    }
+    if (this.context.can('bookings.view')) {
+      items.push({ label: 'Exhibitors', icon: 'storefront', link: ['/', slug, 'exhibitors'] });
+    }
+    // The portal is for an exhibitor's own users: a member linked to an exhibitor company.
+    if (this.context.can('stalls.book') && this.context.context()?.membership.scope.exhibitorId) {
+      items.push({ label: 'Book a stall', icon: 'add_business', link: ['/', slug, 'portal'] });
+    }
     if (this.context.can('rules.view')) {
       items.push({ label: 'Rules', icon: 'rule', link: ['/', slug, 'rules'] });
     }

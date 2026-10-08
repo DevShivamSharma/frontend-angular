@@ -170,9 +170,12 @@ export interface PermissionGroup {
   permissions: PermissionDefinition[];
 }
 
+/** Where a membership applies: an event role names its events; whole-organisation roles none. */
 export interface MembershipScope {
   eventIds?: string[];
   hallIds?: string[];
+  /** The exhibitor an event-scoped member who books stalls acts for. */
+  exhibitorId?: string;
 }
 
 export interface MemberView {
@@ -187,6 +190,8 @@ export interface InvitationView {
   id: string;
   email: string;
   role: RoleRef;
+  /** The events (and exhibitor) an event role is given for; empty for the whole organisation. */
+  scope: MembershipScope;
   invitedBy: { name: string; email: string } | null;
   createdAt: string;
   expiresAt: string;
@@ -196,6 +201,17 @@ export interface InvitationView {
 export interface CreatedInvitation extends InvitationView {
   /** Present only while email goes to the server log; the inviter passes it on. */
   inviteUrl: string | null;
+}
+
+/**
+ * An invitation. An event role names the events the person works on and, when it books
+ * stalls, the exhibitor it books for; a whole-organisation role names neither.
+ */
+export interface InviteInput {
+  email: string;
+  roleId: string;
+  eventIds?: string[];
+  exhibitorId?: string | null;
 }
 
 export interface InvitationPreview {
@@ -238,7 +254,7 @@ export interface OrgContext {
     bookingMode: BookingMode;
     features: OrganisationFeatures;
   };
-  membership: { id: string; role: RoleRef; scope: MembershipScope };
+  membership: { id: string; role: RoleRef & { scopeKind: RoleScopeKind }; scope: MembershipScope };
   permissions: string[];
 }
 
@@ -410,8 +426,12 @@ export interface ItpoImportPreview {
   rows: ItpoImportRowView[];
 }
 
+/** Field paths. Absent: recognised by name; an empty path: the file has no such field. */
 export interface JsonHallMapping {
+  /** CSV only: one row per hall (default), or one row per space grouped by hall. */
+  rows?: 'hall' | 'space';
   halls?: string;
+  id?: string;
   name?: string;
   width?: string;
   depth?: string;
@@ -419,6 +439,7 @@ export interface JsonHallMapping {
   areas?: string;
   zones?: string;
   unit?: string;
+  unitField?: string;
   metresPerUnit?: number;
   kinds?: Record<string, string>;
   yAxis?: 'down' | 'up';
@@ -428,6 +449,8 @@ export interface JsonHallMapping {
 }
 export interface JsonHallRow {
   externalId: string;
+  /** The hall's own ID in the file, when it has one. */
+  sourceId?: string | null;
   name: string;
   floor: HallFloor | null;
   width: number | null;
@@ -436,11 +459,37 @@ export interface JsonHallRow {
   warnings: string[];
   error: string | null;
   existing: { hallId: string; name: string; version: number; sameFloor: boolean } | null;
+  /** CSV rows read into this hall, when the file has one row per space. */
+  records?: number;
 }
+/** A field a CSV column can be mapped to. `width`/`depth` are the hall's, or each space's. */
+export type CsvField =
+  | 'id'
+  | 'name'
+  | 'width'
+  | 'depth'
+  | 'boundary'
+  | 'zones'
+  | 'areas'
+  | 'unitField'
+  | 'kind'
+  | 'x'
+  | 'y'
+  | 'label'
+  | 'geometry';
 export interface JsonHallPreview {
   rows: JsonHallRow[];
   fields: string[];
   collectionPaths: string[];
   areaTypes: string[];
   previewToken: string;
+  /** CSV only, below: the file's columns and how they are read. */
+  rowLayout?: 'hall' | 'space';
+  format?: 'itpo' | 'generic';
+  columns?: string[];
+  samples?: Record<string, string>;
+  suggested?: Partial<Record<CsvField, string>>;
+  autoColumns?: Record<string, string>;
+  missing?: (CsvField | 'unit')[];
+  layoutHint?: 'hall' | 'space';
 }

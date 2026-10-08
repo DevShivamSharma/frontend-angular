@@ -10,7 +10,10 @@ const rect = (w: number, h: number) => [
     ],
   ],
 ];
-async function mockCsv(page: Page, options: { missingUnits?: boolean; multiple?: boolean } = {}) {
+async function mockCsv(
+  page: Page,
+  options: { missingUnits?: boolean; multiple?: boolean; spaces?: boolean } = {},
+) {
   const previews: any[] = [],
     commits: any[] = [];
   await page.route('**/api/**', async (route) => {
@@ -54,6 +57,96 @@ async function mockCsv(page: Page, options: { missingUnits?: boolean; multiple?:
           permissions: ['venues.view', 'halls.import'],
         },
       });
+    if (path.endsWith('/halls/import/csv/preview') && options.spaces) {
+      const body = route.request().postDataJSON();
+      previews.push(body);
+      const spaces = body.mapping.rows === 'space';
+      const columns = ['Hall No.', 'Type', 'X (m)', 'Y (m)', 'Length (m)', 'Breadth (m)'];
+      const floor = {
+        schema: 'floor/1',
+        width: 20,
+        depth: 33,
+        areas: [],
+        labels: [],
+        iconGroups: [],
+        north: null,
+        legend: [],
+        geometry: {
+          schema: 'geometry/1',
+          unit: 'm',
+          boundary: rect(20, 33),
+          hallBoundary: rect(20, 30),
+          grid: { x: 0, y: 0, width: 1, height: 1, rotation: 0 },
+          objects: [],
+          zones: [
+            {
+              id: 'zone-0',
+              name: 'Entry foyer',
+              kind: 'foyer',
+              geometry: [
+                [
+                  [
+                    [0, 30],
+                    [5, 30],
+                    [5, 33],
+                    [0, 33],
+                    [0, 30],
+                  ],
+                ],
+              ],
+              shared: false,
+              hallKeys: [],
+            },
+          ],
+        },
+      };
+      return route.fulfill({
+        json: {
+          rows: spaces
+            ? [
+                {
+                  externalId: 'h11',
+                  sourceId: '11',
+                  name: 'Hall 11',
+                  width: 20,
+                  depth: 33,
+                  floorArea: 600,
+                  records: 3,
+                  warnings: ['1 stall row(s) were not imported: stalls come with the planner.'],
+                  error: null,
+                  existing: null,
+                  floor,
+                },
+              ]
+            : ['a', 'b', 'c'].map((id, i) => ({
+                externalId: id,
+                sourceId: '11',
+                name: `Hall ${i + 1}`,
+                width: i ? null : 20,
+                depth: i ? null : 30,
+                floorArea: i ? null : 600,
+                warnings: [],
+                error: i ? 'Duplicate hall identity in this file.' : null,
+                existing: null,
+                floor: i ? null : floor,
+              })),
+          previewToken: 'b'.repeat(64),
+          fields: [...columns, 'Name', 'Remarks'],
+          collectionPaths: [],
+          areaTypes: spaces ? ['Hall', 'Foyer', 'Stall'] : [],
+          rowLayout: spaces ? 'space' : 'hall',
+          format: 'generic',
+          columns: [...columns, 'Name', 'Remarks'],
+          samples: { 'Hall No.': '11', Type: 'Hall' },
+          suggested: spaces
+            ? { id: 'Hall No.', kind: 'Type', x: 'X (m)', y: 'Y (m)', width: 'Length (m)' }
+            : { id: 'Hall No.', width: 'Length (m)', depth: 'Breadth (m)' },
+          autoColumns: {},
+          missing: [],
+          ...(spaces ? {} : { layoutHint: 'space' }),
+        },
+      });
+    }
     if (path.endsWith('/halls/import/csv/preview')) {
       const body = route.request().postDataJSON();
       previews.push(body);
@@ -205,13 +298,47 @@ test('missing units are repaired by mapping and mapping edits invalidate the rev
   await page.getByLabel('Confirm reviewed CSV hall North hall', { exact: true }).check();
   await expect(page.getByRole('button', { name: 'Save 1 hall', exact: true })).toBeEnabled();
   await page.getByText('Units and field mapping', { exact: true }).click();
-  await page.getByLabel('CSV Width field', { exact: true }).fill('size.width');
+  await page.getByLabel('CSV Width column', { exact: true }).selectOption('height');
   await expect(page.getByRole('button', { name: 'Save 1 hall', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Update preview', exact: true }).click();
   await expect(
     page.getByLabel('Confirm reviewed CSV hall North hall', { exact: true }),
   ).not.toBeChecked();
-  expect(api.previews.at(-1).mapping).toMatchObject({ unit: 'm', width: 'size.width' });
+  expect(api.previews.at(-1).mapping).toMatchObject({ unit: 'm', width: 'height' });
+});
+test('rows that are spaces of halls are read as spaces after the layout hint', async ({ page }) => {
+  const api = await mockCsv(page, { spaces: true });
+  await openCsv(page);
+  await page.getByLabel('Choose venue CSV file').setInputFiles({
+    name: 'venue-spaces.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(
+      'Hall No.,Type,X (m),Y (m),Length (m),Breadth (m),Name,Remarks\r\n11,Hall,0,0,20,30,,\r\n11,Foyer,0,30,5,3,Entry foyer,\r\n11,Stall,2,2,3,3,A1,Booked\r\n',
+    ),
+  });
+  await expect(page.getByText(/Several rows share a hall ID/)).toBeVisible();
+  await page.getByRole('button', { name: 'Read one row per space', exact: true }).click();
+  await expect(page.getByText('Mapped records (1)', { exact: true })).toBeVisible();
+  expect(api.previews.at(-1).mapping).toMatchObject({ rows: 'space' });
+  const records = page.getByRole('table', { name: 'Mapped CSV records' });
+  await expect(records.getByRole('columnheader', { name: 'CSV rows' })).toBeVisible();
+  await expect(records.getByRole('cell', { name: '1 · 15 m²', exact: true })).toBeVisible();
+  await page.getByText('Units and field mapping', { exact: true }).click();
+  await expect(page.getByLabel('CSV Space type column', { exact: true })).toContainText(
+    'Automatic: Type',
+  );
+  await page.getByLabel('CSV Space name column', { exact: true }).selectOption('Remarks');
+  await page.getByRole('button', { name: 'Update preview', exact: true }).click();
+  expect(api.previews.at(-1).mapping).toMatchObject({
+    rows: 'space',
+    areaFields: { label: 'Remarks' },
+  });
+  await page.getByLabel('Confirm reviewed CSV hall Hall 11', { exact: true }).check();
+  await page.getByRole('button', { name: 'Save 1 hall', exact: true }).click();
+  expect(api.commits[0]).toMatchObject({
+    mapping: { rows: 'space' },
+    halls: [{ externalId: 'h11' }],
+  });
 });
 test('multiple CSV halls need separate previews before saving the selected batch', async ({
   page,

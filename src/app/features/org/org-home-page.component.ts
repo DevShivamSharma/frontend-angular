@@ -23,12 +23,6 @@ const UPCOMING: ModuleCard[] = [
     permission: 'venues.view',
   },
   {
-    title: 'Events',
-    icon: 'event',
-    text: 'Events, the halls they book and their dates; internal or external.',
-    permission: 'events.view',
-  },
-  {
     title: 'Stall layouts',
     icon: 'grid_view',
     text: 'Draft stalls with CAD tools, import an architect’s PDF, review and publish.',
@@ -63,6 +57,34 @@ const UPCOMING: ModuleCard[] = [
         </header>
 
         <div class="quick">
+          @if (context.can('stalls.book') && ctx.membership.scope.exhibitorId) {
+            <mat-card appearance="outlined">
+              <mat-card-content>
+                <mat-icon>add_business</mat-icon>
+                <h2>Book a stall</h2>
+                <p class="muted">
+                  Your company's events, the free stalls of each hall, and your holds.
+                </p>
+              </mat-card-content>
+              <mat-card-actions
+                ><a mat-button [routerLink]="['portal']">Choose a stall</a></mat-card-actions
+              >
+            </mat-card>
+          }
+          @if (context.can('events.view')) {
+            <mat-card appearance="outlined">
+              <mat-card-content>
+                <mat-icon>event</mat-icon>
+                <h2>Events</h2>
+                <p class="muted">
+                  Events, the halls they book and their dates; internal or external.
+                </p>
+              </mat-card-content>
+              <mat-card-actions
+                ><a mat-button [routerLink]="['events']">Open events</a></mat-card-actions
+              >
+            </mat-card>
+          }
           @if (context.can('team.view')) {
             <mat-card appearance="outlined">
               <mat-card-content>

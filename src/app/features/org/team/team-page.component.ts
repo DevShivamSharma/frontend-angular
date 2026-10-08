@@ -16,8 +16,12 @@ import type {
   CreatedInvitation,
   InvitationView,
   MemberView,
+  MembershipScope,
 } from '../../../core/api/api.models';
 import { AuthService } from '../../../core/auth/auth.service';
+import { EventsApi } from '../../../core/events/events-api.service';
+import type { EventView, ExhibitorView } from '../../../core/events/events.models';
+import { ExhibitorsApi } from '../../../core/events/exhibitors-api.service';
 import { OrgApi } from '../../../core/org/org-api.service';
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { ConfirmService } from '../../../core/ui/confirm.service';
@@ -25,6 +29,7 @@ import { Notifier } from '../../../core/ui/notifier.service';
 import { CopyLinkComponent } from '../../../shared/copy-link.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { InviteDialogComponent, InviteDialogData } from './invite-dialog.component';
+import { scopeLines } from './scope-lines';
 
 /**
  * The organisation's people. What a member can change follows their permissions, and never
@@ -51,6 +56,8 @@ import { InviteDialogComponent, InviteDialogData } from './invite-dialog.compone
 })
 export class TeamPageComponent {
   private readonly api = inject(OrgApi);
+  private readonly eventsApi = inject(EventsApi);
+  private readonly exhibitorsApi = inject(ExhibitorsApi);
   private readonly dialog = inject(MatDialog);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(Notifier);
@@ -60,6 +67,9 @@ export class TeamPageComponent {
   protected readonly members = signal<MemberView[]>([]);
   protected readonly invitations = signal<InvitationView[]>([]);
   protected readonly roles = signal<AssignableRoleView[]>([]);
+  /** To name the events and exhibitors of event roles, when the member may see them. */
+  private readonly events = signal<EventView[]>([]);
+  private readonly exhibitors = signal<ExhibitorView[]>([]);
   protected readonly resent = signal<CreatedInvitation | null>(null);
   protected readonly loading = signal(false);
 
@@ -74,6 +84,10 @@ export class TeamPageComponent {
       : ['email', 'role', 'invitedBy', 'expires'],
   );
   private readonly rolesById = computed(() => new Map(this.roles().map((role) => [role.id, role])));
+  private readonly eventNames = computed(() => new Map(this.events().map((e) => [e.id, e.name])));
+  private readonly exhibitorNames = computed(
+    () => new Map(this.exhibitors().map((x) => [x.id, x.name])),
+  );
 
   private get slug(): string {
     return this.context.slug();
@@ -81,6 +95,7 @@ export class TeamPageComponent {
 
   constructor() {
     void this.load();
+    void this.loadScopeNames();
   }
 
   private async load(): Promise<void> {
@@ -101,6 +116,29 @@ export class TeamPageComponent {
     }
   }
 
+  /** Separate from the team itself: the team shows even when these cannot be read. */
+  private async loadScopeNames(): Promise<void> {
+    try {
+      const [events, exhibitors] = await Promise.all([
+        this.context.can('events.view')
+          ? firstValueFrom(this.eventsApi.events(this.slug))
+          : Promise.resolve([]),
+        this.context.can('bookings.view')
+          ? firstValueFrom(this.exhibitorsApi.exhibitors(this.slug))
+          : Promise.resolve([]),
+      ]);
+      this.events.set(events);
+      this.exhibitors.set(exhibitors);
+    } catch {
+      // The error interceptor has shown it.
+    }
+  }
+
+  /** The events (and exhibitor) an event role is given for. */
+  protected scope(scope: MembershipScope): string[] {
+    return scopeLines(scope, this.eventNames(), this.exhibitorNames());
+  }
+
   protected isSelf(member: MemberView): boolean {
     return member.user.id === this.me()?.id;
   }
@@ -111,7 +149,14 @@ export class TeamPageComponent {
   }
 
   protected openInvite(): void {
-    const data: InviteDialogData = { slug: this.slug, roles: this.roles() };
+    const data: InviteDialogData = {
+      slug: this.slug,
+      roles: this.roles(),
+      events: this.events(),
+      exhibitors: this.exhibitors(),
+      canSeeEvents: this.context.can('events.view'),
+      canSeeExhibitors: this.context.can('bookings.view'),
+    };
     this.dialog
       .open(InviteDialogComponent, { data, autoFocus: 'first-tabbable' })
       .afterClosed()

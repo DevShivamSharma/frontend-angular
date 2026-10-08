@@ -11,6 +11,7 @@ import type {
   CreatedInvitation,
   InvitationPreview,
   InvitationView,
+  InviteInput,
   MemberView,
   OrganisationConfig,
   OrgContext,
@@ -59,8 +60,9 @@ export class OrgApi {
     return this.http.get<InvitationView[]>(`${this.org(slug)}/invitations`);
   }
 
-  invite(slug: string, email: string, roleId: string): Observable<CreatedInvitation> {
-    return this.http.post<CreatedInvitation>(`${this.org(slug)}/invitations`, { email, roleId });
+  /** An event role's invitation also names its events (and, to book stalls, the exhibitor). */
+  invite(slug: string, input: InviteInput): Observable<CreatedInvitation> {
+    return this.http.post<CreatedInvitation>(`${this.org(slug)}/invitations`, input);
   }
 
   resendInvitation(slug: string, invitationId: string): Observable<CreatedInvitation> {

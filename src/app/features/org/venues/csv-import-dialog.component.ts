@@ -14,12 +14,14 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { firstValueFrom } from 'rxjs';
 import type {
+  CsvField,
   JsonHallMapping,
   JsonHallPreview,
   JsonHallRow,
   ItpoImportResult,
 } from '../../../core/api/api.models';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
+import { geometryArea } from '../../../shared/floor/floor-view.component';
 import { ThreePlanComponent } from '../../../shared/floor/three-plan.component';
 import { ImportTourComponent } from '../../../shared/import-tour/import-tour.component';
 import { locateImportControl } from '../../../shared/import-tour/locate-import-control';
@@ -34,6 +36,12 @@ interface Choice {
   name: string;
   inspected: boolean;
 }
+interface MappingField {
+  key: CsvField;
+  label: string;
+  required: boolean;
+}
+type AreaField = 'x' | 'y' | 'width' | 'height' | 'kind' | 'label' | 'geometry';
 @Component({
   selector: 'app-csv-import-dialog',
   imports: [
@@ -89,19 +97,57 @@ interface Choice {
             />
           </label>
           <p class="muted">
-            Each CSV row becomes a separate hall. Layout exports with length, breadth, layout_data,
-            legends and annotations are recognised. Other column names can be mapped; geometry and
-            foyer cells may contain JSON arrays or objects.
+            A row is a whole hall, or one space of a hall (outline, foyer, pillar) grouped by its
+            hall column. Layout exports with length, breadth, layout_data, legends and annotations
+            are recognised. Other column names are suggested and can be mapped; geometry and foyer
+            cells may contain JSON arrays or objects.
           </p>
         } @else {
-          <p class="muted">{{ fileName() }} · {{ choices().length }} hall(s) found</p>
+          <p class="muted">
+            {{ fileName() }} · {{ choices().length }} hall(s) found
+            @if (preview()?.columns?.length) {
+              · {{ preview()!.columns!.length }} columns
+            }
+          </p>
+          @if (layoutHinted()) {
+            <p class="hint" role="status">
+              Several rows share a hall ID and have position and type columns. If each row is one
+              space of a hall (outline, foyer, pillar or stall), read the rows as spaces.
+              <button mat-stroked-button (click)="useSpaceRows()" [disabled]="busy()">
+                Read one row per space
+              </button>
+            </p>
+          }
           <details data-import-guide="mapping" [open]="mappingOpen()">
             <summary>Units and field mapping</summary>
-            <p class="muted">
-              Leave recognised fields on Automatic. Choose source units if they are missing from the
-              file.
-            </p>
+            @if (preview()?.format === 'itpo') {
+              <p class="muted">
+                Recognised layout export: its columns are read by their own names, so no mapping is
+                needed.
+              </p>
+            } @else {
+              <p class="muted">
+                Each field reads the column shown. Choose another column if a suggestion is wrong;
+                columns no field reads are ignored.
+                @if (mapping.rows === 'space') {
+                  A polygon column can replace position and size. Each hall needs a row of type Hall
+                  outline: its outline is never guessed from its spaces.
+                } @else {
+                  Width and depth are not needed when the file has a boundary polygon.
+                }
+              </p>
+            }
             <div class="fields">
+              <label
+                >Rows in this file<select
+                  aria-label="CSV row layout"
+                  [ngModel]="mapping.rows ?? 'hall'"
+                  (ngModelChange)="setLayout($event)"
+                >
+                  <option value="hall">One row per hall</option>
+                  <option value="space">One row per space, grouped by hall</option>
+                </select></label
+              >
               <label
                 >Source units<select
                   aria-label="CSV source units"
@@ -128,17 +174,45 @@ interface Choice {
                     (ngModelChange)="mappingChanged()"
                 /></label>
               }
-              @for (field of fields; track field.key) {
+            </div>
+            @if (missingLabels().length) {
+              <p class="error" role="alert">
+                Map the required column(s): {{ missingLabels().join(', ') }}.
+              </p>
+            }
+            <h3>Column for each field</h3>
+            <div class="fields">
+              @for (field of mappingFields; track field.key) {
                 <label
-                  >{{ field.label
-                  }}<input
-                    type="text"
-                    [attr.aria-label]="'CSV ' + field.label + ' field'"
-                    [ngModel]="mapping[field.key]"
-                    (ngModelChange)="setField(field.key, $event)"
-                    list="csv-fields"
-                    placeholder="Automatic"
-                /></label>
+                  ><span
+                    >{{ field.label }}
+                    @if (field.required) {
+                      <span class="required">required</span>
+                    }</span
+                  ><select
+                    [attr.aria-label]="'CSV ' + field.label + ' column'"
+                    [ngModel]="columnOf(field.key)"
+                    (ngModelChange)="setColumn(field.key, $event)"
+                    [disabled]="preview()?.format === 'itpo'"
+                  >
+                    <option [ngValue]="undefined">
+                      Automatic{{ suggestion(field.key) ? ': ' + suggestion(field.key) : '' }}
+                    </option>
+                    @if (!field.required) {
+                      <option value="">Not in this file</option>
+                    }
+                    @for (c of columnOptions.columns; track c) {
+                      <option [value]="c">{{ c }}</option>
+                    }
+                    @if (columnOptions.paths.length) {
+                      <optgroup label="Inside JSON cells">
+                        @for (p of columnOptions.paths; track p) {
+                          <option [value]="p">{{ p }}</option>
+                        }
+                      </optgroup>
+                    }
+                  </select></label
+                >
               }
             </div>
             <label
@@ -151,35 +225,62 @@ interface Choice {
                 <option value="up">Upwards (Cartesian coordinates)</option>
               </select></label
             >
-            <details>
-              <summary>Custom area fields</summary>
-              <p class="muted">
-                Use these only if each rectangle or polygon uses different field names. Paths are
-                relative to one area object.
-              </p>
-              <div class="fields">
-                @for (field of areaFields; track field.key) {
-                  <label
-                    >{{ field.label
-                    }}<input
-                      [attr.aria-label]="'CSV area ' + field.label + ' field'"
-                      [ngModel]="mapping.areaFields?.[field.key]"
-                      (ngModelChange)="setAreaField(field.key, $event)"
-                      placeholder="Automatic"
-                  /></label>
-                }
-              </div>
-            </details>
-            <datalist id="csv-fields">
-              @for (p of preview()?.fields ?? []; track p) {
-                <option [value]="p"></option>
-              }
-            </datalist>
+            @if (preview()?.columns?.length) {
+              <details>
+                <summary>Columns in this file ({{ preview()!.columns!.length }})</summary>
+                <div class="table-scroll">
+                  <table aria-label="CSV columns and how they are read">
+                    <thead>
+                      <tr>
+                        <th>Column</th>
+                        <th>First value</th>
+                        <th>Read as</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (c of preview()!.columns!; track c) {
+                        <tr>
+                          <td>{{ c }}</td>
+                          <td class="muted">{{ preview()?.samples?.[c] }}</td>
+                          <td [class.muted]="usageOf(c) === 'Not used'">{{ usageOf(c) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            }
+            @if (mapping.rows !== 'space') {
+              <details>
+                <summary>Custom area fields</summary>
+                <p class="muted">
+                  Use these only if each rectangle or polygon uses different field names. Paths are
+                  relative to one area object.
+                </p>
+                <div class="fields">
+                  @for (field of areaFields; track field.key) {
+                    <label
+                      >{{ field.label
+                      }}<input
+                        [attr.aria-label]="'CSV area ' + field.label + ' field'"
+                        [ngModel]="mapping.areaFields?.[field.key]"
+                        (ngModelChange)="setAreaField(field.key, $event)"
+                        placeholder="Automatic"
+                    /></label>
+                  }
+                </div>
+              </details>
+            }
             @if (preview()?.areaTypes?.length) {
-              <h3>Area meanings</h3>
+              <h3>{{ mapping.rows === 'space' ? 'Space types' : 'Area meanings' }}</h3>
               <p class="muted">
-                Choose a meaning for unknown types or colours. A colour is not assumed to be a
-                restriction.
+                @if (mapping.rows === 'space') {
+                  Choose what each space type is. Stall rows are listed but not imported: stalls
+                  come with the planner.
+                } @else {
+                  Choose a meaning for unknown types or colours. A colour is not assumed to be a
+                  restriction.
+                }
               </p>
               <div class="fields">
                 @for (t of preview()?.areaTypes ?? []; track t) {
@@ -191,6 +292,11 @@ interface Choice {
                       (ngModelChange)="setKind(t, $event)"
                     >
                       <option [ngValue]="undefined">Use source meaning</option>
+                      @if (mapping.rows === 'space') {
+                        @for (k of spaceRoles; track k.value) {
+                          <option [value]="k.value">{{ k.label }}</option>
+                        }
+                      }
                       @for (k of kinds; track k.value) {
                         <option [value]="k.value">{{ k.label }}</option>
                       }
@@ -206,6 +312,57 @@ interface Choice {
               <p class="warning">Update the preview before reviewing or saving halls.</p>
             }
           </details>
+          @if (choices().length) {
+            <details class="records" open>
+              <summary>Mapped records ({{ choices().length }})</summary>
+              <div class="table-scroll">
+                <table aria-label="Mapped CSV records">
+                  <thead>
+                    <tr>
+                      <th>Hall ID</th>
+                      <th>Hall name</th>
+                      <th>Hall floor</th>
+                      <th>Foyers</th>
+                      <th>Restrictions</th>
+                      @if (preview()?.rowLayout === 'space') {
+                        <th>CSV rows</th>
+                      }
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (c of choices(); track c.row.externalId) {
+                      <tr [class.error]="!!c.row.error">
+                        <td>{{ c.row.sourceId ?? '—' }}</td>
+                        <td>{{ c.row.name }}</td>
+                        <td>
+                          @if (c.row.floor) {
+                            {{ c.row.floorArea | number: '1.0-2' }} m²
+                          } @else {
+                            —
+                          }
+                        </td>
+                        <td>{{ foyerSummary(c.row) }}</td>
+                        <td>{{ c.row.floor?.geometry?.objects?.length ?? 0 }}</td>
+                        @if (preview()?.rowLayout === 'space') {
+                          <td>{{ c.row.records }}</td>
+                        }
+                        <td>
+                          {{
+                            c.row.error
+                              ? 'Error'
+                              : c.row.warnings.length
+                                ? c.row.warnings.length + ' note(s)'
+                                : 'Ready'
+                          }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          }
           @if (choices().length) {
             @if (selectedCount()) {
               <div class="batch-progress" role="status">
@@ -452,6 +609,45 @@ interface Choice {
       font-size: 12px;
       color: var(--mat-sys-on-surface-variant);
     }
+    .hint {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--mat-sys-surface-container);
+      font-size: 13px;
+    }
+    .required {
+      margin-left: 6px;
+      color: var(--mat-sys-error);
+      font-size: 11px;
+    }
+    .table-scroll {
+      max-height: 260px;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th,
+    td {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      vertical-align: top;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--mat-sys-surface);
+    }
+    tr.error td {
+      color: var(--mat-sys-error);
+    }
     button:focus-visible {
       outline: 2px solid var(--mat-sys-primary);
     }
@@ -494,6 +690,8 @@ export class CsvImportDialogComponent {
     const pending = this.choices()
       .filter((c) => c.row.error)
       .map((c) => `${c.row.name}: ${c.row.error}`);
+    if (this.missingLabels().length)
+      pending.unshift(`Map the required column(s): ${this.missingLabels().join(', ')}.`);
     if (this.mappingDirty()) pending.push('Click Update preview after changing the mapping.');
     if (!this.selectedCount())
       pending.push('Select at least one converted hall that needs saving.');
@@ -532,17 +730,120 @@ export class CsvImportDialogComponent {
         .filter((c) => c.selected)
         .every((c) => !c.row.error && c.inspected && c.name.trim()),
   );
-  protected fields: {
-    key: 'name' | 'width' | 'depth' | 'boundary' | 'areas' | 'zones';
-    label: string;
-  }[] = [
-    { key: 'name', label: 'Hall name' },
-    { key: 'width', label: 'Width' },
-    { key: 'depth', label: 'Depth' },
-    { key: 'boundary', label: 'Boundary' },
-    { key: 'areas', label: 'Areas' },
-    { key: 'zones', label: 'Foyers' },
+  private readonly hallFields: MappingField[] = [
+    { key: 'id', label: 'Hall ID', required: false },
+    { key: 'name', label: 'Hall name', required: false },
+    { key: 'width', label: 'Width', required: true },
+    { key: 'depth', label: 'Depth', required: true },
+    { key: 'boundary', label: 'Boundary polygon', required: false },
+    { key: 'zones', label: 'Foyers', required: false },
+    { key: 'areas', label: 'Areas and restrictions', required: false },
+    { key: 'unitField', label: 'Unit per row', required: false },
   ];
+  private readonly spaceFields: MappingField[] = [
+    { key: 'id', label: 'Hall', required: true },
+    { key: 'name', label: 'Hall name', required: false },
+    { key: 'kind', label: 'Space type', required: true },
+    { key: 'x', label: 'X position', required: true },
+    { key: 'y', label: 'Y position', required: true },
+    { key: 'width', label: 'Width', required: true },
+    { key: 'depth', label: 'Depth', required: true },
+    { key: 'geometry', label: 'Polygon', required: false },
+    { key: 'label', label: 'Space name', required: false },
+    { key: 'unitField', label: 'Unit per row', required: false },
+  ];
+  protected readonly spaceRoles = [
+    { value: 'hall', label: 'Hall outline' },
+    { value: 'foyer', label: 'Foyer' },
+    { value: 'circulation', label: 'Circulation / lobby' },
+    { value: 'stall', label: 'Stall (listed, not imported)' },
+  ];
+  protected get mappingFields(): MappingField[] {
+    return this.mapping.rows === 'space' ? this.spaceFields : this.hallFields;
+  }
+  /** Columns first; in hall rows also paths inside the first row's JSON cells. */
+  protected get columnOptions(): { columns: string[]; paths: string[] } {
+    const p = this.preview();
+    const columns = p?.columns ?? p?.fields ?? [];
+    const paths =
+      this.mapping.rows === 'space' ? [] : (p?.fields ?? []).filter((f) => !columns.includes(f));
+    return { columns, paths };
+  }
+  /** The preview's suggestion, while it was read with the layout now chosen. */
+  protected suggestion(field: CsvField): string | undefined {
+    const p = this.preview();
+    return p && (p.rowLayout ?? 'hall') === (this.mapping.rows ?? 'hall')
+      ? p.suggested?.[field]
+      : undefined;
+  }
+  protected missingLabels(): string[] {
+    const p = this.preview();
+    if (!p?.missing?.length || (p.rowLayout ?? 'hall') !== (this.mapping.rows ?? 'hall')) return [];
+    return p.missing.map((key) =>
+      key === 'unit'
+        ? 'Source units or a units column'
+        : (this.mappingFields.find((f) => f.key === key)?.label ?? key),
+    );
+  }
+  protected layoutHinted(): boolean {
+    return this.preview()?.layoutHint === 'space' && this.mapping.rows !== 'space';
+  }
+  /** Where a field's column is kept: a space row's position and size are its area fields. */
+  private slot(field: CsvField): { area: AreaField } | { top: keyof JsonHallMapping } {
+    if (this.mapping.rows === 'space' && !['id', 'name', 'unitField'].includes(field))
+      return { area: field === 'depth' ? 'height' : (field as AreaField) };
+    return { top: field as keyof JsonHallMapping };
+  }
+  /** undefined: automatic; '': not in this file; otherwise the column or path. */
+  protected columnOf(field: CsvField): string | undefined {
+    const s = this.slot(field);
+    return 'area' in s
+      ? this.mapping.areaFields?.[s.area]
+      : (this.mapping[s.top] as string | undefined);
+  }
+  protected setColumn(field: CsvField, value: string | undefined) {
+    const s = this.slot(field);
+    if ('area' in s) {
+      this.mapping.areaFields ??= {};
+      if (value === undefined) delete this.mapping.areaFields[s.area];
+      else this.mapping.areaFields[s.area] = value;
+    } else if (value === undefined) delete this.mapping[s.top];
+    else (this.mapping as Record<string, unknown>)[s.top] = value;
+    this.mappingChanged();
+  }
+  protected usageOf(column: string): string {
+    const p = this.preview();
+    const used = this.mappingFields
+      .filter((f) => {
+        const mapped = p?.format === 'itpo' ? undefined : this.columnOf(f.key);
+        return (mapped !== undefined ? mapped : this.suggestion(f.key)) === column;
+      })
+      .map((f) => f.label);
+    return used.length ? used.join(', ') : (p?.autoColumns?.[column] ?? 'Not used');
+  }
+  protected setLayout(rows: 'hall' | 'space') {
+    if ((this.mapping.rows ?? 'hall') === rows) return;
+    // A column means another field in the other layout, so the field mapping starts again.
+    const { unit, metresPerUnit, yAxis } = this.mapping;
+    this.mapping = {
+      kinds: Object.create(null),
+      ...(rows === 'space' ? { rows } : {}),
+      ...(unit ? { unit } : {}),
+      ...(metresPerUnit !== undefined ? { metresPerUnit } : {}),
+      ...(yAxis ? { yAxis } : {}),
+    };
+    this.mappingChanged();
+  }
+  protected useSpaceRows() {
+    this.setLayout('space');
+    void this.refresh();
+  }
+  protected foyerSummary(row: JsonHallRow): string {
+    const zones = row.floor?.geometry?.zones ?? [];
+    if (!zones.length) return '—';
+    const area = zones.reduce((sum, z) => sum + geometryArea(z.geometry), 0);
+    return `${zones.length} · ${Math.round(area)} m²`;
+  }
   protected kinds = [
     { value: 'wall', label: 'Wall' },
     { value: 'column', label: 'Column' },
@@ -617,13 +918,6 @@ export class CsvImportDialogComponent {
     this.mappingDirty.set(true);
     this.choices.update((all) => all.map((c) => ({ ...c, inspected: false })));
   }
-  protected setField(
-    field: 'name' | 'width' | 'depth' | 'boundary' | 'areas' | 'zones',
-    value: string,
-  ) {
-    this.mapping[field] = value.trim() || undefined;
-    this.mappingChanged();
-  }
   protected setKind(token: string, value: string | undefined) {
     this.mapping.kinds ??= Object.create(null);
     if (value) this.mapping.kinds![token] = value;
@@ -647,7 +941,7 @@ export class CsvImportDialogComponent {
         })),
       );
       this.activeId.set(p.rows.find((r) => !r.error)?.externalId ?? p.rows[0]?.externalId ?? '');
-      this.mappingOpen.set(p.rows.some((r) => !!r.error));
+      this.mappingOpen.set(!p.rows.length || p.rows.some((r) => !!r.error) || !!p.missing?.length);
       this.mappingDirty.set(false);
     } catch {
       // The error interceptor has shown it.

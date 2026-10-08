@@ -4,6 +4,12 @@
   --mat-form-field-container-vertical-padding: 8px;
 }
 
+.scope {
+  display: block;
+  margin-top: 2px;
+  font: var(--mat-sys-body-small);
+}
+
 .actions-cell {
   text-align: right;
   white-space: nowrap;

@@ -43,6 +43,9 @@
             } @else {
               {{ m.role.name }}
             }
+            @for (line of scope(m.scope); track line) {
+              <span class="muted scope">{{ line }}</span>
+            }
           </td>
         </ng-container>
         <ng-container matColumnDef="lastLogin">
@@ -101,7 +104,12 @@
           </ng-container>
           <ng-container matColumnDef="role">
             <th mat-header-cell *matHeaderCellDef>Role</th>
-            <td mat-cell *matCellDef="let i">{{ i.role.name }}</td>
+            <td mat-cell *matCellDef="let i">
+              {{ i.role.name }}
+              @for (line of scope(i.scope); track line) {
+                <span class="muted scope">{{ line }}</span>
+              }
+            </td>
           </ng-container>
           <ng-container matColumnDef="invitedBy">
             <th mat-header-cell *matHeaderCellDef>Invited by</th>

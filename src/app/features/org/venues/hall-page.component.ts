@@ -31,6 +31,7 @@ import {
   AREA_COLORS,
   AREA_LABELS,
   FloorViewComponent,
+  geometryArea,
 } from '../../../shared/floor/floor-view.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { HallDialogComponent, HallDialogData } from './hall-dialog.component';
@@ -136,6 +137,25 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
               } @else {
                 <p class="muted">Open floor: nothing blocks stalls.</p>
               }
+              @if (zones().length) {
+                <h3 class="subtitle">Foyers</h3>
+                <ul class="kinds">
+                  @for (z of zones(); track z.id) {
+                    <li>
+                      <span class="swatch zone"></span>
+                      <span>{{ z.name }}</span>
+                      @if (z.kind === 'circulation') {
+                        <span class="muted">circulation</span>
+                      }
+                      @if (z.shared) {
+                        <span class="status-chip is-neutral">Shared</span>
+                      }
+                      <span class="spacer"></span>
+                      <span class="muted count">{{ z.area | number: '1.0-0' }} m²</span>
+                    </li>
+                  }
+                </ul>
+              }
             </section>
 
             <section class="panel">
@@ -221,6 +241,13 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
     .count {
       font-variant-numeric: tabular-nums;
     }
+    .subtitle {
+      font: var(--mat-sys-title-small);
+      margin: 16px 0 8px;
+    }
+    .swatch.zone {
+      background: #4aa9db;
+    }
     .versions li {
       padding: 10px 12px;
       border-radius: 12px;
@@ -284,6 +311,10 @@ export class HallPageComponent implements OnInit {
       color: AREA_COLORS[kind],
     }));
   });
+  /** The foyers and circulation saved with the floor, measured from their own outlines. */
+  protected readonly zones = computed(() =>
+    (this.shown().geometry?.zones ?? []).map((z) => ({ ...z, area: geometryArea(z.geometry) })),
+  );
 
   ngOnInit(): void {
     void this.load();

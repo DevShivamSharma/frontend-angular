@@ -85,6 +85,66 @@ export const ORG_ROUTES: Routes = [
           import('./rules/rules-page.component').then((m) => m.RulesPageComponent),
       },
       {
+        path: 'events',
+        canActivate: [permissionGuard('events.view')],
+        children: [
+          {
+            path: '',
+            title: 'Events',
+            loadComponent: () =>
+              import('./events/events-page.component').then((m) => m.EventsPageComponent),
+          },
+          {
+            path: ':eventId',
+            title: 'Event',
+            loadComponent: () =>
+              import('./events/event-page.component').then((m) => m.EventPageComponent),
+          },
+        ],
+      },
+      // Pages of an event with their own permission: not under `events`, which needs events.view.
+      {
+        path: 'events/:eventId/halls/:hallId/plan',
+        title: 'Stall plan',
+        canActivate: [permissionGuard('layouts.view')],
+        loadComponent: () =>
+          import('./stall-plans/stall-plan-page.component').then((m) => m.StallPlanPageComponent),
+      },
+      {
+        path: 'events/:eventId/bookings',
+        title: 'Bookings',
+        canActivate: [permissionGuard('bookings.view')],
+        loadComponent: () =>
+          import('./bookings/event-bookings-page.component').then(
+            (m) => m.EventBookingsPageComponent,
+          ),
+      },
+      {
+        path: 'exhibitors',
+        title: 'Exhibitors',
+        canActivate: [permissionGuard('bookings.view')],
+        loadComponent: () =>
+          import('./exhibitors/exhibitors-page.component').then((m) => m.ExhibitorsPageComponent),
+      },
+      {
+        path: 'portal',
+        canActivate: [permissionGuard('stalls.book')],
+        children: [
+          {
+            path: '',
+            title: 'Book a stall',
+            loadComponent: () =>
+              import('./portal/portal-page.component').then((m) => m.PortalPageComponent),
+          },
+          {
+            path: 'events/:eventId/halls/:hallId',
+            title: 'Choose a stall',
+            loadComponent: () =>
+              import('./portal/portal-hall-page.component').then((m) => m.PortalHallPageComponent),
+          },
+        ],
+      },
+      {
         path: 'team',
         title: 'Team',
         canActivate: [permissionGuard('team.view')],
