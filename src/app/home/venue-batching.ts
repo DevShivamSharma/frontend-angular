@@ -14,7 +14,7 @@ export function batchVenue(root: T.Group, classify: (object: T.Object3D) => stri
         if (!(object instanceof T.Mesh) || object instanceof T.SkinnedMesh || object.children.length ||
             Array.isArray(object.material) || object.material.transparent || object.morphTargetInfluences) return;
         for (let node: T.Object3D | null = object; node; node = node.parent)
-            if (node.userData['cc_level'] || /^(OUTER_GROUND|CONTEXT_GROUND)$/.test(node.name)) return;
+            if (node.userData['cc_level'] || node.userData['interiorRoof'] || /^(OUTER_GROUND|CONTEXT_GROUND)$/.test(node.name)) return;
         const geometry = object.geometry;
         const attributes = Object.entries(geometry.attributes as Record<string, T.BufferAttribute>).map(([key, a]) =>
             `${key}:${a.itemSize}:${a.normalized}:${a.array.constructor.name}`).sort().join(',');

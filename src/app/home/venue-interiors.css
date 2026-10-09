@@ -1,0 +1,60 @@
+.venue-interior-actions {
+  padding: 12px;
+  background: #f3f0ea;
+  border-left: 3px solid #9a623f;
+  border-bottom: 1px solid #d7dbd9;
+  color: #272c2b;
+  font-size: 12px;
+}
+.walk-action-grid, .walk-secondary-actions, .walk-direction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.sub-menu .venue-interior-actions button {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  min-height: 42px;
+  padding: 8px 6px;
+  border: 1px solid #d5dbd5;
+  background: #e4e8e2;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.sub-menu .venue-interior-actions button:hover { background: #d3dbd2; }
+.sub-menu .venue-interior-actions .walk-primary { background: #353c36; color: #fff; border-color: #353c36; }
+.sub-menu .venue-interior-actions .walk-primary:hover { background: #4a564b; }
+.sub-menu .venue-interior-actions button:disabled { opacity: .55; cursor: wait; }
+.walk-secondary-actions { margin-top: 8px; }
+.sub-menu .walk-secondary-actions button { background: #fafaf7; min-height: 36px; }
+.walk-room-label { display: block; margin: 12px 0 6px; font-size: 11px; font-weight: 600; }
+.venue-interior-actions select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px;
+  background: #fff;
+  color: #272c2b;
+  border: 1px solid #9ea6a2;
+  font: inherit;
+  font-size: 11px;
+}
+.walk-direction-grid { grid-template-columns: repeat(4,minmax(0,1fr)); margin-top: 10px; }
+.sub-menu .walk-direction-grid button { font-size: 20px; padding: 4px; }
+.walk-status { margin: 0 0 10px; font-size: 11px; font-weight: 600; line-height: 1.5; }
+.walk-hint { margin: 8px 0 0; color: #526057; font-size: 10px; line-height: 1.55; }
+.walk-error { margin: 8px 0 0; color: #8c2929; font-size: 11px; line-height: 1.5; }
+.sub-menu .hall-name { font-size: 11px; }
+.venue-interior-actions select:focus-visible { outline: 2px solid #9a623f; outline-offset: 2px; }
+.hall-menu { max-height: none; overflow: visible; }
+@media (max-width: 700px) {
+  .navigation:has(.venue-interior-actions) { width: min(290px,calc(100vw - 70px)); }
+  .navigation.collapsed { transform: translateX(calc(-100% - 10px)); }
+  .navigation.collapsed .collapse-menu { right: -38px; }
+  .sub-menu .venue-interior-actions button { min-height: 44px; }
+  .venue-interior-actions select { min-height: 44px; font-size: 12px; }
+  .walk-hint { font-size: 11px; }
+  .map-tools.interior-tools { top: 125px; bottom: auto; }
+}

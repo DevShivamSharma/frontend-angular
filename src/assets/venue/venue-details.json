@@ -1,7 +1,7 @@
 {
   "overview": {
     "title": "Entire venue",
-    "subtitle": "Bharat Mandapam \u00b7 New Delhi",
+    "subtitle": "Bharat Mandapam · New Delhi",
     "description": "Explore the Convention Centre and each exhibition hall. Select a destination to see its plan and move to it in the model.",
     "plan": "floorplans/venue-map.png",
     "facts": [
@@ -11,7 +11,7 @@
       ],
       [
         "Exhibition halls",
-        "1\u20136, 8\u201312, 12A and 14"
+        "1–6, 8–12, 12A and 14"
       ]
     ]
   },
@@ -19,7 +19,7 @@
     "title": "Convention Centre",
     "subtitle": "Bharat Mandapam",
     "description": "Explore meeting rooms, auditoriums and shared spaces across three levels. Choose a level to see room photos, floor areas and capacities.",
-    "plan": "floorplans/cc-level1.png",
+    "plan": "cc-plans/level1.png",
     "facts": [
       [
         "Level 1",
@@ -36,24 +36,24 @@
     ]
   },
   "level1": {
-    "title": "Convention Centre \u00b7 Level 1",
+    "title": "Convention Centre · Level 1",
     "subtitle": "Ground floor",
     "description": "Auditorium, meeting and hospitality spaces arranged around the central foyer.",
-    "plan": "floorplans/cc-level1.png",
+    "plan": "cc-plans/level1.png",
     "facts": []
   },
   "level2": {
-    "title": "Convention Centre \u00b7 Level 2",
+    "title": "Convention Centre · Level 2",
     "subtitle": "Podium level",
     "description": "Auditorium seating, conference rooms and meeting spaces with side entries.",
-    "plan": "floorplans/cc-level2.png",
+    "plan": "cc-plans/level2.png",
     "facts": []
   },
   "level3": {
-    "title": "Convention Centre \u00b7 Level 3",
+    "title": "Convention Centre · Level 3",
     "subtitle": "Plenary level",
     "description": "Tiered auditorium and the large plenary hall, with circulation and service rooms around the perimeter.",
-    "plan": "floorplans/cc-level3.png",
+    "plan": "cc-plans/level3.png",
     "facts": []
   },
   "hall1": {
@@ -101,28 +101,28 @@
   "hall8": {
     "title": "Hall 8",
     "subtitle": "Exhibition hall",
-    "description": "Part of the connected Halls 8\u201311 complex. The shared plan identifies each hall and the connecting foyers.",
+    "description": "Part of the connected Halls 8–11 complex. The shared plan identifies each hall and the connecting foyers.",
     "plan": "floorplans/halls8-11.png",
     "facts": []
   },
   "hall9": {
     "title": "Hall 9",
     "subtitle": "Exhibition hall",
-    "description": "Part of the connected Halls 8\u201311 complex. The shared plan identifies each hall and the connecting foyers.",
+    "description": "Part of the connected Halls 8–11 complex. The shared plan identifies each hall and the connecting foyers.",
     "plan": "floorplans/halls8-11.png",
     "facts": []
   },
   "hall10": {
     "title": "Hall 10",
     "subtitle": "Exhibition hall",
-    "description": "Part of the connected Halls 8\u201311 complex. The shared plan identifies each hall and the connecting foyers.",
+    "description": "Part of the connected Halls 8–11 complex. The shared plan identifies each hall and the connecting foyers.",
     "plan": "floorplans/halls8-11.png",
     "facts": []
   },
   "hall11": {
     "title": "Hall 11",
     "subtitle": "Exhibition hall",
-    "description": "Part of the connected Halls 8\u201311 complex. The shared plan identifies each hall and the connecting foyers.",
+    "description": "Part of the connected Halls 8–11 complex. The shared plan identifies each hall and the connecting foyers.",
     "plan": "floorplans/halls8-11.png",
     "facts": []
   },
@@ -134,15 +134,15 @@
     "facts": [
       [
         "Hall 12 area",
-        "1,681 m\u00b2"
+        "1,681 m²"
       ],
       [
         "Shared foyer",
-        "400 m\u00b2"
+        "400 m²"
       ],
       [
         "Combined area",
-        "6,714 m\u00b2"
+        "6,714 m²"
       ]
     ]
   },
@@ -154,15 +154,15 @@
     "facts": [
       [
         "Hall 12A area",
-        "4,633 m\u00b2"
+        "4,633 m²"
       ],
       [
         "Shared foyer",
-        "400 m\u00b2"
+        "400 m²"
       ],
       [
         "Combined area",
-        "6,714 m\u00b2"
+        "6,714 m²"
       ]
     ]
   },

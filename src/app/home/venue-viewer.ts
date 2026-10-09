@@ -12,10 +12,11 @@ import { prepareVenueArchitecturalDetail } from './venue-architectural-detail';
 import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
 import { createVenueAppearance, VenueAppearance, VenueScenery } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
+import { createVenueInteriors, InteriorState } from './venue-interiors';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
-interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; }
-export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; readonly isGlobe:boolean; dispose:()=>void; }
+interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; }
+export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; readonly isGlobe:boolean; dispose:()=>void; }
 /** Render camera motion and visible fountain water with consistent scene shading. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement): VenueViewer {
     const lifetime = new AbortController();
@@ -26,8 +27,11 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
     let viewCommand = (_id:string) => {}, levelCommand = (_level:number) => {}, globeCommand = () => {}, zoomCommand = (_factor:number) => {}, lightCommand = (_enabled:boolean) => {}, isGlobe = () => false;
     let appearanceCommand = async (_mode: VenueAppearance) => {};
     let sceneryCommand = (_scenery: VenueScenery) => {};
+    let enterCommand=(_id:string,_guided=false)=>{},pauseCommand=()=>{},leaveCommand=()=>{},walkCommand=(_forward:number,_turn=0)=>{};
+    let roomCommand=(_id:string,_room:string)=>{};
+    let exportCommand=async(_id:string):Promise<ArrayBuffer>=>{throw new Error('Interiors are still loading');};
     const ready = initializeVenue();
-    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), get isGlobe(){return isGlobe();}, dispose:()=>{lifetime.abort();for(const cleanup of cleanups.reverse())cleanup();} };
+    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), enterHall:(id,guided)=>enterCommand(id,guided),pauseTour:()=>pauseCommand(),leaveInterior:()=>leaveCommand(),walk:(f,t)=>walkCommand(f,t),exportHall:id=>exportCommand(id),visitRoom:(id,room)=>roomCommand(id,room),get isGlobe(){return isGlobe();}, dispose:()=>{lifetime.abort();for(const cleanup of cleanups.reverse())cleanup();} };
     async function initializeVenue() {
         signal.throwIfAborted();
         const scene = new T.Scene();
@@ -90,6 +94,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
         let prepared = false, localMapReady = false;
+        let pendingInterior: (()=>void) | undefined;
+        let interiors:Awaited<ReturnType<typeof createVenueInteriors>>|undefined,daylight=false;
         let water: ReturnType<typeof createVenueWater> | undefined;
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
         const frames = createVenueRenderLoop(updateFrame, renderFrame);
@@ -177,6 +183,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             return;
         } tween = { start: performance.now(), duration, a: camera.position.clone(), b: controls.target.clone(), p: position, t: target }; invalidate(); }
         function view(id:string) {
+            pendingInterior=undefined;
+            interiors?.leave();controls.enabled=true;controls.minDistance=32;
             controls.maxPolarAngle = Math.PI * .46;
             resetLevel();highlight(id);const v=views[id];if(!v)return;
             const target=W(...v.t),eye=W(...v.p);
@@ -195,10 +203,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         // Include the adjoining checkpoint when selecting Gate 9 from the menu.
         views['gate9'] = { p: [-571, -401, 22], t: [-536, -369, 2.5], radius: 22 };
         levelCommand=n=>{view('cc');level=n;};
-        globeCommand=()=>{resetLevel();tween=null;globe?.goGlobe();};
+        globeCommand=()=>{pendingInterior=undefined;interiors?.leave();controls.enabled=true;resetLevel();tween=null;globe?.goGlobe();};
         isGlobe=()=>!!globe?.isGlobe;
-        zoomCommand=f=>{if(globe?.transitioning)return;tween=null;camera.position.sub(controls.target).multiplyScalar(f).add(controls.target);controls.update();invalidate();};
-        lightCommand=daylight=>{sun.intensity=daylight?3.8:4.5;hemi.intensity=daylight?1.3:.38;renderer.toneMappingExposure=daylight?1.05:.86;scene.environmentIntensity=daylight?.6:.32;invalidate();};
+        zoomCommand=f=>{if(interiors?.active){interiors.step(f<1?1:-1);return;}if(globe?.transitioning)return;tween=null;camera.position.sub(controls.target).multiplyScalar(f).add(controls.target);controls.update();invalidate();};
+        lightCommand=enabled=>{daylight=enabled;sun.intensity=daylight?3.8:.22;hemi.intensity=daylight?1.3:.48;fill.intensity=daylight?.25:.3;renderer.toneMappingExposure=daylight?1.05:1.12;scene.environmentIntensity=daylight?.6:.3;scene.background=new T.Color(daylight?'#b8cbd2':'#182735');renderer.shadowMap.needsUpdate=true;invalidate();};
         controls.addEventListener('start', () => { tween = null; });
         controls.addEventListener('change', invalidate);
         camera.position.copy(W(...views['overview'].p));
@@ -227,6 +235,38 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         prepareVenueSurfaceDetail(root);
         prepareVenueArchitecturalDetail(root);
         prepareVenueFountainJets(root);
+        try {
+            interiors=await createVenueInteriors({root,scene,camera,canvas,asset,signal,invalidate,shadowsChanged:()=>renderer.shadowMap.needsUpdate=true,exit:()=>leaveCommand(),daylight:()=>daylight,state:state=>{
+                controls.enabled=!state.walking;
+                if(!state.walking){controls.target.copy(camera.position).add(new T.Vector3(0,0,-1).applyQuaternion(camera.quaternion).multiplyScalar(32));}
+                events.interiorState?.(state);
+                renderer.shadowMap.needsUpdate=true;
+            }});
+            cleanups.push(()=>interiors?.dispose());
+            events.interiorsReady?.(interiors.halls.map(h=>({id:h.id,label:h.label,rooms:h.rooms?.map(r=>({id:r.id,label:r.label}))})));
+            enterCommand=(id,guided=false)=>{if(globe?.isGlobe||globe?.transitioning){view(id.startsWith('cc-level')?'cc':id);pendingInterior=()=>enterCommand(id,guided);events.status('Returning to the venue…');return;}tween=null;resetLevel();highlight('');interiors?.enter(id,guided);events.status(`${interiors?.hall?.label??'Hall'} · ${guided?'Guided tour':'Interior walkthrough'}`);};
+            levelCommand=n=>{
+                if(globe?.isGlobe||globe?.transitioning){view('cc');pendingInterior=()=>levelCommand(n);return;}
+                tween=null;resetLevel();highlight('');const h=interiors?.preview(`cc-level${n}`);if(!h)return;
+                level=n;controls.enabled=true;controls.minDistance=8;controls.maxPolarAngle=Math.PI*.48;
+                const c=Math.cos(h.angle),s=Math.sin(h.angle),offset=h.depth*.35;
+                controls.target.copy(h.center);camera.position.set(h.center.x-offset*s,h.center.y+Math.max(h.width,h.depth)*1.65*Math.max(1,.8/camera.aspect),h.center.z+offset*c);
+                camera.near=.2;camera.fov=45;camera.updateProjectionMatrix();controls.update();invalidate();
+                events.status(`Convention Centre · Level ${n} · 3D floor plan`);
+            };
+            roomCommand=(id,room)=>{if(globe?.isGlobe||globe?.transitioning){view('cc');pendingInterior=()=>roomCommand(id,room);return;}enterCommand(id);interiors?.visit(id,room);events.status(`${interiors?.hall?.label} · ${interiors?.hall?.rooms?.find(r=>r.id===room)?.label??'Walkthrough'}`);};
+            leaveCommand=()=>{const h=interiors?.hall;if(h?.level)levelCommand(h.level);else{view(h?.id??'overview');events.status('Bharat Mandapam');}};
+            pauseCommand=()=>interiors?.pause();walkCommand=(f,t)=>interiors?.step(f,t);
+            exportCommand=async id=>{
+                const {GLTFExporter}=await import('three/addons/exporters/GLTFExporter.js');
+                const selected=interiors?.halls.find(h=>h.id===id);if(!selected)throw new Error('Select a furnished hall');
+                const model=new T.Group();model.name=`Bharat_Mandapam_${id}`;model.userData={referenceInteriors:interiors!.layer.userData,walkthrough:'Camera navigation, collisions, cutaway and guided routes are runtime viewer features.'};
+                root!.updateMatrixWorld(true);interiors!.layer.updateMatrixWorld(true);
+                root!.traverse(o=>{if(!selected.level&&o instanceof T.Mesh&&classify(o)===id){const clone=o.clone(false);clone.matrix.copy(o.matrixWorld);clone.matrixAutoUpdate=false;clone.visible=true;model.add(clone);}});
+                const furnishing=interiors!.layer.children.find(o=>selected.level?o.userData['ccLevel']===selected.level:o.userData['hall']===id.slice(4));if(furnishing){const clone=furnishing.clone(true);clone.traverse(o=>{o.visible=true;});model.add(clone);}
+                return await new GLTFExporter().parseAsync(model,{binary:true,onlyVisible:false}) as ArrayBuffer;
+            };
+        } catch(error) {signal.throwIfAborted();console.warn('Interior components unavailable',error);events.interiorsReady?.([],'Interiors could not load. Reload to retry.');}
         // Export is already metres, Y-up, east +X / south +Z. Do not rotate the
         // glTF a second time; W converts only the authored navigation coordinates.
         batchVenue(root, classify, o => [
@@ -283,6 +323,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             invalidate();
         };
         events.status('Bharat Mandapam');
+        lightCommand(false);
         const detailView = new URLSearchParams(location.search).get('view');
         const fitDetailWidth = (aspect: number) =>
             ['itpo-office', 'gate9', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
@@ -328,6 +369,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }
         camera.position.sub(controls.target).multiplyScalar(fitDetailWidth(camera.aspect)).add(controls.target);
         controls.update();
+        const ccLevel=Number(new URLSearchParams(location.search).get('ccLevel'));
+        if([1,2,3].includes(ccLevel))levelCommand(ccLevel);
+        const entry=new URLSearchParams(location.search).get('interior');
+        if(entry&&interiors?.halls.some(h=>h.id===entry)){enterCommand(entry);if(new URLSearchParams(location.search).get('interiors')==='off')interiors.layer.visible=false;}
         const ray = new T.Raycaster(), pointer = new T.Vector2();
         let down: [
             number,
@@ -337,7 +382,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         renderer.domElement.addEventListener('pointercancel', () => { down = undefined; }, { signal });
         renderer.domElement.addEventListener('pointerup', e => {
             const start = down; down = undefined;
-            if (!root || !start || globe?.isGlobe || Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 5) return;
+            if (!root || !start || interiors?.active || globe?.isGlobe || Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 5) return;
             const rect = canvas.getBoundingClientRect();
             pointer.set((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
             ray.setFromCamera(pointer, camera);
@@ -364,7 +409,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }
         listen('resize', resize);
         listen('pageshow', resize);
-        function updateFrame() { if (tween) {
+        function updateFrame() {
+            if(pendingInterior&&!globe?.isGlobe&&!globe?.transitioning){const action=pendingInterior;pendingInterior=undefined;action();}
+            if (tween) {
             let k = Math.min(1, (performance.now() - tween.start) / tween.duration);
             k = k * k * (3 - 2 * k);
             camera.position.lerpVectors(tween.a, tween.p, k);
@@ -372,23 +419,24 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             if (k >= 1)
                 tween = null;
         }
-            const changed = !globe?.transitioning && controls.update();
-            globe?.update();
+            const changed = !interiors?.active && !globe?.transitioning && controls.update();
+            if(!interiors?.active)globe?.update();
+            const walking=interiors?.update(performance.now());
             const flowing = water?.update(performance.now(), camera,
                 !reducedMotion.matches && !globe?.isGlobe && camera.position.distanceTo(controls.target) < 3000);
-            return Boolean(changed || tween || globe?.transitioning || flowing);
+            return Boolean(changed || walking || tween || pendingInterior || globe?.transitioning || flowing);
         }
         function renderFrame() {
             // Use the same antialiased materials, lighting and cached shadows for every frame.
             // The AO mask is always applied, so stopping input never changes the finish.
             renderer.setRenderTarget(null);
             renderer.render(scene, camera);
-            ambientOcclusion.render(camera.position.distanceTo(controls.target));
+            if(!interiors?.active)ambientOcclusion.render(camera.position.distanceTo(controls.target));
         }
         // Draw a prepared scene before releasing the welcome screen.
         signal.throwIfAborted();
-        controls.update();
-        globe?.update();
+        if(!interiors?.active){controls.update();globe?.update();}
+        interiors?.update(performance.now());
         prepared = true;
         if (!document.hidden) renderFrame();
         invalidate();

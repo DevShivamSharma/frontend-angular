@@ -1,0 +1,1240 @@
+{
+  "sources": [
+    {
+      "source": "CC-level-1.pdf",
+      "sha256": "cbddbd59a82f9ae8b5b7fbe7384fd8bf1d1e87d3042de7e54f9359d517f46022"
+    },
+    {
+      "source": "CC-level-2.pdf",
+      "sha256": "69135c0aa0b8f93fd677bbb10557cc5fb7e3f3ac6babe63a304cdd0a5cc059ad"
+    },
+    {
+      "source": "CC-level-3.pdf",
+      "sha256": "415aaa24f920afac0825a28369517bcd62ef97f22018bd2987d44093cf664169"
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "width": 116.00000607813607,
+      "depth": 126.00000067837237,
+      "floorElevation": 6.400000112056732,
+      "ceiling": 7.1,
+      "rooms": [
+        {
+          "id": "mr4",
+          "label": "MR 4",
+          "kind": "boardroom",
+          "sourceRect": [
+            448,
+            700,
+            492,
+            795
+          ],
+          "door": "s"
+        },
+        {
+          "id": "mr3",
+          "label": "MR 3",
+          "kind": "boardroom",
+          "sourceRect": [
+            495,
+            700,
+            539,
+            795
+          ],
+          "door": "s"
+        },
+        {
+          "id": "pmr-pbl",
+          "label": "PMR / PBL",
+          "kind": "boardroom",
+          "sourceRect": [
+            542,
+            680,
+            607,
+            792
+          ],
+          "door": "s"
+        },
+        {
+          "id": "pmr21",
+          "label": "PMR 21",
+          "kind": "boardroom",
+          "sourceRect": [
+            612,
+            675,
+            752,
+            752
+          ],
+          "door": "s"
+        },
+        {
+          "id": "br20",
+          "label": "BR 20",
+          "kind": "lounge",
+          "sourceRect": [
+            574,
+            797,
+            609,
+            825
+          ],
+          "door": "s"
+        },
+        {
+          "id": "ppf26",
+          "label": "PPF 26",
+          "kind": "lounge",
+          "sourceRect": [
+            613,
+            757,
+            733,
+            822
+          ],
+          "door": "s"
+        },
+        {
+          "id": "pwl22",
+          "label": "PWL 22",
+          "kind": "lounge",
+          "sourceRect": [
+            738,
+            776,
+            786,
+            824
+          ],
+          "door": "s"
+        },
+        {
+          "id": "pdr23",
+          "label": "PDR 23",
+          "kind": "boardroom",
+          "sourceRect": [
+            790,
+            744,
+            835,
+            824
+          ],
+          "door": "s"
+        },
+        {
+          "id": "mr2",
+          "label": "MR 2",
+          "kind": "boardroom",
+          "sourceRect": [
+            840,
+            700,
+            884,
+            796
+          ],
+          "door": "s"
+        },
+        {
+          "id": "mr1",
+          "label": "MR 1",
+          "kind": "boardroom",
+          "sourceRect": [
+            888,
+            700,
+            932,
+            796
+          ],
+          "door": "s"
+        },
+        {
+          "id": "mr16-north",
+          "label": "MR 16 · north",
+          "kind": "boardroom",
+          "sourceRect": [
+            396,
+            894,
+            440,
+            972
+          ],
+          "door": "n"
+        },
+        {
+          "id": "mr19",
+          "label": "MR 19",
+          "kind": "banquet",
+          "sourceRect": [
+            445,
+            894,
+            538,
+            1046
+          ],
+          "door": "e"
+        },
+        {
+          "id": "mr18",
+          "label": "MR 18",
+          "kind": "theatre",
+          "sourceRect": [
+            445,
+            1116,
+            538,
+            1266
+          ],
+          "door": "e"
+        },
+        {
+          "id": "mr5",
+          "label": "MR 5",
+          "kind": "boardroom",
+          "sourceRect": [
+            930,
+            894,
+            975,
+            972
+          ],
+          "door": "n"
+        },
+        {
+          "id": "mr6",
+          "label": "MR 6",
+          "kind": "banquet",
+          "sourceRect": [
+            831,
+            894,
+            925,
+            1046
+          ],
+          "door": "w"
+        },
+        {
+          "id": "mr7",
+          "label": "MR 7",
+          "kind": "theatre",
+          "sourceRect": [
+            831,
+            1120,
+            925,
+            1266
+          ],
+          "door": "w"
+        },
+        {
+          "id": "mr14",
+          "label": "MR 14",
+          "kind": "boardroom",
+          "sourceRect": [
+            593,
+            970,
+            642,
+            1044
+          ],
+          "door": "n"
+        },
+        {
+          "id": "mr13",
+          "label": "MR 13",
+          "kind": "banquet",
+          "sourceRect": [
+            645,
+            970,
+            687,
+            1044
+          ],
+          "door": "n"
+        },
+        {
+          "id": "mr12",
+          "label": "MR 12",
+          "kind": "meeting",
+          "sourceRect": [
+            690,
+            970,
+            732,
+            1044
+          ],
+          "door": "n"
+        },
+        {
+          "id": "mr11",
+          "label": "MR 11",
+          "kind": "theatre",
+          "sourceRect": [
+            735,
+            970,
+            778,
+            1044
+          ],
+          "door": "n"
+        },
+        {
+          "id": "mr15",
+          "label": "MR 15",
+          "kind": "theatre",
+          "sourceRect": [
+            593,
+            1049,
+            675,
+            1122
+          ],
+          "door": "w"
+        },
+        {
+          "id": "mr10",
+          "label": "MR 10",
+          "kind": "theatre",
+          "sourceRect": [
+            688,
+            1049,
+            778,
+            1122
+          ],
+          "door": "e"
+        },
+        {
+          "id": "mr16-central",
+          "label": "MR 16 · central",
+          "kind": "theatre",
+          "sourceRect": [
+            593,
+            1127,
+            675,
+            1196
+          ],
+          "door": "w"
+        },
+        {
+          "id": "mr9",
+          "label": "MR 9",
+          "kind": "theatre",
+          "sourceRect": [
+            688,
+            1127,
+            778,
+            1196
+          ],
+          "door": "e"
+        },
+        {
+          "id": "mr17",
+          "label": "MR 17",
+          "kind": "banquet",
+          "sourceRect": [
+            593,
+            1200,
+            684,
+            1267
+          ],
+          "door": "s"
+        },
+        {
+          "id": "mr8",
+          "label": "MR 8",
+          "kind": "banquet",
+          "sourceRect": [
+            689,
+            1200,
+            778,
+            1267
+          ],
+          "door": "s"
+        },
+        {
+          "id": "reception-general",
+          "label": "31 · General reception",
+          "kind": "foyer",
+          "sourceRect": [
+            312,
+            673,
+            432,
+            825
+          ],
+          "door": "s"
+        },
+        {
+          "id": "reception-vip",
+          "label": "28 · VIP reception",
+          "kind": "foyer",
+          "sourceRect": [
+            944,
+            674,
+            1057,
+            826
+          ],
+          "door": "s"
+        },
+        {
+          "id": "growth",
+          "label": "Growth courtyard",
+          "kind": "garden",
+          "sourceRect": [
+            256,
+            721,
+            323,
+            882
+          ],
+          "door": "s"
+        },
+        {
+          "id": "culture",
+          "label": "Cultural courtyard",
+          "kind": "garden",
+          "sourceRect": [
+            1048,
+            721,
+            1109,
+            880
+          ],
+          "door": "s"
+        },
+        {
+          "id": "drivers",
+          "label": "Drivers lounge",
+          "kind": "lounge",
+          "sourceRect": [
+            1106,
+            836,
+            1155,
+            988
+          ],
+          "door": "w"
+        },
+        {
+          "id": "ahu-nw",
+          "label": "AHU · north west",
+          "kind": "service",
+          "sourceRect": [
+            396,
+            976,
+            438,
+            1046
+          ],
+          "door": "s"
+        },
+        {
+          "id": "ahu-sw",
+          "label": "AHU · south west",
+          "kind": "service",
+          "sourceRect": [
+            397,
+            1115,
+            438,
+            1198
+          ],
+          "door": "s"
+        },
+        {
+          "id": "ahu-se",
+          "label": "AHU · south east",
+          "kind": "service",
+          "sourceRect": [
+            934,
+            1116,
+            976,
+            1198
+          ],
+          "door": "s"
+        },
+        {
+          "id": "wc-nw",
+          "label": "Toilets · north west",
+          "kind": "wc",
+          "sourceRect": [
+            189,
+            524,
+            258,
+            591
+          ],
+          "door": "s"
+        },
+        {
+          "id": "wc-ne",
+          "label": "Toilets · north east",
+          "kind": "wc",
+          "sourceRect": [
+            1114,
+            524,
+            1183,
+            591
+          ],
+          "door": "s"
+        },
+        {
+          "id": "wc-w",
+          "label": "Toilets · west",
+          "kind": "wc",
+          "sourceRect": [
+            317,
+            913,
+            374,
+            966
+          ],
+          "door": "e"
+        },
+        {
+          "id": "wc-e",
+          "label": "Toilets · east",
+          "kind": "wc",
+          "sourceRect": [
+            1000,
+            974,
+            1065,
+            1042
+          ],
+          "door": "w"
+        },
+        {
+          "id": "stairs-nw",
+          "label": "Stairs · north west",
+          "kind": "stair",
+          "sourceRect": [
+            402,
+            683,
+            439,
+            770
+          ],
+          "door": "s"
+        },
+        {
+          "id": "stairs-ne",
+          "label": "Stairs · north east",
+          "kind": "stair",
+          "sourceRect": [
+            935,
+            683,
+            970,
+            770
+          ],
+          "door": "s"
+        },
+        {
+          "id": "stairs-sw",
+          "label": "Stairs · south west",
+          "kind": "stair",
+          "sourceRect": [
+            387,
+            1291,
+            423,
+            1329
+          ],
+          "door": "n"
+        },
+        {
+          "id": "stairs-se",
+          "label": "Stairs · south east",
+          "kind": "stair",
+          "sourceRect": [
+            790,
+            1291,
+            833,
+            1329
+          ],
+          "door": "n"
+        },
+        {
+          "id": "lift-w",
+          "label": "Passenger lifts · west",
+          "kind": "lift",
+          "sourceRect": [
+            443,
+            1291,
+            507,
+            1328
+          ],
+          "door": "n"
+        },
+        {
+          "id": "lift-e",
+          "label": "Passenger lifts · east",
+          "kind": "lift",
+          "sourceRect": [
+            846,
+            1291,
+            913,
+            1328
+          ],
+          "door": "n"
+        },
+        {
+          "id": "cargo-w",
+          "label": "Cargo lift · west",
+          "kind": "lift",
+          "sourceRect": [
+            622,
+            1334,
+            662,
+            1406
+          ],
+          "door": "n"
+        },
+        {
+          "id": "cargo-e",
+          "label": "Cargo lift · east",
+          "kind": "lift",
+          "sourceRect": [
+            705,
+            1334,
+            744,
+            1406
+          ],
+          "door": "n"
+        }
+      ],
+      "seatsIllustrative": 1644,
+      "meshes": 1058,
+      "route": [
+        [
+          -36.75247717327083,
+          -11.30769236857188
+        ],
+        [
+          -36.75247717327083,
+          -2.6923077068028287
+        ],
+        [
+          -13.897030431143033,
+          -2.6923077068028287
+        ],
+        [
+          -13.897030431143033,
+          21.53846165442263
+        ],
+        [
+          -13.897030431143033,
+          43.07692330884526
+        ],
+        [
+          12.403961045978907,
+          43.07692330884526
+        ],
+        [
+          12.403961045978907,
+          22.61538473714376
+        ],
+        [
+          12.403961045978907,
+          -2.5846153985307154
+        ],
+        [
+          34.22574436760846,
+          -2.5846153985307154
+        ],
+        [
+          36.17821971743847,
+          -11.092307752027654
+        ]
+      ],
+      "routeFailures": []
+    },
+    {
+      "level": 2,
+      "width": 118.00000367673343,
+      "depth": 127.99997845522131,
+      "floorElevation": 15.000000553131104,
+      "ceiling": 9.5,
+      "rooms": [
+        {
+          "id": "auditorium2",
+          "label": "Auditorium 2",
+          "kind": "theatre",
+          "sourceRect": [
+            493,
+            885,
+            659,
+            1076
+          ],
+          "door": "s"
+        },
+        {
+          "id": "auditorium1",
+          "label": "Auditorium 1",
+          "kind": "theatre",
+          "sourceRect": [
+            753,
+            885,
+            917,
+            1069
+          ],
+          "door": "s"
+        },
+        {
+          "id": "g20",
+          "label": "G20 meeting room",
+          "kind": "g20",
+          "sourceRect": [
+            497,
+            1219,
+            739,
+            1408
+          ],
+          "door": "n"
+        },
+        {
+          "id": "leaders",
+          "label": "Leaders lounge",
+          "kind": "banquet",
+          "sourceRect": [
+            748,
+            1221,
+            916,
+            1385
+          ],
+          "door": "n"
+        },
+        {
+          "id": "prefunction1",
+          "label": "Prefunction 1",
+          "kind": "foyer",
+          "sourceRect": [
+            497,
+            1115,
+            915,
+            1209
+          ],
+          "door": "s"
+        },
+        {
+          "id": "prefunction2",
+          "label": "Prefunction 2",
+          "kind": "foyer",
+          "sourceRect": [
+            666,
+            886,
+            746,
+            1081
+          ],
+          "door": "s"
+        },
+        {
+          "id": "court-west",
+          "label": "Courtyard · public side",
+          "kind": "garden",
+          "sourceRect": [
+            320,
+            923,
+            416,
+            1076
+          ],
+          "door": "s"
+        },
+        {
+          "id": "court-east",
+          "label": "Courtyard · VVIP side",
+          "kind": "garden",
+          "sourceRect": [
+            997,
+            923,
+            1087,
+            1076
+          ],
+          "door": "s"
+        },
+        {
+          "id": "lobby-west",
+          "label": "Public reception",
+          "kind": "foyer",
+          "sourceRect": [
+            295,
+            1100,
+            481,
+            1160
+          ],
+          "door": "s"
+        },
+        {
+          "id": "lobby-east",
+          "label": "VVIP reception",
+          "kind": "foyer",
+          "sourceRect": [
+            940,
+            1100,
+            1123,
+            1160
+          ],
+          "door": "s"
+        },
+        {
+          "id": "special",
+          "label": "Special lounge",
+          "kind": "lounge",
+          "sourceRect": [
+            648,
+            608,
+            760,
+            652
+          ],
+          "door": "s"
+        },
+        {
+          "id": "vvip",
+          "label": "VVIP lounge / presidential lobby",
+          "kind": "lounge",
+          "sourceRect": [
+            964,
+            790,
+            1022,
+            874
+          ],
+          "door": "w"
+        },
+        {
+          "id": "office-w",
+          "label": "Organiser office · west",
+          "kind": "service",
+          "sourceRect": [
+            426,
+            1198,
+            481,
+            1244
+          ],
+          "door": "e"
+        },
+        {
+          "id": "office-e",
+          "label": "Organiser office · east",
+          "kind": "service",
+          "sourceRect": [
+            940,
+            1198,
+            986,
+            1244
+          ],
+          "door": "w"
+        },
+        {
+          "id": "medical",
+          "label": "Medical room",
+          "kind": "service",
+          "sourceRect": [
+            940,
+            1280,
+            985,
+            1348
+          ],
+          "door": "w"
+        },
+        {
+          "id": "wc-w",
+          "label": "Toilets · west",
+          "kind": "wc",
+          "sourceRect": [
+            335,
+            1200,
+            419,
+            1272
+          ],
+          "door": "e"
+        },
+        {
+          "id": "wc-e",
+          "label": "Toilets · east",
+          "kind": "wc",
+          "sourceRect": [
+            991,
+            1200,
+            1078,
+            1280
+          ],
+          "door": "w"
+        },
+        {
+          "id": "stairs-nw",
+          "label": "Stairs · north west",
+          "kind": "stair",
+          "sourceRect": [
+            458,
+            910,
+            491,
+            966
+          ],
+          "door": "s"
+        },
+        {
+          "id": "stairs-ne",
+          "label": "Stairs · north east",
+          "kind": "stair",
+          "sourceRect": [
+            921,
+            910,
+            952,
+            966
+          ],
+          "door": "s"
+        },
+        {
+          "id": "stairs-sw",
+          "label": "Stairs · south west",
+          "kind": "stair",
+          "sourceRect": [
+            434,
+            1358,
+            482,
+            1403
+          ],
+          "door": "e"
+        },
+        {
+          "id": "stairs-se",
+          "label": "Stairs · south east",
+          "kind": "stair",
+          "sourceRect": [
+            940,
+            1358,
+            983,
+            1403
+          ],
+          "door": "w"
+        },
+        {
+          "id": "lift-w",
+          "label": "Passenger lifts · west",
+          "kind": "lift",
+          "sourceRect": [
+            490,
+            1422,
+            597,
+            1462
+          ],
+          "door": "n"
+        },
+        {
+          "id": "lift-e",
+          "label": "Passenger lifts · east",
+          "kind": "lift",
+          "sourceRect": [
+            778,
+            1422,
+            885,
+            1462
+          ],
+          "door": "n"
+        },
+        {
+          "id": "cargo-w",
+          "label": "Cargo lift · west",
+          "kind": "lift",
+          "sourceRect": [
+            649,
+            1470,
+            691,
+            1533
+          ],
+          "door": "n"
+        },
+        {
+          "id": "cargo-e",
+          "label": "Cargo lift · east",
+          "kind": "lift",
+          "sourceRect": [
+            718,
+            1470,
+            762,
+            1533
+          ],
+          "door": "n"
+        }
+      ],
+      "seatsIllustrative": 1846,
+      "meshes": 643,
+      "route": [
+        [
+          -0.6629213689704125,
+          23.32002563873766
+        ],
+        [
+          -0.6629213689704125,
+          12.913523325305032
+        ],
+        [
+          0,
+          4.966739740501936
+        ],
+        [
+          0,
+          12.913523325305032
+        ],
+        [
+          0,
+          19.535842979307613
+        ],
+        [
+          31.8202257105798,
+          19.535842979307613
+        ],
+        [
+          43.75281035204723,
+          19.535842979307613
+        ],
+        [
+          43.75281035204723,
+          26.06355806682444
+        ],
+        [
+          32.085394258167966,
+          26.06355806682444
+        ],
+        [
+          -0.13258427379408252,
+          26.06355806682444
+        ],
+        [
+          -29.69887732987448,
+          26.06355806682444
+        ],
+        [
+          -49.586518398986854,
+          26.06355806682444
+        ],
+        [
+          -49.586518398986854,
+          19.535842979307613
+        ]
+      ],
+      "routeFailures": []
+    },
+    {
+      "level": 3,
+      "width": 144.00000549474663,
+      "depth": 153.99998027323457,
+      "floorElevation": 26.10000093460083,
+      "ceiling": 16.8,
+      "rooms": [
+        {
+          "id": "multi-function",
+          "label": "Multi-function hall",
+          "kind": "theatre",
+          "sourceRect": [
+            455,
+            916,
+            885,
+            1395
+          ],
+          "door": "n"
+        },
+        {
+          "id": "prefunction-w",
+          "label": "Prefunction · Exhibition Complex side",
+          "kind": "foyer",
+          "sourceRect": [
+            345,
+            1050,
+            444,
+            1335
+          ],
+          "door": "s"
+        },
+        {
+          "id": "prefunction-e",
+          "label": "Prefunction · Mathura Road side",
+          "kind": "foyer",
+          "sourceRect": [
+            899,
+            1050,
+            988,
+            1335
+          ],
+          "door": "s"
+        },
+        {
+          "id": "special",
+          "label": "Special lobby",
+          "kind": "lounge",
+          "sourceRect": [
+            634,
+            565,
+            698,
+            607
+          ],
+          "door": "s"
+        },
+        {
+          "id": "vvip",
+          "label": "VVIP / special lounge",
+          "kind": "lounge",
+          "sourceRect": [
+            947,
+            756,
+            1003,
+            841
+          ],
+          "door": "w"
+        },
+        {
+          "id": "green-w",
+          "label": "Green room · west",
+          "kind": "lounge",
+          "sourceRect": [
+            398,
+            1330,
+            450,
+            1365
+          ],
+          "door": "e"
+        },
+        {
+          "id": "green-e",
+          "label": "Green room · east",
+          "kind": "lounge",
+          "sourceRect": [
+            894,
+            1330,
+            941,
+            1365
+          ],
+          "door": "w"
+        },
+        {
+          "id": "stairs-nw",
+          "label": "Stairs · north west",
+          "kind": "stair",
+          "sourceRect": [
+            412,
+            867,
+            454,
+            934
+          ],
+          "door": "s"
+        },
+        {
+          "id": "stairs-ne",
+          "label": "Stairs · north east",
+          "kind": "stair",
+          "sourceRect": [
+            884,
+            867,
+            926,
+            934
+          ],
+          "door": "s"
+        },
+        {
+          "id": "stairs-sw",
+          "label": "Stairs · south west",
+          "kind": "stair",
+          "sourceRect": [
+            411,
+            1369,
+            454,
+            1401
+          ],
+          "door": "s"
+        },
+        {
+          "id": "stairs-se",
+          "label": "Stairs · south east",
+          "kind": "stair",
+          "sourceRect": [
+            888,
+            1369,
+            937,
+            1401
+          ],
+          "door": "s"
+        },
+        {
+          "id": "wc-sw",
+          "label": "Toilets · south west",
+          "kind": "wc",
+          "sourceRect": [
+            451,
+            1470,
+            542,
+            1534
+          ],
+          "door": "n"
+        },
+        {
+          "id": "wc-se",
+          "label": "Toilets · south east",
+          "kind": "wc",
+          "sourceRect": [
+            797,
+            1470,
+            888,
+            1534
+          ],
+          "door": "n"
+        },
+        {
+          "id": "lift-w",
+          "label": "Passenger lifts · west",
+          "kind": "lift",
+          "sourceRect": [
+            465,
+            1413,
+            566,
+            1455
+          ],
+          "door": "s"
+        },
+        {
+          "id": "lift-e",
+          "label": "Passenger lifts · east",
+          "kind": "lift",
+          "sourceRect": [
+            776,
+            1413,
+            875,
+            1455
+          ],
+          "door": "s"
+        },
+        {
+          "id": "cargo-w",
+          "label": "Cargo lift · west",
+          "kind": "lift",
+          "sourceRect": [
+            616,
+            1461,
+            663,
+            1524
+          ],
+          "door": "n"
+        },
+        {
+          "id": "cargo-e",
+          "label": "Cargo lift · east",
+          "kind": "lift",
+          "sourceRect": [
+            679,
+            1461,
+            727,
+            1524
+          ],
+          "door": "n"
+        }
+      ],
+      "seatsIllustrative": 5016,
+      "meshes": 540,
+      "route": [
+        [
+          0.7912088213997068,
+          16.48646220316416
+        ],
+        [
+          0.7912088213997068,
+          0.6948317403632406
+        ],
+        [
+          0.7912088213997068,
+          -9.159145668424534
+        ],
+        [
+          0.7912088213997068,
+          -11.18047436766305
+        ],
+        [
+          0.7912088213997068,
+          -9.159145668424534
+        ],
+        [
+          0.7912088213997068,
+          16.48646220316416
+        ],
+        [
+          0.7912088213997068,
+          37.45774745776379
+        ],
+        [
+          0.7912088213997068,
+          16.48646220316416
+        ]
+      ],
+      "routeFailures": []
+    }
+  ]
+}
