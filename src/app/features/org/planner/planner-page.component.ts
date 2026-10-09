@@ -42,6 +42,7 @@ import {
 import { AutoSeatsData, AutoSeatsDialogComponent } from './auto-seats-dialog.component';
 import { FullDemoDialogComponent } from './full-demo-dialog.component';
 import { FullDemoPanelComponent } from './full-demo-panel.component';
+import { PlannerAgentCtx } from './planner-agent';
 import { PlannerAssistantComponent } from './planner-assistant.component';
 import { DemoConfig, FullDemoService } from './full-demo.service';
 import {
@@ -895,6 +896,7 @@ const OBJECT_COLOR = '#334155';
                 [slug]="slug()"
                 [eventId]="eventId()"
                 [hallId]="hallId()"
+                [ctx]="agentCtx"
                 (closed)="assistantOpen.set(false)"
               />
             } @else {
@@ -2520,6 +2522,39 @@ export class PlannerPageComponent {
       },
     });
   }
+
+  // ---- AI assistant -------------------------------------------------------------------------
+
+  /** What the AI assistant reads and does: the store and the same handlers as the buttons. */
+  protected readonly agentCtx: PlannerAgentCtx = {
+    store: this.store,
+    canvas: () => this.canvas(),
+    passage: () => {
+      const v = this.store.view();
+      return v ? v.hall.rules.values.passageWidth[v.hall.event.audience] : 3;
+    },
+    confirm: (title, message, confirmLabel, destructive = false) =>
+      this.confirm.confirm({ title, message, confirmLabel, destructive }),
+    copySelection: () => this.copySelection(),
+    rotateSelection: () => this.rotateSelection(),
+    mirrorSelection: (axis) => this.mirrorSelection(axis),
+    numberSelection: () => this.numberSelection(),
+    splitSelection: () => this.splitSelection(),
+    mergeSelection: () => this.mergeSelection(),
+    patchStalls: (patch) => this.patchStalls(patch),
+    patchZone: (patch) => this.patchZone(patch),
+    moveSelection: (dx, dy) => {
+      const sel = this.store.selection();
+      return sel ? this.moved({ kind: sel.kind, ids: sel.ids, dx, dy }) : Promise.resolve();
+    },
+    removeSelection: () => this.removeSelection(),
+    removeZone: (zone) => this.removeZone(zone),
+    addZone: (polygon) => this.addZone(polygon),
+    addBooth: (r) => this.addBooth(r),
+    exportPlan: () => this.exportPlan(),
+    fullDemo: () => this.fullDemo(),
+    openProperties: () => this.rightOpen.set(true),
+  };
 
   // ---- full demo ----------------------------------------------------------------------------
 
