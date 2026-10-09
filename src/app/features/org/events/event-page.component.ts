@@ -10,14 +10,10 @@ import {
   untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { TooltipModule } from 'primeng/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -39,6 +35,10 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { AddHallsDialogComponent, AddHallsData } from './add-halls-dialog.component';
 import { formatDay, formatDays } from './event-dates';
 import { EventDialogComponent, EventDialogData } from './event-dialog.component';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { AppDialog } from '../../../core/ui/app-dialog.service';
+import { SelectModule } from 'primeng/select';
 
 /** One event: its dates, the halls it uses (each with its rules), and its organisers. */
 @Component({
@@ -47,25 +47,25 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
     DecimalPipe,
     FormsModule,
     RouterLink,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressBarModule,
-    MatSelectModule,
-    MatTooltipModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
+    TooltipModule,
     CopyLinkComponent,
     EmptyStateComponent,
     PageHeaderComponent,
+    FieldComponent,
+    InputTextModule,
+    SelectModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page page-narrow">
-      <a mat-button class="back" [routerLink]="backLink()"
-        ><mat-icon>arrow_back</mat-icon>{{ backLabel() }}</a
+      <a pButton [text]="true" class="back" [routerLink]="backLink()"
+        ><app-icon name="arrow_back" />{{ backLabel() }}</a
       >
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
       @if (event(); as e) {
         <app-page-header
@@ -82,9 +82,11 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
             <span class="status-chip is-neutral">{{ e.audience }}</span>
           </span>
           @if (canManage()) {
-            <button mat-stroked-button (click)="edit(e)"><mat-icon>edit</mat-icon>Edit</button>
-            <button mat-button class="danger" (click)="remove(e)">
-              <mat-icon>delete</mat-icon>Delete
+            <button pButton [outlined]="true" (click)="edit(e)">
+              <app-icon name="edit" />Edit
+            </button>
+            <button pButton [text]="true" severity="danger" (click)="remove(e)">
+              <app-icon name="delete" />Delete
             </button>
           }
         </app-page-header>
@@ -118,9 +120,7 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
           <div class="row">
             <h2 class="section-title grow">Halls</h2>
             @if (canManage()) {
-              <button mat-flat-button (click)="addHalls(e)">
-                <mat-icon>add</mat-icon>Add halls
-              </button>
+              <button pButton (click)="addHalls(e)"><app-icon name="add" />Add halls</button>
             }
           </div>
           @if (!e.halls.length) {
@@ -150,27 +150,30 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
                   </span>
                   <span class="small">{{ h.rulesOn }} rules on</span>
                   @if (h.overlaps.length) {
-                    <span class="status-chip is-warning" [matTooltip]="overlapText(h)">
-                      <mat-icon inline>warning</mat-icon> Also booked
+                    <span class="status-chip is-warning" [pTooltip]="overlapText(h)">
+                      <app-icon name="warning" /> Also booked
                     </span>
                   }
                   @if (h.latestFloorVersion !== h.floorVersion && !eventScoped()) {
                     <span
                       class="status-chip is-neutral"
-                      matTooltip="The hall's floor changed after it was added; this event keeps the floor it was added with."
+                      pTooltip="The hall's floor changed after it was added; this event keeps the floor it was added with."
                     >
                       Floor v{{ h.floorVersion }}
                     </span>
                   }
-                  <mat-icon class="chevron" aria-hidden="true">chevron_right</mat-icon>
+                  <app-icon class="chevron" name="chevron_right" />
                 </a>
                 @if (canManage()) {
                   <button
-                    mat-icon-button
+                    pButton
+                    [text]="true"
+                    [rounded]="true"
+                    severity="secondary"
                     (click)="removeHall(e, h)"
                     [attr.aria-label]="'Remove ' + h.name"
                   >
-                    <mat-icon>close</mat-icon>
+                    <app-icon name="close" />
                   </button>
                 }
               </li>
@@ -186,21 +189,34 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
               only. They plan stalls with the rules you set for each hall.
             </p>
             <form class="invite" (ngSubmit)="invite(e)">
-              <mat-form-field class="email">
-                <mat-label>Email</mat-label>
-                <input matInput type="email" name="email" [(ngModel)]="email" required />
-              </mat-form-field>
-              <mat-form-field class="role">
-                <mat-label>Role</mat-label>
-                <mat-select name="role" [(ngModel)]="roleId" required>
-                  @for (r of eventRoles(); track r.id) {
-                    <mat-option [value]="r.id">{{ r.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <button mat-flat-button type="submit" [disabled]="busy() || !email || !roleId">
-                Invite
-              </button>
+              <app-field class="email" label="Email" for="event-email">
+                <input
+                  id="event-email"
+                  pInputText
+                  type="email"
+                  name="email"
+                  [(ngModel)]="email"
+                  required
+                />
+              </app-field>
+              <app-field label="Role" for="event-invite-role" class="role">
+                <p-select
+                  inputId="event-invite-role"
+                  name="role"
+                  [(ngModel)]="roleId"
+                  [options]="eventRoles()"
+                  optionLabel="name"
+                  optionValue="id"
+                  required
+                />
+              </app-field>
+              <button
+                pButton
+                type="submit"
+                icon="pi pi-send"
+                label="Invite"
+                [disabled]="busy() || !email || !roleId"
+              ></button>
             </form>
             @if (lastLink(); as link) {
               <div class="link">
@@ -216,7 +232,9 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
                       <b>{{ m.user.name }}</b>
                       <span class="muted small">{{ m.user.email }} · {{ m.role.name }}</span>
                     </span>
-                    <button mat-button (click)="removePerson(e, m.id, m.user.name)">Remove</button>
+                    <button pButton [text]="true" (click)="removePerson(e, m.id, m.user.name)">
+                      Remove
+                    </button>
                   </li>
                 }
                 @for (i of p.invitations; track i.id) {
@@ -228,7 +246,9 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
                         {{ i.expired ? 'invitation expired' : 'invited' }}</span
                       >
                     </span>
-                    <button mat-button (click)="revoke(e, i.id, i.email)">Cancel invitation</button>
+                    <button pButton [text]="true" (click)="revoke(e, i.id, i.email)">
+                      Cancel invitation
+                    </button>
                   </li>
                 }
                 @if (!p.members.length && !p.invitations.length) {
@@ -260,8 +280,8 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
       gap: 2px;
     }
     .label {
-      font: var(--mat-sys-label-small);
-      color: var(--mat-sys-on-surface-variant);
+      font: var(--app-label-small);
+      color: var(--app-on-surface-variant);
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
@@ -275,7 +295,7 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
       min-width: 0;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
     .nums {
       font-variant-numeric: tabular-nums;
@@ -292,7 +312,7 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
       display: flex;
       align-items: center;
       gap: 8px;
-      border-top: 1px solid var(--mat-sys-outline-variant);
+      border-top: 1px solid var(--app-outline-variant);
       padding: 8px 0;
     }
     .halls li:first-child,
@@ -313,7 +333,7 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
     }
     .hall:hover,
     .hall:focus-visible {
-      background: var(--mat-sys-surface-container);
+      background: var(--app-surface-container);
     }
     .hall-name {
       display: grid;
@@ -321,7 +341,7 @@ import { EventDialogComponent, EventDialogData } from './event-dialog.component'
       flex: 1 1 200px;
     }
     .chevron {
-      color: var(--mat-sys-on-surface-variant);
+      color: var(--app-on-surface-variant);
     }
     .invite {
       display: flex;
@@ -350,7 +370,7 @@ export class EventPageComponent {
 
   private readonly api = inject(EventsApi);
   private readonly orgApi = inject(OrgApi);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(AppDialog);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(Notifier);
   private readonly router = inject(Router);
@@ -435,15 +455,12 @@ export class EventPageComponent {
 
   protected edit(event: EventView): void {
     const data: EventDialogData = { slug: this.slug(), kind: event.kind, event };
-    this.dialog
-      .open(EventDialogComponent, { data })
-      .afterClosed()
-      .subscribe((saved?: EventView) => {
-        if (saved) {
-          this.notifier.success('Event saved.');
-          void this.load(saved.id);
-        }
-      });
+    this.dialog.open<EventView>(EventDialogComponent, { data }).subscribe((saved?: EventView) => {
+      if (saved) {
+        this.notifier.success('Event saved.');
+        void this.load(saved.id);
+      }
+    });
   }
 
   protected async remove(event: EventView): Promise<void> {
@@ -469,8 +486,7 @@ export class EventPageComponent {
   protected addHalls(event: EventDetailView): void {
     const data: AddHallsData = { slug: this.slug(), event };
     this.dialog
-      .open(AddHallsDialogComponent, { data })
-      .afterClosed()
+      .open<EventDetailView>(AddHallsDialogComponent, { data })
       .subscribe((saved?: EventDetailView) => {
         if (saved) {
           this.event.set(saved);

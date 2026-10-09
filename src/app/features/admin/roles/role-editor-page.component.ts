@@ -11,15 +11,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatRadioModule } from '@angular/material/radio';
-import { MatSelectModule } from '@angular/material/select';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -33,6 +27,12 @@ import { AdminApi } from '../../../core/admin/admin-api.service';
 import { ConfirmService } from '../../../core/ui/confirm.service';
 import { Notifier } from '../../../core/ui/notifier.service';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { CheckboxModule } from 'primeng/checkbox';
+import { RadioButtonModule } from 'primeng/radiobutton';
+import { FormsModule } from '@angular/forms';
 
 const ROLE_KEY = /^[a-z][a-z0-9_]{1,47}$/;
 
@@ -52,16 +52,16 @@ function roleKey(name: string): string {
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatCardModule,
-    MatCheckboxModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressBarModule,
-    MatRadioModule,
-    MatSelectModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
     PageHeaderComponent,
+    FieldComponent,
+    InputTextModule,
+    SelectModule,
+    CheckboxModule,
+    RadioButtonModule,
+    FormsModule,
   ],
   templateUrl: './role-editor-page.component.html',
   styleUrl: './role-editor-page.component.scss',
@@ -82,6 +82,10 @@ export class RoleEditorPageComponent {
   protected readonly role = signal<AdminRoleView | null>(null);
   protected readonly groups = signal<PermissionGroup[]>([]);
   protected readonly organisations = signal<OrganisationSummary[]>([]);
+  protected readonly organisationOptions = computed(() => [
+    { value: '', label: 'Every organisation' },
+    ...this.organisations().map((org) => ({ value: org.id, label: `Only ${org.name}` })),
+  ]);
   protected readonly selected = signal<ReadonlySet<string>>(new Set());
   protected readonly busy = signal(false);
   protected readonly isNew = computed(() => !this.id());

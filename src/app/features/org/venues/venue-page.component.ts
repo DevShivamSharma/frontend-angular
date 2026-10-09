@@ -8,12 +8,9 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -28,6 +25,10 @@ import { HallDialogComponent, HallDialogData } from './hall-dialog.component';
 import { CsvImportDialogComponent, CsvImportDialogData } from './csv-import-dialog.component';
 import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component';
 import { ImportTourComponent } from '../../../shared/import-tour/import-tour.component';
+import { AppDialog } from '../../../core/ui/app-dialog.service';
+import { CheckboxModule } from 'primeng/checkbox';
+import { PopoverModule } from 'primeng/popover';
+import { FormsModule } from '@angular/forms';
 
 /** One venue and its halls, with the ways to add a hall. */
 @Component({
@@ -37,19 +38,22 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
     DecimalPipe,
     NgTemplateOutlet,
     RouterLink,
-    MatButtonModule,
-    MatCheckboxModule,
-    MatIconModule,
-    MatMenuModule,
-    MatProgressBarModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
     EmptyStateComponent,
     PageHeaderComponent,
     ImportTourComponent,
+    CheckboxModule,
+    PopoverModule,
+    FormsModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
-      <a mat-button class="back" [routerLink]="['..']"><mat-icon>arrow_back</mat-icon>Venues</a>
+      <a pButton [text]="true" class="back" [routerLink]="['..']"
+        ><app-icon name="arrow_back" />Venues</a
+      >
       @if (venue(); as v) {
         <app-page-header [heading]="v.name" [subheading]="v.address ?? ''">
           @if (canImport()) {
@@ -61,54 +65,73 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
             />
           }
           @if (canManage()) {
-            <button mat-stroked-button (click)="editVenue(v)"><mat-icon>edit</mat-icon>Edit</button>
+            <button pButton [outlined]="true" (click)="editVenue(v)">
+              <app-icon name="edit" />Edit
+            </button>
             <button
-              mat-button
-              class="danger"
+              pButton
+              [text]="true"
+              severity="danger"
               (click)="deleteVenue(v)"
               [disabled]="halls().length > 0"
               [title]="halls().length ? 'Only a venue without halls can be deleted' : ''"
             >
-              <mat-icon>delete</mat-icon>Delete
+              <app-icon name="delete" />Delete
             </button>
           }
           @if (canAdd()) {
-            <button mat-flat-button [matMenuTriggerFor]="addMenu">
-              <mat-icon>add</mat-icon>Add hall
-            </button>
+            <button
+              pButton
+              type="button"
+              icon="pi pi-plus"
+              label="Add hall"
+              aria-haspopup="menu"
+              (click)="addMenu.toggle($event)"
+            ></button>
           }
         </app-page-header>
       }
 
-      <mat-menu #addMenu="matMenu" xPosition="before" class="add-hall-menu">
-        @if (canManage()) {
-          <button mat-menu-item (click)="createHall()">
-            <mat-icon>crop_free</mat-icon>
-            <span class="item"
-              ><b>Draw by size</b><span class="muted">Width × depth in metres</span></span
+      <p-popover #addMenu>
+        <div class="add-menu" role="menu">
+          @if (canManage()) {
+            <button
+              type="button"
+              class="menu-item"
+              role="menuitem"
+              (click)="addMenu.hide(); createHall()"
             >
-          </button>
-        }
-        @if (canImport()) {
-          <a mat-menu-item [routerLink]="['import-floor-plan']"
-            ><mat-icon>map</mat-icon
-            ><span class="item"
-              ><b>Import from floor plan</b
-              ><span class="muted">PDF, DXF or scanned image · review in Three.js</span></span
-            ></a
-          >
-          <button mat-menu-item (click)="importCsv()">
-            <mat-icon>table_view</mat-icon>
-            <span class="item"
-              ><b>Import from CSV</b
-              ><span class="muted">Convert a venue CSV file into halls</span></span
+              <app-icon name="crop_free" />
+              <span class="item"
+                ><b>Draw by size</b><span class="muted">Width × depth in metres</span></span
+              >
+            </button>
+          }
+          @if (canImport()) {
+            <a class="menu-item" role="menuitem" [routerLink]="['import-floor-plan']"
+              ><app-icon name="map" /><span class="item"
+                ><b>Import from floor plan</b
+                ><span class="muted">PDF, DXF or scanned image · review in Three.js</span></span
+              ></a
             >
-          </button>
-        }
-      </mat-menu>
+            <button
+              type="button"
+              class="menu-item"
+              role="menuitem"
+              (click)="addMenu.hide(); importCsv()"
+            >
+              <app-icon name="table_view" />
+              <span class="item"
+                ><b>Import from CSV</b
+                ><span class="muted">Convert a venue CSV file into halls</span></span
+              >
+            </button>
+          }
+        </div>
+      </p-popover>
 
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
 
       @if (!loading() && venue() && !halls().length) {
@@ -119,10 +142,10 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
             text="Draw a hall by its size or import halls from a venue CSV file."
           >
             @if (canManage()) {
-              <button mat-flat-button (click)="createHall()">Draw by size</button>
+              <button pButton (click)="createHall()">Draw by size</button>
             }
             @if (canImport()) {
-              <button mat-stroked-button (click)="importCsv()">Import from CSV</button>
+              <button pButton [outlined]="true" (click)="importCsv()">Import from CSV</button>
             }
           </app-empty-state>
         </div>
@@ -131,21 +154,27 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
       @if (halls().length) {
         <div class="row list-bar" [class.selecting]="selecting()">
           @if (selecting()) {
-            <mat-checkbox
-              [checked]="allSelected()"
-              [indeterminate]="selected().size > 0 && !allSelected()"
-              (change)="selectAll($event.checked)"
-              >{{ selected().size }} of {{ halls().length }} selected</mat-checkbox
-            >
+            <span class="check">
+              <p-checkbox
+                inputId="halls-select-all"
+                [binary]="true"
+                [ngModel]="allSelected()"
+                [indeterminate]="selected().size > 0 && !allSelected()"
+                (ngModelChange)="selectAll($event)"
+              />
+              <label for="halls-select-all"
+                >{{ selected().size }} of {{ halls().length }} selected</label
+              >
+            </span>
             <span class="spacer"></span>
-            <button mat-button (click)="stopSelecting()">Cancel</button>
+            <button pButton [text]="true" (click)="stopSelecting()">Cancel</button>
             <button
-              mat-flat-button
-              class="danger"
+              pButton
+              severity="danger"
               [disabled]="!selected().size || busy()"
               (click)="deleteSelected()"
             >
-              <mat-icon>delete</mat-icon>Delete {{ selected().size || '' }}
+              <app-icon name="delete" />Delete {{ selected().size || '' }}
             </button>
           } @else {
             <span class="muted"
@@ -153,8 +182,8 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
             >
             <span class="spacer"></span>
             @if (canManage()) {
-              <button mat-button (click)="selecting.set(true)">
-                <mat-icon>checklist</mat-icon>Select
+              <button pButton [text]="true" (click)="selecting.set(true)">
+                <app-icon name="checklist" />Select
               </button>
             }
           }
@@ -164,10 +193,11 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
             <li>
               @if (selecting()) {
                 <label class="hall panel" [class.checked]="selected().has(hall.id)">
-                  <mat-checkbox
-                    [checked]="selected().has(hall.id)"
-                    (change)="toggle(hall.id, $event.checked)"
-                    [aria-label]="'Select ' + hall.name"
+                  <p-checkbox
+                    [binary]="true"
+                    [ngModel]="selected().has(hall.id)"
+                    (ngModelChange)="toggle(hall.id, $event)"
+                    [ariaLabel]="'Select ' + hall.name"
                   />
                   <ng-container
                     [ngTemplateOutlet]="hallCard"
@@ -226,13 +256,17 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
       justify-self: start;
       margin-bottom: -16px;
     }
+    .add-menu {
+      display: grid;
+      min-width: 300px;
+    }
     .item {
       display: grid;
       line-height: 1.3;
-      padding: 4px 0;
+      padding: 2px 0;
     }
     .item .muted {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
     .halls {
       list-style: none;
@@ -261,21 +295,21 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
       z-index: 2;
       padding: 4px 8px 4px 4px;
       border-radius: 12px;
-      background: var(--mat-sys-secondary-container);
-      color: var(--mat-sys-on-secondary-container);
-      box-shadow: var(--mat-sys-level2);
+      background: var(--app-secondary-container);
+      color: var(--app-on-secondary-container);
+      box-shadow: var(--app-level2);
     }
     label.hall {
       cursor: pointer;
     }
     .hall.checked {
-      border-color: var(--mat-sys-primary);
-      box-shadow: inset 0 0 0 1px var(--mat-sys-primary);
-      background: var(--mat-sys-surface-container-high);
+      border-color: var(--app-primary);
+      box-shadow: inset 0 0 0 1px var(--app-primary);
+      background: var(--app-surface-container-high);
     }
     .hall:hover,
     .hall:focus-visible {
-      border-color: var(--mat-sys-primary);
+      border-color: var(--app-primary);
     }
     .shape {
       flex: none;
@@ -287,8 +321,8 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
       height: 100%;
     }
     .shape rect {
-      fill: var(--mat-sys-primary-container);
-      stroke: var(--mat-sys-primary);
+      fill: var(--app-primary-container);
+      stroke: var(--app-primary);
       stroke-width: 2;
       vector-effect: non-scaling-stroke;
     }
@@ -298,7 +332,7 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
       min-width: 0;
     }
     .name {
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
       display: flex;
       gap: 8px;
       align-items: center;
@@ -308,7 +342,7 @@ import { ImportTourComponent } from '../../../shared/import-tour/import-tour.com
       font-variant-numeric: tabular-nums;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
   `,
 })
@@ -317,7 +351,7 @@ export class VenuePageComponent implements OnInit {
   readonly venueId = input.required<string>();
 
   private readonly api = inject(VenuesApi);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(AppDialog);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(Notifier);
   private readonly router = inject(Router);
@@ -412,8 +446,7 @@ export class VenuePageComponent implements OnInit {
   protected createHall(): void {
     const data: HallDialogData = { slug: this.context.slug(), venueId: this.venueId() };
     this.dialog
-      .open(HallDialogComponent, { data, width: '1100px', maxWidth: '95vw' })
-      .afterClosed()
+      .open<HallView>(HallDialogComponent, { data, width: 'min(1100px, 96vw)' })
       .subscribe((hall?: HallView) => {
         if (hall) {
           this.notifier.success(`${hall.name} created.`);
@@ -433,8 +466,11 @@ export class VenuePageComponent implements OnInit {
       venueName: this.venue()?.name ?? 'this venue',
     };
     this.dialog
-      .open(CsvImportDialogComponent, { data, maxWidth: '1100px', width: '95vw' })
-      .afterClosed()
+      .open<boolean>(CsvImportDialogComponent, {
+        data,
+        width: 'min(1100px, 96vw)',
+        dismissable: false,
+      })
       .subscribe((saved?: boolean) => {
         if (saved) void this.load();
       });
@@ -442,12 +478,9 @@ export class VenuePageComponent implements OnInit {
 
   protected editVenue(venue: VenueView): void {
     const data: VenueDialogData = { slug: this.context.slug(), venue };
-    this.dialog
-      .open(VenueDialogComponent, { data })
-      .afterClosed()
-      .subscribe((saved?: VenueView) => {
-        if (saved) this.venue.set(saved);
-      });
+    this.dialog.open<VenueView>(VenueDialogComponent, { data }).subscribe((saved?: VenueView) => {
+      if (saved) this.venue.set(saved);
+    });
   }
 
   protected async deleteVenue(venue: VenueView): Promise<void> {

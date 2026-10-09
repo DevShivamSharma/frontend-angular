@@ -6,7 +6,7 @@
   flex-wrap: wrap;
 
   h1 {
-    font: var(--mat-sys-headline-medium);
+    font: var(--app-headline-medium);
   }
 
   p {
@@ -15,8 +15,8 @@
 }
 
 .eyebrow {
-  font: var(--mat-sys-label-large);
-  color: var(--mat-sys-primary);
+  font: var(--app-label-large);
+  color: var(--app-primary);
   margin: 0 0 4px !important;
 }
 
@@ -46,7 +46,7 @@
   margin-bottom: 12px;
 
   h2 {
-    font: var(--mat-sys-title-medium);
+    font: var(--app-title-medium);
   }
 }
 
@@ -62,8 +62,8 @@
   gap: 12px;
   padding: 18px 16px 14px;
   border-radius: 14px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface);
+  border: 1px solid var(--app-outline-variant);
+  background: var(--app-surface);
   color: inherit;
   text-decoration: none;
   overflow: hidden;
@@ -72,12 +72,12 @@
     box-shadow 150ms ease;
 
   &:hover {
-    border-color: var(--mat-sys-outline);
-    box-shadow: var(--mat-sys-level1);
+    border-color: var(--app-outline);
+    box-shadow: var(--app-level1);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
+    outline: 2px solid var(--app-primary);
     outline-offset: 2px;
   }
 }
@@ -101,7 +101,7 @@
 }
 
 .org-name {
-  font: var(--mat-sys-title-small);
+  font: var(--app-title-small);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -111,9 +111,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  font: var(--mat-sys-body-small);
+  font: var(--app-body-small);
 
-  mat-icon {
+  app-icon {
     vertical-align: -2px;
   }
 
@@ -132,11 +132,11 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--mat-sys-primary);
+    background: var(--app-primary);
   }
 
   &.is-off::before {
-    background: var(--mat-sys-error);
+    background: var(--app-error);
   }
 }
 
@@ -160,11 +160,11 @@
   text-decoration: none;
 
   &:hover {
-    background: var(--mat-sys-surface-container);
+    background: var(--app-surface-container);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
+    outline: 2px solid var(--app-primary);
   }
 }
 
@@ -182,18 +182,18 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
+  background: var(--app-secondary-container);
+  color: var(--app-on-secondary-container);
 
-  mat-icon {
+  app-icon {
     width: 20px;
     height: 20px;
     font-size: 20px;
   }
 
   &.is-error {
-    background: var(--mat-sys-error-container);
-    color: var(--mat-sys-on-error-container);
+    background: var(--app-error-container);
+    color: var(--app-on-error-container);
   }
 }
 
@@ -204,15 +204,15 @@
 }
 
 .strong {
-  font: var(--mat-sys-title-small);
+  font: var(--app-title-small);
 }
 
 .small {
-  font: var(--mat-sys-body-small);
+  font: var(--app-body-small);
 }
 
 .chevron {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-on-surface-variant);
 }
 
 .all-good {
@@ -220,7 +220,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  color: var(--mat-sys-primary);
+  color: var(--app-primary);
 }
 
 .empty-line {

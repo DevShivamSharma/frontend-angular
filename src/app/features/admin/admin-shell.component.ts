@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
+import { IconComponent } from '../../shared/icon.component';
 import { RouterLink } from '@angular/router';
 
 import { AccountMenuComponent } from '../../shared/account-menu.component';
@@ -7,12 +7,12 @@ import { NavItem, ShellLayoutComponent } from '../../shared/shell-layout.compone
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [ShellLayoutComponent, AccountMenuComponent, MatIconModule, RouterLink],
+  imports: [ShellLayoutComponent, AccountMenuComponent, IconComponent, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-shell-layout [navItems]="nav">
       <a brand routerLink="/admin" class="brand" aria-label="Platform admin, overview">
-        <span class="mark" aria-hidden="true"><mat-icon>stadium</mat-icon></span>
+        <span class="mark" aria-hidden="true"><app-icon name="stadium" /></span>
         <span class="titles">
           <span class="name">Venue Platform</span>
           <span class="role">Super Admin console</span>
@@ -32,7 +32,7 @@ import { NavItem, ShellLayoutComponent } from '../../shared/shell-layout.compone
       border-radius: 10px;
     }
     .brand:focus-visible {
-      outline: 2px solid var(--mat-sys-primary);
+      outline: 2px solid var(--app-primary);
       outline-offset: 4px;
     }
     .mark {
@@ -44,21 +44,21 @@ import { NavItem, ShellLayoutComponent } from '../../shared/shell-layout.compone
       border-radius: 10px;
       background: linear-gradient(
         135deg,
-        var(--mat-sys-primary),
-        color-mix(in srgb, var(--mat-sys-primary) 55%, var(--mat-sys-tertiary))
+        var(--app-primary),
+        color-mix(in srgb, var(--app-primary) 55%, var(--app-tertiary))
       );
-      color: var(--mat-sys-on-primary);
+      color: var(--app-on-primary);
     }
     .titles {
       display: grid;
       line-height: 1.2;
     }
     .name {
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
     }
     .role {
-      font: var(--mat-sys-label-small);
-      color: var(--mat-sys-on-surface-variant);
+      font: var(--app-label-small);
+      color: var(--app-on-surface-variant);
       letter-spacing: 0.04em;
     }
     @media (max-width: 480px) {

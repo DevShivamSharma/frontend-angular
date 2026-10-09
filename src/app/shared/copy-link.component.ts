@@ -1,24 +1,27 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from './icon.component';
+import { TooltipModule } from 'primeng/tooltip';
 
 /** A link to pass on by hand, with a copy button. */
 @Component({
   selector: 'app-copy-link',
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [ButtonModule, IconComponent, TooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <code class="url">{{ url() }}</code>
     <button
-      mat-icon-button
+      pButton
+      [text]="true"
+      [rounded]="true"
+      severity="secondary"
       type="button"
       (click)="copy()"
-      [matTooltip]="copied() ? 'Copied' : 'Copy link'"
+      [pTooltip]="copied() ? 'Copied' : 'Copy link'"
       [attr.aria-label]="label()"
     >
-      <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+      <app-icon [name]="copied() ? 'check' : 'content_copy'" />
     </button>
   `,
   styles: `
@@ -28,14 +31,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       gap: 4px;
       padding: 4px 4px 4px 12px;
       border-radius: 8px;
-      background: var(--mat-sys-surface-container-high);
+      background: var(--app-surface-container-high);
       min-width: 0;
     }
     .url {
       flex: 1;
       min-width: 0;
       overflow-wrap: anywhere;
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
   `,

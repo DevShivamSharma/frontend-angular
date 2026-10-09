@@ -13,13 +13,13 @@ form {
   gap: 4px;
   padding-bottom: 16px;
 
-  mat-radio-group {
+  .radios {
     display: grid;
   }
 }
 
 .small {
-  font: var(--mat-sys-body-small);
+  font: var(--app-body-small);
 }
 
 .groups {
@@ -31,7 +31,7 @@ form {
 .group-toggle {
   display: block;
   margin-bottom: 8px;
-  font: var(--mat-sys-title-small);
+  font: var(--app-title-small);
 }
 
 .permission {
@@ -41,21 +41,21 @@ form {
 
 .description {
   margin: -8px 0 6px 40px;
-  font: var(--mat-sys-body-small);
+  font: var(--app-body-small);
 }
 
 .soon {
   margin-left: 6px;
   padding: 0 6px;
   border-radius: 4px;
-  font: var(--mat-sys-label-small);
-  background: var(--mat-sys-tertiary-container);
-  color: var(--mat-sys-on-tertiary-container);
+  font: var(--app-label-small);
+  background: var(--app-tertiary-container);
+  color: var(--app-on-tertiary-container);
 }
 
 .actions {
   position: sticky;
   bottom: 0;
   padding: 12px 0;
-  background: var(--mat-sys-surface);
+  background: var(--app-surface);
 }

@@ -1,21 +1,24 @@
 <a class="skip-link" href="#main-content">Skip to content</a>
 
-<mat-toolbar class="topbar">
+<header class="topbar">
   <button
     #navToggle
-    mat-icon-button
+    pButton
+    [text]="true"
+    [rounded]="true"
+    severity="secondary"
     class="nav-toggle"
     (click)="toggle()"
     [attr.aria-label]="toggleLabel()"
     [attr.aria-expanded]="expanded()"
     aria-controls="app-nav"
   >
-    <mat-icon>{{ expanded() && !compact() ? 'menu_open' : 'menu' }}</mat-icon>
+    <app-icon [name]="expanded() && !compact() ? 'menu_open' : 'menu'" />
   </button>
   <ng-content select="[brand]" />
   <span class="spacer"></span>
   <ng-content select="[account]" />
-</mat-toolbar>
+</header>
 
 <div
   class="frame"
@@ -27,7 +30,6 @@
     id="app-nav"
     class="rail"
     [cdkTrapFocus]="compact() && drawerOpen()"
-    [cdkTrapFocusAutoCapture]="true"
     (keydown.escape)="closeDrawer()"
   >
     <nav class="nav" aria-label="Main navigation">
@@ -42,17 +44,16 @@
         @for (item of group.items; track item.label) {
           <a
             class="nav-item"
-            matRipple
             [routerLink]="item.link"
             routerLinkActive="is-active"
             ariaCurrentWhenActive="page"
             [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-            [matTooltip]="item.label"
-            [matTooltipDisabled]="!railCollapsed()"
-            matTooltipPosition="right"
+            [pTooltip]="item.label"
+            [tooltipDisabled]="!railCollapsed()"
+            tooltipPosition="right"
             [attr.aria-label]="railCollapsed() ? item.label : null"
           >
-            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+            <app-icon [name]="item.icon" />
             <span class="nav-label">{{ item.label }}</span>
           </a>
         }
@@ -65,18 +66,15 @@
         <button
           type="button"
           class="nav-item collapse-button"
-          matRipple
           (click)="toggle()"
           [attr.aria-label]="toggleLabel()"
           [attr.aria-expanded]="expanded()"
           aria-controls="app-nav"
-          [matTooltip]="toggleLabel()"
-          [matTooltipDisabled]="!railCollapsed()"
-          matTooltipPosition="right"
+          [pTooltip]="toggleLabel()"
+          [tooltipDisabled]="!railCollapsed()"
+          tooltipPosition="right"
         >
-          <mat-icon aria-hidden="true">{{
-            collapsed() ? 'left_panel_open' : 'left_panel_close'
-          }}</mat-icon>
+          <app-icon [name]="collapsed() ? 'left_panel_open' : 'left_panel_close'" />
           <span class="nav-label">Collapse</span>
         </button>
       }

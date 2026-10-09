@@ -13,11 +13,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatRippleModule } from '@angular/material/core';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from './icon.component';
+import { TooltipModule } from 'primeng/tooltip';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 
@@ -64,11 +62,9 @@ function storeCollapsed(collapsed: boolean): void {
   selector: 'app-shell-layout',
   imports: [
     A11yModule,
-    MatButtonModule,
-    MatIconModule,
-    MatRippleModule,
-    MatToolbarModule,
-    MatTooltipModule,
+    ButtonModule,
+    IconComponent,
+    TooltipModule,
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
@@ -80,6 +76,7 @@ function storeCollapsed(collapsed: boolean): void {
 })
 export class ShellLayoutComponent {
   readonly navItems = input.required<NavItem[]>();
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   private readonly toggleButton = viewChild.required<unknown, ElementRef<HTMLElement>>(
     'navToggle',
@@ -140,6 +137,10 @@ export class ShellLayoutComponent {
   protected toggle(): void {
     if (this.compact()) {
       this.drawerOpen.update((open) => !open);
+      // An opened drawer takes the focus to its first link (never on page load).
+      if (this.drawerOpen()) {
+        setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('#app-nav a')?.focus());
+      }
       return;
     }
     this.collapsed.update((collapsed) => !collapsed);

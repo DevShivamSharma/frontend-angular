@@ -1,22 +1,18 @@
 import { inject, Injectable } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MessageService } from 'primeng/api';
 
 import { errorMessage } from '../api/http-error';
 
-/** Short confirmations and failures, as a snackbar. */
+/** Short confirmations and failures, as a toast. */
 @Injectable({ providedIn: 'root' })
 export class Notifier {
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly messages = inject(MessageService);
 
   success(message: string): void {
-    this.snackBar.open(message, 'OK', { duration: 4000 });
+    this.messages.add({ severity: 'success', summary: message, life: 4000 });
   }
 
   error(error: unknown, fallback?: string): void {
-    this.snackBar.open(errorMessage(error, fallback), 'Dismiss', {
-      duration: 8000,
-      panelClass: 'app-snackbar-error',
-      politeness: 'assertive',
-    });
+    this.messages.add({ severity: 'error', summary: errorMessage(error, fallback), life: 8000 });
   }
 }

@@ -99,7 +99,7 @@ const MARGIN = 4;
   styles: `
     :host {
       display: block;
-      --floor-outside: var(--mat-sys-surface-container);
+      --floor-outside: var(--app-surface-container);
     }
     svg {
       display: block;
@@ -108,14 +108,14 @@ const MARGIN = 4;
       max-height: 75vh;
     }
     .floor {
-      fill: var(--mat-sys-surface-container-lowest);
+      fill: var(--app-surface-container-lowest);
     }
     .grid-line {
-      stroke: var(--mat-sys-outline-variant);
+      stroke: var(--app-outline-variant);
       stroke-width: 0.04;
     }
     .grid-line-major {
-      stroke: var(--mat-sys-outline);
+      stroke: var(--app-outline);
       stroke-width: 0.08;
       opacity: 0.6;
     }
@@ -128,17 +128,17 @@ const MARGIN = 4;
     }
     .outline {
       fill: none;
-      stroke: var(--mat-sys-outline);
+      stroke: var(--app-outline);
       stroke-width: 0.12;
     }
     .label {
       font-size: 1.4px;
-      font-family: var(--mat-sys-label-medium-font, sans-serif);
-      fill: var(--mat-sys-on-surface);
+      font-family: var(--app-font-family, sans-serif);
+      fill: var(--app-on-surface);
       dominant-baseline: hanging;
     }
     .icon-dot {
-      fill: var(--mat-sys-tertiary);
+      fill: var(--app-tertiary);
     }
   `,
 })

@@ -1,11 +1,11 @@
 <div class="page">
-  <a mat-button routerLink="/admin/organisations" class="back"
-    ><mat-icon>arrow_back</mat-icon>Organisations</a
+  <a pButton [text]="true" routerLink="/admin/organisations" class="back"
+    ><app-icon name="arrow_back" />Organisations</a
   >
 
   @if (created(); as result) {
     <section class="panel done" aria-labelledby="done-title">
-      <span class="done-icon" aria-hidden="true"><mat-icon>task_alt</mat-icon></span>
+      <span class="done-icon" aria-hidden="true"><app-icon name="task_alt" /></span>
       <h1 id="done-title">{{ result.organisation.name }} is ready</h1>
       <p class="muted">Its first Venue Admin is invited. They set up the rest of the team.</p>
 
@@ -29,10 +29,10 @@
       </div>
 
       <div class="row">
-        <a mat-flat-button [routerLink]="['/admin/organisations', result.organisation.id]"
+        <a pButton [routerLink]="['/admin/organisations', result.organisation.id]"
           >Open the organisation</a
         >
-        <a mat-button routerLink="/admin/organisations">Back to the list</a>
+        <a pButton [text]="true" routerLink="/admin/organisations">Back to the list</a>
       </div>
     </section>
   } @else {
@@ -45,33 +45,44 @@
       <div class="steps">
         <section class="panel step" aria-labelledby="step-identity">
           <h2 id="step-identity"><span class="step-number" aria-hidden="true">1</span>Identity</h2>
-          <mat-form-field class="full-width">
-            <mat-label>Name</mat-label>
-            <input matInput formControlName="name" placeholder="Yashobhoomi (IICC)" />
-            <mat-error>2 to 160 characters</mat-error>
-          </mat-form-field>
-          <mat-form-field class="full-width">
-            <mat-label>Link</mat-label>
-            <span matTextPrefix class="prefix">{{ origin }}/</span>
-            <input matInput formControlName="slug" />
-            @if (form.controls.slug.pending) {
-              <mat-spinner matSuffix diameter="18" />
-            } @else if (form.controls.slug.valid && form.controls.slug.value) {
-              <mat-icon matSuffix class="ok" aria-label="Available">check_circle</mat-icon>
-            }
-            <mat-hint
-              >Lower-case letters, digits and hyphens. A later change keeps old links
-              working.</mat-hint
-            >
-            @if (form.controls.slug.hasError('slugTaken')) {
-              <mat-error>{{ form.controls.slug.getError('slugTaken') }}</mat-error>
-            } @else {
-              <mat-error
-                >3–40 lower-case letters, digits and single hyphens, starting with a
-                letter</mat-error
-              >
-            }
-          </mat-form-field>
+          <app-field
+            class="full-width"
+            label="Name"
+            error="2 to 160 characters"
+            for="organisation-create-name"
+          >
+            <input
+              id="organisation-create-name"
+              pInputText
+              formControlName="name"
+              placeholder="Yashobhoomi (IICC)"
+            />
+          </app-field>
+          <app-field
+            class="full-width"
+            label="Link"
+            for="org-create-slug"
+            hint="Lower-case letters, digits and hyphens. A later change keeps old links working."
+            [error]="
+              form.controls.slug.hasError('slugTaken')
+                ? form.controls.slug.getError('slugTaken')
+                : '3–40 lower-case letters, digits and single hyphens, starting with a letter'
+            "
+          >
+            <p-inputgroup>
+              <p-inputgroup-addon class="prefix">{{ origin }}/</p-inputgroup-addon>
+              <input id="org-create-slug" pInputText formControlName="slug" />
+              <p-inputgroup-addon>
+                @if (form.controls.slug.pending) {
+                  <p-progressspinner styleClass="slug-spinner" strokeWidth="6" />
+                } @else if (form.controls.slug.valid && form.controls.slug.value) {
+                  <app-icon class="ok" label="Available" name="check_circle" />
+                } @else {
+                  <app-icon name="link" />
+                }
+              </p-inputgroup-addon>
+            </p-inputgroup>
+          </app-field>
           <div class="color-field">
             <input
               type="color"
@@ -79,12 +90,19 @@
               (input)="pickColor($event)"
               aria-label="Pick the brand colour"
             />
-            <mat-form-field class="full-width">
-              <mat-label>Brand colour</mat-label>
-              <input matInput formControlName="primaryColor" />
-              <mat-hint>Their admin can refine the branding later</mat-hint>
-              <mat-error>A colour like #1f5fbf</mat-error>
-            </mat-form-field>
+            <app-field
+              class="full-width"
+              label="Brand colour"
+              hint="Their admin can refine the branding later"
+              error="A colour like #1f5fbf"
+              for="organisation-create-primary-color"
+            >
+              <input
+                id="organisation-create-primary-color"
+                pInputText
+                formControlName="primaryColor"
+              />
+            </app-field>
           </div>
         </section>
 
@@ -92,13 +110,21 @@
           <h2 id="step-admin">
             <span class="step-number" aria-hidden="true">2</span>First Venue Admin
           </h2>
-          <mat-form-field class="full-width">
-            <mat-label>Email</mat-label>
-            <mat-icon matPrefix>mail</mat-icon>
-            <input matInput type="email" formControlName="adminEmail" />
-            <mat-hint>They get an invitation and build the rest of the team</mat-hint>
-            <mat-error>A valid email address</mat-error>
-          </mat-form-field>
+          <app-field
+            class="full-width"
+            label="Email"
+            hint="They get an invitation and build the rest of the team"
+            error="A valid email address"
+            for="organisation-create-mail"
+          >
+            <app-icon name="mail" />
+            <input
+              id="organisation-create-mail"
+              pInputText
+              type="email"
+              formControlName="adminEmail"
+            />
+          </app-field>
         </section>
 
         <section class="panel step" aria-labelledby="step-plan">
@@ -107,10 +133,10 @@
         </section>
 
         <div class="row actions">
-          <button mat-flat-button type="submit" [disabled]="saving()">
-            <mat-icon>send</mat-icon>{{ saving() ? 'Creating…' : 'Create and invite' }}
+          <button pButton type="submit" [disabled]="saving()">
+            <app-icon name="send" />{{ saving() ? 'Creating…' : 'Create and invite' }}
           </button>
-          <a mat-button routerLink="/admin/organisations">Cancel</a>
+          <a pButton [text]="true" routerLink="/admin/organisations">Cancel</a>
         </div>
       </div>
 
@@ -133,9 +159,7 @@
             <span class="fake-button">Sign in</span>
           </div>
         </div>
-        <p class="preview-url">
-          <mat-icon aria-hidden="true">link</mat-icon>{{ origin }}/{{ previewSlug() }}
-        </p>
+        <p class="preview-url"><app-icon name="link" />{{ origin }}/{{ previewSlug() }}</p>
       </aside>
     </form>
   }

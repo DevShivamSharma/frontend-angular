@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
+import { IconComponent } from '../../shared/icon.component';
 
 /**
  * What any URL that names no organisation shows, the bare domain included. It deliberately
@@ -7,11 +7,11 @@ import { MatIconModule } from '@angular/material/icon';
  */
 @Component({
   selector: 'app-invalid-link-page',
-  imports: [MatIconModule],
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="frame">
-      <mat-icon class="icon" aria-hidden="true">link_off</mat-icon>
+      <app-icon class="icon" name="link_off" />
       <h1>This link doesn't lead anywhere</h1>
       <p class="muted">
         Use the link your venue or event organiser shared with you. If you typed the address, check
@@ -28,17 +28,17 @@ import { MatIconModule } from '@angular/material/icon';
       gap: 12px;
       padding: 24px;
       text-align: center;
-      background: var(--mat-sys-surface-container-low);
+      background: var(--app-surface-container-low);
       box-sizing: border-box;
     }
     .icon {
       width: 56px;
       height: 56px;
       font-size: 56px;
-      color: var(--mat-sys-primary);
+      color: var(--app-primary);
     }
     h1 {
-      font: var(--mat-sys-headline-small);
+      font: var(--app-headline-small);
     }
     p {
       max-width: 440px;

@@ -50,7 +50,7 @@ test("an organisation's pages open in its own look", async ({ page }) => {
   await expect(page).toHaveURL(/\/itpo\/login\?returnUrl=%2Fitpo$/);
   await expect(page.getByText('Bharat Mandapam (ITPO)').first()).toBeVisible();
   const primary = await page.evaluate(() =>
-    getComputedStyle(document.documentElement).getPropertyValue('--mat-sys-primary'),
+    getComputedStyle(document.documentElement).getPropertyValue('--app-primary'),
   );
   expect(primary).toContain('light-dark(');
   await expect(page).toHaveTitle('Sign in · Bharat Mandapam (ITPO)');
@@ -80,7 +80,5 @@ test('a failed sign-in explains itself', async ({ page }) => {
   await page.getByLabel('Password', { exact: true }).fill('not-the-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
   // API errors arrive as a toast, from the error interceptor.
-  await expect(page.locator('mat-snack-bar-container')).toContainText(
-    'Email or password is incorrect.',
-  );
+  await expect(page.locator('p-toast')).toContainText('Email or password is incorrect.');
 });

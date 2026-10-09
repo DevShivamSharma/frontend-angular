@@ -1,88 +1,41 @@
-@use '@angular/material' as mat;
+@use 'primeicons/primeicons.css';
 
 /*
- * The platform look, in Material 3 tokens. An organisation's colours replace the
- * --mat-sys-* colour tokens at runtime (ThemeService), and its font replaces
- * --app-font-family; every component below reads only these tokens.
+ * The platform look. Colours are `--app-*` tokens that ThemeService computes from an
+ * organisation's colour at runtime (and PrimeNG's primary palette with them); its font
+ * replaces --app-font-family. Every component below reads only these tokens.
  */
 html {
   color-scheme: light dark;
   --app-font-family: 'Inter', system-ui, sans-serif;
 
-  @include mat.theme(
-    (
-      color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$orange-palette,
-        theme-type: color-scheme,
-      ),
-      typography: (
-        plain-family: var(--app-font-family),
-        brand-family: var(--app-font-family),
-      ),
-      density: 0,
-    )
-  );
+  /* Type scale: weight, size/line-height, family. */
+  --app-headline-medium: 600 1.75rem/2.25rem var(--app-font-family);
+  --app-headline-small: 600 1.5rem/2rem var(--app-font-family);
+  --app-title-large: 600 1.25rem/1.75rem var(--app-font-family);
+  --app-title-medium: 600 1rem/1.5rem var(--app-font-family);
+  --app-title-small: 600 0.875rem/1.25rem var(--app-font-family);
+  --app-body-large: 400 1rem/1.5rem var(--app-font-family);
+  --app-body-medium: 400 0.875rem/1.25rem var(--app-font-family);
+  --app-body-small: 400 0.75rem/1rem var(--app-font-family);
+  --app-label-large: 500 0.875rem/1.25rem var(--app-font-family);
+  --app-label-medium: 500 0.75rem/1rem var(--app-font-family);
+  --app-label-small: 500 0.6875rem/1rem var(--app-font-family);
 
-  // A calmer, business look than stock Material: tighter corners, no pill buttons.
-  @include mat.button-overrides(
-    (
-      filled-container-shape: 8px,
-      outlined-container-shape: 8px,
-      protected-container-shape: 8px,
-      text-container-shape: 8px,
-      tonal-container-shape: 8px,
-    )
-  );
-  @include mat.card-overrides(
-    (
-      elevated-container-shape: 12px,
-      outlined-container-shape: 12px,
-    )
-  );
-  @include mat.dialog-overrides(
-    (
-      container-shape: 16px,
-    )
-  );
-  @include mat.chips-overrides(
-    (
-      container-shape-radius: 8px,
-    )
-  );
-  @include mat.sidenav-overrides(
-    (
-      container-shape: 0,
-    )
-  );
-  @include mat.table-overrides(
-    (
-      background-color: transparent,
-      header-headline-color: var(--mat-sys-on-surface-variant),
-      header-headline-font: var(--app-font-family),
-      header-headline-size: 12px,
-      header-headline-weight: 600,
-      row-item-outline-color: var(--mat-sys-outline-variant),
-    )
-  );
-  @include mat.paginator-overrides(
-    (
-      container-background-color: transparent,
-    )
-  );
-  @include mat.tabs-overrides(
-    (
-      divider-color: var(--mat-sys-outline-variant),
-    )
-  );
+  /* Elevation: soft, low shadows. */
+  --app-level1: 0 1px 2px rgb(15 23 42 / 6%), 0 1px 3px rgb(15 23 42 / 8%);
+  --app-level2: 0 2px 6px rgb(15 23 42 / 8%), 0 8px 24px rgb(15 23 42 / 8%);
+  --app-level3: 0 8px 28px rgb(15 23 42 / 14%);
+
+  --app-radius: 12px;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
+  background: var(--app-surface);
+  color: var(--app-on-surface);
+  font: var(--app-body-medium);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -93,23 +46,16 @@ h3 {
 }
 
 a {
-  color: var(--mat-sys-primary);
-}
-
-.material-symbols-outlined {
-  font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24;
+  color: var(--app-primary);
 }
 
 /* Keyboard focus is always visible. */
 :focus-visible {
-  outline-color: var(--mat-sys-primary);
+  outline-color: var(--app-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -134,33 +80,15 @@ a {
 .panel {
   padding: 20px;
   border-radius: 16px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--app-outline-variant);
+  background: var(--app-surface-container-lowest);
+  box-shadow: var(--app-level1);
   min-width: 0;
 }
 
 .panel-flush {
   padding: 0;
   overflow: hidden;
-}
-
-/*
- * Form fields. The hint or error under a field takes its real height (subscriptSizing is
- * 'dynamic' app-wide), and every field keeps a gap below it, so neither a long hint nor the
- * next field's floating label can overlap. Fields in toolbars and table cells opt out.
- */
-.mat-mdc-form-field {
-  margin-bottom: 16px;
-
-  &.inline-field {
-    margin-bottom: 0;
-  }
-}
-
-/* Table header labels, quieter than the data. */
-.mat-mdc-header-cell {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .page-narrow {
@@ -183,7 +111,7 @@ a {
 }
 
 .muted {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-on-surface-variant);
 }
 
 .form-grid {
@@ -193,8 +121,17 @@ a {
 }
 
 .section-title {
-  font: var(--mat-sys-title-medium);
+  font: var(--app-title-medium);
   margin: 8px 0 12px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .table-wrap {
@@ -204,22 +141,207 @@ a {
 .empty-state {
   padding: 32px 16px;
   text-align: center;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-on-surface-variant);
+}
+
+/* A self-contained card: content, then actions at the bottom. */
+.card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid var(--app-outline-variant);
+  background: var(--app-surface-container-lowest);
+  box-shadow: var(--app-level1);
+  min-width: 0;
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.card-body {
+  padding: 20px 20px 8px;
+  flex: 1;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px 12px;
+
+  &.end {
+    justify-content: flex-end;
+  }
+}
+
+/* ---- Forms ------------------------------------------------------------------ */
+
+/* A labelled control (app-field), with its hint or error below; fields keep a gap between. */
+.field {
+  display: grid;
+  /* Rows keep their own height when a neighbour's hint makes the line taller. */
+  align-content: start;
+  gap: 6px;
+  margin-bottom: 16px;
+  min-width: 0;
+
+  >* {
+    min-width: 0;
+  }
+
+  .p-multiselect-label-container {
+    min-width: 0;
+  }
+
+  &.inline-field {
+    margin-bottom: 0;
+  }
+
+  >label {
+    font: var(--app-label-large);
+    color: var(--app-on-surface);
+  }
+
+  .p-inputtext,
+  .p-select,
+  .p-multiselect,
+  .p-autocomplete,
+  .p-inputnumber,
+  .p-inputgroup,
+  .p-datepicker,
+  textarea {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+.field-hint {
+  font: var(--app-body-small);
+  color: var(--app-on-surface-variant);
+}
+
+.field-error {
+  font: var(--app-body-small);
+  color: var(--app-error);
+}
+
+/* A checkbox, radio or switch with its label beside it. */
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font: var(--app-body-medium);
+
+  label {
+    cursor: pointer;
+  }
+}
+
+/* ---- Dialogs (opened through AppDialog) ------------------------------------- */
+
+.p-dynamicdialog .p-dialog-content {
+  padding: 0;
+}
+
+.dialog-title {
+  font: var(--app-title-large);
+  margin: 0;
+  padding: 20px 24px 8px;
+}
+
+.dialog-content {
+  padding: 8px 24px 16px;
+  max-height: calc(100dvh - 220px);
+  overflow: auto;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 24px 20px;
+}
+
+/* ---- Menus (in a p-popover) ------------------------------------------------- */
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--app-on-surface);
+  font: var(--app-body-medium);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: color-mix(in srgb, var(--app-on-surface) 8%, transparent);
+  }
+
+  &:disabled {
+    cursor: default;
+    color: var(--app-on-surface-variant);
+  }
+
+  &.is-danger {
+    color: var(--app-error);
+  }
+
+  app-icon {
+    width: 18px;
+    color: var(--app-on-surface-variant);
+  }
 }
 
 /* ---- Component touches ------------------------------------------------------ */
 
-.mat-mdc-button-base.danger {
-  --mat-button-filled-container-color: var(--mat-sys-error);
-  --mat-button-filled-label-text-color: var(--mat-sys-on-error);
-  --mat-button-text-label-text-color: var(--mat-sys-error);
-  --mat-button-outlined-label-text-color: var(--mat-sys-error);
+.p-button {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
 }
 
-.app-snackbar-error {
-  --mat-snack-bar-container-color: var(--mat-sys-error-container);
-  --mat-snack-bar-supporting-text-color: var(--mat-sys-on-error-container);
-  --mat-snack-bar-button-color: var(--mat-sys-on-error-container);
+.p-button-text:not(.p-button-icon-only) {
+  padding-inline: 0.75rem;
+}
+
+/* Table header labels, quieter than the data. */
+.p-datatable .p-datatable-thead>tr>th {
+  font: var(--app-label-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-on-surface-variant);
+  background: transparent;
+}
+
+.p-datatable .p-datatable-tbody>tr {
+  background: transparent;
+}
+
+/* Tabs sit on the page, not on a card of their own. */
+.p-tabs {
+  --p-tabs-tablist-background: transparent;
+  --p-tabs-tabpanel-background: transparent;
+}
+
+.p-tabs .p-tabpanels {
+  padding: 16px 0 0;
+}
+
+.p-progressbar-indeterminate {
+  height: 4px;
+}
+
+.p-toast {
+  max-width: min(440px, calc(100vw - 32px));
 }
 
 .status-chip {
@@ -228,24 +350,24 @@ a {
   gap: 4px;
   padding: 2px 10px;
   border-radius: 999px;
-  font: var(--mat-sys-label-medium);
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
+  font: var(--app-label-medium);
+  background: var(--app-secondary-container);
+  color: var(--app-on-secondary-container);
   white-space: nowrap;
 
   &.is-positive {
-    background: var(--mat-sys-primary-container);
-    color: var(--mat-sys-on-primary-container);
+    background: var(--app-primary-container);
+    color: var(--app-on-primary-container);
   }
 
   &.is-warning {
-    background: var(--mat-sys-error-container);
-    color: var(--mat-sys-on-error-container);
+    background: var(--app-error-container);
+    color: var(--app-on-error-container);
   }
 
   &.is-neutral {
-    background: var(--mat-sys-surface-container-highest);
-    color: var(--mat-sys-on-surface-variant);
+    background: var(--app-surface-container-highest);
+    color: var(--app-on-surface-variant);
   }
 }
 
@@ -256,5 +378,18 @@ a {
 
   .panel {
     padding: 16px;
+  }
+
+  .dialog-title,
+  .dialog-content,
+  .dialog-actions {
+    padding-inline: 16px;
+  }
+}
+
+.white {
+  color: white !important;
+  .p-button-label {
+    color: white !important;
   }
 }

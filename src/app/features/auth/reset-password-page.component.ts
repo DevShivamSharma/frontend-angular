@@ -1,24 +1,24 @@
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { ButtonModule } from 'primeng/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { OrgApi } from '../../core/org/org-api.service';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rules';
+import { FieldComponent } from '../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-reset-password-page',
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
+    ButtonModule,
     AuthLayoutComponent,
+    FieldComponent,
+    InputTextModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -27,28 +27,36 @@ import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rul
         <p class="error" role="alert">This link is incomplete. Open it again from the email.</p>
       } @else if (done()) {
         <p role="status">Your password is changed. You are signed out on every device.</p>
-        <a mat-flat-button [routerLink]="['..', 'login']">Sign in</a>
+        <a pButton [routerLink]="['..', 'login']">Sign in</a>
       } @else {
         <form [formGroup]="form" (ngSubmit)="submit()" class="stack">
-          <mat-form-field>
-            <mat-label>New password</mat-label>
+          <app-field
+            label="New password"
+            for="reset-password"
+            [hint]="'At least ' + min + ' characters'"
+            [error]="'At least ' + min + ' characters'"
+          >
             <input
-              matInput
+              id="reset-password"
+              pInputText
               type="password"
               formControlName="password"
               autocomplete="new-password"
             />
-            <mat-hint>At least {{ min }} characters</mat-hint>
-            <mat-error>At least {{ min }} characters</mat-error>
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>Repeat it</mat-label>
-            <input matInput type="password" formControlName="confirm" autocomplete="new-password" />
-          </mat-form-field>
+          </app-field>
+          <app-field label="Repeat it" for="reset-password-confirm">
+            <input
+              id="reset-password-confirm"
+              pInputText
+              type="password"
+              formControlName="confirm"
+              autocomplete="new-password"
+            />
+          </app-field>
           @if (form.hasError('mismatch') && form.controls.confirm.touched) {
             <p class="error">The two passwords differ.</p>
           }
-          <button mat-flat-button type="submit" [disabled]="busy()">Save the password</button>
+          <button pButton type="submit" [disabled]="busy()">Save the password</button>
         </form>
       }
     </app-auth-layout>
@@ -60,7 +68,7 @@ import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rul
     }
     .error {
       margin: 0 0 8px;
-      color: var(--mat-sys-error);
+      color: var(--app-error);
     }
   `,
 })

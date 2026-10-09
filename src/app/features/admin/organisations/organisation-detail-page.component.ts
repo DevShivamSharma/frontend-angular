@@ -13,16 +13,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { TooltipModule } from 'primeng/tooltip';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -42,6 +36,13 @@ import { BrandMarkComponent } from '../../../shared/brand-mark.component';
 import { ConfigFormComponent } from '../../../shared/config-form/config-form.component';
 import { CopyLinkComponent } from '../../../shared/copy-link.component';
 import { planForm, PlanFieldsComponent, slugAvailable, SLUG_PATTERN } from './plan-fields';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
+import { TabsModule } from 'primeng/tabs';
 
 /**
  * One organisation in the console: its status, link, plan, branding and admins. Business data
@@ -53,20 +54,21 @@ import { planForm, PlanFieldsComponent, slugAvailable, SLUG_PATTERN } from './pl
     DatePipe,
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressBarModule,
-    MatSelectModule,
-    MatTableModule,
-    MatTabsModule,
-    MatTooltipModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
+    TooltipModule,
     BrandMarkComponent,
     ConfigFormComponent,
     CopyLinkComponent,
     PlanFieldsComponent,
+    FieldComponent,
+    InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
+    SelectModule,
+    TableModule,
+    TabsModule,
   ],
   templateUrl: './organisation-detail-page.component.html',
   styleUrl: './organisation-detail-page.component.scss',
@@ -89,8 +91,6 @@ export class OrganisationDetailPageComponent {
   protected readonly lastInvite = signal<CreatedInvitation | null>(null);
   protected readonly busy = signal(false);
 
-  protected readonly memberColumns = ['name', 'role', 'lastLogin'];
-  protected readonly invitationColumns = ['email', 'role', 'expires'];
   protected readonly bookingLabel = computed(
     () =>
       BOOKING_MODES.find((mode) => mode.value === this.organisation()?.bookingMode)?.label ?? '',

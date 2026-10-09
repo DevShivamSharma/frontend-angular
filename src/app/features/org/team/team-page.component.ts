@@ -1,14 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { TooltipModule } from 'primeng/tooltip';
 import { firstValueFrom } from 'rxjs';
 
 import type {
@@ -25,6 +19,10 @@ import { Notifier } from '../../../core/ui/notifier.service';
 import { CopyLinkComponent } from '../../../shared/copy-link.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { InviteDialogComponent, InviteDialogData } from './invite-dialog.component';
+import { AppDialog } from '../../../core/ui/app-dialog.service';
+import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
+import { FormsModule } from '@angular/forms';
 
 /**
  * The organisation's people. What a member can change follows their permissions, and never
@@ -34,16 +32,14 @@ import { InviteDialogComponent, InviteDialogData } from './invite-dialog.compone
   selector: 'app-team-page',
   imports: [
     DatePipe,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatMenuModule,
-    MatProgressBarModule,
-    MatSelectModule,
-    MatTableModule,
-    MatTooltipModule,
+    ButtonModule,
+    ProgressBarModule,
+    TooltipModule,
     CopyLinkComponent,
     PageHeaderComponent,
+    SelectModule,
+    TableModule,
+    FormsModule,
   ],
   templateUrl: './team-page.component.html',
   styleUrl: './team-page.component.scss',
@@ -51,7 +47,7 @@ import { InviteDialogComponent, InviteDialogData } from './invite-dialog.compone
 })
 export class TeamPageComponent {
   private readonly api = inject(OrgApi);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(AppDialog);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(Notifier);
   protected readonly context = inject(OrgContextStore);
@@ -65,13 +61,9 @@ export class TeamPageComponent {
 
   protected readonly canInvite = computed(() => this.context.can('team.invite'));
   protected readonly canManage = computed(() => this.context.can('team.manage'));
-  protected readonly memberColumns = computed(() =>
-    this.canManage() ? ['person', 'role', 'lastLogin', 'actions'] : ['person', 'role', 'lastLogin'],
-  );
-  protected readonly invitationColumns = computed(() =>
-    this.canInvite() || this.canManage()
-      ? ['email', 'role', 'invitedBy', 'expires', 'actions']
-      : ['email', 'role', 'invitedBy', 'expires'],
+  /** Roles the member may not give are listed but cannot be chosen. */
+  protected readonly roleOptions = computed(() =>
+    this.roles().map((role) => ({ ...role, disabled: !role.assignable })),
   );
   private readonly rolesById = computed(() => new Map(this.roles().map((role) => [role.id, role])));
 
@@ -113,8 +105,7 @@ export class TeamPageComponent {
   protected openInvite(): void {
     const data: InviteDialogData = { slug: this.slug, roles: this.roles() };
     this.dialog
-      .open(InviteDialogComponent, { data, autoFocus: 'first-tabbable' })
-      .afterClosed()
+      .open<boolean>(InviteDialogComponent, { data, dismissable: false })
       .subscribe((invited?: boolean) => {
         if (invited) {
           void this.load();

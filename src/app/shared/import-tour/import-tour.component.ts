@@ -8,13 +8,8 @@ import {
   Output,
   signal,
 } from '@angular/core';
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogModule,
-  MatDialogRef,
-} from '@angular/material/dialog';
 import { ImportMode, CSV_LESSONS, PDF_LESSONS } from './import-tour.data';
+import { AppDialog, dialogData, DialogRef } from '../../core/ui/app-dialog.service';
 
 interface TourContext {
   mode: ImportMode | 'choose';
@@ -55,10 +50,10 @@ interface TourAction {
       align-items: start;
       gap: 16px;
       padding: 16px;
-      border: 1px solid var(--mat-sys-outline-variant);
+      border: 1px solid var(--app-outline-variant);
       border-radius: 12px;
       margin: 16px 0;
-      background: var(--mat-sys-surface-container-low);
+      background: var(--app-surface-container-low);
       font-size: 13px;
     }
     p {
@@ -67,9 +62,9 @@ interface TourAction {
     }
     button {
       flex: none;
-      border: 1px solid var(--mat-sys-primary);
-      color: var(--mat-sys-primary);
-      background: var(--mat-sys-surface);
+      border: 1px solid var(--app-primary);
+      color: var(--app-primary);
+      background: var(--app-surface);
       padding: 10px 14px;
       border-radius: 8px;
       cursor: pointer;
@@ -78,7 +73,7 @@ interface TourAction {
     summary {
       cursor: pointer;
       margin-top: 10px;
-      color: var(--mat-sys-primary);
+      color: var(--app-primary);
     }
     li {
       margin: 7px 0;
@@ -106,14 +101,22 @@ export class ImportTourComponent {
   @Input() autoOpenReady = true;
   @Output() locate = new EventEmitter<string>();
   @Output() launch = new EventEmitter<ImportMode>();
-  private dialog = inject(MatDialog);
+  private dialog = inject(AppDialog);
   private opened = false;
-  private activeDialog?: MatDialogRef<ImportTourDialogComponent, TourAction>;
+  private activeDialog?: DialogRef;
   constructor() {
-    afterEveryRender(() => {
-      if (this.autoOpen && this.autoOpenReady && !this.opened) this.open();
-    });
+    afterEveryRender(() => this.openIfDue());
     inject(DestroyRef).onDestroy(() => this.activeDialog?.close());
+  }
+  /**
+   * Also checked once on init: inside a dialog, this component can be created after its
+   * host's render, and the app (zoneless) may not render again until the user acts.
+   */
+  ngOnInit() {
+    setTimeout(() => this.openIfDue());
+  }
+  private openIfDue() {
+    if (this.autoOpen && this.autoOpenReady && !this.opened) this.open();
   }
   get stageTitle() {
     if (this.mode === 'csv')
@@ -144,18 +147,17 @@ export class ImportTourComponent {
   open() {
     if (this.activeDialog) return;
     this.opened = true;
-    this.activeDialog = this.dialog.open(ImportTourDialogComponent, {
-      width: '980px',
-      maxWidth: '96vw',
-      maxHeight: '94dvh',
-      data: {
-        mode: this.mode,
-        stage: this.stage,
-        blockers: this.blockers,
-        canLocate: this.canLocate,
-      } satisfies TourContext,
-    });
-    this.activeDialog.afterClosed().subscribe((action?: TourAction) => {
+    this.activeDialog =
+      this.dialog.openRef(ImportTourDialogComponent, {
+        width: 'min(980px, 96vw)',
+        data: {
+          mode: this.mode,
+          stage: this.stage,
+          blockers: this.blockers,
+          canLocate: this.canLocate,
+        } satisfies TourContext,
+      }) ?? undefined;
+    this.activeDialog?.onClose.subscribe((action?: TourAction) => {
       this.activeDialog = undefined;
       if (action?.topic) this.locate.emit(action.topic);
       if (action?.launch) this.launch.emit(action.launch);
@@ -165,13 +167,12 @@ export class ImportTourComponent {
 @Component({
   selector: 'app-import-tour-dialog',
   standalone: true,
-  imports: [MatDialogModule],
   templateUrl: './import-tour-dialog.component.html',
   styleUrl: './import-tour-dialog.component.scss',
 })
 export class ImportTourDialogComponent {
-  readonly context = inject<TourContext>(MAT_DIALOG_DATA);
-  readonly ref = inject(MatDialogRef<ImportTourDialogComponent, TourAction>);
+  readonly context = dialogData<TourContext>();
+  protected readonly ref = inject(DialogRef);
   mode = signal<ImportMode>(this.context.mode === 'csv' ? 'csv' : 'pdf');
   language = signal(0);
   index = signal(

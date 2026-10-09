@@ -1,16 +1,18 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { PublicOrgStore } from '../../core/org/org.stores';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { safeReturnUrl } from './safe-return-url';
+import { FieldComponent } from '../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 
 /** Sign-in, for an organisation (`/<org>/login`) or for the platform console (`/admin/login`). */
 @Component({
@@ -18,12 +20,14 @@ import { safeReturnUrl } from './safe-return-url';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressBarModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
     AuthLayoutComponent,
+    FieldComponent,
+    InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -32,36 +36,45 @@ import { safeReturnUrl } from './safe-return-url';
         <p class="notice" role="alert">This account cannot open the platform console.</p>
       }
       <form [formGroup]="form" (ngSubmit)="submit()" class="stack">
-        <mat-form-field>
-          <mat-label>Email</mat-label>
-          <input matInput type="email" formControlName="email" autocomplete="username" required />
-          <mat-error>Enter a valid email address</mat-error>
-        </mat-form-field>
-        <mat-form-field>
-          <mat-label>Password</mat-label>
+        <app-field label="Email" error="Enter a valid email address" for="login-email">
           <input
-            matInput
-            [type]="showPassword() ? 'text' : 'password'"
-            formControlName="password"
-            autocomplete="current-password"
+            id="login-email"
+            pInputText
+            type="email"
+            formControlName="email"
+            autocomplete="username"
             required
           />
-          <button
-            mat-icon-button
-            matSuffix
-            type="button"
-            (click)="showPassword.set(!showPassword())"
-            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
-          >
-            <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-          </button>
-          <mat-error>Enter your password</mat-error>
-        </mat-form-field>
+        </app-field>
+        <app-field label="Password" for="login-password" error="Enter your password">
+          <p-inputgroup>
+            <input
+              id="login-password"
+              pInputText
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="current-password"
+              required
+            />
+            <p-inputgroup-addon>
+              <button
+                pButton
+                type="button"
+                [text]="true"
+                severity="secondary"
+                (click)="showPassword.set(!showPassword())"
+                [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              >
+                <app-icon [name]="showPassword() ? 'visibility_off' : 'visibility'" />
+              </button>
+            </p-inputgroup-addon>
+          </p-inputgroup>
+        </app-field>
         @if (busy()) {
-          <mat-progress-bar mode="indeterminate" />
+          <p-progressbar mode="indeterminate" />
         }
-        <button mat-flat-button type="submit" [disabled]="busy()">Sign in</button>
-        <a mat-button [routerLink]="['..', 'forgot-password']">Forgot your password?</a>
+        <button pButton type="submit" label="Sign in" [disabled]="busy()"></button>
+        <a pButton [text]="true" [routerLink]="['..', 'forgot-password']">Forgot your password?</a>
       </form>
     </app-auth-layout>
   `,
@@ -73,7 +86,7 @@ import { safeReturnUrl } from './safe-return-url';
     .error,
     .notice {
       margin: 0 0 8px;
-      color: var(--mat-sys-error);
+      color: var(--app-error);
     }
   `,
 })

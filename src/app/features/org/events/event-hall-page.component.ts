@@ -9,10 +9,9 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -32,6 +31,8 @@ import { Notifier } from '../../../core/ui/notifier.service';
 import { FloorViewComponent } from '../../../shared/floor/floor-view.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { RulesSummaryComponent } from '../rules/rules-summary.component';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { FormsModule } from '@angular/forms';
 
 const GROUPS: Array<{ key: RuleGroup; label: string }> = [
   { key: 'floor', label: 'The hall floor' },
@@ -49,24 +50,25 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
   imports: [
     DecimalPipe,
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatSlideToggleModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
     FloorViewComponent,
     PageHeaderComponent,
     RulesSummaryComponent,
+    ToggleSwitchModule,
+    FormsModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page page-narrow">
       @if (detail(); as d) {
-        <a mat-button class="back" [routerLink]="['/', slug(), 'events', d.event.id]"
-          ><mat-icon>arrow_back</mat-icon>{{ d.event.name }}</a
+        <a pButton [text]="true" class="back" [routerLink]="['/', slug(), 'events', d.event.id]"
+          ><app-icon name="arrow_back" />{{ d.event.name }}</a
         >
       }
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
       @if (detail(); as d) {
         <app-page-header
@@ -100,8 +102,8 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
                     this event here; values stay as copied.
                   </p>
                 </div>
-                <button mat-button (click)="reset()" [disabled]="busy()">
-                  <mat-icon>restart_alt</mat-icon>Copy organisation rules again
+                <button pButton [text]="true" (click)="reset()" [disabled]="busy()">
+                  <app-icon name="restart_alt" />Copy organisation rules again
                 </button>
               </div>
             </section>
@@ -111,11 +113,11 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
                 <ul class="rules">
                   @for (r of rulesOf(c, g.key); track r.id) {
                     <li [class.waiting]="!r.available">
-                      <mat-slide-toggle
-                        [checked]="d.rules.switches[r.id]"
-                        (change)="toggle(r.id, $event.checked)"
+                      <p-toggleswitch
+                        [ngModel]="d.rules.switches[r.id]"
+                        (ngModelChange)="toggle(r.id, $event)"
                         [disabled]="!r.available || busy()"
-                        [aria-label]="r.label"
+                        [ariaLabel]="r.label"
                       />
                       <span class="rule">
                         <span class="rule-name"
@@ -124,7 +126,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
                         <span class="muted small">{{ r.description }}</span>
                         @if (!r.available) {
                           <span class="muted small"
-                            ><mat-icon inline>hourglass_empty</mat-icon> Takes effect with:
+                            ><app-icon name="hourglass_empty" /> Takes effect with:
                             {{ r.waitingFor }}</span
                           >
                         }
@@ -147,7 +149,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       margin-bottom: -16px;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
     .nums {
       font-variant-numeric: tabular-nums;
@@ -191,8 +193,8 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       font-weight: 600;
     }
     .ref {
-      font: var(--mat-sys-label-small);
-      color: var(--mat-sys-primary);
+      font: var(--app-label-small);
+      color: var(--app-primary);
       margin-left: 6px;
     }
   `,

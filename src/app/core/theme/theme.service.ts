@@ -1,11 +1,13 @@
 import { DOCUMENT, inject, Injectable } from '@angular/core';
+import { palette, updatePrimaryPalette } from '@primeuix/themes';
 
 import type { FontFamily, OrganisationBranding } from '../api/api.models';
-import { brandColorVariables, HEX_COLOR } from './material-theme';
+import { PLATFORM_PRIMARY } from './app-preset';
+import { brandColorVariables, HEX_COLOR } from './brand-colors';
 
 /** The platform's own look, for the console and pages that belong to no organisation. */
 export const PLATFORM_BRANDING: OrganisationBranding = {
-  primaryColor: '#3949ab',
+  primaryColor: PLATFORM_PRIMARY,
   accentColor: null,
   fontFamily: 'Inter',
   logoUrl: null,
@@ -17,9 +19,9 @@ const FONT_LINK_ID = 'org-font';
 const DEFAULT_FAVICON = 'favicon.ico';
 
 /**
- * Applies an organisation's branding to the whole app: Material colour tokens generated from
- * its seed colour, its font and its favicon. Components read only `--mat-sys-*` tokens, so a
- * new organisation needs no code.
+ * Applies an organisation's branding to the whole app: colour tokens generated from its seed
+ * colour (`--app-*` for our own surfaces, the primary palette for PrimeNG), its font and its
+ * favicon. Nothing reads a fixed colour, so a new organisation needs no code.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -35,6 +37,9 @@ export class ThemeService {
 
     const root = this.document.documentElement;
     this.applyTo(root, branding);
+    updatePrimaryPalette(
+      palette(this.primaryOf(branding)) as Parameters<typeof updatePrimaryPalette>[0],
+    );
     this.loadFont(branding.fontFamily);
     this.setFavicon(branding.faviconUrl);
   }
@@ -43,18 +48,25 @@ export class ThemeService {
     this.applyBranding(PLATFORM_BRANDING);
   }
 
-  /** Themes one element only: a live preview inside a settings form. */
+  /**
+   * Themes one element: the root, or a live preview inside a settings form. PrimeNG controls in
+   * a preview take the colour from its own primary variables.
+   */
   applyTo(
     element: HTMLElement,
     branding: Pick<OrganisationBranding, 'primaryColor' | 'accentColor' | 'fontFamily'>,
   ): void {
-    const primary = HEX_COLOR.test(branding.primaryColor)
-      ? branding.primaryColor
-      : PLATFORM_BRANDING.primaryColor;
+    const primary = this.primaryOf(branding);
     for (const [name, value] of Object.entries(
       brandColorVariables(primary, branding.accentColor),
     )) {
       element.style.setProperty(name, value);
+    }
+    if (element !== this.document.documentElement) {
+      const shades = palette(primary) as Record<string, string>;
+      element.style.setProperty('--p-primary-color', shades['600']);
+      element.style.setProperty('--p-primary-hover-color', shades['700']);
+      element.style.setProperty('--p-primary-active-color', shades['800']);
     }
     element.style.setProperty(
       '--app-font-family',
@@ -77,6 +89,10 @@ export class ThemeService {
     if (link.href !== href) {
       link.href = href;
     }
+  }
+
+  private primaryOf(branding: Pick<OrganisationBranding, 'primaryColor'>): string {
+    return HEX_COLOR.test(branding.primaryColor) ? branding.primaryColor : PLATFORM_PRIMARY;
   }
 
   private setFavicon(url: string | null): void {

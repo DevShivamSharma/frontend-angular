@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
+import { ButtonModule } from 'primeng/button';
+import { PopoverModule } from 'primeng/popover';
+
+import { IconComponent } from './icon.component';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../core/auth/auth.service';
@@ -10,29 +10,34 @@ import { AuthService } from '../core/auth/auth.service';
 /** The signed-in person's menu: who they are, and sign out. */
 @Component({
   selector: 'app-account-menu',
-  imports: [MatButtonModule, MatDividerModule, MatIconModule, MatMenuModule],
+  imports: [ButtonModule, IconComponent, PopoverModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (auth.user(); as user) {
       <button
-        mat-icon-button
-        [matMenuTriggerFor]="menu"
+        pButton
+        [text]="true"
+        [rounded]="true"
+        severity="secondary"
+        (click)="menu.toggle($event)"
+        aria-haspopup="menu"
         [attr.aria-label]="'Account of ' + user.name"
       >
         <span class="avatar" aria-hidden="true">{{ user.name.charAt(0).toUpperCase() }}</span>
       </button>
-      <mat-menu #menu="matMenu" xPosition="before">
-        <div class="who">
-          <b>{{ user.name }}</b>
-          <span class="muted">{{ user.email }}</span>
+      <p-popover #menu>
+        <div class="menu" role="menu">
+          <div class="who">
+            <b>{{ user.name }}</b>
+            <span class="muted">{{ user.email }}</span>
+          </div>
+          <ng-content />
+          <button type="button" class="menu-item" role="menuitem" (click)="menu.hide(); signOut()">
+            <app-icon name="logout" />
+            <span>Sign out</span>
+          </button>
         </div>
-        <mat-divider />
-        <ng-content />
-        <button mat-menu-item (click)="signOut()">
-          <mat-icon>logout</mat-icon>
-          <span>Sign out</span>
-        </button>
-      </mat-menu>
+      </p-popover>
     }
   `,
   styles: `
@@ -42,14 +47,20 @@ import { AuthService } from '../core/auth/auth.service';
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-      font: var(--mat-sys-title-small);
+      background: var(--app-primary-container);
+      color: var(--app-on-primary-container);
+      font: var(--app-title-small);
+    }
+    .menu {
+      display: grid;
+      min-width: 240px;
     }
     .who {
       display: grid;
-      padding: 12px 16px;
+      padding: 4px 8px 10px;
+      margin-bottom: 4px;
       gap: 2px;
+      border-bottom: 1px solid var(--app-outline-variant);
     }
   `,
 })

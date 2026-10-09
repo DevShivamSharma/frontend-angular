@@ -15,8 +15,8 @@
   z-index: 10;
   padding: 8px 16px;
   border-radius: 8px;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
 
   &:focus {
     top: 8px;
@@ -29,8 +29,11 @@
   height: var(--topbar-height);
   gap: 8px;
   padding: 0 12px 0 14px;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
-  --mat-toolbar-container-background-color: var(--mat-sys-surface-container-low);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--app-outline-variant);
+  background: color-mix(in srgb, var(--app-surface-container-lowest) 88%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .frame {
@@ -59,8 +62,8 @@
   min-height: 0;
   padding: 12px;
   overflow: hidden auto;
-  background: var(--mat-sys-surface-container-low);
-  border-right: 1px solid var(--mat-sys-outline-variant);
+  background: var(--app-surface-container-low);
+  border-right: 1px solid var(--app-outline-variant);
 }
 
 .nav {
@@ -71,10 +74,10 @@
 .nav-section {
   margin: 16px 0 6px;
   padding: 0 14px;
-  font: var(--mat-sys-label-small);
+  font: var(--app-label-small);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-on-surface-variant);
   white-space: nowrap;
 }
 
@@ -82,7 +85,7 @@
   width: 32px;
   margin: 14px auto;
   border: 0;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-top: 1px solid var(--app-outline-variant);
 }
 
 .nav-item {
@@ -91,13 +94,13 @@
   align-items: center;
   gap: 14px;
   width: 100%;
-  height: 48px;
+  height: 44px;
   padding: 0 14px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: none;
-  color: var(--mat-sys-on-surface-variant);
-  font: var(--mat-sys-label-large);
+  color: var(--app-on-surface-variant);
+  font: var(--app-label-large);
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
@@ -105,26 +108,36 @@
   box-sizing: border-box;
   transition: background-color 150ms ease;
 
-  mat-icon {
+  app-icon {
     flex: none;
+    width: 20px;
+    font-size: 1.1rem;
   }
 
   &:hover {
-    background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
-    color: var(--mat-sys-on-surface);
+    background: color-mix(in srgb, var(--app-on-surface) 8%, transparent);
+    color: var(--app-on-surface);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
+    outline: 2px solid var(--app-primary);
     outline-offset: 2px;
   }
 
   &.is-active {
-    background: var(--mat-sys-secondary-container);
-    color: var(--mat-sys-on-secondary-container);
+    background: color-mix(in srgb, var(--app-primary) 12%, transparent);
+    color: var(--app-primary);
+    font-weight: 600;
 
-    mat-icon {
-      font-variation-settings: 'FILL' 1;
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--app-primary);
     }
   }
 }
@@ -145,14 +158,14 @@
 }
 
 .collapse-button {
-  font: var(--mat-sys-label-medium);
+  font: var(--app-label-medium);
 }
 
 .content {
   min-width: 0;
   overflow: auto;
   outline: none;
-  background: var(--mat-sys-surface);
+  background: var(--app-surface);
 }
 
 /* Narrow screens: the rail becomes a drawer over the page. */
@@ -167,7 +180,7 @@
     box-sizing: border-box;
     transform: translateX(-100%);
     visibility: hidden;
-    box-shadow: var(--mat-sys-level3);
+    box-shadow: var(--app-level3);
     transition:
       transform 200ms cubic-bezier(0.3, 0, 0.8, 0.15),
       visibility 0s linear 200ms;
@@ -184,7 +197,7 @@
   position: fixed;
   inset: var(--topbar-height) 0 0 0;
   z-index: 4;
-  background: color-mix(in srgb, var(--mat-sys-scrim) 32%, transparent);
+  background: color-mix(in srgb, var(--app-scrim) 32%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

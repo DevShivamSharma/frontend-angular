@@ -20,7 +20,7 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-  font: var(--mat-sys-title-medium);
+  font: var(--app-title-medium);
 }
 
 .step-number {
@@ -29,13 +29,13 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
-  font: var(--mat-sys-label-large);
+  background: var(--app-primary-container);
+  color: var(--app-on-primary-container);
+  font: var(--app-label-large);
 }
 
 .prefix {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-on-surface-variant);
 }
 
 .color-field {
@@ -45,10 +45,11 @@
 
   input[type='color'] {
     flex: none;
-    width: 52px;
-    height: 56px;
+    margin-top: 26px;
+    width: 46px;
+    height: 40px;
     padding: 0;
-    border: 1px solid var(--mat-sys-outline-variant);
+    border: 1px solid var(--app-outline-variant);
     border-radius: 8px;
     background: none;
     cursor: pointer;
@@ -56,7 +57,12 @@
 }
 
 .ok {
-  color: var(--mat-sys-primary);
+  color: var(--app-primary);
+}
+
+:host ::ng-deep .slug-spinner {
+  width: 18px;
+  height: 18px;
 }
 
 .actions {
@@ -72,8 +78,8 @@
 
 .preview-label {
   margin: 0;
-  font: var(--mat-sys-label-large);
-  color: var(--mat-sys-on-surface-variant);
+  font: var(--app-label-large);
+  color: var(--app-on-surface-variant);
 }
 
 .preview {
@@ -82,9 +88,9 @@
   min-height: 220px;
   overflow: hidden;
   border-radius: 16px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface-container-low);
-  box-shadow: var(--mat-sys-level1);
+  border: 1px solid var(--app-outline-variant);
+  background: var(--app-surface-container-low);
+  box-shadow: var(--app-level1);
 }
 
 .preview-panel {
@@ -95,15 +101,15 @@
   padding: 16px;
   background: linear-gradient(
     150deg,
-    var(--mat-sys-primary),
-    color-mix(in srgb, var(--mat-sys-primary) 60%, var(--mat-sys-tertiary))
+    var(--app-primary),
+    color-mix(in srgb, var(--app-primary) 60%, var(--app-tertiary))
   );
-  color: var(--mat-sys-on-primary);
+  color: var(--app-on-primary);
 }
 
 .preview-name {
   margin: 0;
-  font: var(--mat-sys-title-small);
+  font: var(--app-title-small);
   overflow-wrap: anywhere;
 }
 
@@ -112,28 +118,28 @@
   align-content: center;
   gap: 8px;
   padding: 16px;
-  background: var(--mat-sys-surface);
+  background: var(--app-surface);
 }
 
 .preview-title {
   margin: 0 0 4px;
-  font: var(--mat-sys-title-small);
-  color: var(--mat-sys-on-surface);
+  font: var(--app-title-small);
+  color: var(--app-on-surface);
 }
 
 .fake-field {
   height: 22px;
   border-radius: 6px;
-  border: 1px solid var(--mat-sys-outline-variant);
+  border: 1px solid var(--app-outline-variant);
 }
 
 .fake-button {
   margin-top: 4px;
   padding: 5px 0;
   border-radius: 6px;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  font: var(--mat-sys-label-small);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+  font: var(--app-label-small);
   text-align: center;
 }
 
@@ -142,11 +148,11 @@
   align-items: center;
   gap: 6px;
   margin: 0;
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
+  font: var(--app-body-small);
+  color: var(--app-on-surface-variant);
   overflow-wrap: anywhere;
 
-  mat-icon {
+  app-icon {
     width: 16px;
     height: 16px;
     font-size: 16px;
@@ -160,7 +166,7 @@
   max-width: 760px;
 
   h1 {
-    font: var(--mat-sys-headline-small);
+    font: var(--app-headline-small);
   }
 
   p {
@@ -174,8 +180,8 @@
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
+  background: var(--app-primary-container);
+  color: var(--app-on-primary-container);
 }
 
 .links {
@@ -186,7 +192,7 @@
 }
 
 .link-label {
-  font: var(--mat-sys-label-large);
+  font: var(--app-label-large);
 }
 
 @media (max-width: 1000px) {

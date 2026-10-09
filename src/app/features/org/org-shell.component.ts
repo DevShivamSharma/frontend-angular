@@ -1,14 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
+import { ButtonModule } from 'primeng/button';
+import { PopoverModule } from 'primeng/popover';
 import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { OrgContextStore, PublicOrgStore } from '../../core/org/org.stores';
 import { AccountMenuComponent } from '../../shared/account-menu.component';
 import { BrandMarkComponent } from '../../shared/brand-mark.component';
+import { IconComponent } from '../../shared/icon.component';
 import { NavItem, ShellLayoutComponent } from '../../shared/shell-layout.component';
 
 /** The signed-in workspace of one organisation, in its own look. */
@@ -16,10 +15,9 @@ import { NavItem, ShellLayoutComponent } from '../../shared/shell-layout.compone
   selector: 'app-org-shell',
   imports: [
     RouterLink,
-    MatButtonModule,
-    MatDividerModule,
-    MatIconModule,
-    MatMenuModule,
+    ButtonModule,
+    IconComponent,
+    PopoverModule,
     AccountMenuComponent,
     BrandMarkComponent,
     ShellLayoutComponent,
@@ -38,25 +36,37 @@ import { NavItem, ShellLayoutComponent } from '../../shared/shell-layout.compone
         </a>
         <ng-container account>
           @if (otherOrganisations().length) {
-            <button mat-button [matMenuTriggerFor]="switcher" class="switcher">
-              <mat-icon>swap_horiz</mat-icon>
+            <button
+              pButton
+              type="button"
+              [text]="true"
+              severity="secondary"
+              class="switcher"
+              aria-haspopup="menu"
+              (click)="switcher.toggle($event)"
+            >
+              <app-icon name="swap_horiz" />
               <span class="switcher-label">Switch</span>
             </button>
-            <mat-menu #switcher="matMenu" xPosition="before">
-              <p class="menu-title">Your organisations</p>
-              @for (membership of auth.memberships(); track membership.id) {
-                <button
-                  mat-menu-item
-                  (click)="switchTo(membership.organisation.slug)"
-                  [disabled]="membership.organisation.slug === o.slug"
-                >
-                  <mat-icon>{{
-                    membership.organisation.slug === o.slug ? 'check' : 'domain'
-                  }}</mat-icon>
-                  <span>{{ membership.organisation.name }}</span>
-                </button>
-              }
-            </mat-menu>
+            <p-popover #switcher>
+              <div class="menu" role="menu">
+                <p class="menu-title">Your organisations</p>
+                @for (membership of auth.memberships(); track membership.id) {
+                  <button
+                    type="button"
+                    class="menu-item"
+                    role="menuitem"
+                    (click)="switcher.hide(); switchTo(membership.organisation.slug)"
+                    [disabled]="membership.organisation.slug === o.slug"
+                  >
+                    <app-icon
+                      [name]="membership.organisation.slug === o.slug ? 'check' : 'domain'"
+                    />
+                    <span>{{ membership.organisation.name }}</span>
+                  </button>
+                }
+              </div>
+            </p-popover>
           }
           <span class="role muted">{{ context.context()?.membership?.role?.name }}</span>
           <app-account-menu [signedOutUrl]="'/' + o.slug + '/login'" />
@@ -72,12 +82,16 @@ import { NavItem, ShellLayoutComponent } from '../../shared/shell-layout.compone
       min-width: 0;
     }
     .role {
-      font: var(--mat-sys-label-medium);
+      font: var(--app-label-medium);
+    }
+    .menu {
+      display: grid;
+      min-width: 220px;
     }
     .menu-title {
-      margin: 8px 16px;
-      font: var(--mat-sys-label-medium);
-      color: var(--mat-sys-on-surface-variant);
+      margin: 4px 8px 8px;
+      font: var(--app-label-medium);
+      color: var(--app-on-surface-variant);
     }
     @media (max-width: 600px) {
       .role,

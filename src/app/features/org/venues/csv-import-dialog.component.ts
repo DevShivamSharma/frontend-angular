@@ -9,9 +9,8 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { ButtonModule } from 'primeng/button';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { firstValueFrom } from 'rxjs';
 import type {
   JsonHallMapping,
@@ -23,6 +22,7 @@ import { VenuesApi } from '../../../core/venues/venues-api.service';
 import { ThreePlanComponent } from '../../../shared/floor/three-plan.component';
 import { ImportTourComponent } from '../../../shared/import-tour/import-tour.component';
 import { locateImportControl } from '../../../shared/import-tour/locate-import-control';
+import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
 export interface CsvImportDialogData {
   slug: string;
   venueId: string;
@@ -39,15 +39,14 @@ interface Choice {
   imports: [
     DecimalPipe,
     FormsModule,
-    MatButtonModule,
-    MatDialogModule,
-    MatProgressBarModule,
+    ButtonModule,
+    ProgressBarModule,
     ThreePlanComponent,
     ImportTourComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: ` <h2 mat-dialog-title>Import from CSV</h2>
-    <mat-dialog-content>
+  template: ` <h2 class="dialog-title">Import from CSV</h2>
+    <div class="dialog-content">
       <app-import-tour
         mode="csv"
         [autoOpen]="true"
@@ -56,7 +55,7 @@ interface Choice {
         (locate)="showGuideTopic($event)"
       />
       @if (busy()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
@@ -199,7 +198,7 @@ interface Choice {
                 }
               </div>
             }
-            <button mat-stroked-button (click)="refresh()" [disabled]="busy()">
+            <button pButton [outlined]="true" (click)="refresh()" [disabled]="busy()">
               Update preview
             </button>
             @if (mappingDirty()) {
@@ -218,7 +217,7 @@ interface Choice {
                   }
                 </p>
                 @if (remainingCount()) {
-                  <button mat-stroked-button (click)="reviewNext()" [disabled]="busy()">
+                  <button pButton [outlined]="true" (click)="reviewNext()" [disabled]="busy()">
                     Go to pending hall
                   </button>
                 }
@@ -227,8 +226,10 @@ interface Choice {
             <div class="review-layout" [attr.inert]="busy() ? '' : null">
               <section class="hall-list" data-import-guide="choose">
                 <h3>Choose halls</h3>
-                <button mat-button (click)="selectAll(true)">Select all available</button>
-                <button mat-button (click)="selectAll(false)">Clear selection</button>
+                <button pButton [text]="true" (click)="selectAll(true)">
+                  Select all available
+                </button>
+                <button pButton [text]="true" (click)="selectAll(false)">Clear selection</button>
                 @for (c of choices(); track c.row.externalId) {
                   <div class="hall-row" [class.active]="activeId() === c.row.externalId">
                     <label class="check"
@@ -270,7 +271,7 @@ interface Choice {
                   @if (c.row.floor?.geometry; as g) {
                     <div class="preview-heading">
                       <h3>{{ c.row.name }}</h3>
-                      <button mat-button (click)="canvas?.fit()">Fit</button>
+                      <button pButton [text]="true" (click)="canvas?.fit()">Fit</button>
                     </div>
                     @if (c.selected) {
                       <p class="muted">Hall {{ activeIndex() + 1 }} of {{ selectedCount() }}</p>
@@ -301,11 +302,18 @@ interface Choice {
                       />The converted hall, foyers and restrictions look correct</label
                     >
                     @if (c.inspected && remainingCount()) {
-                      <button mat-stroked-button (click)="reviewNext()" [disabled]="mappingDirty()">
+                      <button
+                        pButton
+                        [outlined]="true"
+                        (click)="reviewNext()"
+                        [disabled]="mappingDirty()"
+                      >
                         Review next hall
                       </button>
                     }
-                    <button mat-button (click)="download(c)">Download converted JSON</button>
+                    <button pButton [text]="true" (click)="download(c)">
+                      Download converted JSON
+                    </button>
                   } @else {
                     <p>Adjust the mapping above, then update the preview for this hall.</p>
                   }
@@ -315,13 +323,13 @@ interface Choice {
           }
         }
       }
-    </mat-dialog-content>
-    <mat-dialog-actions align="end" data-import-guide="save">
+    </div>
+    <div class="dialog-actions" data-import-guide="save">
       @if (result()) {
-        <button mat-flat-button [mat-dialog-close]="true">Done</button>
+        <button pButton (click)="ref.close(true)">Done</button>
       } @else {
         @if (content) {
-          <button mat-button (click)="reset()" [disabled]="busy()">Other file</button>
+          <button pButton [text]="true" (click)="reset()" [disabled]="busy()">Other file</button>
           @if (remainingCount()) {
             <span role="status">
               {{ remainingCount() }} selected
@@ -329,14 +337,14 @@ interface Choice {
             </span>
           }
         }
-        <button mat-button mat-dialog-close [disabled]="busy()">Cancel</button>
-        <button mat-flat-button (click)="save()" [disabled]="!canSave()">
+        <button pButton [text]="true" (click)="ref.close()" [disabled]="busy()">Cancel</button>
+        <button pButton (click)="save()" [disabled]="!canSave()">
           Save {{ selectedCount() || '' }} {{ selectedCount() === 1 ? 'hall' : 'halls' }}
         </button>
       }
-    </mat-dialog-actions>`,
+    </div>`,
   styles: `
-    mat-dialog-content {
+    .dialog-content {
       min-width: 0;
     }
     .drop {
@@ -345,7 +353,7 @@ interface Choice {
       position: relative;
       text-align: center;
       padding: 40px 20px;
-      border: 2px dashed var(--mat-sys-outline-variant);
+      border: 2px dashed var(--app-outline-variant);
       border-radius: 12px;
     }
     .drop input {
@@ -356,14 +364,14 @@ interface Choice {
       cursor: pointer;
     }
     details {
-      border: 1px solid var(--mat-sys-outline-variant);
+      border: 1px solid var(--app-outline-variant);
       border-radius: 12px;
       padding: 14px;
       margin: 16px 0;
     }
     summary {
       cursor: pointer;
-      color: var(--mat-sys-primary);
+      color: var(--app-primary);
     }
     .fields {
       display: grid;
@@ -381,9 +389,9 @@ interface Choice {
       min-width: 0;
       width: 100%;
       box-sizing: border-box;
-      border: 1px solid var(--mat-sys-outline-variant);
+      border: 1px solid var(--app-outline-variant);
       border-radius: 6px;
-      background: var(--mat-sys-surface);
+      background: var(--app-surface);
       color: inherit;
       padding: 8px;
       font: inherit;
@@ -405,17 +413,17 @@ interface Choice {
     }
     .hall-row {
       padding: 12px;
-      border: 1px solid var(--mat-sys-outline-variant);
+      border: 1px solid var(--app-outline-variant);
       border-radius: 10px;
       margin: 10px 0;
     }
     .hall-row.active {
-      border-color: var(--mat-sys-primary);
+      border-color: var(--app-primary);
     }
     .hall-link {
       border: 0;
       background: none;
-      color: var(--mat-sys-primary);
+      color: var(--app-primary);
       font: inherit;
       text-align: left;
       cursor: pointer;
@@ -442,18 +450,18 @@ interface Choice {
       justify-content: space-between;
     }
     .muted {
-      color: var(--mat-sys-on-surface-variant);
+      color: var(--app-on-surface-variant);
       font-size: 12px;
     }
     .error {
-      color: var(--mat-sys-error);
+      color: var(--app-error);
     }
     .warning {
       font-size: 12px;
-      color: var(--mat-sys-on-surface-variant);
+      color: var(--app-on-surface-variant);
     }
     button:focus-visible {
-      outline: 2px solid var(--mat-sys-primary);
+      outline: 2px solid var(--app-primary);
     }
     app-three-plan {
       --plan-canvas-height: 42vh;
@@ -471,10 +479,10 @@ interface Choice {
   `,
 })
 export class CsvImportDialogComponent {
-  protected data = inject<CsvImportDialogData>(MAT_DIALOG_DATA);
+  protected data = dialogData<CsvImportDialogData>();
   private api = inject(VenuesApi);
   private element = inject<ElementRef<HTMLElement>>(ElementRef);
-  private ref = inject(MatDialogRef<CsvImportDialogComponent, boolean>);
+  protected readonly ref = inject(DialogRef);
   @ViewChild(ThreePlanComponent) protected canvas?: ThreePlanComponent;
   protected content = '';
   protected mapping: JsonHallMapping = { kinds: Object.create(null) };
@@ -557,12 +565,6 @@ export class CsvImportDialogComponent {
     { value: 'outside', label: 'Outside hall' },
     { value: 'marking', label: 'Drawing only' },
   ];
-  constructor() {
-    this.ref.disableClose = true;
-    this.ref.backdropClick().subscribe(() => {
-      if (!this.busy()) this.ref.close(!!this.result());
-    });
-  }
   protected pick(event: Event) {
     const input = event.target as HTMLInputElement;
     const f = input.files?.[0];

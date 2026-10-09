@@ -6,8 +6,8 @@
 .hero {
   overflow: hidden;
   border-radius: 20px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--app-outline-variant);
+  background: var(--app-surface-container-lowest);
 }
 
 /* The organisation's colours, with a faint 1 m grid: a nod to hall plans. */
@@ -17,17 +17,17 @@
     repeating-linear-gradient(
       90deg,
       transparent 0 31px,
-      color-mix(in srgb, var(--mat-sys-on-primary) 12%, transparent) 31px 32px
+      color-mix(in srgb, var(--app-on-primary) 12%, transparent) 31px 32px
     ),
     repeating-linear-gradient(
       0deg,
       transparent 0 31px,
-      color-mix(in srgb, var(--mat-sys-on-primary) 12%, transparent) 31px 32px
+      color-mix(in srgb, var(--app-on-primary) 12%, transparent) 31px 32px
     ),
     linear-gradient(
       120deg,
-      var(--mat-sys-primary),
-      color-mix(in srgb, var(--mat-sys-primary) 55%, var(--mat-sys-tertiary))
+      var(--app-primary),
+      color-mix(in srgb, var(--app-primary) 55%, var(--app-tertiary))
     );
 }
 
@@ -50,7 +50,7 @@
   min-width: 0;
 
   h1 {
-    font: var(--mat-sys-headline-small);
+    font: var(--app-headline-small);
   }
 }
 
@@ -79,11 +79,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   margin: 0;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-top: 1px solid var(--app-outline-variant);
 
   div {
     padding: 14px 24px;
-    border-right: 1px solid var(--mat-sys-outline-variant);
+    border-right: 1px solid var(--app-outline-variant);
 
     &:last-child {
       border-right: 0;
@@ -91,21 +91,21 @@
   }
 
   dt {
-    font: var(--mat-sys-label-medium);
-    color: var(--mat-sys-on-surface-variant);
+    font: var(--app-label-medium);
+    color: var(--app-on-surface-variant);
   }
 
   dd {
     margin: 2px 0 0;
-    font: var(--mat-sys-title-large);
+    font: var(--app-title-large);
     font-variant-numeric: tabular-nums;
 
     &.text {
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
     }
 
     .muted {
-      font: var(--mat-sys-body-medium);
+      font: var(--app-body-medium);
     }
   }
 }
@@ -117,8 +117,8 @@
   margin: 0;
   padding: 12px 16px;
   border-radius: 12px;
-  background: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
+  background: var(--app-error-container);
+  color: var(--app-on-error-container);
 }
 
 .tab {
@@ -149,12 +149,12 @@
     gap: 12px;
     flex-wrap: wrap;
     padding: 8px 0;
-    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    border-bottom: 1px solid var(--app-outline-variant);
   }
 }
 
 .version {
-  font: var(--mat-sys-label-large);
+  font: var(--app-label-large);
   min-width: 36px;
 }
 

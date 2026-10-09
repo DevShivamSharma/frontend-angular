@@ -1,7 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTabsModule } from '@angular/material/tabs';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { firstValueFrom } from 'rxjs';
 
 import { OrgContextStore } from '../../../core/org/org.stores';
@@ -11,6 +10,7 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { RulesEditorComponent } from './rules-editor.component';
 import { RulesSummaryComponent } from './rules-summary.component';
 import { RulesTryComponent } from './rules-try.component';
+import { TabsModule } from 'primeng/tabs';
 
 /**
  * The organisation's rules: the fixed checks every layout must pass, with their values. Those
@@ -21,12 +21,12 @@ import { RulesTryComponent } from './rules-try.component';
   selector: 'app-rules-page',
   imports: [
     DatePipe,
-    MatProgressBarModule,
-    MatTabsModule,
+    ProgressBarModule,
     PageHeaderComponent,
     RulesEditorComponent,
     RulesSummaryComponent,
     RulesTryComponent,
+    TabsModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -37,28 +37,35 @@ import { RulesTryComponent } from './rules-try.component';
         }
       </app-page-header>
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
       @if (rules(); as r) {
         @if (catalogue(); as c) {
-          <mat-tab-group mat-stretch-tabs="false" animationDuration="0ms">
-            <mat-tab label="Rules">
-              <div class="tab">
-                @if (canManage()) {
-                  <app-rules-editor [rules]="r" [catalogue]="c" (saved)="rules.set($event)" />
-                } @else {
-                  <app-rules-summary [rules]="r" [catalogue]="c" />
-                }
-              </div>
-            </mat-tab>
-            <mat-tab label="Try on a hall">
-              <ng-template matTabContent>
+          <p-tabs [value]="tab()" (valueChange)="tab.set($any($event))">
+            <p-tablist>
+              <p-tab value="rules">Rules</p-tab>
+              <p-tab value="try">Try on a hall</p-tab>
+            </p-tablist>
+            <p-tabpanels>
+              <p-tabpanel value="rules">
                 <div class="tab">
-                  <app-rules-try [catalogue]="c" />
+                  @if (canManage()) {
+                    <app-rules-editor [rules]="r" [catalogue]="c" (saved)="rules.set($event)" />
+                  } @else {
+                    <app-rules-summary [rules]="r" [catalogue]="c" />
+                  }
                 </div>
-              </ng-template>
-            </mat-tab>
-          </mat-tab-group>
+              </p-tabpanel>
+              <p-tabpanel value="try">
+                <!-- Created on opening, so each visit starts a fresh check. -->
+                @if (tab() === 'try') {
+                  <div class="tab">
+                    <app-rules-try [catalogue]="c" />
+                  </div>
+                }
+              </p-tabpanel>
+            </p-tabpanels>
+          </p-tabs>
         }
       }
     </div>
@@ -67,10 +74,13 @@ import { RulesTryComponent } from './rules-try.component';
     .tab {
       display: grid;
       gap: 16px;
-      padding-top: 16px;
+    }
+    p-tabpanels {
+      padding: 16px 0 0;
+      background: transparent;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
   `,
 })
@@ -81,6 +91,7 @@ export class RulesPageComponent {
   protected readonly rules = signal<RulesView | null>(null);
   protected readonly catalogue = signal<RuleCatalogue | null>(null);
   protected readonly loading = signal(false);
+  protected readonly tab = signal<'rules' | 'try'>('rules');
   protected readonly canManage = computed(() => this.context.can('rules.manage'));
   protected readonly subheading = computed(() =>
     this.canManage()

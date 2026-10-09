@@ -11,11 +11,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom, map, startWith } from 'rxjs';
 
@@ -26,6 +24,10 @@ import { BrandMarkComponent } from '../../../shared/brand-mark.component';
 import { CopyLinkComponent } from '../../../shared/copy-link.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { planForm, PlanFieldsComponent, slugAvailable, slugify, SLUG_PATTERN } from './plan-fields';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const DEFAULT_COLOR = '#1f5fbf';
@@ -39,15 +41,17 @@ const DEFAULT_COLOR = '#1f5fbf';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
+    ButtonModule,
+    IconComponent,
+    ProgressSpinnerModule,
     BrandMarkComponent,
     CopyLinkComponent,
     PageHeaderComponent,
     PlanFieldsComponent,
+    FieldComponent,
+    InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
   ],
   templateUrl: './organisation-create-page.component.html',
   styleUrl: './organisation-create-page.component.scss',

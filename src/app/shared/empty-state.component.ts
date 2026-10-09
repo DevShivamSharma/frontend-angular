@@ -1,15 +1,13 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
+import { IconComponent } from './icon.component';
 
 /** What to show where a list is empty: what this place is for, and the way to fill it. */
 @Component({
   selector: 'app-empty-state',
-  imports: [MatIconModule],
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span class="icon" aria-hidden="true"
-      ><mat-icon>{{ icon() }}</mat-icon></span
-    >
+    <span class="icon" aria-hidden="true"><app-icon [name]="icon()" /></span>
     <p class="title">{{ heading() }}</p>
     @if (text()) {
       <p class="text">{{ text() }}</p>
@@ -30,10 +28,10 @@ import { MatIconModule } from '@angular/material/icon';
       width: 64px;
       height: 64px;
       border-radius: 20px;
-      background: var(--mat-sys-surface-container-high);
-      color: var(--mat-sys-primary);
+      background: var(--app-surface-container-high);
+      color: var(--app-primary);
     }
-    .icon mat-icon {
+    .icon app-icon {
       width: 32px;
       height: 32px;
       font-size: 32px;
@@ -44,10 +42,10 @@ import { MatIconModule } from '@angular/material/icon';
     }
     .title {
       margin-top: 8px;
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
     }
     .text {
-      color: var(--mat-sys-on-surface-variant);
+      color: var(--app-on-surface-variant);
     }
     .actions:not(:empty) {
       margin-top: 8px;

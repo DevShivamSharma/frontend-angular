@@ -1,14 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { SelectModule } from 'primeng/select';
 import { firstValueFrom } from 'rxjs';
 
 import type { AuditEntry, OrganisationSummary } from '../../../core/api/api.models';
 import { AdminApi } from '../../../core/admin/admin-api.service';
 import { AuditTableComponent } from '../../../shared/audit-table.component';
+import { FieldComponent } from '../../../shared/field.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 
 const ACTION_FILTERS = [
@@ -24,11 +24,11 @@ const ACTION_FILTERS = [
   selector: 'app-admin-audit-page',
   imports: [
     FormsModule,
-    MatFormFieldModule,
-    MatPaginatorModule,
-    MatProgressBarModule,
-    MatSelectModule,
+    PaginatorModule,
+    ProgressBarModule,
+    SelectModule,
     AuditTableComponent,
+    FieldComponent,
     PageHeaderComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,38 +39,42 @@ const ACTION_FILTERS = [
         subheading="Every administrative change on the platform, newest first."
       />
       <div class="row">
-        <mat-form-field class="inline-field">
-          <mat-label>Organisation</mat-label>
-          <mat-select
+        <app-field label="Organisation" for="audit-org" class="inline-field">
+          <p-select
+            inputId="audit-org"
+            [options]="organisationOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            filterBy="label"
             [ngModel]="organisationId()"
             (ngModelChange)="organisationId.set($event); reload()"
-          >
-            <mat-option value="">All</mat-option>
-            @for (org of organisations(); track org.id) {
-              <mat-option [value]="org.id">{{ org.name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field class="inline-field">
-          <mat-label>About</mat-label>
-          <mat-select [ngModel]="action()" (ngModelChange)="action.set($event); reload()">
-            @for (filter of filters; track filter.value) {
-              <mat-option [value]="filter.value">{{ filter.label }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+          />
+        </app-field>
+        <app-field label="About" for="audit-action" class="inline-field">
+          <p-select
+            inputId="audit-action"
+            [options]="filters"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="action()"
+            (ngModelChange)="action.set($event); reload()"
+          />
+        </app-field>
       </div>
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
-      <app-audit-table [entries]="entries()" [organisations]="organisationNames()" />
-      <mat-paginator
-        [length]="total()"
-        [pageIndex]="page() - 1"
-        [pageSize]="pageSize"
-        [hidePageSize]="true"
-        (page)="onPage($event)"
-      />
+      <div class="panel panel-flush">
+        <app-audit-table [entries]="entries()" [organisations]="organisationNames()" />
+        <p-paginator
+          [totalRecords]="total()"
+          [first]="(page() - 1) * pageSize"
+          [rows]="pageSize"
+          [alwaysShow]="false"
+          (onPageChange)="onPage($event)"
+        />
+      </div>
     </div>
   `,
 })
@@ -86,6 +90,10 @@ export class AdminAuditPageComponent {
   protected readonly total = signal(0);
   protected readonly page = signal(1);
   protected readonly loading = signal(false);
+  protected readonly organisationOptions = computed(() => [
+    { value: '', label: 'All' },
+    ...this.organisations().map((org) => ({ value: org.id, label: org.name })),
+  ]);
   protected readonly organisationNames = computed(() =>
     Object.fromEntries(this.organisations().map((org) => [org.id, org.name])),
   );
@@ -103,8 +111,8 @@ export class AdminAuditPageComponent {
     void this.load();
   }
 
-  protected onPage(event: PageEvent): void {
-    this.page.set(event.pageIndex + 1);
+  protected onPage(event: PaginatorState): void {
+    this.page.set((event.page ?? 0) + 1);
     void this.load();
   }
 

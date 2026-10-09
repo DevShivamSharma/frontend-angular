@@ -1,11 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { TooltipModule } from 'primeng/tooltip';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -18,6 +15,10 @@ import { AdminApi } from '../../../core/admin/admin-api.service';
 import { ConfirmService } from '../../../core/ui/confirm.service';
 import { Notifier } from '../../../core/ui/notifier.service';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
+import { FieldComponent } from '../../../shared/field.component';
+import { SelectModule } from 'primeng/select';
+import { CheckboxModule } from 'primeng/checkbox';
+import { FormsModule } from '@angular/forms';
 
 /**
  * Dynamic RBAC at a glance: every role against every permission. Ticking a box changes the
@@ -27,14 +28,15 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
   selector: 'app-roles-page',
   imports: [
     RouterLink,
-    MatButtonModule,
-    MatCheckboxModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatSelectModule,
-    MatTooltipModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
+    TooltipModule,
     PageHeaderComponent,
+    FieldComponent,
+    SelectModule,
+    CheckboxModule,
+    FormsModule,
   ],
   templateUrl: './roles-page.component.html',
   styleUrl: './roles-page.component.scss',
@@ -55,6 +57,10 @@ export class RolesPageComponent {
   /** Edited permission sets, by role id, not saved yet. */
   protected readonly drafts = signal<ReadonlyMap<string, ReadonlySet<string>>>(new Map());
   protected readonly changedCount = computed(() => this.drafts().size);
+  protected readonly organisationOptions = computed(() => [
+    { value: '', label: 'Platform roles (every organisation)' },
+    ...this.organisations().map((org) => ({ value: org.id, label: `As ${org.name} sees them` })),
+  ]);
 
   constructor() {
     void this.init();

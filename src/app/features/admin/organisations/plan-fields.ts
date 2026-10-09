@@ -8,10 +8,6 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { catchError, map, Observable, of, switchMap, timer } from 'rxjs';
 
 import {
@@ -22,6 +18,10 @@ import {
   OrganisationLimits,
 } from '../../../core/api/api.models';
 import { AdminApi } from '../../../core/admin/admin-api.service';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 export const SLUG_PATTERN = /^[a-z](?:[a-z0-9]|-(?=[a-z0-9])){2,39}$/;
 
@@ -83,54 +83,76 @@ export interface PlanValue {
 
 @Component({
   selector: 'app-plan-fields',
-  imports: [
-    ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatSlideToggleModule,
-  ],
+  imports: [ReactiveFormsModule, FieldComponent, InputTextModule, SelectModule, ToggleSwitchModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-container [formGroup]="group()">
       <h2 class="section-title">Booking</h2>
-      <mat-form-field class="full-width">
-        <mat-label>How exhibitors book</mat-label>
-        <mat-select formControlName="bookingMode">
-          @for (mode of modes; track mode.value) {
-            <mat-option [value]="mode.value">{{ mode.label }} — {{ mode.hint }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-field label="How exhibitors book" for="plan-booking-mode">
+        <p-select
+          inputId="plan-booking-mode"
+          formControlName="bookingMode"
+          [options]="modes"
+          optionLabel="label"
+          optionValue="value"
+        >
+          <ng-template #item let-mode>
+            <span class="mode"
+              ><b>{{ mode.label }}</b
+              ><span class="muted">{{ mode.hint }}</span></span
+            >
+          </ng-template>
+        </p-select>
+      </app-field>
 
       <h2 class="section-title">Features</h2>
       <div class="toggles" formGroupName="features">
         @for (feature of features; track feature.key) {
-          <mat-slide-toggle [formControlName]="feature.key">{{ feature.label }}</mat-slide-toggle>
+          <span class="check">
+            <p-toggleswitch [formControlName]="feature.key" [inputId]="'plan-' + feature.key" />
+            <label [for]="'plan-' + feature.key">{{ feature.label }}</label>
+          </span>
         }
       </div>
 
       <h2 class="section-title">Limits</h2>
       <div class="form-grid" formGroupName="limits">
-        <mat-form-field>
-          <mat-label>Venues</mat-label>
-          <input matInput type="number" formControlName="venues" min="1" />
-          <mat-error>1 to 1000</mat-error>
-        </mat-form-field>
-        <mat-form-field>
-          <mat-label>People (members and open invitations)</mat-label>
-          <input matInput type="number" formControlName="users" min="1" />
-          <mat-error>1 to 100000</mat-error>
-        </mat-form-field>
-        <mat-form-field>
-          <mat-label>Storage (MB)</mat-label>
-          <input matInput type="number" formControlName="storageMb" min="100" />
-          <mat-error>At least 100</mat-error>
-        </mat-form-field>
+        <app-field label="Venues" error="1 to 1000" for="plan-fields-venues">
+          <input
+            id="plan-fields-venues"
+            pInputText
+            type="number"
+            formControlName="venues"
+            min="1"
+          />
+        </app-field>
+        <app-field
+          label="People (members and open invitations)"
+          error="1 to 100000"
+          for="plan-fields-users"
+        >
+          <input id="plan-fields-users" pInputText type="number" formControlName="users" min="1" />
+        </app-field>
+        <app-field label="Storage (MB)" error="At least 100" for="plan-fields-storage-mb">
+          <input
+            id="plan-fields-storage-mb"
+            pInputText
+            type="number"
+            formControlName="storageMb"
+            min="100"
+          />
+        </app-field>
       </div>
     </ng-container>
   `,
   styles: `
+    .mode {
+      display: grid;
+      white-space: normal;
+    }
+    .mode .muted {
+      font: var(--app-body-small);
+    }
     .toggles {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -142,7 +164,7 @@ export interface PlanValue {
 export class PlanFieldsComponent {
   readonly group = input.required<FormGroup>();
 
-  protected readonly modes = BOOKING_MODES;
+  protected readonly modes = [...BOOKING_MODES];
   protected readonly features = (Object.keys(FEATURE_LABELS) as (keyof OrganisationFeatures)[]).map(
     (key) => ({ key, label: FEATURE_LABELS[key] }),
   );

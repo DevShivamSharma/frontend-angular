@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatListModule } from '@angular/material/list';
+import { ButtonModule } from 'primeng/button';
 import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -10,25 +9,45 @@ import { AuthLayoutComponent } from '../auth/auth-layout.component';
 /** Signed in, but not a member of the organisation in the link. */
 @Component({
   selector: 'app-no-access-page',
-  imports: [RouterLink, MatButtonModule, MatListModule, AuthLayoutComponent],
+  imports: [RouterLink, ButtonModule, AuthLayoutComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-auth-layout heading="No access here" [subheading]="subheading()">
       @if (auth.memberships().length) {
         <p class="muted">Your organisations:</p>
-        <mat-nav-list>
+        <nav class="orgs" aria-label="Your organisations">
           @for (membership of auth.memberships(); track membership.id) {
-            <a mat-list-item [routerLink]="['/', membership.organisation.slug]">
-              <span matListItemTitle>{{ membership.organisation.name }}</span>
-              <span matListItemLine>{{ membership.role.name }}</span>
+            <a class="org" [routerLink]="['/', membership.organisation.slug]">
+              <b>{{ membership.organisation.name }}</b>
+              <span class="muted">{{ membership.role.name }}</span>
             </a>
           }
-        </mat-nav-list>
+        </nav>
       } @else if (auth.user()?.isPlatformAdmin) {
-        <a mat-button routerLink="/admin">Go to the platform console</a>
+        <a pButton [text]="true" routerLink="/admin">Go to the platform console</a>
       }
-      <button mat-stroked-button (click)="signOut()">Sign in with another account</button>
+      <button pButton [outlined]="true" (click)="signOut()">Sign in with another account</button>
     </app-auth-layout>
+  `,
+  styles: `
+    .orgs {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .org {
+      display: grid;
+      gap: 2px;
+      padding: 12px 14px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 10px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .org:hover,
+    .org:focus-visible {
+      border-color: var(--app-primary);
+    }
   `,
 })
 export class NoAccessPageComponent {

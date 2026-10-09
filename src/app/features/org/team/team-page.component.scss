@@ -1,7 +1,23 @@
 .role-select {
   width: 220px;
-  --mat-form-field-container-height: 40px;
-  --mat-form-field-container-vertical-padding: 8px;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--app-primary-container);
+  color: var(--app-on-primary-container);
+  font: var(--app-title-small);
 }
 
 .actions-cell {

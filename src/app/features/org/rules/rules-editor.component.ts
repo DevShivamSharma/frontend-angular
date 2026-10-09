@@ -8,12 +8,8 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
 import { firstValueFrom } from 'rxjs';
 
 import { OrgContextStore } from '../../../core/org/org.stores';
@@ -29,6 +25,12 @@ import type {
   ValueLimit,
 } from '../../../core/rules/rules.models';
 import { Notifier } from '../../../core/ui/notifier.service';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { SelectModule } from 'primeng/select';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 const GROUPS: Array<{ key: RuleGroup; label: string }> = [
   { key: 'floor', label: 'The hall floor' },
@@ -42,26 +44,32 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
   selector: 'app-rules-editor',
   imports: [
     FormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatSelectModule,
-    MatSlideToggleModule,
+    ButtonModule,
+    IconComponent,
+    FieldComponent,
+    InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
+    SelectModule,
+    ToggleSwitchModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="panel">
       <h2 class="section-title">Drawing</h2>
-      <mat-form-field class="full-width">
-        <mat-label>Drawing profile of the venue's system</mat-label>
-        <mat-select [(ngModel)]="profile">
-          @for (p of catalogue().profiles; track p.id) {
-            <mat-option [value]="p.id">{{ p.label }}</mat-option>
-          }
-        </mat-select>
-        <mat-hint>{{ profileText() }}</mat-hint>
-      </mat-form-field>
+      <app-field
+        label="Drawing profile of the venue's system"
+        for="rules-profile"
+        [hint]="profileText()"
+      >
+        <p-select
+          inputId="rules-profile"
+          [(ngModel)]="profile"
+          [options]="catalogue().profiles"
+          optionLabel="label"
+          optionValue="id"
+        />
+      </app-field>
     </section>
 
     @for (g of groups; track g.key) {
@@ -70,18 +78,20 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
         <ul class="rules">
           @for (r of rulesOf(g.key); track r.id) {
             <li [class.waiting]="!r.available">
-              <mat-slide-toggle
-                [checked]="switches()[r.id]"
-                (change)="toggle(r.id, $event.checked)"
+              <p-toggleswitch
+                [ngModel]="switches()[r.id]"
+                (ngModelChange)="toggle(r.id, $event)"
                 [disabled]="!r.available"
-                [aria-label]="r.label"
+                [ariaLabel]="r.label"
               />
               <div class="rule">
+                <span class="rule-name"
+                  >{{ r.label }} <span class="ref">{{ r.reference }}</span></span
+                >
                 <span class="muted small">{{ r.description }}</span>
                 @if (!r.available) {
                   <span class="small waiting-for"
-                    ><mat-icon inline>hourglass_empty</mat-icon> Takes effect with:
-                    {{ r.waitingFor }}</span
+                    ><app-icon name="hourglass_empty" /> Takes effect with: {{ r.waitingFor }}</span
                   >
                 }
               </div>
@@ -95,35 +105,43 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       <h2 class="section-title">Values</h2>
       <div class="form-grid">
         @for (l of catalogue().limits; track l.key) {
-          <mat-form-field>
-            <mat-label>{{ l.label }}</mat-label>
-            <input
-              matInput
-              type="number"
-              [ngModel]="shown(l)"
-              (ngModelChange)="setValue(l, $event)"
-              [min]="l.unit === 'share' ? l.min * 100 : l.min"
-              [max]="l.unit === 'share' ? l.max * 100 : l.max"
-              [step]="l.unit === 'share' ? 5 : 0.5"
-            />
-            <span matTextSuffix>{{ l.unit === 'share' ? '%' : 'm' }}</span>
-            <mat-hint>{{
+          <app-field
+            [label]="l.label"
+            [for]="'rule-value-' + l.key"
+            [hint]="
               l.unit === 'share'
                 ? l.min * 100 + '–' + l.max * 100 + '%'
                 : l.min + '–' + l.max + ' m'
-            }}</mat-hint>
-          </mat-form-field>
+            "
+          >
+            <p-inputgroup>
+              <input
+                pInputText
+                type="number"
+                [id]="'rule-value-' + l.key"
+                [ngModel]="shown(l)"
+                (ngModelChange)="setValue(l, $event)"
+                [min]="l.unit === 'share' ? l.min * 100 : l.min"
+                [max]="l.unit === 'share' ? l.max * 100 : l.max"
+                [step]="l.unit === 'share' ? 5 : 0.5"
+              />
+              <p-inputgroup-addon>{{ l.unit === 'share' ? '%' : 'm' }}</p-inputgroup-addon>
+            </p-inputgroup>
+          </app-field>
         }
       </div>
-      <mat-slide-toggle [(ngModel)]="foyerConstruction">
-        Stalls may stand in foyers (constructible foyer areas)
-      </mat-slide-toggle>
+      <span class="check">
+        <p-toggleswitch inputId="rules-foyer" [(ngModel)]="foyerConstruction" />
+        <label for="rules-foyer">Stalls may stand in foyers (constructible foyer areas)</label>
+      </span>
     </section>
 
     <section class="panel">
       <div class="row">
         <h2 class="section-title grow">Documents these rules follow</h2>
-        <button mat-button (click)="addReference()"><mat-icon>add</mat-icon>Add document</button>
+        <button pButton [text]="true" (click)="addReference()">
+          <app-icon name="add" />Add document
+        </button>
       </div>
       @if (!references().length) {
         <p class="muted">
@@ -133,35 +151,42 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       }
       @for (ref of references(); track $index) {
         <div class="ref-row">
-          <mat-form-field class="doc">
-            <mat-label>Document</mat-label>
+          <app-field class="doc" label="Document" for="rules-editor-field">
             <input
-              matInput
+              id="rules-editor-field"
+              pInputText
               [ngModel]="ref.document"
               (ngModelChange)="setRef($index, 'document', $event)"
               maxlength="200"
             />
-          </mat-form-field>
-          <mat-form-field class="section">
-            <mat-label>Section</mat-label>
+          </app-field>
+          <app-field class="section" label="Section" for="rules-editor-field-2">
             <input
-              matInput
+              id="rules-editor-field-2"
+              pInputText
               [ngModel]="ref.section ?? ''"
               (ngModelChange)="setRef($index, 'section', $event)"
               maxlength="60"
             />
-          </mat-form-field>
-          <mat-form-field class="note">
-            <mat-label>Note</mat-label>
+          </app-field>
+          <app-field class="note" label="Note" for="rules-editor-field-3">
             <input
-              matInput
+              id="rules-editor-field-3"
+              pInputText
               [ngModel]="ref.note ?? ''"
               (ngModelChange)="setRef($index, 'note', $event)"
               maxlength="300"
             />
-          </mat-form-field>
-          <button mat-icon-button (click)="removeRef($index)" aria-label="Remove document">
-            <mat-icon>close</mat-icon>
+          </app-field>
+          <button
+            pButton
+            [text]="true"
+            [rounded]="true"
+            severity="secondary"
+            (click)="removeRef($index)"
+            aria-label="Remove document"
+          >
+            <app-icon name="close" />
           </button>
         </div>
       }
@@ -169,8 +194,8 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
 
     <div class="save row">
       <span class="grow"></span>
-      <button mat-button (click)="reset()" [disabled]="busy()">Undo changes</button>
-      <button mat-flat-button (click)="save()" [disabled]="busy()">Save</button>
+      <button pButton [text]="true" (click)="reset()" [disabled]="busy()">Undo changes</button>
+      <button pButton (click)="save()" [disabled]="busy()">Save</button>
     </div>
   `,
   styles: `
@@ -179,7 +204,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       gap: 16px;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
     .grow {
       flex: 1 1 auto;
@@ -209,12 +234,12 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       font-weight: 600;
     }
     .ref {
-      font: var(--mat-sys-label-small);
-      color: var(--mat-sys-primary);
+      font: var(--app-label-small);
+      color: var(--app-primary);
       margin-left: 6px;
     }
     .waiting-for {
-      color: var(--mat-sys-on-surface-variant);
+      color: var(--app-on-surface-variant);
     }
     .ref-row {
       display: flex;
@@ -235,7 +260,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       position: sticky;
       bottom: 0;
       padding: 12px 0;
-      background: var(--mat-sys-surface);
+      background: var(--app-surface);
     }
   `,
 })

@@ -196,7 +196,7 @@ const HELPERS = [
       font-size: 13px;
     }
     .muted {
-      color: var(--mat-sys-on-surface-variant);
+      color: var(--app-on-surface-variant);
     }
     .toolbar,
     .preview-tools {
@@ -232,16 +232,16 @@ const HELPERS = [
       min-width: 0;
       padding: 8px;
       color: inherit;
-      background: var(--mat-sys-surface);
-      border: 1px solid var(--mat-sys-outline-variant);
+      background: var(--app-surface);
+      border: 1px solid var(--app-outline-variant);
       border-radius: 6px;
       font: inherit;
     }
     button {
       cursor: pointer;
-      background: var(--mat-sys-surface);
-      color: var(--mat-sys-primary);
-      border: 1px solid var(--mat-sys-outline-variant);
+      background: var(--app-surface);
+      color: var(--app-primary);
+      border: 1px solid var(--app-outline-variant);
       border-radius: 6px;
       padding: 8px 10px;
       font: inherit;

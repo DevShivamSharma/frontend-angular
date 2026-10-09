@@ -4,17 +4,21 @@
   gap: 12px;
   flex-wrap: wrap;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  border-bottom: 1px solid var(--app-outline-variant);
 }
 
 .search {
   flex: 1 1 300px;
   max-width: 480px;
+
+  input {
+    width: 100%;
+  }
 }
 
 .count {
   margin-left: auto;
-  font: var(--mat-sys-label-large);
+  font: var(--app-label-large);
 }
 
 .progress {
@@ -34,8 +38,8 @@
 }
 
 .org-name {
-  font: var(--mat-sys-title-small);
-  color: var(--mat-sys-on-surface);
+  font: var(--app-title-small);
+  color: var(--app-on-surface);
   text-decoration: none;
 
   &:hover {
@@ -43,7 +47,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
+    outline: 2px solid var(--app-primary);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -64,8 +68,8 @@ code {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 8px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  font: var(--mat-sys-label-medium);
+  border: 1px solid var(--app-outline-variant);
+  font: var(--app-label-medium);
   white-space: nowrap;
 }
 
@@ -74,34 +78,34 @@ code {
   align-items: center;
   gap: 6px;
 
-  mat-icon {
+  app-icon {
     width: 18px;
     height: 18px;
     font-size: 18px;
-    color: var(--mat-sys-on-surface-variant);
+    color: var(--app-on-surface-variant);
   }
 }
 
 .invited {
-  font: var(--mat-sys-label-small);
+  font: var(--app-label-small);
   padding: 1px 6px;
   border-radius: 6px;
-  background: var(--mat-sys-tertiary-container);
-  color: var(--mat-sys-on-tertiary-container);
+  background: var(--app-tertiary-container);
+  color: var(--app-on-tertiary-container);
 }
 
 .created {
   display: grid;
-  font: var(--mat-sys-body-medium);
+  font: var(--app-body-medium);
 
   .muted {
-    font: var(--mat-sys-body-small);
+    font: var(--app-body-small);
   }
 }
 
 .chevron-cell {
   width: 40px;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-on-surface-variant);
 }
 
 .clickable {
@@ -109,12 +113,12 @@ code {
   transition: background-color 120ms ease;
 
   &:hover {
-    background: var(--mat-sys-surface-container-low);
+    background: var(--app-surface-container-low);
   }
 }
 
-.mat-mdc-cell:first-child,
-.mat-mdc-header-cell:first-child {
+::ng-deep .p-datatable td:first-child,
+::ng-deep .p-datatable th:first-child {
   padding-left: 20px;
 }
 
@@ -123,4 +127,8 @@ code {
     margin-left: 0;
     width: 100%;
   }
+}
+
+.white{
+  color: white !important;
 }

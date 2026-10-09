@@ -1,5 +1,5 @@
-<h2 mat-dialog-title>Hall import tour</h2>
-<mat-dialog-content>
+<h2 class="dialog-title">Hall import tour</h2>
+<div class="dialog-content">
   <div class="options">
     <div class="tabs" aria-label="Tour import method">
       <button [class.active]="mode() === 'pdf'" (click)="changeMode('pdf')">
@@ -103,8 +103,8 @@
       </ul>
     </aside>
   }
-</mat-dialog-content>
-<mat-dialog-actions>
+</div>
+<div class="dialog-actions">
   <button (click)="index.set(index() - 1)" [disabled]="index() === 0">Previous topic</button>
   @if (index() < lessons.length - 1) {
     <button (click)="index.set(index() + 1)">Next topic →</button>
@@ -115,5 +115,5 @@
       Open {{ mode() === 'pdf' ? 'floor plan' : 'CSV' }} importer
     </button>
   }
-  <button mat-dialog-close>Back to import</button>
-</mat-dialog-actions>
+  <button (click)="ref.close()">Back to import</button>
+</div>

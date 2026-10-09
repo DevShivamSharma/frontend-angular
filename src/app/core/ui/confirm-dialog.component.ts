@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { ButtonModule } from 'primeng/button';
+import { TextareaModule } from 'primeng/textarea';
+
+import { FieldComponent } from '../../shared/field.component';
+import { dialogData, DialogRef } from './app-dialog.service';
 
 export interface ConfirmDialogData {
   title: string;
@@ -18,44 +19,53 @@ export interface ConfirmDialogData {
 /** Closes with `true` (or the reason, when one is asked for), or `undefined` when cancelled. */
 @Component({
   selector: 'app-confirm-dialog',
-  imports: [
-    MatDialogModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    ReactiveFormsModule,
-  ],
+  imports: [ReactiveFormsModule, ButtonModule, TextareaModule, FieldComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>{{ data.title }}</h2>
-    <mat-dialog-content>
-      <p>{{ data.message }}</p>
+    <h2 class="dialog-title">{{ data.title }}</h2>
+    <div class="dialog-content">
+      <p class="message">{{ data.message }}</p>
       @if (data.reasonLabel) {
-        <mat-form-field class="full-width">
-          <mat-label>{{ data.reasonLabel }}</mat-label>
-          <textarea matInput [formControl]="reason" rows="3" cdkFocusInitial></textarea>
-          @if (reason.hasError('minlength') || reason.hasError('required')) {
-            <mat-error>At least 3 characters.</mat-error>
-          }
-        </mat-form-field>
+        <app-field [label]="data.reasonLabel" for="confirm-reason" error="At least 3 characters.">
+          <textarea
+            pTextarea
+            id="confirm-reason"
+            [formControl]="reason"
+            rows="3"
+            autofocus
+          ></textarea>
+        </app-field>
       }
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
+    </div>
+    <div class="dialog-actions">
       <button
-        mat-flat-button
-        [class.danger]="data.destructive"
-        [disabled]="data.reasonLabel && reason.invalid"
+        pButton
+        type="button"
+        label="Cancel"
+        [text]="true"
+        severity="secondary"
+        (click)="ref.close()"
+      ></button>
+      <button
+        pButton
+        type="button"
+        [label]="data.confirmLabel"
+        [severity]="data.destructive ? 'danger' : 'primary'"
+        [disabled]="!!data.reasonLabel && reason.invalid"
         (click)="confirm()"
-      >
-        {{ data.confirmLabel }}
-      </button>
-    </mat-dialog-actions>
+      ></button>
+    </div>
+  `,
+  styles: `
+    .message {
+      margin: 0 0 12px;
+      color: var(--app-on-surface-variant);
+    }
   `,
 })
 export class ConfirmDialogComponent {
-  protected readonly data = inject<ConfirmDialogData>(MAT_DIALOG_DATA);
-  private readonly ref = inject(MatDialogRef<ConfirmDialogComponent, true | string>);
+  protected readonly data = dialogData<ConfirmDialogData>();
+  protected readonly ref = inject(DialogRef);
   protected readonly reason = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.minLength(3)],

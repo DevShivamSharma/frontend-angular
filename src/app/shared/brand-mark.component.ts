@@ -53,14 +53,14 @@ import { readableOn } from './readable-color';
       place-items: center;
       flex: none;
       border-radius: 28%;
-      background: var(--mat-sys-primary);
-      color: var(--mat-sys-on-primary);
+      background: var(--app-primary);
+      color: var(--app-on-primary);
       font-family: var(--app-font-family);
       font-weight: 600;
       letter-spacing: 0.02em;
     }
     .name {
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;

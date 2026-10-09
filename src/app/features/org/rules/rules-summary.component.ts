@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
+import { IconComponent } from '../../../shared/icon.component';
 
 import type {
   RuleCatalogue,
@@ -41,7 +41,7 @@ const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
  */
 @Component({
   selector: 'app-rules-summary',
-  imports: [MatIconModule],
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let s = rules();
@@ -81,8 +81,7 @@ const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
                 }
                 @if (!r.available) {
                   <span class="small muted"
-                    ><mat-icon inline>hourglass_empty</mat-icon> Takes effect with:
-                    {{ r.waitingFor }}</span
+                    ><app-icon name="hourglass_empty" /> Takes effect with: {{ r.waitingFor }}</span
                   >
                 }
               </div>
@@ -117,7 +116,7 @@ const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
       gap: 16px;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
     .profile {
       margin: 0 0 4px;
@@ -155,12 +154,12 @@ const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
       font-weight: 600;
     }
     .ref {
-      font: var(--mat-sys-label-small);
-      color: var(--mat-sys-primary);
+      font: var(--app-label-small);
+      color: var(--app-primary);
       margin-left: 6px;
     }
     .value {
-      color: var(--mat-sys-on-surface);
+      color: var(--app-on-surface);
       font-variant-numeric: tabular-nums;
     }
   `,

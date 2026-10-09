@@ -6,15 +6,15 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { ButtonModule } from 'primeng/button';
 import { firstValueFrom } from 'rxjs';
 
 import { EventsApi } from '../../../core/events/events-api.service';
 import type { EventKind, EventView } from '../../../core/events/events.models';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
+import { SelectModule } from 'primeng/select';
 
 export interface EventDialogData {
   slug: string;
@@ -35,17 +35,10 @@ function datesInOrder(group: AbstractControl): ValidationErrors | null {
 /** Creates or edits an internal or external event. Closes with the saved event. */
 @Component({
   selector: 'app-event-dialog',
-  imports: [
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-  ],
+  imports: [ReactiveFormsModule, ButtonModule, FieldComponent, InputTextModule, SelectModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>
+    <h2 class="dialog-title">
       {{
         data.event
           ? 'Edit event'
@@ -55,58 +48,83 @@ function datesInOrder(group: AbstractControl): ValidationErrors | null {
       }}
     </h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <mat-dialog-content class="stack">
-        <mat-form-field>
-          <mat-label>Event name</mat-label>
-          <input matInput formControlName="name" cdkFocusInitial maxlength="160" />
-          <mat-error>2 to 160 characters</mat-error>
-        </mat-form-field>
+      <div class="dialog-content stack">
+        <app-field label="Event name" error="2 to 160 characters" for="event-dialog-name">
+          <input
+            id="event-dialog-name"
+            pInputText
+            formControlName="name"
+            cdkFocusInitial
+            maxlength="160"
+          />
+        </app-field>
         @if (data.kind === 'external') {
-          <mat-form-field>
-            <mat-label>Organiser</mat-label>
-            <input matInput formControlName="organiserName" maxlength="160" />
-            <mat-hint>The company that booked the halls</mat-hint>
-            <mat-error>Name the organiser</mat-error>
-          </mat-form-field>
+          <app-field
+            label="Organiser"
+            hint="The company that booked the halls"
+            error="Name the organiser"
+            for="event-dialog-organiser-name"
+          >
+            <input
+              id="event-dialog-organiser-name"
+              pInputText
+              formControlName="organiserName"
+              maxlength="160"
+            />
+          </app-field>
         }
         <div class="row2">
-          <mat-form-field>
-            <mat-label>Event id in your system</mat-label>
-            <input matInput formControlName="venueEventId" maxlength="80" />
-            <mat-hint>Optional, e.g. the hall booking number</mat-hint>
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>Visitors</mat-label>
-            <mat-select formControlName="audience">
-              <mat-option value="B2B">B2B (trade)</mat-option>
-              <mat-option value="B2C">B2C (public)</mat-option>
-            </mat-select>
-            <mat-hint>Sets the passage width the rules ask for</mat-hint>
-          </mat-form-field>
+          <app-field
+            label="Event id in your system"
+            hint="Optional, e.g. the hall booking number"
+            for="event-dialog-venue-event-id"
+          >
+            <input
+              id="event-dialog-venue-event-id"
+              pInputText
+              formControlName="venueEventId"
+              maxlength="80"
+            />
+          </app-field>
+          <app-field
+            label="Visitors"
+            for="event-dialog-audience"
+            hint="Sets the passage width the rules ask for"
+          >
+            <p-select
+              inputId="event-dialog-audience"
+              formControlName="audience"
+              [options]="audiences"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </app-field>
         </div>
         <div class="row2">
-          <mat-form-field>
-            <mat-label>Starts</mat-label>
-            <input matInput type="date" formControlName="startsOn" />
-            <mat-error>Choose the first day</mat-error>
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>Ends</mat-label>
-            <input matInput type="date" formControlName="endsOn" />
-            <mat-error>Choose the last day</mat-error>
-          </mat-form-field>
+          <app-field label="Starts" error="Choose the first day" for="event-dialog-starts-on">
+            <input id="event-dialog-starts-on" pInputText type="date" formControlName="startsOn" />
+          </app-field>
+          <app-field label="Ends" error="Choose the last day" for="event-dialog-ends-on">
+            <input id="event-dialog-ends-on" pInputText type="date" formControlName="endsOn" />
+          </app-field>
         </div>
         <div class="row2">
-          <mat-form-field>
-            <mat-label>Build-up from</mat-label>
-            <input matInput type="date" formControlName="buildUpOn" />
-            <mat-hint>Optional</mat-hint>
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>Dismantling until</mat-label>
-            <input matInput type="date" formControlName="dismantleOn" />
-            <mat-hint>Optional</mat-hint>
-          </mat-form-field>
+          <app-field label="Build-up from" hint="Optional" for="event-dialog-build-up-on">
+            <input
+              id="event-dialog-build-up-on"
+              pInputText
+              type="date"
+              formControlName="buildUpOn"
+            />
+          </app-field>
+          <app-field label="Dismantling until" hint="Optional" for="event-dialog-dismantle-on">
+            <input
+              id="event-dialog-dismantle-on"
+              pInputText
+              type="date"
+              formControlName="dismantleOn"
+            />
+          </app-field>
         </div>
         @if (form.errors && form.touched) {
           <p class="problem" role="alert">
@@ -119,13 +137,13 @@ function datesInOrder(group: AbstractControl): ValidationErrors | null {
             }
           </p>
         }
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button mat-button type="button" mat-dialog-close>Cancel</button>
-        <button mat-flat-button type="submit" [disabled]="busy()">
+      </div>
+      <div class="dialog-actions">
+        <button pButton [text]="true" type="button" (click)="ref.close()">Cancel</button>
+        <button pButton type="submit" [disabled]="busy()">
           {{ data.event ? 'Save' : 'Create event' }}
         </button>
-      </mat-dialog-actions>
+      </div>
     </form>
   `,
   styles: `
@@ -141,14 +159,14 @@ function datesInOrder(group: AbstractControl): ValidationErrors | null {
     }
     .problem {
       margin: 0;
-      color: var(--mat-sys-error);
+      color: var(--app-error);
     }
   `,
 })
 export class EventDialogComponent {
-  protected readonly data = inject<EventDialogData>(MAT_DIALOG_DATA);
+  protected readonly data = dialogData<EventDialogData>();
   private readonly api = inject(EventsApi);
-  private readonly ref = inject(MatDialogRef<EventDialogComponent, EventView>);
+  protected readonly ref = inject(DialogRef);
 
   protected readonly form = inject(NonNullableFormBuilder).group(
     {
@@ -167,6 +185,10 @@ export class EventDialogComponent {
     { validators: datesInOrder },
   );
   protected readonly busy = signal(false);
+  protected readonly audiences = [
+    { value: 'B2B', label: 'B2B (trade)' },
+    { value: 'B2C', label: 'B2C (public)' },
+  ];
 
   protected async submit(): Promise<void> {
     if (this.form.invalid) {

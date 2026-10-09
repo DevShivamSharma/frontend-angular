@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -13,15 +12,16 @@ import { VenuesApi } from '../../../core/venues/venues-api.service';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component';
+import { AppDialog } from '../../../core/ui/app-dialog.service';
 
 /** The organisation's venues; each holds the halls stalls are planned in. */
 @Component({
   selector: 'app-venues-page',
   imports: [
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressBarModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
     EmptyStateComponent,
     PageHeaderComponent,
   ],
@@ -30,12 +30,12 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
     <div class="page">
       <app-page-header heading="Venues" subheading="Exhibition grounds and the halls inside them.">
         @if (canManage()) {
-          <button mat-flat-button (click)="create()"><mat-icon>add</mat-icon>New venue</button>
+          <button pButton (click)="create()"><app-icon name="add" />New venue</button>
         }
       </app-page-header>
 
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
 
       @if (!loading() && !venues().length) {
@@ -46,7 +46,7 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
             text="Add a venue, then draw its halls by size or import a venue JSON file."
           >
             @if (canManage()) {
-              <button mat-flat-button (click)="create()">New venue</button>
+              <button pButton (click)="create()">New venue</button>
             }
           </app-empty-state>
         </div>
@@ -56,7 +56,7 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
         @for (venue of venues(); track venue.id) {
           <li>
             <a class="card panel" [routerLink]="[venue.id]">
-              <span class="icon" aria-hidden="true"><mat-icon>location_city</mat-icon></span>
+              <span class="icon" aria-hidden="true"><app-icon name="location_city" /></span>
               <span class="body">
                 <span class="name">
                   {{ venue.name }}
@@ -71,7 +71,7 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
                   >{{ venue.hallCount }} {{ venue.hallCount === 1 ? 'hall' : 'halls' }}</span
                 >
               </span>
-              <mat-icon class="chevron" aria-hidden="true">chevron_right</mat-icon>
+              <app-icon class="chevron" name="chevron_right" />
             </a>
           </li>
         }
@@ -96,10 +96,11 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
       height: 100%;
       box-sizing: border-box;
       transition: border-color 120ms;
+      flex-direction: inherit;
     }
     .card:hover,
     .card:focus-visible {
-      border-color: var(--mat-sys-primary);
+      border-color: var(--app-primary);
     }
     .icon {
       display: grid;
@@ -108,8 +109,8 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
       height: 44px;
       flex: none;
       border-radius: 12px;
-      background: var(--mat-sys-secondary-container);
-      color: var(--mat-sys-on-secondary-container);
+      background: var(--app-secondary-container);
+      color: var(--app-on-secondary-container);
     }
     .body {
       display: grid;
@@ -118,7 +119,7 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
       flex: 1;
     }
     .name {
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
       display: flex;
       gap: 8px;
       align-items: center;
@@ -130,13 +131,13 @@ import { VenueDialogComponent, VenueDialogData } from './venue-dialog.component'
       white-space: nowrap;
     }
     .chevron {
-      color: var(--mat-sys-on-surface-variant);
+      color: var(--app-on-surface-variant);
     }
   `,
 })
 export class VenuesPageComponent {
   private readonly api = inject(VenuesApi);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(AppDialog);
   private readonly notifier = inject(Notifier);
   private readonly context = inject(OrgContextStore);
 
@@ -161,14 +162,11 @@ export class VenuesPageComponent {
 
   protected create(): void {
     const data: VenueDialogData = { slug: this.context.slug() };
-    this.dialog
-      .open(VenueDialogComponent, { data })
-      .afterClosed()
-      .subscribe((venue?: VenueView) => {
-        if (venue) {
-          this.notifier.success(`${venue.name} created.`);
-          void this.load();
-        }
-      });
+    this.dialog.open<VenueView>(VenueDialogComponent, { data }).subscribe((venue?: VenueView) => {
+      if (venue) {
+        this.notifier.success(`${venue.name} created.`);
+        void this.load();
+      }
+    });
   }
 }

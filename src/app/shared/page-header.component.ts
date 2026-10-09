@@ -23,7 +23,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       flex-wrap: wrap;
     }
     h1 {
-      font: var(--mat-sys-headline-small);
+      font: var(--app-headline-small);
     }
     p {
       margin: 4px 0 0;
@@ -33,6 +33,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       gap: 8px;
       flex-wrap: wrap;
     }
+      .white{
+      color: white !important;
+      }
   `,
 })
 export class PageHeaderComponent {

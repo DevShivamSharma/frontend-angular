@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { ButtonModule } from 'primeng/button';
 import { firstValueFrom } from 'rxjs';
 
 import type { VenueView } from '../../../core/api/api.models';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
+import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
 
 export interface VenueDialogData {
   slug: string;
@@ -18,39 +19,40 @@ export interface VenueDialogData {
 /** Creates or edits a venue. Closes with the saved venue. */
 @Component({
   selector: 'app-venue-dialog',
-  imports: [
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-  ],
+  imports: [ReactiveFormsModule, ButtonModule, FieldComponent, InputTextModule, TextareaModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>{{ data.venue ? 'Edit venue' : 'New venue' }}</h2>
+    <h2 class="dialog-title">{{ data.venue ? 'Edit venue' : 'New venue' }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <mat-dialog-content class="stack">
-        <mat-form-field>
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" cdkFocusInitial maxlength="160" />
-          <mat-error>2 to 160 characters</mat-error>
-        </mat-form-field>
-        <mat-form-field>
-          <mat-label>Code</mat-label>
-          <input matInput formControlName="code" maxlength="40" />
-          <mat-hint>Optional short name, e.g. BM</mat-hint>
-        </mat-form-field>
-        <mat-form-field>
-          <mat-label>Address</mat-label>
-          <textarea matInput formControlName="address" rows="2" maxlength="300"></textarea>
-        </mat-form-field>
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button mat-button type="button" mat-dialog-close>Cancel</button>
-        <button mat-flat-button type="submit" [disabled]="busy()">
+      <div class="dialog-content stack">
+        <app-field label="Name" error="2 to 160 characters" for="venue-dialog-name">
+          <input
+            id="venue-dialog-name"
+            pInputText
+            formControlName="name"
+            cdkFocusInitial
+            maxlength="160"
+          />
+        </app-field>
+        <app-field label="Code" hint="Optional short name, e.g. BM" for="venue-dialog-code">
+          <input id="venue-dialog-code" pInputText formControlName="code" maxlength="40" />
+        </app-field>
+        <app-field label="Address" for="venue-dialog-address">
+          <textarea
+            id="venue-dialog-address"
+            pTextarea
+            formControlName="address"
+            rows="2"
+            maxlength="300"
+          ></textarea>
+        </app-field>
+      </div>
+      <div class="dialog-actions">
+        <button pButton [text]="true" type="button" (click)="ref.close()">Cancel</button>
+        <button pButton type="submit" [disabled]="busy()">
           {{ data.venue ? 'Save' : 'Create venue' }}
         </button>
-      </mat-dialog-actions>
+      </div>
     </form>
   `,
   styles: `
@@ -62,9 +64,9 @@ export interface VenueDialogData {
   `,
 })
 export class VenueDialogComponent {
-  protected readonly data = inject<VenueDialogData>(MAT_DIALOG_DATA);
+  protected readonly data = dialogData<VenueDialogData>();
   private readonly api = inject(VenuesApi);
-  private readonly ref = inject(MatDialogRef<VenueDialogComponent, VenueView>);
+  protected readonly ref = inject(DialogRef);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     name: [this.data.venue?.name ?? '', [Validators.required, Validators.minLength(2)]],

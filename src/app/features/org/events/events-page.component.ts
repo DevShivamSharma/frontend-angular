@@ -8,10 +8,9 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -22,6 +21,7 @@ import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { formatDays } from './event-dates';
 import { EventDialogComponent, EventDialogData } from './event-dialog.component';
+import { AppDialog } from '../../../core/ui/app-dialog.service';
 
 const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: string }> = {
   internal: {
@@ -46,9 +46,9 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
   selector: 'app-events-page',
   imports: [
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressBarModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
     EmptyStateComponent,
     PageHeaderComponent,
   ],
@@ -57,12 +57,12 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
     <div class="page">
       <app-page-header [heading]="copy().heading" [subheading]="copy().sub">
         @if (canManage() && kind()) {
-          <button mat-flat-button (click)="create()"><mat-icon>add</mat-icon>New event</button>
+          <button pButton (click)="create()"><app-icon name="add" />New event</button>
         }
       </app-page-header>
 
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
 
       @if (!loading() && !events().length) {
@@ -73,7 +73,7 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
             [text]="copy().empty"
           >
             @if (canManage() && kind()) {
-              <button mat-flat-button (click)="create()">New event</button>
+              <button pButton (click)="create()">New event</button>
             }
           </app-empty-state>
         </div>
@@ -100,7 +100,7 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
                   }}{{ e.venueEventId ? ' · ' + e.venueEventId : '' }}</span
                 >
               </span>
-              <mat-icon class="chevron" aria-hidden="true">chevron_right</mat-icon>
+              <app-icon class="chevron" name="chevron_right" />
             </a>
           </li>
         }
@@ -128,7 +128,7 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
     }
     .card:hover,
     .card:focus-visible {
-      border-color: var(--mat-sys-primary);
+      border-color: var(--app-primary);
     }
     .when {
       display: grid;
@@ -137,16 +137,16 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
       height: 52px;
       flex: none;
       border-radius: 12px;
-      background: var(--mat-sys-secondary-container);
-      color: var(--mat-sys-on-secondary-container);
+      background: var(--app-secondary-container);
+      color: var(--app-on-secondary-container);
       line-height: 1.1;
     }
     .day {
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
       font-variant-numeric: tabular-nums;
     }
     .mon {
-      font: var(--mat-sys-label-small);
+      font: var(--app-label-small);
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
@@ -157,18 +157,18 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
       flex: 1;
     }
     .name {
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
       display: flex;
       gap: 8px;
       align-items: center;
       flex-wrap: wrap;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
       font-variant-numeric: tabular-nums;
     }
     .chevron {
-      color: var(--mat-sys-on-surface-variant);
+      color: var(--app-on-surface-variant);
     }
   `,
 })
@@ -177,7 +177,7 @@ export class EventsPageComponent {
   readonly kind = input<EventKind>();
 
   private readonly api = inject(EventsApi);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(AppDialog);
   private readonly router = inject(Router);
   private readonly context = inject(OrgContextStore);
 
@@ -218,12 +218,9 @@ export class EventsPageComponent {
     const kind = this.kind();
     if (!kind) return;
     const data: EventDialogData = { slug: this.slug(), kind };
-    this.dialog
-      .open(EventDialogComponent, { data })
-      .afterClosed()
-      .subscribe((event?: EventView) => {
-        // Straight on to adding its halls.
-        if (event) void this.router.navigate(['/', this.slug(), 'events', event.id]);
-      });
+    this.dialog.open<EventView>(EventDialogComponent, { data }).subscribe((event?: EventView) => {
+      // Straight on to adding its halls.
+      if (event) void this.router.navigate(['/', this.slug(), 'events', event.id]);
+    });
   }
 }

@@ -1,18 +1,18 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
+import { ButtonModule } from 'primeng/button';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { firstValueFrom } from 'rxjs';
 
 import type { HallView, VenueView } from '../../../core/api/api.models';
 import { EventsApi } from '../../../core/events/events-api.service';
 import type { EventDetailView } from '../../../core/events/events.models';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
+import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
+import { FieldComponent } from '../../../shared/field.component';
+import { SelectModule } from 'primeng/select';
+import { CheckboxModule } from 'primeng/checkbox';
 
 export interface AddHallsData {
   slug: string;
@@ -25,31 +25,33 @@ export interface AddHallsData {
   imports: [
     DecimalPipe,
     FormsModule,
-    MatButtonModule,
-    MatCheckboxModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatProgressBarModule,
-    MatSelectModule,
+    ButtonModule,
+    ProgressBarModule,
+    FieldComponent,
+    SelectModule,
+    CheckboxModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Add halls to {{ data.event.name }}</h2>
-    <mat-dialog-content class="stack">
+    <h2 class="dialog-title">Add halls to {{ data.event.name }}</h2>
+    <div class="dialog-content stack">
       <p class="muted">
         Each hall is added on its floor as it is today, with your organisation’s rules. You can
         switch rules for each hall afterwards.
       </p>
-      <mat-form-field>
-        <mat-label>Venue</mat-label>
-        <mat-select [ngModel]="venueId()" (ngModelChange)="pickVenue($event)">
-          @for (v of venues(); track v.id) {
-            <mat-option [value]="v.id">{{ v.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-field label="Venue" for="add-halls-venue">
+        <p-select
+          inputId="add-halls-venue"
+          [options]="venues()"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Choose a venue"
+          [ngModel]="venueId()"
+          (ngModelChange)="pickVenue($event)"
+        />
+      </app-field>
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
       @if (venueId() && !loading() && !halls().length) {
         <p class="muted">This venue has no halls yet.</p>
@@ -57,12 +59,15 @@ export interface AddHallsData {
       <ul class="halls">
         @for (h of halls(); track h.id) {
           <li>
-            <mat-checkbox
-              [checked]="picked().has(h.id) || taken().has(h.id)"
-              [disabled]="taken().has(h.id)"
-              (change)="toggle(h.id, $event.checked)"
-            >
-              <span class="hall">
+            <span class="check">
+              <p-checkbox
+                [binary]="true"
+                [inputId]="'add-hall-' + h.id"
+                [ngModel]="picked().has(h.id) || taken().has(h.id)"
+                [disabled]="taken().has(h.id)"
+                (ngModelChange)="toggle(h.id, $event)"
+              />
+              <label class="hall" [for]="'add-hall-' + h.id">
                 <b>{{ h.name }}</b>
                 <span class="muted small">
                   {{ h.width | number: '1.0-1' }} × {{ h.depth | number: '1.0-1' }} m ·
@@ -71,18 +76,18 @@ export interface AddHallsData {
                     · already in this event
                   }
                 </span>
-              </span>
-            </mat-checkbox>
+              </label>
+            </span>
           </li>
         }
       </ul>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button type="button" mat-dialog-close>Cancel</button>
-      <button mat-flat-button (click)="add()" [disabled]="!picked().size || busy()">
+    </div>
+    <div class="dialog-actions">
+      <button pButton [text]="true" type="button" (click)="ref.close()">Cancel</button>
+      <button pButton (click)="add()" [disabled]="!picked().size || busy()">
         Add {{ picked().size || '' }} {{ picked().size === 1 ? 'hall' : 'halls' }}
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
   styles: `
     .stack {
@@ -101,7 +106,7 @@ export interface AddHallsData {
       display: grid;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
       font-variant-numeric: tabular-nums;
     }
     p {
@@ -110,10 +115,10 @@ export interface AddHallsData {
   `,
 })
 export class AddHallsDialogComponent {
-  protected readonly data = inject<AddHallsData>(MAT_DIALOG_DATA);
+  protected readonly data = dialogData<AddHallsData>();
   private readonly venuesApi = inject(VenuesApi);
   private readonly eventsApi = inject(EventsApi);
-  private readonly ref = inject(MatDialogRef<AddHallsDialogComponent, EventDetailView>);
+  protected readonly ref = inject(DialogRef);
 
   protected readonly venues = signal<VenueView[]>([]);
   protected readonly venueId = signal<string | null>(null);

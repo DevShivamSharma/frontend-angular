@@ -8,10 +8,8 @@ import {
   untracked,
 } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { ButtonModule } from 'primeng/button';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -20,6 +18,8 @@ import { AuthService } from '../../core/auth/auth.service';
 import { OrgApi } from '../../core/org/org-api.service';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rules';
+import { FieldComponent } from '../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
 
 /**
  * Where an invitation link lands. A new person chooses a name and password; someone with an
@@ -30,11 +30,11 @@ import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rul
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatProgressBarModule,
+    ButtonModule,
+    ProgressBarModule,
     AuthLayoutComponent,
+    FieldComponent,
+    InputTextModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -46,51 +46,62 @@ import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rul
         <form [formGroup]="form" (ngSubmit)="submit(invite)" class="stack">
           @if (invite.accountExists) {
             <p class="muted">You already have an account. Confirm it's you to accept.</p>
-            <mat-form-field>
-              <mat-label>Your password</mat-label>
+            <app-field
+              label="Your password"
+              error="Enter your password"
+              for="accept-invite-password"
+            >
               <input
-                matInput
+                id="accept-invite-password"
+                pInputText
                 type="password"
                 formControlName="password"
                 autocomplete="current-password"
               />
-              <mat-error>Enter your password</mat-error>
-            </mat-form-field>
-            <a mat-button [routerLink]="['..', 'forgot-password']">Forgot your password?</a>
+            </app-field>
+            <a pButton [text]="true" [routerLink]="['..', 'forgot-password']"
+              >Forgot your password?</a
+            >
           } @else {
-            <mat-form-field>
-              <mat-label>Your name</mat-label>
-              <input matInput formControlName="name" autocomplete="name" />
-              <mat-error>Enter your name</mat-error>
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Choose a password</mat-label>
+            <app-field label="Your name" error="Enter your name" for="accept-invite-name">
               <input
-                matInput
+                id="accept-invite-name"
+                pInputText
+                formControlName="name"
+                autocomplete="name"
+              />
+            </app-field>
+            <app-field
+              label="Choose a password"
+              for="accept-invite-new-password"
+              [hint]="'At least ' + min + ' characters'"
+              [error]="'At least ' + min + ' characters'"
+            >
+              <input
+                id="accept-invite-new-password"
+                pInputText
                 type="password"
                 formControlName="password"
                 autocomplete="new-password"
               />
-              <mat-hint>At least {{ min }} characters</mat-hint>
-              <mat-error>At least {{ min }} characters</mat-error>
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Repeat it</mat-label>
+            </app-field>
+            <app-field label="Repeat it" for="accept-invite-confirm">
               <input
-                matInput
+                id="accept-invite-confirm"
+                pInputText
                 type="password"
                 formControlName="confirm"
                 autocomplete="new-password"
               />
-            </mat-form-field>
+            </app-field>
             @if (form.hasError('mismatch') && form.controls.confirm.touched) {
               <p class="error">The two passwords differ.</p>
             }
           }
           @if (busy()) {
-            <mat-progress-bar mode="indeterminate" />
+            <p-progressbar mode="indeterminate" />
           }
-          <button mat-flat-button type="submit" [disabled]="busy()">Accept and continue</button>
+          <button pButton type="submit" [disabled]="busy()">Accept and continue</button>
         </form>
       </app-auth-layout>
     } @else {
@@ -99,9 +110,9 @@ import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rul
       >
         @if (loadError()) {
           <p class="error" role="alert">{{ loadError() }}</p>
-          <a mat-button [routerLink]="['..', 'login']">Go to sign in</a>
+          <a pButton [text]="true" [routerLink]="['..', 'login']">Go to sign in</a>
         } @else {
-          <mat-progress-bar mode="indeterminate" />
+          <p-progressbar mode="indeterminate" />
         }
       </app-auth-layout>
     }
@@ -113,7 +124,7 @@ import { PASSWORD_MIN, passwordsMatch, passwordValidators } from './password-rul
     }
     .error {
       margin: 0 0 8px;
-      color: var(--mat-sys-error);
+      color: var(--app-error);
     }
   `,
 })

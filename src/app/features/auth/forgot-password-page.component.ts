@@ -1,24 +1,24 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { ButtonModule } from 'primeng/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { OrgApi } from '../../core/org/org-api.service';
 import { PublicOrgStore } from '../../core/org/org.stores';
 import { AuthLayoutComponent } from './auth-layout.component';
+import { FieldComponent } from '../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-forgot-password-page',
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
+    ButtonModule,
     AuthLayoutComponent,
+    FieldComponent,
+    InputTextModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -31,16 +31,20 @@ import { AuthLayoutComponent } from './auth-layout.component';
           If an account exists for <b>{{ form.controls.email.value }}</b
           >, a link is on its way. It works once, for one hour.
         </p>
-        <a mat-flat-button [routerLink]="['..', 'login']">Back to sign in</a>
+        <a pButton [routerLink]="['..', 'login']">Back to sign in</a>
       } @else {
         <form [formGroup]="form" (ngSubmit)="submit()" class="stack">
-          <mat-form-field>
-            <mat-label>Email</mat-label>
-            <input matInput type="email" formControlName="email" autocomplete="username" />
-            <mat-error>Enter a valid email address</mat-error>
-          </mat-form-field>
-          <button mat-flat-button type="submit" [disabled]="busy()">Send the link</button>
-          <a mat-button [routerLink]="['..', 'login']">Back to sign in</a>
+          <app-field label="Email" error="Enter a valid email address" for="forgot-password-email">
+            <input
+              id="forgot-password-email"
+              pInputText
+              type="email"
+              formControlName="email"
+              autocomplete="username"
+            />
+          </app-field>
+          <button pButton type="submit" [disabled]="busy()">Send the link</button>
+          <a pButton [text]="true" [routerLink]="['..', 'login']">Back to sign in</a>
         </form>
       }
     </app-auth-layout>

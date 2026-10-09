@@ -8,11 +8,9 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -34,6 +32,9 @@ import {
 } from '../../../shared/floor/floor-view.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { HallDialogComponent, HallDialogData } from './hall-dialog.component';
+import { AppDialog } from '../../../core/ui/app-dialog.service';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { FormsModule } from '@angular/forms';
 
 const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
   blank: 'Drawn by size',
@@ -51,19 +52,20 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
     DatePipe,
     DecimalPipe,
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatSlideToggleModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
     FloorViewComponent,
     PageHeaderComponent,
+    ToggleSwitchModule,
+    FormsModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
       @if (hall(); as h) {
-        <a mat-button class="back" [routerLink]="['/', slug(), 'venues', h.venue.id]">
-          <mat-icon>arrow_back</mat-icon>{{ h.venue.name }}
+        <a pButton [text]="true" class="back" [routerLink]="['/', slug(), 'venues', h.venue.id]">
+          <app-icon name="arrow_back" />{{ h.venue.name }}
         </a>
         <app-page-header [heading]="h.name">
           <span meta class="meta">
@@ -78,18 +80,18 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
             }
           </span>
           @if (canManage()) {
-            <button mat-stroked-button (click)="edit(h)">
-              <mat-icon>edit</mat-icon>Edit details
+            <button pButton [outlined]="true" (click)="edit(h)">
+              <app-icon name="edit" />Edit details
             </button>
-            <button mat-button class="danger" (click)="remove(h)">
-              <mat-icon>delete</mat-icon>Delete
+            <button pButton [text]="true" severity="danger" (click)="remove(h)">
+              <app-icon name="delete" />Delete
             </button>
           }
         </app-page-header>
       }
 
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
 
       @if (hall(); as h) {
@@ -110,11 +112,18 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
               <span class="spacer"></span>
               @if (viewing() !== h.currentVersion) {
                 <span class="status-chip is-warning">Viewing version {{ viewing() }}</span>
-                <button mat-button (click)="viewVersion(h.currentVersion)">Back to current</button>
+                <button pButton [text]="true" (click)="viewVersion(h.currentVersion)">
+                  Back to current
+                </button>
               }
-              <mat-slide-toggle [checked]="labels()" (change)="labels.set($event.checked)">
-                Labels
-              </mat-slide-toggle>
+              <span class="check">
+                <p-toggleswitch
+                  inputId="hall-labels"
+                  [ngModel]="labels()"
+                  (ngModelChange)="labels.set($event)"
+                />
+                <label for="hall-labels">Labels</label>
+              </span>
             </div>
             <app-floor-view [floor]="shown()" [showLabels]="labels()" />
           </section>
@@ -156,10 +165,10 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
                     </span>
                     <div class="v-actions">
                       @if (v.version !== viewing()) {
-                        <button mat-button (click)="viewVersion(v.version)">View</button>
+                        <button pButton [text]="true" (click)="viewVersion(v.version)">View</button>
                       }
                       @if (!v.current && canManage()) {
-                        <button mat-button (click)="restore(v)">Restore</button>
+                        <button pButton [text]="true" (click)="restore(v)">Restore</button>
                       }
                     </div>
                   </li>
@@ -224,10 +233,10 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
     .versions li {
       padding: 10px 12px;
       border-radius: 12px;
-      border: 1px solid var(--mat-sys-outline-variant);
+      border: 1px solid var(--app-outline-variant);
     }
     .versions li.active {
-      border-color: var(--mat-sys-primary);
+      border-color: var(--app-primary);
     }
     .v-head {
       display: flex;
@@ -235,7 +244,7 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
       align-items: center;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
     .v-actions {
       display: flex;
@@ -254,7 +263,7 @@ export class HallPageComponent implements OnInit {
   readonly hallId = input.required<string>();
 
   private readonly api = inject(VenuesApi);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(AppDialog);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(Notifier);
   private readonly router = inject(Router);
@@ -352,8 +361,10 @@ export class HallPageComponent implements OnInit {
       ...(manual ? { floor: hall.floor } : {}),
     };
     this.dialog
-      .open(HallDialogComponent, { data, ...(manual ? { width: '1100px', maxWidth: '95vw' } : {}) })
-      .afterClosed()
+      .open<HallView>(HallDialogComponent, {
+        data,
+        ...(manual ? { width: 'min(1100px, 96vw)' } : {}),
+      })
       .subscribe((saved?: HallView) => {
         if (saved) void this.load();
       });

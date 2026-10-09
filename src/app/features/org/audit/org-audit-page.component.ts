@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { firstValueFrom } from 'rxjs';
 
 import type { AuditEntry } from '../../../core/api/api.models';
@@ -11,7 +11,7 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
 
 @Component({
   selector: 'app-org-audit-page',
-  imports: [MatPaginatorModule, MatProgressBarModule, AuditTableComponent, PageHeaderComponent],
+  imports: [PaginatorModule, ProgressBarModule, AuditTableComponent, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
@@ -20,16 +20,18 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
         subheading="Who changed what in this organisation, newest first."
       />
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
-      <app-audit-table [entries]="entries()" />
-      <mat-paginator
-        [length]="total()"
-        [pageIndex]="page() - 1"
-        [pageSize]="pageSize"
-        [hidePageSize]="true"
-        (page)="onPage($event)"
-      />
+      <div class="panel panel-flush">
+        <app-audit-table [entries]="entries()" />
+        <p-paginator
+          [totalRecords]="total()"
+          [first]="(page() - 1) * pageSize"
+          [rows]="pageSize"
+          [alwaysShow]="false"
+          (onPageChange)="onPage($event)"
+        />
+      </div>
     </div>
   `,
 })
@@ -47,8 +49,8 @@ export class OrgAuditPageComponent {
     void this.load();
   }
 
-  protected onPage(event: PageEvent): void {
-    this.page.set(event.pageIndex + 1);
+  protected onPage(event: PaginatorState): void {
+    this.page.set((event.page ?? 0) + 1);
     void this.load();
   }
 

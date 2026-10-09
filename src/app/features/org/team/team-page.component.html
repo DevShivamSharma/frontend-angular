@@ -1,83 +1,93 @@
 <div class="page">
   <app-page-header heading="Team" subheading="Who works in this organisation, and with which role.">
     @if (canInvite()) {
-      <button mat-flat-button (click)="openInvite()"><mat-icon>person_add</mat-icon>Invite</button>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-user-plus"
+        label="Invite"
+        (click)="openInvite()"
+      ></button>
     }
   </app-page-header>
 
   @if (loading()) {
-    <mat-progress-bar mode="indeterminate" />
+    <p-progressbar mode="indeterminate" />
   }
 
   <section>
     <h2 class="section-title">Members ({{ members().length }})</h2>
-    <div class="table-wrap">
-      <table mat-table [dataSource]="members()">
-        <ng-container matColumnDef="person">
-          <th mat-header-cell *matHeaderCellDef>Person</th>
-          <td mat-cell *matCellDef="let m">
-            <b>{{ m.user.name }}</b>
-            @if (isSelf(m)) {
-              <span class="status-chip is-neutral">You</span>
+    <div class="panel panel-flush">
+      <p-table [value]="members()" [tableStyle]="{ 'min-width': '640px' }">
+        <ng-template #header>
+          <tr>
+            <th>Person</th>
+            <th>Role</th>
+            <th>Last sign-in</th>
+            @if (canManage()) {
+              <th><span class="visually-hidden">Actions</span></th>
             }
-            <br /><span class="muted">{{ m.user.email }}</span>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef>Role</th>
-          <td mat-cell *matCellDef="let m">
-            @if (manageable(m)) {
-              <mat-form-field class="inline-field role-select">
-                <mat-select
-                  [value]="m.role.id"
-                  (selectionChange)="changeRole(m, $event.value)"
-                  [attr.aria-label]="'Role of ' + m.user.name"
-                >
-                  @for (role of roles(); track role.id) {
-                    <mat-option [value]="role.id" [disabled]="!role.assignable">{{
-                      role.name
-                    }}</mat-option>
+          </tr>
+        </ng-template>
+        <ng-template #body let-m>
+          <tr>
+            <td>
+              <span class="person">
+                <span class="avatar" aria-hidden="true">{{
+                  m.user.name.charAt(0).toUpperCase()
+                }}</span>
+                <span>
+                  <b>{{ m.user.name }}</b>
+                  @if (isSelf(m)) {
+                    <span class="status-chip is-neutral">You</span>
                   }
-                </mat-select>
-              </mat-form-field>
-            } @else {
-              {{ m.role.name }}
+                  <br /><span class="muted">{{ m.user.email }}</span>
+                </span>
+              </span>
+            </td>
+            <td>
+              @if (manageable(m)) {
+                <p-select
+                  class="role-select"
+                  [options]="roleOptions()"
+                  optionLabel="name"
+                  optionValue="id"
+                  optionDisabled="disabled"
+                  [ngModel]="m.role.id"
+                  (ngModelChange)="changeRole(m, $event)"
+                  [ariaLabel]="'Role of ' + m.user.name"
+                  appendTo="body"
+                />
+              } @else {
+                {{ m.role.name }}
+              }
+            </td>
+            <td>
+              {{ m.user.lastLoginAt ? (m.user.lastLoginAt | date: 'd MMM y, HH:mm') : 'Never' }}
+            </td>
+            @if (canManage()) {
+              <td class="actions-cell">
+                @if (manageable(m)) {
+                  <button
+                    pButton
+                    type="button"
+                    [text]="true"
+                    severity="danger"
+                    icon="pi pi-user-minus"
+                    [label]="isSelf(m) ? 'Leave' : 'Remove'"
+                    [attr.aria-label]="
+                      isSelf(m)
+                        ? 'Leave the organisation'
+                        : 'Remove ' + m.user.name + ' from the organisation'
+                    "
+                    (click)="remove(m)"
+                  ></button>
+                }
+              </td>
             }
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="lastLogin">
-          <th mat-header-cell *matHeaderCellDef>Last sign-in</th>
-          <td mat-cell *matCellDef="let m">
-            {{ m.user.lastLoginAt ? (m.user.lastLoginAt | date: 'd MMM y, HH:mm') : 'Never' }}
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef>
-            <span class="cdk-visually-hidden">Actions</span>
-          </th>
-          <td mat-cell *matCellDef="let m" class="actions-cell">
-            @if (manageable(m)) {
-              <button
-                mat-icon-button
-                [matMenuTriggerFor]="memberMenu"
-                [attr.aria-label]="'More for ' + m.user.name"
-              >
-                <mat-icon>more_vert</mat-icon>
-              </button>
-              <mat-menu #memberMenu="matMenu">
-                <button mat-menu-item (click)="remove(m)">
-                  <mat-icon>person_remove</mat-icon>
-                  <span>{{
-                    isSelf(m) ? 'Leave the organisation' : 'Remove from the organisation'
-                  }}</span>
-                </button>
-              </mat-menu>
-            }
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="memberColumns()"></tr>
-        <tr mat-row *matRowDef="let row; columns: memberColumns()"></tr>
-      </table>
+          </tr>
+        </ng-template>
+      </p-table>
     </div>
   </section>
 
@@ -93,56 +103,62 @@
       </div>
     }
     @if (invitations().length) {
-      <div class="table-wrap">
-        <table mat-table [dataSource]="invitations()">
-          <ng-container matColumnDef="email">
-            <th mat-header-cell *matHeaderCellDef>Email</th>
-            <td mat-cell *matCellDef="let i">{{ i.email }}</td>
-          </ng-container>
-          <ng-container matColumnDef="role">
-            <th mat-header-cell *matHeaderCellDef>Role</th>
-            <td mat-cell *matCellDef="let i">{{ i.role.name }}</td>
-          </ng-container>
-          <ng-container matColumnDef="invitedBy">
-            <th mat-header-cell *matHeaderCellDef>Invited by</th>
-            <td mat-cell *matCellDef="let i">
-              {{ i.invitedBy?.name ?? '—' }}<br /><span class="muted">{{
-                i.createdAt | date: 'd MMM y'
-              }}</span>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="expires">
-            <th mat-header-cell *matHeaderCellDef>Expires</th>
-            <td mat-cell *matCellDef="let i">
-              @if (i.expired) {
-                <span class="status-chip is-warning">Expired</span>
-              } @else {
-                {{ i.expiresAt | date: 'd MMM y' }}
+      <div class="panel panel-flush">
+        <p-table [value]="invitations()" [tableStyle]="{ 'min-width': '640px' }">
+          <ng-template #header>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Invited by</th>
+              <th>Expires</th>
+              @if (canInvite() || canManage()) {
+                <th><span class="visually-hidden">Actions</span></th>
               }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>
-              <span class="cdk-visually-hidden">Actions</span>
-            </th>
-            <td mat-cell *matCellDef="let i" class="actions-cell">
-              @if (canInvite()) {
-                <button
-                  mat-button
-                  (click)="resend(i)"
-                  matTooltip="Makes a new link; the old one stops working"
-                >
-                  Resend
-                </button>
+            </tr>
+          </ng-template>
+          <ng-template #body let-i>
+            <tr>
+              <td>{{ i.email }}</td>
+              <td>{{ i.role.name }}</td>
+              <td>
+                {{ i.invitedBy?.name ?? '—' }}<br /><span class="muted">{{
+                  i.createdAt | date: 'd MMM y'
+                }}</span>
+              </td>
+              <td>
+                @if (i.expired) {
+                  <span class="status-chip is-warning">Expired</span>
+                } @else {
+                  {{ i.expiresAt | date: 'd MMM y' }}
+                }
+              </td>
+              @if (canInvite() || canManage()) {
+                <td class="actions-cell">
+                  @if (canInvite()) {
+                    <button
+                      pButton
+                      type="button"
+                      [text]="true"
+                      label="Resend"
+                      (click)="resend(i)"
+                      pTooltip="Makes a new link; the old one stops working"
+                    ></button>
+                  }
+                  @if (canManage()) {
+                    <button
+                      pButton
+                      type="button"
+                      [text]="true"
+                      severity="danger"
+                      label="Revoke"
+                      (click)="revoke(i)"
+                    ></button>
+                  }
+                </td>
               }
-              @if (canManage()) {
-                <button mat-button class="danger" (click)="revoke(i)">Revoke</button>
-              }
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="invitationColumns()"></tr>
-          <tr mat-row *matRowDef="let row; columns: invitationColumns()"></tr>
-        </table>
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
     } @else {
       <p class="empty-state">No open invitations.</p>

@@ -4,36 +4,39 @@
     subheading="Permissions are fixed by the platform. Roles are yours: which permissions each one holds, and who can be given it."
   >
     <a
-      mat-flat-button
+      pButton
       routerLink="new"
       [queryParams]="organisationId() ? { organisationId: organisationId() } : {}"
     >
-      <mat-icon>add</mat-icon>New role
+      <app-icon name="add" />New role
     </a>
   </app-page-header>
 
   <div class="row toolbar">
-    <mat-form-field class="inline-field org-select">
-      <mat-label>Roles shown</mat-label>
-      <mat-select [value]="organisationId()" (selectionChange)="selectOrganisation($event.value)">
-        <mat-option value="">Platform roles (every organisation)</mat-option>
-        @for (org of organisations(); track org.id) {
-          <mat-option [value]="org.id">As {{ org.name }} sees them</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <app-field label="Roles shown" for="roles-shown" class="inline-field org-select">
+      <p-select
+        inputId="roles-shown"
+        [options]="organisationOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [filter]="true"
+        filterBy="label"
+        [ngModel]="organisationId()"
+        (ngModelChange)="selectOrganisation($event)"
+      />
+    </app-field>
     <span class="spacer"></span>
     @if (changedCount()) {
       <span class="muted">{{ changedCount() }} role(s) changed</span>
-      <button mat-button (click)="discard()" [disabled]="saving()">Discard</button>
-      <button mat-flat-button (click)="save()" [disabled]="saving()">
+      <button pButton [text]="true" (click)="discard()" [disabled]="saving()">Discard</button>
+      <button pButton (click)="save()" [disabled]="saving()">
         {{ saving() ? 'Saving…' : 'Save changes' }}
       </button>
     }
   </div>
 
   @if (loading()) {
-    <mat-progress-bar mode="indeterminate" />
+    <p-progressbar mode="indeterminate" />
   }
 
   <div class="matrix-wrap">
@@ -46,7 +49,7 @@
               <a [routerLink]="[role.id]">{{ role.name }}</a>
               <span class="role-meta">
                 @if (role.isLocked) {
-                  <span class="status-chip is-neutral" matTooltip="Always holds every permission"
+                  <span class="status-chip is-neutral" pTooltip="Always holds every permission"
                     >Owner</span
                   >
                 } @else if (role.organisation) {
@@ -74,7 +77,7 @@
                 <span class="permission-label">
                   {{ permission.label }}
                   @if (!permission.available) {
-                    <span class="soon" matTooltip="Takes effect when its module is built"
+                    <span class="soon" pTooltip="Takes effect when its module is built"
                       >coming</span
                     >
                   }
@@ -83,11 +86,12 @@
               </th>
               @for (role of roles(); track role.id) {
                 <td class="cell">
-                  <mat-checkbox
-                    [checked]="has(role, permission.key)"
+                  <p-checkbox
+                    [binary]="true"
+                    [ngModel]="has(role, permission.key)"
                     [disabled]="role.isLocked || saving()"
-                    (change)="toggle(role, permission.key, $event.checked)"
-                    [attr.aria-label]="role.name + ': ' + permission.label"
+                    (ngModelChange)="toggle(role, permission.key, $event)"
+                    [ariaLabel]="role.name + ': ' + permission.label"
                   />
                 </td>
               }

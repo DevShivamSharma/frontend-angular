@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  signal,
   effect,
   ElementRef,
   inject,
@@ -11,14 +12,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { ButtonModule } from 'primeng/button';
 import { startWith } from 'rxjs';
 
 import {
@@ -30,6 +24,12 @@ import {
 } from '../../core/api/api.models';
 import { ThemeService } from '../../core/theme/theme.service';
 import { BrandMarkComponent } from '../brand-mark.component';
+import { FieldComponent } from '../field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
+import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const IMAGE_URL = /^(https:\/\/[^\s"'<>]+|\/[\w\-./]+)$/;
@@ -76,15 +76,14 @@ function toFormValue(config: OrganisationConfig) {
   selector: 'app-config-form',
   imports: [
     ReactiveFormsModule,
-    MatAutocompleteModule,
-    MatButtonModule,
-    MatCardModule,
-    MatChipsModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatSelectModule,
+    ButtonModule,
     BrandMarkComponent,
+    FieldComponent,
+    InputTextModule,
+    TextareaModule,
+    SelectModule,
+    MultiSelectModule,
+    AutoCompleteModule,
   ],
   templateUrl: './config-form.component.html',
   styleUrl: './config-form.component.scss',
@@ -100,9 +99,9 @@ export class ConfigFormComponent {
   readonly saving = input(false);
   readonly save = output<OrganisationConfig>();
 
-  protected readonly fonts = FONT_FAMILIES;
-  protected readonly languages = LANGUAGES;
-  protected readonly currencies = CURRENCIES;
+  protected readonly fonts = [...FONT_FAMILIES];
+  protected readonly languages = [...LANGUAGES];
+  protected readonly currencies = [...CURRENCIES];
 
   protected readonly form = this.fb.group({
     branding: this.fb.group({
@@ -138,11 +137,9 @@ export class ConfigFormComponent {
   });
   private readonly preview = viewChild.required<ElementRef<HTMLElement>>('preview');
 
-  protected readonly timezoneQuery = toSignal(
-    this.form.controls.locale.controls.timezone.valueChanges,
-    { initialValue: '' },
-  );
-  protected readonly timezoneOptions = computed(() => {
+  /** Any IANA name is accepted (browsers list some under old names, e.g. Asia/Calcutta). */
+  protected readonly timezoneQuery = signal('');
+  protected readonly timezoneSuggestions = computed(() => {
     const query = this.timezoneQuery().toLowerCase();
     return TIMEZONES.filter((zone) => zone.toLowerCase().includes(query)).slice(0, 50);
   });

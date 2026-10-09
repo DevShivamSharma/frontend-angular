@@ -2,11 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { ButtonModule } from 'primeng/button';
 import { firstValueFrom } from 'rxjs';
 
 import type { HallFloor, HallView } from '../../../core/api/api.models';
@@ -16,6 +12,12 @@ import {
   HallAnnotationsEditorComponent,
 } from '../../../shared/floor/hall-annotations-editor.component';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { CheckboxModule } from 'primeng/checkbox';
 
 export interface HallDialogData {
   slug: string;
@@ -37,68 +39,76 @@ const MAX_SIDE = 2000;
   imports: [
     DecimalPipe,
     ReactiveFormsModule,
-    MatButtonModule,
-    MatCheckboxModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
+    ButtonModule,
     HallAnnotationsEditorComponent,
+    FieldComponent,
+    InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
+    CheckboxModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>{{ data.hall ? 'Edit hall' : 'New hall by size' }}</h2>
+    <h2 class="dialog-title">{{ data.hall ? 'Edit hall' : 'New hall by size' }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <mat-dialog-content>
+      <div class="dialog-content">
         @if (!data.hall) {
           <p class="muted intro">
             The hall starts as an empty rectangle with a 1 m grid, open for stalls.
           </p>
         }
-        <mat-form-field class="full-width">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" cdkFocusInitial maxlength="120" />
-          <mat-error>Give the hall a name</mat-error>
-        </mat-form-field>
+        <app-field
+          class="full-width"
+          label="Name"
+          error="Give the hall a name"
+          for="hall-dialog-name"
+        >
+          <input
+            id="hall-dialog-name"
+            pInputText
+            formControlName="name"
+            cdkFocusInitial
+            maxlength="120"
+          />
+        </app-field>
         <div class="pair">
-          <mat-form-field>
-            <mat-label>Code</mat-label>
-            <input matInput formControlName="code" maxlength="40" />
-            <mat-hint>e.g. H6</mat-hint>
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>Level</mat-label>
-            <input matInput formControlName="level" maxlength="40" />
-            <mat-hint>e.g. Ground floor</mat-hint>
-          </mat-form-field>
+          <app-field label="Code" hint="e.g. H6" for="hall-dialog-code">
+            <input id="hall-dialog-code" pInputText formControlName="code" maxlength="40" />
+          </app-field>
+          <app-field label="Level" hint="e.g. Ground floor" for="hall-dialog-level">
+            <input id="hall-dialog-level" pInputText formControlName="level" maxlength="40" />
+          </app-field>
         </div>
         @if (!data.hall) {
           <div class="pair">
-            <mat-form-field>
-              <mat-label>Width</mat-label>
-              <input
-                matInput
-                type="number"
-                formControlName="width"
-                min="1"
-                [max]="maxSide"
-                step="0.5"
-              />
-              <span matTextSuffix>m</span>
-              <mat-error>1 to {{ maxSide }} m</mat-error>
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Depth</mat-label>
-              <input
-                matInput
-                type="number"
-                formControlName="depth"
-                min="1"
-                [max]="maxSide"
-                step="0.5"
-              />
-              <span matTextSuffix>m</span>
-              <mat-error>1 to {{ maxSide }} m</mat-error>
-            </mat-form-field>
+            <app-field label="Width" for="hall-width" [error]="'1 to ' + maxSide + ' m'">
+              <p-inputgroup>
+                <input
+                  id="hall-width"
+                  pInputText
+                  type="number"
+                  formControlName="width"
+                  min="1"
+                  [max]="maxSide"
+                  step="0.5"
+                />
+                <p-inputgroup-addon>m</p-inputgroup-addon>
+              </p-inputgroup>
+            </app-field>
+            <app-field label="Depth" for="hall-depth" [error]="'1 to ' + maxSide + ' m'">
+              <p-inputgroup>
+                <input
+                  id="hall-depth"
+                  pInputText
+                  type="number"
+                  formControlName="depth"
+                  min="1"
+                  [max]="maxSide"
+                  step="0.5"
+                />
+                <p-inputgroup-addon>m</p-inputgroup-addon>
+              </p-inputgroup>
+            </app-field>
           </div>
           @if (preview(); as p) {
             <p class="muted area">
@@ -118,22 +128,45 @@ const MAX_SIDE = 2000;
         }
         <fieldset formGroupName="uses">
           <legend class="muted">This hall is also used for</legend>
-          <mat-checkbox formControlName="fnb">Food &amp; beverage</mat-checkbox>
-          <mat-checkbox formControlName="branding">Branding</mat-checkbox>
-          <mat-checkbox formControlName="horseshoe">Horseshoe stalls</mat-checkbox>
-          <mat-checkbox formControlName="openArea">Open area</mat-checkbox>
+          <span class="check"
+            ><p-checkbox formControlName="fnb" [binary]="true" inputId="hall-use-fnb" /><label
+              for="hall-use-fnb"
+              >Food &amp; beverage</label
+            ></span
+          >
+          <span class="check"
+            ><p-checkbox
+              formControlName="branding"
+              [binary]="true"
+              inputId="hall-use-branding"
+            /><label for="hall-use-branding">Branding</label></span
+          >
+          <span class="check"
+            ><p-checkbox
+              formControlName="horseshoe"
+              [binary]="true"
+              inputId="hall-use-horseshoe"
+            /><label for="hall-use-horseshoe">Horseshoe stalls</label></span
+          >
+          <span class="check"
+            ><p-checkbox
+              formControlName="openArea"
+              [binary]="true"
+              inputId="hall-use-openArea"
+            /><label for="hall-use-openArea">Open area</label></span
+          >
         </fieldset>
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button mat-button type="button" mat-dialog-close>Cancel</button>
-        <button mat-flat-button type="submit" [disabled]="busy() || !annotationsValid()">
+      </div>
+      <div class="dialog-actions">
+        <button pButton [text]="true" type="button" (click)="ref.close()">Cancel</button>
+        <button pButton type="submit" [disabled]="busy() || !annotationsValid()">
           {{ data.hall ? 'Save' : 'Create hall' }}
         </button>
-      </mat-dialog-actions>
+      </div>
     </form>
   `,
   styles: `
-    mat-dialog-content {
+    .dialog-content {
       min-width: 0;
     }
     .intro {
@@ -161,7 +194,7 @@ const MAX_SIDE = 2000;
       margin-bottom: 4px;
     }
     .error {
-      color: var(--mat-sys-error);
+      color: var(--app-error);
     }
     @media (max-width: 480px) {
       .pair {
@@ -171,9 +204,9 @@ const MAX_SIDE = 2000;
   `,
 })
 export class HallDialogComponent {
-  protected readonly data = inject<HallDialogData>(MAT_DIALOG_DATA);
+  protected readonly data = dialogData<HallDialogData>();
   private readonly api = inject(VenuesApi);
-  private readonly ref = inject(MatDialogRef<HallDialogComponent, HallView>);
+  protected readonly ref = inject(DialogRef);
   protected readonly maxSide = MAX_SIDE;
   protected readonly annotations = signal<HallAnnotations>(
     structuredClone({

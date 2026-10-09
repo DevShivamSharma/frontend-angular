@@ -1,8 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { ButtonModule } from 'primeng/button';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { firstValueFrom } from 'rxjs';
 
 import type { ConfigVersion, OrganisationConfig, OrgSettings } from '../../../core/api/api.models';
@@ -17,14 +16,7 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
 /** The organisation's look and paperwork. Every save is a version that can be restored. */
 @Component({
   selector: 'app-org-settings-page',
-  imports: [
-    DatePipe,
-    MatButtonModule,
-    MatCardModule,
-    MatProgressBarModule,
-    ConfigFormComponent,
-    PageHeaderComponent,
-  ],
+  imports: [DatePipe, ButtonModule, ProgressBarModule, ConfigFormComponent, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
@@ -37,7 +29,7 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
         "
       />
       @if (busy()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p-progressbar mode="indeterminate" />
       }
       @if (settings(); as s) {
         <app-config-form
@@ -47,8 +39,8 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
           [saving]="busy()"
           (save)="save($event)"
         />
-        <mat-card appearance="outlined">
-          <mat-card-content>
+        <div class="card">
+          <div class="card-body">
             <h2 class="section-title">Versions</h2>
             <ul class="versions">
               @for (version of versions(); track version.version) {
@@ -67,15 +59,15 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
                   @if (version.current) {
                     <span class="status-chip is-positive">Current</span>
                   } @else if (canManage()) {
-                    <button mat-button (click)="restore(version)" [disabled]="busy()">
+                    <button pButton [text]="true" (click)="restore(version)" [disabled]="busy()">
                       Restore
                     </button>
                   }
                 </li>
               }
             </ul>
-          </mat-card-content>
-        </mat-card>
+          </div>
+        </div>
       }
     </div>
   `,
@@ -91,10 +83,10 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
       gap: 12px;
       flex-wrap: wrap;
       padding: 8px 0;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      border-bottom: 1px solid var(--app-outline-variant);
     }
     .version {
-      font: var(--mat-sys-label-large);
+      font: var(--app-label-large);
       min-width: 36px;
     }
     .swatch {

@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../shared/icon.component';
 import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -44,7 +43,7 @@ const UPCOMING: ModuleCard[] = [
 
 @Component({
   selector: 'app-org-home-page',
-  imports: [RouterLink, MatButtonModule, MatCardModule, MatIconModule],
+  imports: [RouterLink, ButtonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (context.context(); as ctx) {
@@ -58,54 +57,54 @@ const UPCOMING: ModuleCard[] = [
 
         <div class="quick">
           @if (context.eventScoped()) {
-            <mat-card appearance="outlined">
-              <mat-card-content>
-                <mat-icon>event</mat-icon>
+            <div class="card">
+              <div class="card-body">
+                <app-icon name="event" />
                 <h2>My events</h2>
                 <p class="muted">The halls you plan stalls on, and the rules for each hall.</p>
-              </mat-card-content>
-              <mat-card-actions
-                ><a mat-button [routerLink]="['events']">Open my events</a></mat-card-actions
-              >
-            </mat-card>
+              </div>
+              <div class="card-actions">
+                <a pButton [text]="true" [routerLink]="['events']">Open my events</a>
+              </div>
+            </div>
           } @else if (context.can('events.view')) {
-            <mat-card appearance="outlined">
-              <mat-card-content>
-                <mat-icon>event</mat-icon>
+            <div class="card">
+              <div class="card-body">
+                <app-icon name="event" />
                 <h2>Events</h2>
                 <p class="muted">
                   Your own events, and organisers’ events on the halls they booked.
                 </p>
-              </mat-card-content>
-              <mat-card-actions>
-                <a mat-button [routerLink]="['events', 'internal']">Internal</a>
-                <a mat-button [routerLink]="['events', 'external']">External</a>
-              </mat-card-actions>
-            </mat-card>
+              </div>
+              <div class="card-actions">
+                <a pButton [text]="true" [routerLink]="['events', 'internal']">Internal</a>
+                <a pButton [text]="true" [routerLink]="['events', 'external']">External</a>
+              </div>
+            </div>
           }
           @if (context.can('team.view')) {
-            <mat-card appearance="outlined">
-              <mat-card-content>
-                <mat-icon>group</mat-icon>
+            <div class="card">
+              <div class="card-body">
+                <app-icon name="group" />
                 <h2>Team</h2>
                 <p class="muted">Who works here, with which role. Invite people.</p>
-              </mat-card-content>
-              <mat-card-actions
-                ><a mat-button [routerLink]="['team']">Open team</a></mat-card-actions
-              >
-            </mat-card>
+              </div>
+              <div class="card-actions">
+                <a pButton [text]="true" [routerLink]="['team']">Open team</a>
+              </div>
+            </div>
           }
           @if (context.can('org.settings.view')) {
-            <mat-card appearance="outlined">
-              <mat-card-content>
-                <mat-icon>palette</mat-icon>
+            <div class="card">
+              <div class="card-body">
+                <app-icon name="palette" />
                 <h2>Branding and details</h2>
                 <p class="muted">Logo, colours, languages, invoice and email details.</p>
-              </mat-card-content>
-              <mat-card-actions
-                ><a mat-button [routerLink]="['settings']">Open settings</a></mat-card-actions
-              >
-            </mat-card>
+              </div>
+              <div class="card-actions">
+                <a pButton [text]="true" [routerLink]="['settings']">Open settings</a>
+              </div>
+            </div>
           }
         </div>
 
@@ -115,7 +114,7 @@ const UPCOMING: ModuleCard[] = [
             <div class="upcoming">
               @for (card of upcoming(); track card.title) {
                 <div class="module">
-                  <mat-icon>{{ card.icon }}</mat-icon>
+                  <app-icon [name]="card.icon" />
                   <div>
                     <b>{{ card.title }}</b>
                     <p class="muted">{{ card.text }}</p>
@@ -130,7 +129,7 @@ const UPCOMING: ModuleCard[] = [
   `,
   styles: `
     h1 {
-      font: var(--mat-sys-headline-medium);
+      font: var(--app-headline-medium);
     }
     header p {
       margin: 4px 0 0;
@@ -141,11 +140,11 @@ const UPCOMING: ModuleCard[] = [
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 16px;
     }
-    .quick mat-icon {
-      color: var(--mat-sys-primary);
+    .quick app-icon {
+      color: var(--app-primary);
     }
     .quick h2 {
-      font: var(--mat-sys-title-medium);
+      font: var(--app-title-medium);
       margin: 8px 0 4px;
     }
     .quick p,
@@ -157,11 +156,11 @@ const UPCOMING: ModuleCard[] = [
       gap: 12px;
       padding: 16px;
       border-radius: 12px;
-      background: var(--mat-sys-surface-container-low);
+      background: var(--app-surface-container-low);
     }
-    .module mat-icon {
+    .module app-icon {
       flex: none;
-      color: var(--mat-sys-tertiary);
+      color: var(--app-tertiary);
     }
   `,
 })

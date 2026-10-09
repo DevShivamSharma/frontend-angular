@@ -1,12 +1,8 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
 import { firstValueFrom } from 'rxjs';
 
 import type {
@@ -31,6 +27,12 @@ import type {
 import type { MultiPolygon } from '../../../core/venues/floor-plan.models';
 import { VenuesApi } from '../../../core/venues/venues-api.service';
 import { AREA_COLORS } from '../../../shared/floor/floor-view.component';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { SelectModule } from 'primeng/select';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
 
@@ -43,43 +45,49 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
   imports: [
     DecimalPipe,
     FormsModule,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatSelectModule,
+    ButtonModule,
+    IconComponent,
+    FieldComponent,
+    InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
+    SelectModule,
+    SelectButtonModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="pickers">
-      <mat-form-field>
-        <mat-label>Venue</mat-label>
-        <mat-select [ngModel]="venueId()" (ngModelChange)="pickVenue($event)">
-          @for (v of venues(); track v.id) {
-            <mat-option [value]="v.id">{{ v.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field>
-        <mat-label>Hall</mat-label>
-        <mat-select
+      <app-field label="Venue" for="try-venue">
+        <p-select
+          inputId="try-venue"
+          [options]="venues()"
+          optionLabel="name"
+          optionValue="id"
+          [ngModel]="venueId()"
+          (ngModelChange)="pickVenue($event)"
+        />
+      </app-field>
+      <app-field label="Hall" for="try-hall">
+        <p-select
+          inputId="try-hall"
+          [options]="halls()"
+          optionLabel="name"
+          optionValue="id"
+          [filter]="halls().length > 8"
+          filterBy="name"
           [ngModel]="hallId()"
           (ngModelChange)="pickHall($event)"
           [disabled]="!halls().length"
-        >
-          @for (h of halls(); track h.id) {
-            <mat-option [value]="h.id">{{ h.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field class="narrow">
-        <mat-label>Event</mat-label>
-        <mat-select [ngModel]="eventType()" (ngModelChange)="eventType.set($event); run()">
-          <mat-option value="B2B">B2B</mat-option>
-          <mat-option value="B2C">B2C</mat-option>
-        </mat-select>
-      </mat-form-field>
+        />
+      </app-field>
+      <app-field label="Event" for="try-event" class="narrow">
+        <p-select
+          inputId="try-event"
+          [options]="eventTypes"
+          [ngModel]="eventType()"
+          (ngModelChange)="eventType.set($event); run()"
+        />
+      </app-field>
     </div>
 
     @if (!venues().length) {
@@ -95,8 +103,8 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
               change it.</span
             >
             <span class="spacer"></span>
-            <button mat-button (click)="clear()" [disabled]="!stalls().length">
-              <mat-icon>delete_sweep</mat-icon>Clear
+            <button pButton [text]="true" (click)="clear()" [disabled]="!stalls().length">
+              <app-icon name="delete_sweep" />Clear
             </button>
           </div>
           <svg
@@ -205,28 +213,34 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
           <section class="panel">
             <h3 class="section-title">New stalls</h3>
             <div class="pair">
-              <mat-form-field
-                ><mat-label>Width</mat-label
-                ><input
-                  matInput
-                  type="number"
-                  min="1"
-                  step="1"
-                  [ngModel]="size().w"
-                  (ngModelChange)="setSize('w', $event)"
-                /><span matTextSuffix>m</span></mat-form-field
-              >
-              <mat-form-field
-                ><mat-label>Depth</mat-label
-                ><input
-                  matInput
-                  type="number"
-                  min="1"
-                  step="1"
-                  [ngModel]="size().d"
-                  (ngModelChange)="setSize('d', $event)"
-                /><span matTextSuffix>m</span></mat-form-field
-              >
+              <app-field label="Width" for="try-width-1">
+                <p-inputgroup>
+                  <input
+                    id="try-width-1"
+                    pInputText
+                    type="number"
+                    min="1"
+                    step="1"
+                    [ngModel]="size().w"
+                    (ngModelChange)="setSize('w', $event)"
+                  />
+                  <p-inputgroup-addon>m</p-inputgroup-addon>
+                </p-inputgroup>
+              </app-field>
+              <app-field label="Depth" for="try-depth-2">
+                <p-inputgroup>
+                  <input
+                    id="try-depth-2"
+                    pInputText
+                    type="number"
+                    min="1"
+                    step="1"
+                    [ngModel]="size().d"
+                    (ngModelChange)="setSize('d', $event)"
+                  />
+                  <p-inputgroup-addon>m</p-inputgroup-addon>
+                </p-inputgroup>
+              </app-field>
             </div>
           </section>
 
@@ -234,65 +248,81 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
             <section class="panel">
               <div class="row">
                 <h3 class="section-title grow">Stall {{ s.number }}</h3>
-                <button mat-icon-button (click)="removeSelected()" aria-label="Remove this stall">
-                  <mat-icon>delete</mat-icon>
+                <button
+                  pButton
+                  [text]="true"
+                  [rounded]="true"
+                  severity="secondary"
+                  (click)="removeSelected()"
+                  aria-label="Remove this stall"
+                >
+                  <app-icon name="delete" />
                 </button>
               </div>
               <div class="pair">
-                <mat-form-field
-                  ><mat-label>x</mat-label
-                  ><input
-                    matInput
-                    type="number"
-                    step="0.5"
-                    [ngModel]="s.x"
-                    (ngModelChange)="edit('x', $event)"
-                  /><span matTextSuffix>m</span></mat-form-field
-                >
-                <mat-form-field
-                  ><mat-label>y</mat-label
-                  ><input
-                    matInput
-                    type="number"
-                    step="0.5"
-                    [ngModel]="s.y"
-                    (ngModelChange)="edit('y', $event)"
-                  /><span matTextSuffix>m</span></mat-form-field
-                >
-                <mat-form-field
-                  ><mat-label>Width</mat-label
-                  ><input
-                    matInput
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    [ngModel]="s.width"
-                    (ngModelChange)="edit('width', $event)"
-                  /><span matTextSuffix>m</span></mat-form-field
-                >
-                <mat-form-field
-                  ><mat-label>Depth</mat-label
-                  ><input
-                    matInput
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    [ngModel]="s.depth"
-                    (ngModelChange)="edit('depth', $event)"
-                  /><span matTextSuffix>m</span></mat-form-field
-                >
+                <app-field label="x" for="try-x-3">
+                  <p-inputgroup>
+                    <input
+                      id="try-x-3"
+                      pInputText
+                      type="number"
+                      step="0.5"
+                      [ngModel]="s.x"
+                      (ngModelChange)="edit('x', $event)"
+                    />
+                    <p-inputgroup-addon>m</p-inputgroup-addon>
+                  </p-inputgroup>
+                </app-field>
+                <app-field label="y" for="try-y-4">
+                  <p-inputgroup>
+                    <input
+                      id="try-y-4"
+                      pInputText
+                      type="number"
+                      step="0.5"
+                      [ngModel]="s.y"
+                      (ngModelChange)="edit('y', $event)"
+                    />
+                    <p-inputgroup-addon>m</p-inputgroup-addon>
+                  </p-inputgroup>
+                </app-field>
+                <app-field label="Width" for="try-width-5">
+                  <p-inputgroup>
+                    <input
+                      id="try-width-5"
+                      pInputText
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      [ngModel]="s.width"
+                      (ngModelChange)="edit('width', $event)"
+                    />
+                    <p-inputgroup-addon>m</p-inputgroup-addon>
+                  </p-inputgroup>
+                </app-field>
+                <app-field label="Depth" for="try-depth-6">
+                  <p-inputgroup>
+                    <input
+                      id="try-depth-6"
+                      pInputText
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      [ngModel]="s.depth"
+                      (ngModelChange)="edit('depth', $event)"
+                    />
+                    <p-inputgroup-addon>m</p-inputgroup-addon>
+                  </p-inputgroup>
+                </app-field>
               </div>
-              <span class="muted small">Open sides</span>
-              <mat-button-toggle-group
-                multiple
-                [value]="s.openSides"
-                (change)="setSides($event.value)"
-                aria-label="Open sides"
-              >
-                @for (side of sides; track side) {
-                  <mat-button-toggle [value]="side">{{ side }}</mat-button-toggle>
-                }
-              </mat-button-toggle-group>
+              <span id="try-open-sides" class="muted small">Open sides</span>
+              <p-selectbutton
+                [options]="sides"
+                [multiple]="true"
+                [ngModel]="s.openSides"
+                (ngModelChange)="setSides($event)"
+                ariaLabelledBy="try-open-sides"
+              />
             </section>
           }
 
@@ -321,16 +351,24 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
                     <span>{{ v.message }}</span>
                     @if (v.overridden; as o) {
                       <span class="small muted">Set aside: {{ o.reason }}</span>
-                      <button mat-button (click)="unsetAside(v)">Undo</button>
+                      <button pButton [text]="true" (click)="unsetAside(v)">Undo</button>
                     } @else if (!isProfile(v)) {
                       @if (asideFor() === v) {
                         <div class="aside-form">
-                          <mat-form-field class="inline-field reason">
-                            <mat-label>Reason (shown in approval)</mat-label>
-                            <input matInput [(ngModel)]="reason" maxlength="500" />
-                          </mat-form-field>
+                          <app-field
+                            class="inline-field reason"
+                            label="Reason (shown in approval)"
+                            for="try-aside-reason"
+                          >
+                            <input
+                              id="try-aside-reason"
+                              pInputText
+                              [(ngModel)]="reason"
+                              maxlength="500"
+                            />
+                          </app-field>
                           <button
-                            mat-flat-button
+                            pButton
                             (click)="setAside(v)"
                             [disabled]="reason.trim().length < 3"
                           >
@@ -338,7 +376,7 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
                           </button>
                         </div>
                       } @else {
-                        <button mat-button (click)="asideFor.set(v); reason = ''">
+                        <button pButton [text]="true" (click)="asideFor.set(v); reason = ''">
                           Set aside…
                         </button>
                       }
@@ -365,7 +403,7 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
       flex-wrap: wrap;
       gap: 0 12px;
     }
-    .pickers mat-form-field {
+    .pickers app-field {
       flex: 1 1 200px;
     }
     .pickers .narrow {
@@ -388,26 +426,26 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
       margin-bottom: 8px;
     }
     .small {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
     .grow {
       flex: 1 1 auto;
       margin: 0;
     }
     .ground {
-      fill: var(--mat-sys-surface-container);
+      fill: var(--app-surface-container);
     }
     .floor {
-      fill: var(--mat-sys-surface-container-lowest);
-      stroke: var(--mat-sys-outline);
+      fill: var(--app-surface-container-lowest);
+      stroke: var(--app-outline);
       stroke-width: 0.1;
     }
     .grid-line {
-      stroke: var(--mat-sys-outline-variant);
+      stroke: var(--app-outline-variant);
       stroke-width: 0.03;
     }
     .foyer {
-      fill: var(--mat-sys-tertiary-container);
+      fill: var(--app-tertiary-container);
       fill-opacity: 0.6;
     }
     .object {
@@ -502,11 +540,11 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
       gap: 2px;
       padding: 8px 10px;
       border-radius: 10px;
-      background: var(--mat-sys-error-container);
-      color: var(--mat-sys-on-error-container);
+      background: var(--app-error-container);
+      color: var(--app-on-error-container);
     }
     .violations li.aside {
-      background: var(--mat-sys-surface-container-high);
+      background: var(--app-surface-container-high);
       color: inherit;
     }
     .violations li.muted {
@@ -514,7 +552,7 @@ const SIDES: StallSide[] = ['top', 'bottom', 'left', 'right'];
       padding: 0;
     }
     .ref {
-      font: var(--mat-sys-label-small);
+      font: var(--app-label-small);
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -542,6 +580,7 @@ export class RulesTryComponent {
   private readonly context = inject(OrgContextStore);
 
   protected readonly sides = SIDES;
+  protected readonly eventTypes: EventType[] = ['B2B', 'B2C'];
   protected readonly venues = signal<VenueView[]>([]);
   protected readonly halls = signal<HallView[]>([]);
   protected readonly venueId = signal<string | null>(null);

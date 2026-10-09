@@ -1,9 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { TooltipModule } from 'primeng/tooltip';
 import { RouterLink } from '@angular/router';
 
 import type { AdminOverview } from '../../../core/api/api.models';
@@ -21,10 +21,10 @@ import { TimeAgoPipe } from '../../../shared/time-ago.pipe';
   imports: [
     DatePipe,
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatTooltipModule,
+    ButtonModule,
+    IconComponent,
+    ProgressBarModule,
+    TooltipModule,
     BrandMarkComponent,
     EmptyStateComponent,
     StatTileComponent,

@@ -2,15 +2,13 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { IconComponent } from '../../../shared/icon.component';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { TooltipModule } from 'primeng/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
@@ -24,6 +22,10 @@ import { BrandMarkComponent } from '../../../shared/brand-mark.component';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { TimeAgoPipe } from '../../../shared/time-ago.pipe';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { TableModule } from 'primeng/table';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-organisations-page',
@@ -31,19 +33,21 @@ import { TimeAgoPipe } from '../../../shared/time-ago.pipe';
     DatePipe,
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatPaginatorModule,
-    MatProgressBarModule,
-    MatTableModule,
-    MatTooltipModule,
+    ButtonModule,
+    IconComponent,
+    PaginatorModule,
+    IconFieldModule,
+    InputIconModule,
+    ProgressBarModule,
+    TooltipModule,
     BrandMarkComponent,
     EmptyStateComponent,
     PageHeaderComponent,
     TimeAgoPipe,
+    InputTextModule,
+    SelectButtonModule,
+    TableModule,
+    FormsModule,
   ],
   templateUrl: './organisations-page.component.html',
   styleUrl: './organisations-page.component.scss',
@@ -53,7 +57,11 @@ export class OrganisationsPageComponent {
   private readonly api = inject(AdminApi);
   private readonly router = inject(Router);
 
-  protected readonly columns = ['name', 'status', 'booking', 'people', 'created', 'open'];
+  protected readonly statusOptions = [
+    { value: '', label: 'All' },
+    { value: 'active', label: 'Active' },
+    { value: 'suspended', label: 'Suspended' },
+  ];
   protected readonly search = new FormControl('', { nonNullable: true });
   protected readonly status = signal<OrganisationStatus | ''>('');
   protected readonly rows = signal<OrganisationSummary[]>([]);
@@ -88,9 +96,9 @@ export class OrganisationsPageComponent {
     this.search.setValue('');
   }
 
-  protected onPage(event: PageEvent): void {
-    this.page.set(event.pageIndex + 1);
-    this.pageSize.set(event.pageSize);
+  protected onPage(event: PaginatorState): void {
+    this.page.set((event.page ?? 0) + 1);
+    this.pageSize.set(event.rows ?? this.pageSize());
     this.load();
   }
 

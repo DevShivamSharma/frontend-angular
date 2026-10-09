@@ -277,6 +277,8 @@ test('the venue import tour launches CSV import and its help opens the mapping c
   const initialTour = page.getByRole('dialog').filter({
     has: page.getByRole('heading', { name: 'Hall import tour', exact: true }),
   });
+  // The venue's tour closes (animated) as the importer opens its own; wait for just one.
+  await expect(initialTour).toHaveCount(1);
   await expect(
     initialTour.getByRole('heading', { name: 'Upload venue CSV', exact: true }),
   ).toBeVisible();

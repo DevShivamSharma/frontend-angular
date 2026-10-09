@@ -1,8 +1,8 @@
 import { DatePipe, KeyValuePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconComponent } from './icon.component';
+import { TableModule } from 'primeng/table';
+import { TooltipModule } from 'primeng/tooltip';
 
 import type { AuditEntry } from '../core/api/api.models';
 import { auditIcon, auditIsWarning, auditLabel } from './audit-labels';
@@ -11,34 +11,37 @@ import { TimeAgoPipe } from './time-ago.pipe';
 /** The audit log as a table. */
 @Component({
   selector: 'app-audit-table',
-  imports: [MatIconModule, MatTableModule, MatTooltipModule, DatePipe, KeyValuePipe, TimeAgoPipe],
+  imports: [IconComponent, TableModule, TooltipModule, DatePipe, KeyValuePipe, TimeAgoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="table-wrap">
-      <table mat-table [dataSource]="entries()">
-        <ng-container matColumnDef="when">
-          <th mat-header-cell *matHeaderCellDef>When</th>
-          <td mat-cell *matCellDef="let e">
-            <span class="when" [matTooltip]="(e.createdAt | date: 'd MMM y, HH:mm:ss') ?? ''">
+    <p-table [value]="entries()" styleClass="audit" [tableStyle]="{ 'min-width': '720px' }">
+      <ng-template #header>
+        <tr>
+          <th>When</th>
+          @if (organisations()) {
+            <th>Organisation</th>
+          }
+          <th>Who</th>
+          <th>What</th>
+          <th>Details</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-e>
+        <tr>
+          <td>
+            <span class="when" [pTooltip]="(e.createdAt | date: 'd MMM y, HH:mm:ss') ?? ''">
               {{ e.createdAt | timeAgo }}
               <span class="muted">{{ e.createdAt | date: 'd MMM, HH:mm' }}</span>
             </span>
           </td>
-        </ng-container>
-        <ng-container matColumnDef="organisation">
-          <th mat-header-cell *matHeaderCellDef>Organisation</th>
-          <td mat-cell *matCellDef="let e">{{ organisationName()(e.organisationId) }}</td>
-        </ng-container>
-        <ng-container matColumnDef="who">
-          <th mat-header-cell *matHeaderCellDef>Who</th>
-          <td mat-cell *matCellDef="let e">{{ e.actorEmail ?? 'System' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="action">
-          <th mat-header-cell *matHeaderCellDef>What</th>
-          <td mat-cell *matCellDef="let e">
+          @if (organisations()) {
+            <td>{{ organisationName()(e.organisationId) }}</td>
+          }
+          <td>{{ e.actorEmail ?? 'System' }}</td>
+          <td>
             <span class="action">
               <span class="action-icon" [class.is-warning]="warning(e.action)" aria-hidden="true">
-                <mat-icon>{{ icon(e.action) }}</mat-icon>
+                <app-icon [name]="icon(e.action)" />
               </span>
               <span class="action-text">
                 {{ label(e.action) }}
@@ -46,24 +49,23 @@ import { TimeAgoPipe } from './time-ago.pipe';
               </span>
             </span>
           </td>
-        </ng-container>
-        <ng-container matColumnDef="details">
-          <th mat-header-cell *matHeaderCellDef>Details</th>
-          <td mat-cell *matCellDef="let e" class="details">
+          <td class="details">
             @for (item of e.metadata | keyvalue; track item.key) {
               <span
                 ><b>{{ item.key }}</b> {{ format(item.value) }}</span
               >
             }
           </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="columns()"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns()"></tr>
-      </table>
-      @if (!entries().length) {
-        <p class="empty-state">Nothing recorded yet.</p>
-      }
-    </div>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td [attr.colspan]="organisations() ? 5 : 4" class="empty-state">
+            Nothing recorded yet.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
   `,
   styles: `
     .when,
@@ -71,7 +73,7 @@ import { TimeAgoPipe } from './time-ago.pipe';
       display: grid;
     }
     .when .muted {
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
     .action {
       display: flex;
@@ -86,17 +88,15 @@ import { TimeAgoPipe } from './time-ago.pipe';
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: var(--mat-sys-secondary-container);
-      color: var(--mat-sys-on-secondary-container);
+      background: var(--app-secondary-container);
+      color: var(--app-on-secondary-container);
     }
-    .action-icon mat-icon {
-      width: 18px;
-      height: 18px;
-      font-size: 18px;
+    .action-icon app-icon {
+      font-size: 15px;
     }
     .action-icon.is-warning {
-      background: var(--mat-sys-error-container);
-      color: var(--mat-sys-on-error-container);
+      background: var(--app-error-container);
+      color: var(--app-on-error-container);
     }
     code {
       font-size: 11px;
@@ -105,7 +105,7 @@ import { TimeAgoPipe } from './time-ago.pipe';
       display: block;
       max-width: 420px;
       overflow-wrap: anywhere;
-      font: var(--mat-sys-body-small);
+      font: var(--app-body-small);
     }
   `,
 })
@@ -114,11 +114,6 @@ export class AuditTableComponent {
   /** Organisation names by id; when given, an Organisation column is shown. */
   readonly organisations = input<Record<string, string> | null>(null);
 
-  protected readonly columns = computed(() =>
-    this.organisations()
-      ? ['when', 'organisation', 'who', 'action', 'details']
-      : ['when', 'who', 'action', 'details'],
-  );
   protected readonly organisationName = computed(() => {
     const names = this.organisations() ?? {};
     return (id: string | null) => (id ? (names[id] ?? '—') : 'Platform');

@@ -5,8 +5,8 @@
       <h1>{{ greeting() }}</h1>
       <p class="muted">Here is how the platform stands today.</p>
     </div>
-    <a mat-flat-button routerLink="/admin/organisations/new"
-      ><mat-icon>add_business</mat-icon>New organisation</a
+    <a pButton routerLink="/admin/organisations/new"
+      ><app-icon name="add_business" />New organisation</a
     >
   </header>
 
@@ -49,7 +49,7 @@
         <header class="panel-head">
           <h2 id="latest-title">Latest organisations</h2>
           @if (o.latestOrganisations.length) {
-            <a mat-button routerLink="/admin/organisations">View all</a>
+            <a pButton [text]="true" routerLink="/admin/organisations">View all</a>
           }
         </header>
         @if (o.latestOrganisations.length) {
@@ -74,7 +74,7 @@
                   <span class="status-dot" [class.is-off]="org.status === 'suspended'">
                     {{ org.status === 'active' ? 'Active' : 'Suspended' }}
                   </span>
-                  <span class="muted"><mat-icon inline>group</mat-icon> {{ org.memberCount }}</span>
+                  <span class="muted"><app-icon name="group" /> {{ org.memberCount }}</span>
                   <span class="muted">{{ org.createdAt | timeAgo }}</span>
                 </span>
               </a>
@@ -86,7 +86,7 @@
             heading="No organisations yet"
             text="Each exhibition centre becomes an organisation with its own link, look and team."
           >
-            <a mat-flat-button routerLink="/admin/organisations/new">Create the first one</a>
+            <a pButton routerLink="/admin/organisations/new">Create the first one</a>
           </app-empty-state>
         }
       </section>
@@ -106,9 +106,7 @@
                       [class.is-error]="item.reason === 'suspended'"
                       aria-hidden="true"
                     >
-                      <mat-icon>{{
-                        item.reason === 'suspended' ? 'block' : 'hourglass_top'
-                      }}</mat-icon>
+                      <app-icon [name]="item.reason === 'suspended' ? 'block' : 'hourglass_top'" />
                     </span>
                     <span class="list-text">
                       <span class="strong">{{ item.name }}</span>
@@ -117,22 +115,20 @@
                         {{ item.since | timeAgo }}
                       </span>
                     </span>
-                    <mat-icon class="chevron" aria-hidden="true">chevron_right</mat-icon>
+                    <app-icon class="chevron" name="chevron_right" />
                   </a>
                 </li>
               }
             </ul>
           } @else {
-            <p class="all-good">
-              <mat-icon aria-hidden="true">verified</mat-icon> Every organisation is running.
-            </p>
+            <p class="all-good"><app-icon name="verified" /> Every organisation is running.</p>
           }
         </section>
 
         <section class="panel" aria-labelledby="activity-title">
           <header class="panel-head">
             <h2 id="activity-title">Recent activity</h2>
-            <a mat-button routerLink="/admin/audit">Audit log</a>
+            <a pButton [text]="true" routerLink="/admin/audit">Audit log</a>
           </header>
           @if (o.recentActivity.length) {
             <ol class="timeline">
@@ -143,13 +139,13 @@
                     [class.is-error]="warning(entry.action)"
                     aria-hidden="true"
                   >
-                    <mat-icon>{{ icon(entry.action) }}</mat-icon>
+                    <app-icon [name]="icon(entry.action)" />
                   </span>
                   <span class="list-text">
                     <span>{{ label(entry.action) }}</span>
                     <span
                       class="muted small"
-                      [matTooltip]="(entry.createdAt | date: 'd MMM y, HH:mm') ?? ''"
+                      [pTooltip]="(entry.createdAt | date: 'd MMM y, HH:mm') ?? ''"
                     >
                       {{ entry.actorEmail ?? 'System' }} · {{ entry.createdAt | timeAgo }}
                     </span>
@@ -164,6 +160,6 @@
       </div>
     </div>
   } @else {
-    <mat-progress-bar mode="indeterminate" />
+    <p-progressbar mode="indeterminate" />
   }
 </div>

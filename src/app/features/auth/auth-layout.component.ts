@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
+import { IconComponent } from '../../shared/icon.component';
 
 import { PublicOrgStore } from '../../core/org/org.stores';
 import { BrandMarkComponent } from '../../shared/brand-mark.component';
@@ -28,7 +28,7 @@ const PLATFORM_HIGHLIGHTS: Highlight[] = [
  */
 @Component({
   selector: 'app-auth-layout',
-  imports: [MatIconModule, BrandMarkComponent],
+  imports: [IconComponent, BrandMarkComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="auth">
@@ -47,10 +47,7 @@ const PLATFORM_HIGHLIGHTS: Highlight[] = [
           <h2>{{ tagline() }}</h2>
           <ul>
             @for (item of highlights(); track item.icon) {
-              <li>
-                <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon
-                >{{ item.text }}
-              </li>
+              <li><app-icon [name]="item.icon" />{{ item.text }}</li>
             }
           </ul>
         </div>
@@ -81,7 +78,7 @@ const PLATFORM_HIGHLIGHTS: Highlight[] = [
       display: grid;
       grid-template-columns: minmax(360px, 5fr) 6fr;
       min-height: 100dvh;
-      background: var(--mat-sys-surface);
+      background: var(--app-surface);
     }
     .brand-panel {
       display: flex;
@@ -89,22 +86,22 @@ const PLATFORM_HIGHLIGHTS: Highlight[] = [
       justify-content: space-between;
       gap: 32px;
       padding: 40px 48px;
-      color: var(--mat-sys-on-primary);
+      color: var(--app-on-primary);
       background:
         repeating-linear-gradient(
           90deg,
           transparent 0 39px,
-          color-mix(in srgb, var(--mat-sys-on-primary) 9%, transparent) 39px 40px
+          color-mix(in srgb, var(--app-on-primary) 9%, transparent) 39px 40px
         ),
         repeating-linear-gradient(
           0deg,
           transparent 0 39px,
-          color-mix(in srgb, var(--mat-sys-on-primary) 9%, transparent) 39px 40px
+          color-mix(in srgb, var(--app-on-primary) 9%, transparent) 39px 40px
         ),
         linear-gradient(
           150deg,
-          var(--mat-sys-primary),
-          color-mix(in srgb, var(--mat-sys-primary) 55%, var(--mat-sys-tertiary))
+          var(--app-primary),
+          color-mix(in srgb, var(--app-primary) 55%, var(--app-tertiary))
         );
     }
     .brand-top {
@@ -115,14 +112,14 @@ const PLATFORM_HIGHLIGHTS: Highlight[] = [
     .panel-mark {
       padding: 4px;
       border-radius: 16px;
-      background: color-mix(in srgb, var(--mat-sys-on-primary) 92%, transparent);
+      background: color-mix(in srgb, var(--app-on-primary) 92%, transparent);
     }
     .panel-name {
-      font: var(--mat-sys-title-large);
+      font: var(--app-title-large);
     }
     .pitch h2 {
       max-width: 440px;
-      font: var(--mat-sys-headline-medium);
+      font: var(--app-headline-medium);
       font-weight: 600;
     }
     .pitch ul {
@@ -136,9 +133,9 @@ const PLATFORM_HIGHLIGHTS: Highlight[] = [
       display: flex;
       align-items: center;
       gap: 12px;
-      font: var(--mat-sys-body-large);
+      font: var(--app-body-large);
     }
-    .pitch mat-icon {
+    .pitch app-icon {
       flex: none;
       display: grid;
       place-items: center;
@@ -148,11 +145,11 @@ const PLATFORM_HIGHLIGHTS: Highlight[] = [
       line-height: 36px;
       text-align: center;
       border-radius: 10px;
-      background: color-mix(in srgb, var(--mat-sys-on-primary) 16%, transparent);
+      background: color-mix(in srgb, var(--app-on-primary) 16%, transparent);
     }
     .panel-foot {
       margin: 0;
-      font: var(--mat-sys-label-medium);
+      font: var(--app-label-medium);
       opacity: 0.85;
     }
     .form-side {
@@ -168,7 +165,7 @@ const PLATFORM_HIGHLIGHTS: Highlight[] = [
       margin-bottom: 24px;
     }
     h1 {
-      font: var(--mat-sys-headline-small);
+      font: var(--app-headline-small);
     }
     .sub {
       margin: 8px 0 24px;

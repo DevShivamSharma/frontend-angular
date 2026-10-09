@@ -1,15 +1,15 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { ButtonModule } from 'primeng/button';
 import { firstValueFrom } from 'rxjs';
 
 import type { AssignableRoleView, CreatedInvitation } from '../../../core/api/api.models';
 import { OrgApi } from '../../../core/org/org-api.service';
 import { CopyLinkComponent } from '../../../shared/copy-link.component';
+import { FieldComponent } from '../../../shared/field.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
+import { SelectModule } from 'primeng/select';
 
 export interface InviteDialogData {
   slug: string;
@@ -21,18 +21,17 @@ export interface InviteDialogData {
   selector: 'app-invite-dialog',
   imports: [
     ReactiveFormsModule,
-    MatButtonModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
+    ButtonModule,
     CopyLinkComponent,
+    FieldComponent,
+    InputTextModule,
+    SelectModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Invite someone</h2>
+    <h2 class="dialog-title">Invite someone</h2>
     @if (created(); as invitation) {
-      <mat-dialog-content class="stack">
+      <div class="dialog-content stack">
         <p>{{ invitation.email }} is invited as {{ invitation.role.name }}.</p>
         @if (invitation.inviteUrl) {
           <p class="muted">
@@ -40,38 +39,50 @@ export interface InviteDialogData {
           </p>
           <app-copy-link [url]="invitation.inviteUrl" />
         }
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button mat-button (click)="another()">Invite another</button>
-        <button mat-flat-button [mat-dialog-close]="true">Done</button>
-      </mat-dialog-actions>
+      </div>
+      <div class="dialog-actions">
+        <button pButton [text]="true" (click)="another()">Invite another</button>
+        <button pButton (click)="ref.close(true)">Done</button>
+      </div>
     } @else {
       <form [formGroup]="form" (ngSubmit)="submit()">
-        <mat-dialog-content class="stack">
-          <mat-form-field>
-            <mat-label>Email</mat-label>
-            <input matInput type="email" formControlName="email" cdkFocusInitial />
-            <mat-error>A valid email address</mat-error>
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>Role</mat-label>
-            <mat-select formControlName="roleId">
-              @for (role of data.roles; track role.id) {
-                <mat-option [value]="role.id" [disabled]="!role.assignable">
+        <div class="dialog-content stack">
+          <app-field label="Email" error="A valid email address" for="invite-dialog-email">
+            <input
+              id="invite-dialog-email"
+              pInputText
+              type="email"
+              formControlName="email"
+              cdkFocusInitial
+            />
+          </app-field>
+          <app-field label="Role" for="invite-role" error="Choose a role">
+            <p-select
+              inputId="invite-role"
+              formControlName="roleId"
+              [options]="roles"
+              optionLabel="name"
+              optionValue="id"
+              optionDisabled="disabled"
+              placeholder="Choose a role"
+            >
+              <ng-template #item let-role>
+                <span>
                   {{ role.name }}
                   @if (!role.assignable) {
                     <span class="muted"> — {{ role.reason }}</span>
                   }
-                </mat-option>
-              }
-            </mat-select>
-            <mat-error>Choose a role</mat-error>
-          </mat-form-field>
-        </mat-dialog-content>
-        <mat-dialog-actions align="end">
-          <button mat-button type="button" [mat-dialog-close]="invitedAny()">Cancel</button>
-          <button mat-flat-button type="submit" [disabled]="busy()">Send invitation</button>
-        </mat-dialog-actions>
+                </span>
+              </ng-template>
+            </p-select>
+          </app-field>
+        </div>
+        <div class="dialog-actions">
+          <button pButton [text]="true" type="button" (click)="ref.close(invitedAny())">
+            Cancel
+          </button>
+          <button pButton type="submit" [disabled]="busy()">Send invitation</button>
+        </div>
       </form>
     }
   `,
@@ -84,9 +95,9 @@ export interface InviteDialogData {
   `,
 })
 export class InviteDialogComponent {
-  protected readonly data = inject<InviteDialogData>(MAT_DIALOG_DATA);
+  protected readonly data = dialogData<InviteDialogData>();
   private readonly api = inject(OrgApi);
-  private readonly ref = inject(MatDialogRef<InviteDialogComponent, boolean>);
+  protected readonly ref = inject(DialogRef);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     email: ['', [Validators.required, Validators.email]],
@@ -96,13 +107,14 @@ export class InviteDialogComponent {
     ],
   });
   protected readonly busy = signal(false);
+  /** Roles the inviter may not give are listed, with the reason, but cannot be chosen. */
+  protected readonly roles = this.data.roles.map((role) => ({
+    ...role,
+    disabled: !role.assignable,
+  }));
   protected readonly created = signal<CreatedInvitation | null>(null);
   /** Closing after any invitation was made tells the page to refresh. */
   protected readonly invitedAny = signal(false);
-
-  constructor() {
-    this.ref.backdropClick().subscribe(() => this.ref.close(this.invitedAny()));
-  }
 
   protected async submit(): Promise<void> {
     if (this.form.invalid) {

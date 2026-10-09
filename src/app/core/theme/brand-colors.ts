@@ -11,8 +11,9 @@ import {
 } from '@material/material-color-utilities';
 
 /**
- * The Material 3 system colours Angular Material reads (`--mat-sys-<name>`), with the dynamic
- * colour that produces each.
+ * The app's colour tokens (`--app-<name>`), named after the Material 3 colour roles they are
+ * computed with, and the dynamic colour that produces each. Components and PrimeNG's own
+ * surfaces read only these.
  */
 const SYSTEM_COLORS: ReadonlyArray<[string, DynamicColor]> = [
   ['primary', MaterialDynamicColors.primary],
@@ -93,8 +94,8 @@ function scheme(primary: string, accent: string | null, isDark: boolean): Dynami
 }
 
 /**
- * CSS custom properties for a brand: every Material system colour as `light-dark(light, dark)`,
- * so the page follows the device's light or dark preference with no extra work.
+ * CSS custom properties for a brand: every colour token as `light-dark(light, dark)`, so the
+ * page follows the device's light or dark preference with no extra work.
  */
 export function brandColorVariables(
   primary: string,
@@ -104,7 +105,7 @@ export function brandColorVariables(
   const dark = scheme(primary, accent, true);
   const variables: Record<string, string> = {};
   for (const [name, color] of SYSTEM_COLORS) {
-    variables[`--mat-sys-${name}`] =
+    variables[`--app-${name}`] =
       `light-dark(${hexFromArgb(color.getArgb(light))}, ${hexFromArgb(color.getArgb(dark))})`;
   }
   return variables;
