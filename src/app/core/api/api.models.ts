@@ -410,8 +410,12 @@ export interface ItpoImportPreview {
   rows: ItpoImportRowView[];
 }
 
+/** Field paths. Absent: recognised by name; an empty path: the file has no such field. */
 export interface JsonHallMapping {
+  /** CSV only: one row per hall (default), or one row per space grouped by hall. */
+  rows?: 'hall' | 'space';
   halls?: string;
+  id?: string;
   name?: string;
   width?: string;
   depth?: string;
@@ -419,6 +423,7 @@ export interface JsonHallMapping {
   areas?: string;
   zones?: string;
   unit?: string;
+  unitField?: string;
   metresPerUnit?: number;
   kinds?: Record<string, string>;
   yAxis?: 'down' | 'up';
@@ -428,6 +433,8 @@ export interface JsonHallMapping {
 }
 export interface JsonHallRow {
   externalId: string;
+  /** The hall's own ID in the file, when it has one. */
+  sourceId?: string | null;
   name: string;
   floor: HallFloor | null;
   width: number | null;
@@ -436,11 +443,37 @@ export interface JsonHallRow {
   warnings: string[];
   error: string | null;
   existing: { hallId: string; name: string; version: number; sameFloor: boolean } | null;
+  /** CSV rows read into this hall, when the file has one row per space. */
+  records?: number;
 }
+/** A field a CSV column can be mapped to. `width`/`depth` are the hall's, or each space's. */
+export type CsvField =
+  | 'id'
+  | 'name'
+  | 'width'
+  | 'depth'
+  | 'boundary'
+  | 'zones'
+  | 'areas'
+  | 'unitField'
+  | 'kind'
+  | 'x'
+  | 'y'
+  | 'label'
+  | 'geometry';
 export interface JsonHallPreview {
   rows: JsonHallRow[];
   fields: string[];
   collectionPaths: string[];
   areaTypes: string[];
   previewToken: string;
+  /** CSV only, below: the file's columns and how they are read. */
+  rowLayout?: 'hall' | 'space';
+  format?: 'itpo' | 'generic';
+  columns?: string[];
+  samples?: Record<string, string>;
+  suggested?: Partial<Record<CsvField, string>>;
+  autoColumns?: Record<string, string>;
+  missing?: (CsvField | 'unit')[];
+  layoutHint?: 'hall' | 'space';
 }

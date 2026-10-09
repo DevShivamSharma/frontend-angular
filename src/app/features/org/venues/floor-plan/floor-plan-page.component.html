@@ -602,9 +602,17 @@
                       ><input
                         type="checkbox"
                         [checked]="r.hallIds.includes(h.id)"
+                        [disabled]="savedFoyer(r)"
                         (change)="toggleOwner(r, h.id, $any($event.target).checked)"
                       />{{ h.name }}</label
                     >
+                  }
+                  @if (savedFoyer(r)) {
+                    <p class="muted">
+                      This foyer is saved with {{ ownerNames(r) }}. To move or reshape it, upload
+                      the plan again with Start a new review when re-uploading, and save to the
+                      existing halls.
+                    </p>
                   }
                 </fieldset>
               }
@@ -637,7 +645,9 @@
             <div class="foyer-links">
               <h3>Other foyers on this page</h3>
               @for (z of otherFoyers; track z.id) {
-                <button (click)="linkFoyer(z)">Link {{ z.name }} to this hall</button>
+                <button (click)="linkFoyer(z)" [disabled]="savedFoyer(z)">
+                  Link {{ z.name }} to this hall
+                </button>
               }
             </div>
           }

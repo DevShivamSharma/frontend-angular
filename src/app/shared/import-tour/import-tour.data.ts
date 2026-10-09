@@ -221,12 +221,12 @@ export const CSV_LESSONS: TourLesson[] = [
     tasks: [
       [
         'Open Add hall → Import from CSV and choose a .csv file (up to 12 MB).',
-        'A file can contain one hall or several halls. Each CSV row is one hall. Layout exports and generic rectangle / polygon columns are recognised; cells may contain JSON geometry and annotations.',
+        'A file can contain one hall or several halls. A row is one hall, or one space of a hall (outline, foyer, pillar, stall) grouped by its hall column. Layout exports and generic rectangle / polygon columns are recognised; cells may contain JSON geometry and annotations.',
         'Wait for the converted hall list. Per-hall errors tell you which mapping is missing.',
       ],
       [
         'Add hall → Import from CSV kholo aur .csv file chuno (12 MB tak).',
-        'Har CSV row ek hall hai. Layout exports aur rectangle / polygon columns supported hain; cells mein JSON geometry aur annotations ho sakte hain.',
+        'Ek row ek hall ho sakti hai, ya hall ki ek space (outline, foyer, pillar, stall) jo hall column se group hoti hai. Layout exports aur rectangle / polygon columns supported hain; cells mein JSON geometry aur annotations ho sakte hain.',
         'Converted hall list aane do. Har hall ka error batayega kaunsi mapping missing hai.',
       ],
     ],
@@ -241,15 +241,15 @@ export const CSV_LESSONS: TourLesson[] = [
     title: ['Repair units and field mapping', 'Units aur fields ki mapping karo'],
     tasks: [
       [
-        'Open Units and field mapping if a hall has an error. Choose source units; pixel data needs Metres per source unit.',
-        'For custom CSV, map Hall name, Width, Depth, Boundary, Areas and Foyers to the matching column names or paths inside decoded cells.',
-        'Use Custom area fields for unusual area positions / dimensions. Use Area meanings for unknown types or colours. Map foyers separately with the Foyers field.',
+        'Open Units and field mapping if a hall has an error. Choose Rows in this file, then source units; pixel data needs Metres per source unit.',
+        'Each field shows the column it reads (Automatic: suggested by name). Choose another column if a suggestion is wrong; required fields are marked, and Columns in this file shows what every column is read as.',
+        'Use Custom area fields for unusual area positions / dimensions. Use Area meanings (Space types for one row per space) for unknown types or colours.',
         'Click Update preview after any change. Earlier visual confirmations are cleared.',
       ],
       [
-        'Hall mein error ho toh Units and field mapping kholo. Source units chuno; pixels ke liye Metres per source unit chahiye.',
-        'Custom CSV mein Hall name, Width, Depth, Boundary, Areas aur Foyers ko column names ya decoded cells ke andar paths se map karo.',
-        'Unusual area fields ke liye Custom area fields aur unknown colour/type ke liye Area meanings use karo. Foyers ko Foyers field se map karo.',
+        'Hall mein error ho toh Units and field mapping kholo. Pehle Rows in this file chuno, phir source units; pixels ke liye Metres per source unit chahiye.',
+        'Har field dikhata hai woh kaunsa column padhta hai (Automatic: naam se suggest). Galat ho toh dusra column chuno; required fields marked hain, aur Columns in this file batata hai har column kaise padha gaya.',
+        'Unusual area fields ke liye Custom area fields aur unknown colour/type ke liye Area meanings (one row per space mein Space types) use karo.',
         'Change ke baad Update preview dabao. Purani visual confirmations clear ho jayengi.',
       ],
     ],

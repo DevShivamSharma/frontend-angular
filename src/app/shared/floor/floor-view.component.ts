@@ -2,6 +2,7 @@ import { ThreePlanComponent } from './three-plan.component';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 import type { FloorArea, FloorAreaKind, HallFloor } from '../../core/api/api.models';
+import type { MultiPolygon, Point } from '../../core/venues/floor-plan.models';
 
 /** How each kind of area looks when the venue gave it no colour: ITPO's own palette. */
 export const AREA_COLORS: Record<FloorAreaKind, string> = {
@@ -33,6 +34,21 @@ export const AREA_LABELS: Record<FloorAreaKind, string> = {
   void: 'Void / opening',
   facility: 'Facility',
 };
+
+/** Square metres of polygons: each outer ring less its holes (shoelace formula). */
+export function geometryArea(g: MultiPolygon): number {
+  const ring = (r: Point[]) =>
+    Math.abs(
+      r.reduce(
+        (sum, p, i) => sum + p[0] * r[(i + 1) % r.length][1] - r[(i + 1) % r.length][0] * p[1],
+        0,
+      ),
+    ) / 2;
+  return g.reduce(
+    (sum, [outer, ...holes]) => sum + ring(outer) - holes.reduce((h, r) => h + ring(r), 0),
+    0,
+  );
+}
 
 /** Extra room around the hall so labels placed just outside it stay in view (metres). */
 const MARGIN = 4;

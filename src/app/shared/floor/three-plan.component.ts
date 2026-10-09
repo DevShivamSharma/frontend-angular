@@ -24,6 +24,8 @@ export interface PlanLayer {
   color: string;
   label?: string;
   grid?: Grid | null;
+  /** A foyer or circulation zone: named on the plan even beside the floor's own labels. */
+  zone?: boolean;
 }
 export interface AnnotationMove {
   id: string;
@@ -225,6 +227,7 @@ export class ThreePlanComponent implements AfterViewInit, OnChanges, OnDestroy {
           color: '#4aa9db',
           label: z.name,
           grid: z.grid ?? this.floor!.grid,
+          zone: true,
         })),
         ...this.floor.objects.map((o) => ({
           id: o.id,
@@ -342,7 +345,7 @@ export class ThreePlanComponent implements AfterViewInit, OnChanges, OnDestroy {
     for (const [i, l] of [...this.layers(), ...this.extra].entries()) {
       this.polygon(l, i + 1);
       if (l.grid) this.grid(l);
-      if (l.label && !this.floorInfo) this.label(l);
+      if (l.label && (!this.floorInfo || l.zone)) this.label(l);
     }
     this.drawAnnotations();
     if (this.annotationsEditable && this.selectedAnnotation) {

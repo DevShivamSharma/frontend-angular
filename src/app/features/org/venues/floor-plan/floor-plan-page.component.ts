@@ -598,6 +598,10 @@ export class FloorPlanPageComponent implements OnInit, OnDestroy {
       this.selected = z.id;
     }
   }
+  /** A foyer of a saved hall is part of that hall's saved floor: only a new review changes it. */
+  savedFoyer(z: PlanRegion) {
+    return !!this.page && z.hallIds.some((id) => this.doc?.committed[`${this.page!.number}:${id}`]);
+  }
   ownerNames(z: PlanRegion) {
     return this.halls
       .filter((h) => z.hallIds.includes(h.id))
