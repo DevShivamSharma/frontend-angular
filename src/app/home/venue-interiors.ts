@@ -421,6 +421,7 @@ export async function createVenueInteriors(options: {
     pointLights.set(item.hall.id, item.lights);
   }
   scene.add(layer);
+  let visitorHall: InteriorHall | undefined;
   let active: InteriorHall | undefined,
     preview: InteriorHall | undefined,
     touring = false,
@@ -447,7 +448,7 @@ export async function createVenueInteriors(options: {
       preview: !!preview && !active,
     });
   function ccVisibility() {
-    const selected = active?.level ? active : preview;
+    const selected = visitorHall?.level ? visitorHall : active?.level ? active : preview;
     if (cc.cutaway(!!selected)) options.shadowsChanged();
     for (const item of cc.levels) item.group.visible = item.hall === selected;
   }
@@ -463,7 +464,8 @@ export async function createVenueInteriors(options: {
     for (const h of halls) h.roofs.forEach((o) => (o.visible = true));
   }
   function leave() {
-    if (!active && !preview) return;
+    if (!active && !preview && !visitorHall) return;
+    visitorHall = undefined;
     active = undefined;
     preview = undefined;
     touring = false;
@@ -665,7 +667,7 @@ export async function createVenueInteriors(options: {
         moving = true;
       }
     }
-    let near = active ?? preview;
+    let near = visitorHall ?? active ?? preview;
     if (!near)
       near = halls.find((h) => {
         const p = worldToHall(h, camera.position);
@@ -701,6 +703,12 @@ export async function createVenueInteriors(options: {
     halls,
     layer,
     obstacles,
+    /** Reuse floor visibility and lighting while the third-person controller owns the camera. */
+    setVisitorHall(id?: string) {
+      visitorHall = halls.find(h => h.id === id);
+      ccVisibility();
+      invalidate();
+    },
     enter,
     leave,
     preview(id: string) {

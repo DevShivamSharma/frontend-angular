@@ -17,6 +17,31 @@ The Java backend is expected at `http://localhost:8080/api`. See the repository
 `README.txt` for how to start it. The planner works without a backend - only the
 Saved Layout panel needs one, and a failed list load stays silent, exactly as in React.
 
+## Visit as a Person
+
+The venue home (`/`) has a **Visit as a Person** button. A male visitor starts outside
+Gate 6, with a third-person camera. Use W/A/S/D to walk, arrow keys to turn, drag to
+look, and Shift or **Walk faster** for longer campus distances. On phones, hold the
+direction buttons. Select **Find an entrance** for a direction and distance; it
+does not teleport the visitor. Doors open on approach. Walk through them to enter
+or leave a hall. **Exit visit** or Escape returns to the normal overview.
+
+Available interiors are Hall 1–5, Hall 14 and Convention Centre levels 1–3. The CC
+level buttons switch between the existing furnished floors; return to Level 1 to
+walk back outside. Other buildings can be explored from the campus. The visitor
+uses existing hall/furniture collision data plus lightweight building and water
+footprints. Entrances and the modelled CC podium approach are illustrative, not
+surveyed access routes. No external avatar download or backend change is needed.
+
+The original **Walk inside**, guided tours and GLB exports remain in the normal
+venue menu. `venue-visitor.ts` owns input and camera state, `visitor-navigation.ts`
+derives the navigation geometry, and the existing interior layer owns furnishing,
+floor visibility and lighting. `visitor-avatar.ts` and `visitor-portals.ts` own
+and dispose their visual resources.
+
+Run `npx playwright test e2e/visitor-mode.spec.ts` for geometry, input, transitions,
+resource cleanup and browser coverage. The tests use the checked-in venue model.
+
 ## API base URL
 
 Configured once in `src/app/app.config.ts` via the `API_BASE_URL` token

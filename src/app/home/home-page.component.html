@@ -9,7 +9,7 @@
 </div>
 <section appVenueLoading [state]="loading" (retry)="retry()"></section>
 <div class="identity" [inert]="!loading.ready()"><span>BHARAT MANDAPAM</span><small>NEW DELHI</small></div>
-<div id="navigation" class="navigation" [class.collapsed]="collapsed()" [inert]="!loading.ready()">
+<div id="navigation" class="navigation" [hidden]="visitor().active" [class.collapsed]="collapsed()" [inert]="!loading.ready()">
 <button id="collapse-menu" class="collapse-menu" [attr.aria-label]="collapsed() ? 'Expand menu' : 'Collapse menu'" [attr.aria-expanded]="!collapsed()" (click)="collapsed.set(!collapsed())">{{ collapsed() ? '›' : '‹' }}</button>
 <nav #menu id="menu" aria-label="Discover the venue">
 <button class="section-row" [class.active]="activeView() === 'overview'" data-view="overview" (click)="overview()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20V9l6-3 6 3 6-3v14l-6 2-6-3-6 1M9 6v13m6-10v13M9 2v2m6-1v3"/></svg><span>Entire venue</span></button>
@@ -38,7 +38,7 @@
 <aside appVenueDetails [id]="detailId()" [detail]="details()[detailId()]" [visible]="detailsVisible()" [selection]="selection()" (close)="closeDetails()" (levelChange)="selectLevel($event)" (openPlan)="plan().open($event)"></aside>
 </div>
 <div class="map-tools" [class.interior-tools]="interior().walking || interior().preview" [inert]="!loading.ready()" aria-label="View controls"><button #homeButton id="home-view" (click)="overview()" aria-label="Return to venue" title="Return to venue"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg></button><button id="globe-view" (click)="globe()" [class.active]="globeActive()" [disabled]="!globeAvailable()" aria-label="Explore globe" title="Explore globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button><button id="light-mode" (click)="toggleLight()" [class.active]="daylight()" [attr.aria-label]="daylight() ? 'Switch to evening' : 'Switch to daylight'" [title]="daylight() ? 'Switch to evening' : 'Switch to daylight'"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/></svg></button><div class="tool-gap"></div><button id="zoom-in" (click)="zoom(.74)" aria-label="Zoom in">+</button><button id="zoom-out" (click)="zoom(1.35)" aria-label="Zoom out">−</button></div>
-<footer [inert]="!loading.ready()"><span id="status" aria-live="polite">{{ status() }}</span><span class="interaction-hint">{{ interior().walking ? 'Drag to look · W A S D to walk' : 'Drag to orbit · Right drag to pan · Scroll to zoom' }}</span></footer>
+<footer [inert]="!loading.ready()"><span id="status" aria-live="polite">{{ status() }}</span><span class="interaction-hint">{{ visitor().active ? 'W A S D to walk · Drag to look · Shift to walk faster' : interior().walking ? 'Drag to look · W A S D to walk' : 'Drag to orbit · Right drag to pan · Scroll to zoom' }}</span></footer>
 <div id="geo-credit" [hidden]="!geographyReady()" [inert]="!loading.ready()">
   @if (appearance() === 'color' && scenery() === 'satellite' && satelliteReady() && !globeActive()) {
     <a id="satellite-credit" href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer" target="_blank" rel="noopener">Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community</a>
@@ -96,9 +96,9 @@
   </section>
 </ng-template>
 
-<a class="planner-link" [inert]="!loading.ready()" routerLink="/planner">Stall planner ↗</a>
+<a class="planner-link" [hidden]="visitor().active" [inert]="!loading.ready()" routerLink="/planner">Stall planner ↗</a>
 
-<div class="appearance-control" [inert]="!loading.ready()">
+<div class="appearance-control" [hidden]="visitor().active" [inert]="!loading.ready()">
   <div class="appearance-switch" role="group" aria-label="Model appearance" [attr.aria-busy]="appearanceBusy()">
     <button type="button" data-appearance="natural" [attr.aria-pressed]="appearance() === 'natural'" [disabled]="appearanceBusy()" (click)="setAppearance('natural')">Natural</button>
     <button type="button" data-appearance="color" [attr.aria-pressed]="appearance() === 'color'" [disabled]="appearanceBusy()" (click)="setAppearance('color')">Color</button>
@@ -111,3 +111,53 @@
   }
   <p id="appearance-status" role="status" [hidden]="!appearanceBusy() && !appearanceError()">{{ appearanceBusy() ? 'Preparing materials…' : appearanceError() }}</p>
 </div>
+
+@if (!visitor().active) {
+  <button #visitButton type="button" class="visit-launch" [disabled]="!loading.ready() || !visitorReady()" (click)="startVisitor()">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m8 21 3-7 4 3v4M6 12l3-5 5 1 2 4h4M11 8l-1 6"/></svg>
+    Visit as a Person
+  </button>
+} @else {
+  <section class="visitor-panel" aria-label="Visitor navigation">
+    <div class="visitor-heading"><strong>{{ visitor().location }}</strong><span class="visitor-live">On foot</span></div>
+    @if (!visitor().hall) {
+      @if (visitorDestinations().length) {
+        <label for="visitor-destination">Find an entrance</label>
+        <div class="visitor-destination">
+          <select id="visitor-destination" [value]="visitor().destination" (change)="visitorDestination($any($event.target).value)">
+            @for (destination of visitorDestinations(); track destination.id) { <option [value]="destination.id">{{ destination.label }}</option> }
+          </select>
+          <span class="visitor-distance" [attr.aria-label]="visitor().distance + ' metres to selected entrance'">
+            <svg viewBox="0 0 24 24" aria-hidden="true" [style.transform]="'rotate(' + visitor().bearing + 'deg)'"><path d="m6 12 6-8 6 8M12 4v16"/></svg>{{ visitor().distance }} m
+          </span>
+        </div>
+      } @else { <p>Interiors are unavailable. You can still explore the campus.</p> }
+    }
+    @if (visitor().hall.startsWith('cc-level')) {
+      <div class="visitor-floors" role="group" aria-label="Convention Centre floors">
+        @for (level of [1, 2, 3]; track level) {
+          <button type="button" [attr.aria-pressed]="visitor().hall === 'cc-level' + level" [disabled]="visitor().transitioning" (click)="visitorFloor(level)">Level {{ level }}</button>
+        }
+      </div>
+    }
+    <p class="visitor-hint" role="status">{{ visitor().hint }}</p>
+    <div class="visitor-options">
+      <button type="button" [attr.aria-pressed]="visitor().fast" (click)="visitorFaster()">Walk faster</button>
+      <button type="button" (click)="visitorRestart()">Restart at gate</button>
+    </div>
+    <small>Illustrative entrances and interior layouts.</small>
+  </section>
+  <button class="visitor-exit" type="button" (click)="stopVisitor()">Exit visit <span aria-hidden="true">Esc</span></button>
+  <div class="visitor-pad" role="group" aria-label="Visitor movement controls">
+    @for (control of [{id:'forward',label:'Walk forward',path:'m6 14 6-6 6 6'}, {id:'left',label:'Turn left',path:'m14 6-6 6 6 6'}, {id:'backward',label:'Walk backward',path:'m6 10 6 6 6-6'}, {id:'right',label:'Turn right',path:'m10 6 6 6-6 6'}]; track control.id) {
+      <button type="button" [class]="'visitor-' + control.id" [attr.aria-label]="control.label" [title]="control.label"
+        (pointerdown)="visitorHold($any(control.id),$event,true)" (pointerup)="visitorHold($any(control.id),$event,false)"
+        (pointercancel)="visitorRelease($any(control.id))" (lostpointercapture)="visitorRelease($any(control.id))"
+        (click)="visitorClick($any(control.id),$event)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="control.path"/></svg>
+      </button>
+    }
+    <span>Hold to walk</span>
+  </div>
+  <div class="visitor-transition" [class.visible]="visitor().transitioning" aria-hidden="true"></div>
+}

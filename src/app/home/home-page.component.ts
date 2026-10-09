@@ -10,13 +10,14 @@ import { Destination, VenueDetail, VenueInformation } from './venue.models';
 import { VenueViewer, createVenueViewer } from './venue-viewer';
 import { VenueAppearance, VenueScenery } from './venue-appearance';
 import { InteriorState } from './venue-interiors';
+import { INITIAL_VISITOR_STATE, VisitorInput, VisitorState } from './venue-visitor';
 
 @Component({
   selector: 'app-home-page', standalone: true,
   imports: [RouterLink, NgTemplateOutlet, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent],
   providers: [VenueDataService],
   templateUrl: './home-page.component.html',
-  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css'],
+  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css', './venue-visitor-controls.css', './venue-visitor.css'],
   encapsulation: ViewEncapsulation.ShadowDom,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -59,6 +60,10 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly interior = signal<InteriorState>({hall:'',walking:false,touring:false,paused:false});
   readonly interiorError = signal('');
   readonly exportingHall = signal(false);
+  readonly visitor = signal<VisitorState>({ ...INITIAL_VISITOR_STATE });
+  readonly visitorReady = signal(false);
+  readonly visitorDestinations = signal<{id:string;label:string}[]>([]);
+  private readonly visitButton = viewChild<ElementRef<HTMLButtonElement>>('visitButton');
   ngAfterViewInit(): void {
     this.zone.runOutsideAngular(() => {
       void this.loading.run('rooms', () => this.data.loadRooms());
@@ -73,6 +78,11 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
           geographyReady: ready => this.zone.run(() => { this.geographyReady.set(ready); this.globeAvailable.set(ready); }),
           satelliteReady: () => this.zone.run(() => this.satelliteReady.set(true)),
           interiorsReady:(halls,error)=>this.zone.run(()=>{this.interiorHalls.set(halls);this.interiorError.set(error??'');}),
+          visitorReady:destinations=>this.zone.run(()=>{this.visitorDestinations.set(destinations);this.visitorReady.set(true);}),
+          visitorState:state=>this.zone.run(()=>{
+            const wasActive=this.visitor().active;this.visitor.set(state);
+            if(wasActive&&!state.active){this.activeView.set('overview');this.activeLevel.set(0);this.group.set(null);requestAnimationFrame(()=>this.visitButton()?.nativeElement.focus({preventScroll:true}));}
+          }),
           interiorState:state=>this.zone.run(()=>{
             const previous=this.interior();this.interior.set(state);
             if(!state.walking||state.hall!==previous.hall)this.interiorRoom.set('');
@@ -135,6 +145,19 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   globe(): void { this.closeDetails(); this.activeLevel.set(0); this.zone.runOutsideAngular(() => this.viewer?.goGlobe()); }
   zoom(factor: number): void { this.zone.runOutsideAngular(() => this.viewer?.zoom(factor)); }
   toggleLight(): void { this.daylight.update(value => !value); this.zone.runOutsideAngular(() => this.viewer?.setDaylight(this.daylight())); }
+  startVisitor():void { this.closeDetails();this.group.set(null);this.zone.runOutsideAngular(()=>this.viewer?.startVisitor()); }
+  stopVisitor():void { this.zone.runOutsideAngular(()=>this.viewer?.stopVisitor()); }
+  visitorHold(input:VisitorInput,event:PointerEvent,down:boolean):void {
+    event.preventDefault();
+    if(down)(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.zone.runOutsideAngular(()=>this.viewer?.visitorInput(input,down));
+  }
+  visitorRelease(input:VisitorInput):void {this.zone.runOutsideAngular(()=>this.viewer?.visitorInput(input,false));}
+  visitorClick(input:VisitorInput,event:MouseEvent):void {if(event.detail===0)this.zone.runOutsideAngular(()=>this.viewer?.visitorStep(input));}
+  visitorDestination(id:string):void {this.zone.runOutsideAngular(()=>this.viewer?.visitorDestination(id));}
+  visitorFaster():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorFaster());}
+  visitorRestart():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorRestart());}
+  visitorFloor(level:number):void {this.zone.runOutsideAngular(()=>this.viewer?.visitorFloor(level));}
   hasInterior(id:string):boolean{return this.interiorHalls().some(h=>h.id===id);}
   isWalking(id:string):boolean{return this.interior().walking&&this.interior().hall===id;}
   roomsFor(id:string){return this.interiorHalls().find(h=>h.id===id)?.rooms??[];}
