@@ -425,7 +425,7 @@ export class FullDemoService {
   private async newHall(run: number): Promise<void> {
     const { slug } = this.host;
     if (this.made.hallId) return;
-    this.explain(run, 'Making a new hall in this venue, named â€œDemo hallâ€â€¦');
+    this.explain(run, 'Making a new hall in this venue, named “Demo hall”…');
     const halls = await this.call(run, this.venues.halls(slug, this.made.venueId));
     const taken = new Set(halls.map((h) => h.name.toLowerCase()));
     let name = 'Demo hall';
@@ -442,7 +442,7 @@ export class FullDemoService {
       }),
     );
     this.made = { ...this.made, hallId: hall.id, hallName: hall.name, hallVersion: hall.currentVersion };
-    this.explain(run, `â€œ${hall.name}â€ is made: an empty ${hall.width} Ã— ${hall.depth} m floor.`);
+    this.explain(run, `“${hall.name}” is made: an empty ${hall.width} × ${hall.depth} m floor.`);
   }
 
   /**
@@ -458,12 +458,12 @@ export class FullDemoService {
     const { slug, eventId } = this.host;
     const hallId = this.made.hallId!;
     if (!this.made.inEvent) {
-      this.explain(run, `Adding â€œ${this.made.hallName}â€ to this eventâ€¦`);
+      this.explain(run, `Adding “${this.made.hallName}” to this event…`);
       await this.call(run, this.events.addHalls(slug, eventId, [hallId]));
       this.made = { ...this.made, inEvent: true };
     }
     if (this.host.store.view()?.hall.hall.hallId !== hallId) {
-      this.explain(run, `Opening â€œ${this.made.hallName}â€ in the plannerâ€¦`);
+      this.explain(run, `Opening “${this.made.hallName}” in the planner…`);
       this.working.set(true);
       const moved = await this.host.openHall(hallId);
       this.alive(run);
@@ -474,7 +474,7 @@ export class FullDemoService {
     const floor = this.host.store.floor();
     this.explain(
       run,
-      `The drawing is the floor of â€œ${this.made.hallName}â€: ${floor?.width ?? 0} Ã— ${floor?.depth ?? 0} m, ` +
+      `The drawing is the floor of “${this.made.hallName}”: ${floor?.width ?? 0} × ${floor?.depth ?? 0} m, ` +
         `${floor?.pillars.length ?? 0} columns, walls and exits.`,
     );
     await this.wait(run, PACE[this.config.speed].short);
@@ -491,7 +491,7 @@ export class FullDemoService {
     );
     const page = doc.pages[0];
     if (!page) throw new Error('The drawing reader found no page in the sample.');
-    this.explain(run, 'Reviewing the drawing: hall outline, walls, columns and exitsâ€¦');
+    this.explain(run, 'Reviewing the drawing: hall outline, walls, columns and exits…');
     // The reader keeps the drawing's own units; the sample spans the hall exactly.
     const perUnit = SAMPLE.width / page.width;
     const regionId = 'demo-hall';
@@ -561,7 +561,7 @@ export class FullDemoService {
       return;
     }
     throw new NeedsInput(
-      `â€œ${file.name}â€ needs a person's review: ${
+      `“${file.name}” needs a person's review: ${
         halls.length === 1
           ? halls[0].checks
               .filter((c) => c.status !== 'pass')
@@ -569,20 +569,20 @@ export class FullDemoService {
               .slice(0, 3)
               .join(', ')
           : `${doc.halls.length} halls were found`
-      }. Open the review, save the hall into â€œ${this.made.hallName}â€, then Continue.`,
+      }. Open the review, save the hall into “${this.made.hallName}”, then Continue.`,
       ['/', this.host.slug, 'venues', this.made.venueId, 'import-floor-plan'],
       { document: doc.id },
     );
   }
 
   private async uploadAndRead(run: number, file: File, fresh: boolean): Promise<PlanView> {
-    this.explain(run, `Uploading â€œ${file.name}â€ to the floor-plan importâ€¦`);
+    this.explain(run, `Uploading “${file.name}” to the floor-plan import…`);
     const { id } = await this.call(
       run,
       this.floorPlans.upload(this.host.slug, this.made.venueId, file, fresh),
     );
     this.made = { ...this.made, documentId: id };
-    this.explain(run, 'The drawing reader is finding the hall, walls, columns and exitsâ€¦');
+    this.explain(run, 'The drawing reader is finding the hall, walls, columns and exits…');
     return this.read(run, id);
   }
 
@@ -622,7 +622,7 @@ export class FullDemoService {
     if (blocking.length) {
       throw new Error(`The drawing's review is not complete: ${blocking.map((c) => c.label).join(', ')}.`);
     }
-    this.explain(run, `Saving the drawing as the floor of â€œ${this.made.hallName}â€â€¦`);
+    this.explain(run, `Saving the drawing as the floor of “${this.made.hallName}”…`);
     const hallId = this.made.hallId!;
     const [result] = await this.call(
       run,
@@ -654,7 +654,7 @@ export class FullDemoService {
     if (!floor) throw new Error('The hall floor is not loaded.');
     const rects = zoneGrid(floor, this.passage());
     if (!rects.length) throw new Error('The floor has no room for zones.');
-    this.explain(run, `Dividing the floor into ${rects.length} zones with aisles between themâ€¦`);
+    this.explain(run, `Dividing the floor into ${rects.length} zones with aisles between them…`);
     const zones: PlanZone[] = rects.map((r, i) => ({
       id: newId(),
       name: `Zone ${letters(i)}`,
@@ -684,7 +684,7 @@ export class FullDemoService {
       if (!floor) throw new Error('The hall floor is not loaded.');
       const plan = store.plan();
       if (plan.stalls.some((s) => s.zoneId === zone.id)) continue;
-      this.explain(run, `Filling ${zone.name} with 3 Ã— 3 m booths, each open onto an aisleâ€¦`);
+      this.explain(run, `Filling ${zone.name} with 3 × 3 m booths, each open onto an aisle…`);
       const places = fillBooths(
         {
           region: zone.polygon,
@@ -712,7 +712,7 @@ export class FullDemoService {
       await this.wait(run, PACE[this.config.speed].short);
     }
     if (!store.plan().stalls.length) {
-      throw new Error('No booth fitted the zones under this hallâ€™s rules.');
+      throw new Error('No booth fitted the zones under this hall’s rules.');
     }
     this.explain(
       run,
@@ -774,7 +774,7 @@ export class FullDemoService {
     };
     this.explain(
       run,
-      `Booth ${label}: premium, raw space` + (category ? `, sells â€œ${category.name}â€` : '') + 'â€¦',
+      `Booth ${label}: premium, raw space` + (category ? `, sells “${category.name}”` : '') + '…',
     );
     const plan = store.plan();
     const ok = await this.op(run, () =>
@@ -792,7 +792,7 @@ export class FullDemoService {
   private async save(run: number): Promise<void> {
     const store = this.host.store;
     if (!store.dirty() && store.revision() > 0) return;
-    this.explain(run, 'Saving the stall planâ€¦');
+    this.explain(run, 'Saving the stall plan…');
     const ok = await this.op(run, () => store.save());
     if (!ok) throw new Error('The plan was not saved: the message above says why.');
     this.explain(run, `Saved as version ${store.revision()}.`);
@@ -802,7 +802,7 @@ export class FullDemoService {
   private async publish(run: number): Promise<void> {
     const store = this.host.store;
     if (!this.config.alsoPublish) {
-      this.skip(run, 'Skipped: â€œAlso publish the demo hallâ€ was not chosen.');
+      this.skip(run, 'Skipped: “Also publish the demo hall” was not chosen.');
       return;
     }
     if (!store.view()?.canPublish) {
@@ -810,7 +810,7 @@ export class FullDemoService {
       return;
     }
     if (store.upToDate()) return;
-    this.explain(run, `Publishing version ${store.revision()}; the rules are checked once moreâ€¦`);
+    this.explain(run, `Publishing version ${store.revision()}; the rules are checked once more…`);
     const ok = await this.op(run, () => store.publish());
     if (!ok) throw new Error('The plan was not published: the message above says why.');
     this.explain(run, `Version ${store.published()?.revision} is published.`);
@@ -842,7 +842,7 @@ export class FullDemoService {
   private async open3d(run: number): Promise<void> {
     const canvas = this.host.canvas();
     if (!canvas) throw new Error('The planner view is not ready.');
-    this.explain(run, 'Opening the hall in 3D: walls, columns and booths stand upâ€¦');
+    this.explain(run, 'Opening the hall in 3D: walls, columns and booths stand up…');
     this.host.store.select(null);
     canvas.enter3d(ORBIT_FROM);
     await this.until(run, () => canvas.is3d());
@@ -853,7 +853,7 @@ export class FullDemoService {
     const canvas = this.host.canvas();
     if (!canvas) throw new Error('The planner view is not ready.');
     if (!canvas.is3d()) canvas.enter3d(ORBIT_FROM);
-    this.explain(run, 'A camera tour round the hallâ€¦');
+    this.explain(run, 'A camera tour round the hall…');
     this.skipWait = false;
     const total = PACE[this.config.speed].orbit;
     await new Promise<void>((resolve) => {
@@ -892,7 +892,7 @@ export class FullDemoService {
     this.currentIndex.set(-1);
     this.explanation.set('');
     this.state.set('finished');
-    this.notifier.success(`The demo is done: â€œ${this.made.hallName}â€ is ready.`);
+    this.notifier.success(`The demo is done: “${this.made.hallName}” is ready.`);
   }
 
   // ---- helpers --------------------------------------------------------------------------------

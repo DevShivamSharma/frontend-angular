@@ -42,6 +42,7 @@ import {
 import { AutoSeatsData, AutoSeatsDialogComponent } from './auto-seats-dialog.component';
 import { FullDemoDialogComponent } from './full-demo-dialog.component';
 import { FullDemoPanelComponent } from './full-demo-panel.component';
+import { PlannerAssistantComponent } from './planner-assistant.component';
 import { DemoConfig, FullDemoService } from './full-demo.service';
 import {
   DrawObjectEvent,
@@ -136,6 +137,7 @@ const OBJECT_COLOR = '#334155';
     PlannerPropertiesComponent,
     TourOverlayComponent,
     FullDemoPanelComponent,
+    PlannerAssistantComponent,
   ],
   providers: [PlannerStore, TourService, FullDemoService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -888,9 +890,23 @@ const OBJECT_COLOR = '#334155';
                 }
               </section>
             }
-            <button type="button" class="ai soon" aria-disabled="true" pTooltip="Coming soon">
-              <app-icon name="auto_awesome" />AI Assistant
-            </button>
+            @if (assistantOpen()) {
+              <app-planner-assistant
+                [slug]="slug()"
+                [eventId]="eventId()"
+                [hallId]="hallId()"
+                (closed)="assistantOpen.set(false)"
+              />
+            } @else {
+              <button
+                type="button"
+                class="ai"
+                (click)="assistantOpen.set(true)"
+                pTooltip="Ask about this hall, typed or spoken"
+              >
+                <app-icon name="auto_awesome" />AI Assistant
+              </button>
+            }
           </div>
 
           @if (rightOpen()) {
@@ -1514,6 +1530,7 @@ export class PlannerPageComponent {
   protected readonly rightOpen = signal(true);
   protected readonly zonesOpen = signal(true);
   protected readonly tourOpen = signal(true);
+  protected readonly assistantOpen = signal(false);
   protected readonly fullscreen = signal(false);
   protected readonly treeQuery = signal('');
   protected readonly splitView = signal(false);
