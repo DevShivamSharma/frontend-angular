@@ -33,9 +33,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       gap: 8px;
       flex-wrap: wrap;
     }
-      .white{
-      color: white !important;
-      }
   `,
 })
 export class PageHeaderComponent {

@@ -199,19 +199,6 @@ export function centre(r: Rect): Point {
   return [r.x + r.width / 2, r.y + r.height / 2];
 }
 
-/** Where the hall's ways out are: entry areas and helper cards that show an exit. */
-export function exitPoints(f: HallFloor): Point[] {
-  const fromAreas: Point[] = f.geometry
-    ? f.geometry.objects
-        .filter((o) => o.kind === 'entry')
-        .flatMap((o) => o.geometry.map((p) => centre(ringBox(p[0]))))
-    : f.areas.filter((a) => a.kind === 'entry').map((a) => centre(a));
-  const fromCards: Point[] = (f.iconGroups ?? [])
-    .filter((g) => g.icons.some((i) => i.kind === 'emergency-exit'))
-    .map((g) => [g.x, g.y]);
-  return [...fromAreas, ...fromCards];
-}
-
 // ---- drawings -------------------------------------------------------------------------------
 
 /** Metres a line of drawing text is tall; its width follows the text. */

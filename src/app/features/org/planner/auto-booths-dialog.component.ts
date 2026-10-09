@@ -18,13 +18,12 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 
-import type { PlanStall, StallScheme } from '../../../core/plans/plans.models';
+import type { PlanStall, StallScheme, StallSide } from '../../../core/plans/plans.models';
 import type { Point } from '../../../core/venues/floor-plan.models';
 import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
 import { IconComponent } from '../../../shared/icon.component';
 import {
   centre,
-  DEFAULT_OPEN,
   fillBooths,
   newId,
   NumberStyle,
@@ -686,6 +685,10 @@ export class AutoBoothsDialogComponent {
       this.startAt(),
     );
     const zones = this.store.plan().zones;
+    // Rows open towards each other in pairs: the first onto the aisle below it, the next onto
+    // the same aisle above it. So no open side faces the closed side of the row across.
+    const rows = [...new Set(places.map((r) => r.y))].sort((a, b) => a - b);
+    const facing = (r: Rect): StallSide[] => (rows.indexOf(r.y) % 2 ? ['top'] : ['bottom']);
     return places.map((r, i) => ({
       id: r.id,
       zoneId: zoneAt(centre(r), zones)?.id ?? null,
@@ -695,7 +698,7 @@ export class AutoBoothsDialogComponent {
       y: r.y,
       width: r.width,
       depth: r.height,
-      openSides: [...DEFAULT_OPEN],
+      openSides: facing(r),
       scheme: this.scheme(),
       categoryIds: [...this.categoryIds()],
       isPremium: false,

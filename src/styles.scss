@@ -1,6 +1,12 @@
 @use 'primeicons/primeicons.css';
 
 /*
+ * Layer order: our element defaults first, PrimeNG's components over them. Rules outside any
+ * layer (the rest of this file) still win over both, so component touches below apply.
+ */
+@layer base, primeng;
+
+/*
  * The platform look. Colours are `--app-*` tokens that ThemeService computes from an
  * organisation's colour at runtime (and PrimeNG's primary palette with them); its font
  * replaces --app-font-family. Every component below reads only these tokens.
@@ -45,8 +51,11 @@ h3 {
   margin: 0;
 }
 
-a {
-  color: var(--app-primary);
+/* In the base layer, so a link styled as a button (`<a pButton>`) keeps its button colours. */
+@layer base {
+  a {
+    color: var(--app-primary);
+  }
 }
 
 /* Keyboard focus is always visible. */
@@ -384,12 +393,5 @@ a {
   .dialog-content,
   .dialog-actions {
     padding-inline: 16px;
-  }
-}
-
-.white {
-  color: white !important;
-  .p-button-label {
-    color: white !important;
   }
 }

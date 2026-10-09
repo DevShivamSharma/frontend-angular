@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -46,12 +46,10 @@ import {
   PickEvent,
   PlannerCanvasComponent,
   PlannerTool,
-  WayOutPath,
 } from './planner-canvas.component';
 import {
   centre,
   DEFAULT_OPEN,
-  exitPoints,
   newId,
   objectOutline,
   pointInRing,
@@ -68,6 +66,10 @@ import {
 } from './planner-geometry';
 import { PlannerPropertiesComponent, StallPatch } from './planner-properties.component';
 import { PlannerStore } from './planner.store';
+import { PlannerTourCtx, plannerTour } from './planner-tour';
+import { TourOverlayComponent } from '../../../shared/tour/tour-overlay.component';
+import { TourService } from '../../../shared/tour/tour.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { RowData, RowDialogComponent } from './row-dialog.component';
 import { ScaleData, ScaleDialogComponent } from './scale-dialog.component';
 import { SeatsData, SeatsDialogComponent } from './seats-dialog.component';
@@ -120,6 +122,7 @@ const OBJECT_COLOR = '#334155';
 @Component({
   selector: 'app-planner-page',
   imports: [
+    DatePipe,
     DecimalPipe,
     RouterLink,
     ButtonModule,
@@ -128,14 +131,16 @@ const OBJECT_COLOR = '#334155';
     IconComponent,
     PlannerCanvasComponent,
     PlannerPropertiesComponent,
+    TourOverlayComponent,
   ],
-  providers: [PlannerStore],
+  providers: [PlannerStore, TourService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (store.view(); as v) {
       @let ro = !canEdit();
       @let noStalls = !store.selectedStalls().length || ro || store.busy();
       <div class="planner">
+        <app-tour-overlay />
         <nav class="ribbon" aria-label="Tools">
           <div class="group">
             <div class="tools">
@@ -171,6 +176,7 @@ const OBJECT_COLOR = '#334155';
           <div class="group">
             <div class="tools">
               <button
+                data-tour="zone-tool"
                 type="button"
                 class="tool"
                 [class.on]="tool() === 'zone-rect'"
@@ -184,9 +190,10 @@ const OBJECT_COLOR = '#334155';
             </div>
             <span class="group-label"></span>
           </div>
-          <div class="group">
+          <div class="group" data-tour="fill-group">
             <div class="tools">
               <button
+                data-tour="booth-tool"
                 type="button"
                 class="tool"
                 [class.on]="tool() === 'booth'"
@@ -231,6 +238,7 @@ const OBJECT_COLOR = '#334155';
           <div class="group">
             <div class="tools">
               <button
+                data-tour="select-tool"
                 type="button"
                 class="tool"
                 [class.on]="tool() === 'select'"
@@ -282,7 +290,7 @@ const OBJECT_COLOR = '#334155';
             </div>
             <span class="group-label">Draw</span>
           </div>
-          <div class="group">
+          <div class="group" data-tour="modify-group">
             <div class="tools">
               <button
                 type="button"
@@ -296,6 +304,7 @@ const OBJECT_COLOR = '#334155';
               </button>
               <div class="col">
                 <button
+                  data-tour="copy"
                   type="button"
                   class="mini"
                   (click)="copySelection()"
@@ -405,6 +414,7 @@ const OBJECT_COLOR = '#334155';
               </div>
               <div class="col">
                 <button
+                  data-tour="undo"
                   type="button"
                   class="mini"
                   (click)="store.undo()"
@@ -426,7 +436,7 @@ const OBJECT_COLOR = '#334155';
             </div>
             <span class="group-label">Modify</span>
           </div>
-          <div class="group">
+          <div class="group" data-tour="measure-group">
             <div class="tools">
               <div class="col">
                 <button
@@ -519,16 +529,6 @@ const OBJECT_COLOR = '#334155';
                 >
                   <app-icon name="label" /><span>Labels</span>
                 </button>
-                <button
-                  type="button"
-                  class="mini toggle"
-                  [class.on]="wayOutOn()"
-                  (click)="toggleWayOut()"
-                  [attr.aria-pressed]="wayOutOn()"
-                  pTooltip="Each booth's straight distance to the nearest exit"
-                >
-                  <app-icon name="way_out" /><span>Way out</span>
-                </button>
               </div>
             </div>
             <span class="group-label">View</span>
@@ -539,9 +539,8 @@ const OBJECT_COLOR = '#334155';
                 <button
                   type="button"
                   class="mini"
-                  [class.on]="tourOpen()"
-                  (click)="tourOpen.set(!tourOpen())"
-                  [attr.aria-pressed]="tourOpen()"
+                  (click)="help()"
+                  [pTooltip]="tourFor() ? 'Help & guided tour' : 'Help'"
                 >
                   <app-icon name="help" /><span>Help</span>
                 </button>
@@ -559,7 +558,7 @@ const OBJECT_COLOR = '#334155';
             <span class="group-label">Window</span>
           </div>
           <span class="spacer"></span>
-          <div class="actions">
+          <div class="actions" data-tour="save-publish">
             @if (canEdit()) {
               <button
                 pButton
@@ -574,9 +573,25 @@ const OBJECT_COLOR = '#334155';
                 }}
               </button>
             }
-            <button type="button" class="publish soon" aria-disabled="true" pTooltip="Coming soon">
-              <app-icon name="check_circle" />Publish
-            </button>
+            @if (v.canPublish) {
+              <button
+                type="button"
+                class="publish"
+                [class.done]="store.upToDate()"
+                (click)="publish()"
+                [disabled]="store.busy() || store.dirty() || !store.revision() || store.upToDate()"
+                [pTooltip]="publishTip()"
+              >
+                <app-icon name="check_circle" />{{ store.upToDate() ? 'Published' : 'Publish' }}
+              </button>
+            } @else if (store.published(); as p) {
+              <span
+                class="published-note"
+                [pTooltip]="'Published ' + (p.at | date: 'd MMM y, HH:mm')"
+              >
+                <app-icon name="check_circle" />Published v{{ p.revision }}
+              </span>
+            }
           </div>
         </nav>
         @if (ro) {
@@ -591,7 +606,7 @@ const OBJECT_COLOR = '#334155';
 
         <div class="body" [class.no-left]="!leftOpen()" [class.no-right]="!rightOpen()">
           @if (leftOpen()) {
-            <aside class="side left" aria-label="Plan">
+            <aside class="side left" aria-label="Plan" data-tour="plan-panel">
               <div class="side-head">
                 <h2>Plan</h2>
                 <button
@@ -762,6 +777,7 @@ const OBJECT_COLOR = '#334155';
           <div class="stage" [class.split]="splitView()">
             <app-planner-canvas
               #canvas
+              data-tour="canvas"
               class="canvas"
               [floor]="v.hall.floor"
               [plan]="store.plan()"
@@ -772,7 +788,6 @@ const OBJECT_COLOR = '#334155';
               [readonly]="ro"
               [showGrid]="showGrid()"
               [showLabels]="showLabels()"
-              [wayOut]="wayOut()"
               (drawRect)="drawn($event)"
               (drawPolygon)="zoneFromPolygon($event)"
               (drawObject)="addObject($event)"
@@ -793,7 +808,6 @@ const OBJECT_COLOR = '#334155';
                 [readonly]="true"
                 [showGrid]="showGrid()"
                 [showLabels]="showLabels()"
-                [wayOut]="wayOut()"
               />
             }
             @if (!leftOpen()) {
@@ -828,11 +842,23 @@ const OBJECT_COLOR = '#334155';
                 <app-icon name="expand_more" class="chev" [class.open]="tourOpen()" />
               </button>
               @if (tourOpen()) {
-                <p class="small">
-                  Mark areas with <b>Zone</b> or <b>Polygon</b>, place stalls with <b>Booth</b> or
-                  <b>Auto-booths</b>, then <b>Save</b>. Every change is checked against this hall's
-                  rules.
-                </p>
+                @if (tourFor()) {
+                  <p class="small">
+                    New here, or showing someone round? The guided tour takes you step by step: it
+                    lights up one thing, you do it, and it moves on by itself.
+                  </p>
+                  <div class="tour-actions">
+                    <button pButton type="button" (click)="startTour()">
+                      <app-icon name="play" />Start the guided tour
+                    </button>
+                  </div>
+                } @else {
+                  <p class="small">
+                    Mark areas with <b>Zone</b> or <b>Polygon</b>, place stalls with <b>Booth</b> or
+                    <b>Auto-booths</b>, then <b>Save</b>. Every change is checked against this
+                    hall's rules.
+                  </p>
+                }
               }
             </section>
             <button type="button" class="ai soon" aria-disabled="true" pTooltip="Coming soon">
@@ -1037,6 +1063,23 @@ const OBJECT_COLOR = '#334155';
     .save.saved {
       --p-button-primary-background: #94a3b8;
       --p-button-primary-border-color: #94a3b8;
+    }
+    .publish:disabled:not(.done) {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .publish:not(:disabled) {
+      cursor: pointer;
+    }
+    .publish.done {
+      background: #16a34a;
+    }
+    .published-note {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #15803d;
+      font: var(--app-label-large);
     }
     .publish {
       display: flex;
@@ -1282,6 +1325,11 @@ const OBJECT_COLOR = '#334155';
     .tour-head b {
       flex: 1;
     }
+    .tour-actions {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0 2px 30px;
+    }
     .tour p {
       margin: 6px 0 0 30px;
       color: #334155;
@@ -1420,7 +1468,12 @@ export class PlannerPageComponent {
   private readonly notifier = inject(Notifier);
   private readonly confirm = inject(ConfirmService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  protected readonly slug = inject(OrgContextStore).slug;
+  private readonly context = inject(OrgContextStore);
+  protected readonly slug = this.context.slug;
+  private readonly auth = inject(AuthService);
+  protected readonly tour = inject<TourService<PlannerTourCtx>>(TourService);
+  /** The guided tour is for the organiser's admin and architect. */
+  protected readonly tourFor = computed(() => this.context.eventScoped());
   private readonly canvas = viewChild<PlannerCanvasComponent>('canvas');
 
   protected readonly tool = signal<PlannerTool>('select');
@@ -1435,7 +1488,6 @@ export class PlannerPageComponent {
   protected readonly fullscreen = signal(false);
   protected readonly treeQuery = signal('');
   protected readonly splitView = signal(false);
-  protected readonly wayOutOn = signal(false);
 
   /** Line, Rect, Circle and Polyline, two to a column as the ribbon shows them. */
   protected readonly drawTools: Array<
@@ -1455,24 +1507,6 @@ export class PlannerPageComponent {
   protected readonly canMakeBooth = computed(() => {
     const objects = this.store.selectedObjects();
     return !!this.store.selectedZone() || (objects.length === 1 && objects[0].kind === 'rect');
-  });
-  /** Way out: from each booth's middle straight to the nearest exit of the hall. */
-  protected readonly wayOut = computed<WayOutPath[]>(() => {
-    const v = this.store.view();
-    if (!this.wayOutOn() || !v) return [];
-    const exits = exitPoints(v.hall.floor);
-    if (!exits.length) return [];
-    return this.store.plan().stalls.map((s) => {
-      const from = centre(stallRect(s));
-      let to = exits[0];
-      for (const e of exits) {
-        if (
-          Math.hypot(e[0] - from[0], e[1] - from[1]) < Math.hypot(to[0] - from[0], to[1] - from[1])
-        )
-          to = e;
-      }
-      return { from, to, metres: Math.hypot(to[0] - from[0], to[1] - from[1]) };
-    });
   });
 
   /** The 1 m grid profile asks for whole metres; else half-metre steps. */
@@ -1527,6 +1561,7 @@ export class PlannerPageComponent {
     try {
       const view = await firstValueFrom(this.api.get(this.slug(), eventId, hallId));
       this.store.load(this.slug(), eventId, hallId, view);
+      this.autoTour();
     } catch {
       // The error interceptor has shown it.
     }
@@ -1557,6 +1592,8 @@ export class PlannerPageComponent {
   protected key(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
     if (target?.closest('input, textarea, select, [contenteditable], .p-dialog')) return;
+    // The tour has the keyboard on its info steps; on "Your turn" steps shortcuts work.
+    if (this.tour.active() && !this.tour.step()?.action) return;
     if (!this.canEdit()) return;
     const ctrl = e.ctrlKey || e.metaKey;
     const canvas = this.canvas();
@@ -1567,6 +1604,13 @@ export class PlannerPageComponent {
     } else if (ctrl && e.key.toLowerCase() === 'y') {
       e.preventDefault();
       this.store.redo();
+    } else if (ctrl && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      void this.copySelection();
+    } else if (!ctrl && e.key === '3') {
+      canvas?.enter3d();
+    } else if (!ctrl && e.key === '2') {
+      canvas?.leave3d();
     } else if (ctrl && e.key.toLowerCase() === 's') {
       e.preventDefault();
       void this.save();
@@ -1618,15 +1662,6 @@ export class PlannerPageComponent {
   protected toggleFullscreen(): void {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void this.host.nativeElement.requestFullscreen();
-  }
-
-  protected toggleWayOut(): void {
-    const v = this.store.view();
-    if (!this.wayOutOn() && v && !exitPoints(v.hall.floor).length) {
-      this.notifier.warn('This hall has no exits marked: add an entry area or an exit helper.');
-      return;
-    }
-    this.wayOutOn.set(!this.wayOutOn());
   }
 
   // ---- import and export --------------------------------------------------------------------
@@ -1746,7 +1781,7 @@ export class PlannerPageComponent {
     void this.addBooth({ x: at[0] - 1.5, y: at[1] - 1.5, width: 3, height: 3 });
   }
 
-  private async addZone(polygon: Point[]): Promise<void> {
+  private async addZone(polygon: Point[]): Promise<boolean> {
     const plan = this.store.plan();
     const zone: PlanZone = {
       id: newId(),
@@ -1764,7 +1799,9 @@ export class PlannerPageComponent {
     };
     if (await this.store.change(next, [zone.id], { kind: 'zone', ids: [zone.id] })) {
       this.tool.set('select');
+      return true;
     }
+    return false;
   }
 
   private async addBooth(r: {
@@ -1772,11 +1809,11 @@ export class PlannerPageComponent {
     y: number;
     width: number;
     height: number;
-  }): Promise<void> {
+  }): Promise<boolean> {
     const plan = this.store.plan();
     const [number] = stallNumbers(plan.stalls, null, 'numbers', 1, '');
     const stall = this.newStall(r, number);
-    await this.store.change({ ...plan, stalls: [...plan.stalls, stall] }, [stall.id], {
+    return this.store.change({ ...plan, stalls: [...plan.stalls, stall] }, [stall.id], {
       kind: 'stall',
       ids: [stall.id],
     });
@@ -2339,6 +2376,132 @@ export class PlannerPageComponent {
     } else {
       this.notifier.success(`${name(result.added)} added.`);
     }
+  }
+
+  /** What Publish does now, or why it cannot. */
+  protected readonly publishTip = computed(() => {
+    const p = this.store.published();
+    if (this.store.dirty()) return 'Save your changes first: the saved plan is what is published';
+    if (!this.store.revision()) return 'Save the plan first';
+    if (this.store.upToDate()) return `Version ${p!.revision} is published`;
+    return p
+      ? `Publish version ${this.store.revision()} (version ${p.revision} is published now)`
+      : `Publish version ${this.store.revision()}; the rules are checked once more`;
+  });
+
+  protected async publish(): Promise<void> {
+    const p = this.store.published();
+    const ok = await this.confirm.confirm({
+      title: 'Publish the stall plan?',
+      message: p
+        ? `Version ${this.store.revision()} replaces version ${p.revision} as the published plan of this hall.`
+        : `Version ${this.store.revision()} becomes the published plan of this hall. You can keep drawing and publish again later.`,
+      confirmLabel: 'Publish',
+    });
+    if (ok) await this.store.publish();
+  }
+
+  // ---- guided tour --------------------------------------------------------------------------
+
+  /** Help: the tour for organisers; for the venue's team, the help card. */
+  protected help(): void {
+    if (this.tourFor()) this.startTour();
+    else this.tourOpen.set(!this.tourOpen());
+  }
+
+  /**
+   * Runs the guided tour. What the tour makes is what was not on the plan when it started; the
+   * last step offers to remove it, which also leaves the plan unsaved-free if it was before.
+   */
+  protected startTour(): void {
+    if (this.tour.active() || !this.store.view()) return;
+    const start = this.store.plan();
+    const startDirty = this.store.dirty();
+    const known = new Set(
+      [...start.zones, ...start.stalls, ...start.seats, ...start.objects].map((i) => i.id),
+    );
+    const fresh = <T extends { id: string }>(list: T[]) => list.filter((i) => !known.has(i.id));
+    const ctx: PlannerTourCtx = {
+      store: this.store,
+      tool: this.tool,
+      setTool: (tool) => this.setTool(tool),
+      is3d: () => this.canvas()?.is3d() ?? false,
+      enter3d: () => this.canvas()?.enter3d(),
+      leave3d: () => this.canvas()?.leave3d(),
+      openPlanPanel: () => this.leftOpen.set(true),
+      openProperties: () => this.rightOpen.set(true),
+      madeStalls: () => fresh(this.store.plan().stalls),
+      madeZones: () => fresh(this.store.plan().zones),
+      memo: {},
+    };
+    this.tourOpen.set(false);
+    this.tour.start(plannerTour(this.canEdit()), ctx, {
+      onEnd: (reason) => {
+        this.tourSeen(reason === 'skip');
+        this.tourOpen.set(true);
+        this.tool.set('select');
+      },
+      made: () => {
+        const p = this.store.plan();
+        const parts = [
+          [fresh(p.stalls).length, 'booth'],
+          [fresh(p.zones).length, 'zone'],
+          [fresh(p.seats).length, 'seat'],
+          [fresh(p.objects).length, 'drawing'],
+        ] as const;
+        const text = parts
+          .filter(([n]) => n)
+          .map(([n, what]) => `${n} ${what}${n === 1 ? '' : 's'}`)
+          .join(', ');
+        return text || null;
+      },
+      removeMade: () => {
+        const p = this.store.plan();
+        const out = <T extends { id: string; zoneId: string | null }>(i: T): T =>
+          i.zoneId && !known.has(i.zoneId) ? { ...i, zoneId: null } : i;
+        this.store.remove({
+          zones: p.zones.filter((z) => known.has(z.id)),
+          stalls: p.stalls.filter((s) => known.has(s.id)).map(out),
+          seats: p.seats.filter((s) => known.has(s.id)).map(out),
+          objects: p.objects.filter((o) => known.has(o.id)),
+        });
+        // Back to the plan as it was: nothing new to save.
+        if (!startDirty && JSON.stringify(this.store.plan()) === JSON.stringify(start)) {
+          this.store.dirty.set(false);
+        }
+      },
+    });
+  }
+
+  private tourKeys(): { seen: string; off: string } | null {
+    const user = this.auth.user()?.id;
+    return user
+      ? { seen: `vpTourSeen:${user}:stall-planner:${this.slug()}`, off: `vpTourAutoOff:${user}` }
+      : null;
+  }
+
+  /** Remembers the tour was seen here; "Skip the tour" also stops it opening by itself. */
+  private tourSeen(off: boolean): void {
+    const keys = this.tourKeys();
+    if (!keys) return;
+    try {
+      localStorage.setItem(keys.seen, '1');
+      if (off) localStorage.setItem(keys.off, '1');
+    } catch {
+      // Storage refused: the tour may open again next time.
+    }
+  }
+
+  /** Opens the tour by itself the first time an organiser opens a planner. */
+  private autoTour(): void {
+    const keys = this.tourKeys();
+    if (!this.tourFor() || !this.canEdit() || !keys) return;
+    try {
+      if (localStorage.getItem(keys.seen) || localStorage.getItem(keys.off)) return;
+    } catch {
+      return;
+    }
+    setTimeout(() => this.startTour(), 400);
   }
 
   protected async save(): Promise<void> {

@@ -11,6 +11,7 @@ import type {
   PlanSeat,
   PlanStall,
   PlanZone,
+  StallPlanView,
 } from '../../../core/plans/plans.models';
 import { Notifier } from '../../../core/ui/notifier.service';
 import { plannerFloor, PlannerFloor } from './planner-geometry';
@@ -42,6 +43,12 @@ export class PlannerStore {
   readonly plan = signal<PlanContent>(EMPTY);
   readonly selection = signal<Selection | null>(null);
   readonly revision = signal(0);
+  /** The published revision, if any. */
+  readonly published = signal<StallPlanView['published']>(null);
+  /** Saved, and that saved revision is the published one. */
+  readonly upToDate = computed(
+    () => !this.dirty() && this.revision() > 0 && this.published()?.revision === this.revision(),
+  );
   readonly dirty = signal(false);
   /** Goes up when a change is refused, so fields that showed it go back to the plan. */
   readonly refused = signal(0);
@@ -72,6 +79,7 @@ export class PlannerStore {
   load(slug: string, eventId: string, hallId: string, view: PlannerView): void {
     this.target = { slug, eventId, hallId };
     this.view.set(view);
+    this.published.set(view.plan.published);
     const { zones, stalls, seats, revision } = view.plan;
     // A plan saved before drawings existed has none.
     const objects = view.plan.objects ?? [];
@@ -198,6 +206,23 @@ export class PlannerStore {
       this.revision.set(saved.revision);
       this.dirty.set(false);
       this.notifier.success('Stall plan saved.');
+      return true;
+    } catch {
+      // The error interceptor has shown it.
+      return false;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Publishes the saved plan, after the server checks it against the rules again. */
+  async publish(): Promise<boolean> {
+    const { slug, eventId, hallId } = this.target;
+    this.busy.set(true);
+    try {
+      const done = await firstValueFrom(this.api.publish(slug, eventId, hallId, this.revision()));
+      this.published.set(done.published);
+      this.notifier.success(`Stall plan published (version ${done.revision}).`);
       return true;
     } catch {
       // The error interceptor has shown it.

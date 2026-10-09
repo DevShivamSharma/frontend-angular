@@ -14,8 +14,8 @@ const hallFloor = {
     { kind: 'passage', x: 0, y: 0, width: 4, height: 30, label: 'Passage' },
     { kind: 'column', x: 19.5, y: 14.5, width: 1, height: 1, label: 'Pillar' },
   ],
-  labels: [],
-  iconGroups: [],
+  labels: [{ text: 'HALL 5 — ELECTRONICS', x: 24, y: 2, width: 12, height: 1.5 }],
+  iconGroups: [{ x: 30, y: 26, width: 6, height: 2, icons: [{ kind: 'toilet', label: 'Toilet' }] }],
   north: null,
   legend: [],
 };
@@ -25,6 +25,7 @@ const switches = { hallBoundary: true, stallOverlap: true, PASSAGE: true };
 async function mockPlanner(page: Page, eventScoped = false) {
   const saves: any[] = [];
   const checks: any[] = [];
+  const publishes: number[] = [];
   await page.route('**/api/**', async (route) => {
     const req = route.request();
     const path = new URL(req.url()).pathname;
@@ -81,6 +82,17 @@ async function mockPlanner(page: Page, eventScoped = false) {
         }));
       return route.fulfill({ json: { findings } });
     }
+    if (path.endsWith('/plan/publish')) {
+      const { revision } = req.postDataJSON();
+      publishes.push(revision);
+      return route.fulfill({
+        json: {
+          ...saves[saves.length - 1],
+          revision,
+          published: { revision, at: '2026-10-09T10:00:00Z' },
+        },
+      });
+    }
     if (path.endsWith('/plan') && req.method() === 'PUT') {
       const body = req.postDataJSON();
       saves.push(body);
@@ -93,7 +105,16 @@ async function mockPlanner(page: Page, eventScoped = false) {
         json: {
           canEdit: true,
           readOnlyReason: null,
-          plan: { revision: 0, updatedAt: null, zones: [], stalls: [], seats: [] },
+          canPublish: true,
+          plan: {
+            revision: 0,
+            updatedAt: null,
+            published: null,
+            zones: [],
+            stalls: [],
+            seats: [],
+            objects: [],
+          },
           hall: {
             event: { id: 'ev', name: 'IITF 2026', kind: 'internal', audience: 'B2B' },
             hall: {
@@ -127,7 +148,7 @@ async function mockPlanner(page: Page, eventScoped = false) {
       });
     return route.fulfill({ status: 404, json: { message: 'Not mocked ' + path } });
   });
-  return { saves, checks };
+  return { saves, checks, publishes };
 }
 
 /** A point on the canvas, as a share of its width and height. */
@@ -146,76 +167,195 @@ async function drag(page: Page, from: [number, number], to: [number, number]) {
   await page.mouse.up();
 }
 
-const count = (page: Page, label: string) =>
+/** A number of the Hall Statistics card. */
+const stat = (page: Page, label: string) =>
   page
-    .locator('.counts dt', { hasText: new RegExp(`^${label}$`) })
+    .locator('dl.stats dt', { hasText: new RegExp(`^${label}$`) })
     .locator('xpath=following-sibling::dd[1]');
 
-test('plans zones, booths and seats; a booth breaking a rule is not made', async ({ page }) => {
-  await page.setViewportSize({ width: 1500, height: 920 });
-  const { saves } = await mockPlanner(page);
+/** A button of the ribbon, by its label. */
+const tool = (page: Page, name: string) =>
+  page.locator('nav.ribbon').getByRole('button', { name, exact: true });
+
+async function clickAt(page: Page, ...points: Array<[number, number]>) {
+  for (const p of points) {
+    const at_ = await at(page, ...p);
+    await page.mouse.click(at_.x, at_.y);
+  }
+}
+
+test('every tool of the ribbon, the view cube, the wheel and 3D work', async ({ page }) => {
+  // A long walk through every tool.
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1600, height: 960 });
+  const { saves, publishes } = await mockPlanner(page);
   await page.goto('/venue/events/ev/halls/h5/planner');
-  await expect(page.getByText('Hall 5', { exact: true })).toBeVisible();
   await expect(page.locator('app-planner-canvas canvas')).toBeVisible();
+  // The legend: the hall's areas, and what the plan draws.
+  const legend = page.locator('app-planner-canvas details.legend');
+  await expect(legend).toContainText('Passage');
+  await expect(legend).toContainText('Column');
+  await expect(legend).toContainText('Open side');
+  // The view cube is for 3D only.
+  await expect(page.locator('app-planner-canvas .cube')).toHaveCount(0);
 
-  // A rectangular zone.
-  await page.getByRole('button', { name: 'Zone', exact: true }).click();
+  // Zone, then booths: one refused on the passage, one made.
+  await tool(page, 'Zone').click();
   await drag(page, [0.45, 0.3], [0.75, 0.6]);
-  await expect(page.locator('.zones li')).toHaveCount(1);
-  await expect(count(page, 'Zones')).toHaveText('1');
-  await expect(page.locator('app-planner-properties')).toContainText('Length × breadth');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-zone.png` });
-
-  // A booth on the passage is refused, with the rule in a toast.
-  await page.getByRole('button', { name: 'Booth', exact: true }).click();
-  const passage = await at(page, 0.14, 0.5);
-  await page.mouse.click(passage.x, passage.y);
+  await expect(stat(page, 'Zones')).toHaveText('1');
+  await tool(page, 'Booth').click();
+  await clickAt(page, [0.14, 0.5]);
   await expect(page.locator('p-toast')).toContainText('stands on a compulsory passage');
-  await expect(count(page, 'Stalls')).toHaveText('0');
+  await clickAt(page, [0.3, 0.75]);
+  await expect(stat(page, 'Total Booths')).toHaveText('1');
+  // On whole grid cells, wherever in a cell the click was.
+  const whole = async () => {
+    const values = await page
+      .locator('app-planner-properties p-inputnumber input')
+      .evaluateAll((els) => els.slice(0, 4).map((e) => Number((e as HTMLInputElement).value)));
+    expect(values.every(Number.isInteger)).toBe(true);
+  };
+  await whole();
+  await page.locator('.p-toast-close-button').first().click();
 
-  // A booth on open floor is made, numbered 1.
-  const open = await at(page, 0.3, 0.75);
-  await page.mouse.click(open.x, open.y);
-  await expect(count(page, 'Stalls')).toHaveText('1');
-  await expect(page.locator('app-planner-properties h3')).toHaveText('Stall 1');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-stall.png` });
+  // Modify: copy, split, merge, rotate, mirror, number, scale, row.
+  await tool(page, 'Copy').click();
+  await expect(stat(page, 'Total Booths')).toHaveText('2');
+  await tool(page, 'Split').click();
+  await expect(stat(page, 'Total Booths')).toHaveText('3');
+  await expect(page.locator('app-planner-properties h3')).toHaveText('2 stalls');
+  await tool(page, 'Merge').click();
+  await expect(stat(page, 'Total Booths')).toHaveText('2');
+  await expect(page.locator('app-planner-properties h3')).toHaveText(/^Stall /);
+  for (const name of ['Rotate', 'Mirror', 'Mirror X', 'Number']) await tool(page, name).click();
+  // Number skips 1: the other booth has it.
+  await expect(page.locator('app-planner-properties h3')).toHaveText('Stall 2');
+  await tool(page, 'Scale').click();
+  await page.locator('app-scale-dialog input').fill('200');
+  await page.locator('app-scale-dialog input').press('Tab');
+  await page.locator('app-scale-dialog').getByRole('button', { name: 'Scale' }).click();
+  await expect(page.locator('app-planner-properties')).toContainText('36 m²');
+  await tool(page, 'Row').click();
+  const addRow = page.locator('app-row-dialog').getByRole('button', { name: /^Add \d+ booths$/ });
+  const inRow = Number((await addRow.textContent())!.match(/\d+/)![0]);
+  await addRow.click();
+  await expect(stat(page, 'Total Booths')).toHaveText(String(2 + inRow));
+  // Undo takes the row back; redo brings it again.
+  await tool(page, 'Undo').click();
+  await expect(stat(page, 'Total Booths')).toHaveText('2');
+  await tool(page, 'Redo').click();
+  await expect(stat(page, 'Total Booths')).toHaveText(String(2 + inRow));
 
-  // Auto-booths fills the zone.
-  await page.getByRole('button', { name: 'Auto-booths' }).click();
-  const dialog = page.locator('app-auto-booths-dialog');
-  await expect(dialog).toContainText('Fill zone “Zone 1” with booths');
-  const add = dialog.getByRole('button', { name: /^Add \d+ booths$/ });
-  await expect(add).toBeEnabled();
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-auto-booths.png` });
-  const made = Number((await add.textContent())!.match(/\d+/)![0]);
-  await add.click();
-  await expect(count(page, 'Stalls')).toHaveText(String(1 + made));
+  // Draw: line, rectangle, circle, polyline and text.
+  await tool(page, 'Line').click();
+  await clickAt(page, [0.2, 0.2], [0.35, 0.2]);
+  await tool(page, 'Rect').click();
+  await drag(page, [0.8, 0.2], [0.9, 0.3]);
+  await tool(page, 'Circle').click();
+  await drag(page, [0.85, 0.8], [0.9, 0.8]);
+  await tool(page, 'Polyline').click();
+  await clickAt(page, [0.2, 0.9], [0.3, 0.92]);
+  const last = await at(page, 0.4, 0.9);
+  await page.mouse.dblclick(last.x, last.y);
+  await tool(page, 'Object').click();
+  await clickAt(page, [0.6, 0.15]);
+  await expect(page.locator('app-planner-properties h3')).toHaveText('Text');
 
-  // A block of seats.
-  await page.getByRole('button', { name: 'Seats', exact: true }).click();
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-seats.png` });
-  await page.locator('app-seats-dialog').getByRole('button', { name: 'Add 30 seats' }).click();
-  await expect(count(page, 'Seats')).toHaveText('30');
+  // Measure: distance, area, angle, height.
+  const chips = page.locator('app-planner-canvas .overlay');
+  await tool(page, 'Distance').click();
+  await clickAt(page, [0.2, 0.4], [0.3, 0.4]);
+  const end = await at(page, 0.3, 0.5);
+  await page.mouse.dblclick(end.x, end.y);
+  await expect(chips).toContainText('Total');
+  await tool(page, 'Area').click();
+  await clickAt(page, [0.2, 0.4], [0.3, 0.4], [0.3, 0.5]);
+  await page.keyboard.press('Enter');
+  await expect(chips).toContainText('m²');
+  await tool(page, 'Angle').click();
+  await clickAt(page, [0.2, 0.4], [0.3, 0.4], [0.3, 0.5]);
+  await expect(chips).toContainText('°');
+  await tool(page, 'Height').click();
+  await clickAt(page, [0.2, 0.4], [0.3, 0.5]);
+  await expect(chips).toContainText('↕');
 
-  // Auto-seats fills the zone too.
+  // View: zoom window, split view, grid, labels, way out.
+  await tool(page, 'Zoom window').click();
+  await drag(page, [0.4, 0.4], [0.6, 0.6]);
+  await tool(page, 'Split view').click();
+  await expect(page.locator('app-planner-canvas')).toHaveCount(2);
+  await tool(page, 'Split view').click();
+  await expect(page.locator('app-planner-canvas')).toHaveCount(1);
+  await tool(page, 'Grid').click();
+  await expect(tool(page, 'Grid')).toHaveAttribute('aria-pressed', 'false');
+  await tool(page, 'Labels').click();
+  await expect(tool(page, 'Labels')).toHaveAttribute('aria-pressed', 'false');
+  await tool(page, 'Grid').click();
+  await tool(page, 'Labels').click();
+  // Way out is gone from the toolbar.
+  await expect(tool(page, 'Way out')).toHaveCount(0);
+  await tool(page, 'Select').click();
+
+  // The view cube and the wheel; 3D and back.
+  const cube = page.locator('app-planner-canvas .cube-wrap');
+  const pressed = (name: string) => cube.getByRole('button', { name, exact: true });
+  await pressed('3D').click();
+  await expect(pressed('3D')).toHaveAttribute('aria-pressed', 'true');
+  await expect(pressed('FRONT')).toHaveAttribute('aria-pressed', 'true');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-3d.png` });
+  await pressed('RIGHT').click();
+  await expect(pressed('RIGHT')).toHaveAttribute('aria-pressed', 'true');
+  const ring = cube.locator('.ring');
+  const before = await ring.getAttribute('style');
+  const box = (await ring.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  expect(await ring.getAttribute('style')).not.toBe(before);
+  await expect(pressed('BACK')).toHaveAttribute('aria-pressed', 'true');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-3d-back.png` });
+  // Booths are drawn in 3D too: drag on the floor.
+  await tool(page, 'Booth').click();
+  await expect(pressed('3D')).toHaveAttribute('aria-pressed', 'true');
+  const before3d = Number(await stat(page, 'Total Booths').textContent());
+  await drag(page, [0.55, 0.62], [0.62, 0.7]);
+  await expect(stat(page, 'Total Booths')).toHaveText(String(before3d + 1));
+  await whole();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-3d-booth.png` });
+  // Other drawing tools go back to the plan from above, where the cube is not shown.
+  await tool(page, 'Line').click();
+  await expect(pressed('2D')).toHaveAttribute('aria-pressed', 'true');
+  await expect(cube.locator('.cube')).toHaveCount(0);
+  await tool(page, 'Select').click();
+
+  // To booth: the rectangular zone becomes a booth.
   await page.locator('.zones .zone').first().click();
-  await page.getByRole('button', { name: 'Auto-seats' }).click();
-  const seats = page.locator('app-auto-seats-dialog');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-auto-seats.png` });
-  await seats.getByRole('button', { name: /^Add [\d,]+ seats$/ }).click();
-  await expect(count(page, 'Seats')).not.toHaveText('30');
+  const booths = Number(await stat(page, 'Total Booths').textContent());
+  await tool(page, 'To booth').click();
+  await expect(stat(page, 'Zones')).toHaveText('0');
+  await expect(stat(page, 'Total Booths')).toHaveText(String(booths + 1));
 
-  // Undo takes the whole fill back in one step.
-  await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(count(page, 'Seats')).toHaveText('30');
+  // Export, then import the file back.
+  const download = page.waitForEvent('download');
+  await page.locator('nav.ribbon').getByRole('button', { name: 'Export' }).click();
+  const file = await (await download).path();
+  await page.locator('nav.ribbon input[type=file]').setInputFiles(file!);
+  await page.getByRole('button', { name: 'Replace' }).click();
+  await expect(page.locator('p-toast')).toContainText('Plan brought in');
+  await expect(stat(page, 'Total Booths')).toHaveText(String(booths + 1));
 
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible();
+  // Save, then publish.
+  await page.locator('nav.ribbon').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('nav.ribbon').getByRole('button', { name: 'Saved' })).toBeVisible();
   expect(saves).toHaveLength(1);
-  expect(saves[0]).toMatchObject({ revision: 0, zones: [{ name: 'Zone 1' }] });
-  expect(saves[0].stalls).toHaveLength(1 + made);
-  expect(saves[0].seats).toHaveLength(30);
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-saved.png` });
+  expect(saves[0].stalls).toHaveLength(booths + 1);
+  expect(saves[0].objects).toHaveLength(5);
+  await page.locator('nav.ribbon').getByRole('button', { name: 'Publish' }).click();
+  await page.locator('app-confirm-dialog').getByRole('button', { name: 'Publish' }).click();
+  await expect(page.locator('nav.ribbon').getByRole('button', { name: 'Published' })).toBeVisible();
+  expect(publishes).toEqual([1]);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-published.png` });
 });
 
 test('the venue admin adds categories one by one and from a CSV', async ({ page }) => {

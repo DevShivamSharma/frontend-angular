@@ -187,7 +187,7 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
             appendTo="body"
           />
         </label>
-        <label
+        <label data-tour="stall-categories"
           >Categories
           <p-multiselect
             [options]="categoryOptions(s.categoryIds)"

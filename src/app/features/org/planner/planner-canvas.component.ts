@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
@@ -12,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import * as T from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import type { FloorAreaKind as AreaKind, HallFloor } from '../../../core/api/api.models';
 import {
@@ -40,6 +42,8 @@ import {
   stallRect,
   textBox,
 } from './planner-geometry';
+import { AREA_LABELS } from '../../../shared/floor/floor-view.component';
+import { buildScene3d } from './planner-scene-3d';
 import type { Selection, SelectionKind } from './planner.store';
 
 export type PlannerTool =
@@ -66,13 +70,6 @@ export interface DrawObjectEvent {
   points: Point[];
 }
 
-/** The way from a booth to the nearest exit. */
-export interface WayOutPath {
-  from: Point;
-  to: Point;
-  metres: number;
-}
-
 /** Tools that change nothing, so they work on a read-only plan too. */
 const VIEW_TOOLS: ReadonlySet<PlannerTool> = new Set<PlannerTool>([
   'zoom-window',
@@ -83,6 +80,30 @@ const VIEW_TOOLS: ReadonlySet<PlannerTool> = new Set<PlannerTool>([
 ]);
 /** Points a click-by-click tool takes before it is done by itself. */
 const SHAPE_POINTS: Partial<Record<PlannerTool, number>> = { line: 2, 'mirror-line': 2 };
+
+/** A side of the view cube: the plan from above, or the hall in 3D from one side. */
+export type ViewFace = 'top' | 'front' | 'back' | 'left' | 'right';
+
+/** Degrees round from the front (the bottom edge of the plan), clockwise seen from above. */
+const AZIMUTH: Record<Exclude<ViewFace, 'top'>, number> = {
+  front: 0,
+  right: 90,
+  back: 180,
+  left: -90,
+};
+/** 3D opens from the front, a little to the left, looking down this many degrees. */
+const HOME_AZIMUTH = -35;
+const ELEVATION = 38;
+/** Tools that work in 3D too; the others go back to the plan from above. */
+const TOOLS_3D: ReadonlySet<PlannerTool> = new Set<PlannerTool>(['select', 'pan', 'booth']);
+const HINTS_3D: Partial<Record<PlannerTool, string>> = {
+  select: 'Click a stall to select it · Drag to look round · Right-drag to pan · Scroll to zoom',
+  pan: 'Drag to pan · Scroll to zoom',
+  booth:
+    'Drag on the floor to draw a booth, or click to place 3 × 3 m · Right-drag to pan · Scroll to zoom',
+};
+/** The floor, for finding where the pointer is in 3D. */
+const FLOOR_PLANE = new T.Plane(new T.Vector3(0, 1, 0), 0);
 
 export interface PickEvent {
   kind: SelectionKind;
@@ -128,11 +149,8 @@ const SEAT_FILL = '#a855f7';
 const SELECTED = '#1d4ed8';
 const DRAFT = '#ea580c';
 const MEASURE = '#6d28d9';
-const EXIT = '#16a34a';
 /** Pixels: a drawing within this of the pointer is under it. */
 const HIT_PX = 6;
-/** Way-out paths at most this many get their length written. */
-const WAY_OUT_CHIPS = 60;
 /** Pixels: a click that moved less than this is a click, not a drag. */
 const CLICK_PX = 5;
 /** Booths at most this many get their number drawn. */
@@ -158,21 +176,90 @@ const LABELLED = 1500;
     @if (hint()) {
       <p class="hint">{{ hint() }}</p>
     }
+    <details class="legend" open>
+      <summary>Legend</summary>
+      @if (hallLegend().length) {
+        <h4>Hall</h4>
+        <ul>
+          @for (l of hallLegend(); track $index) {
+            <li>
+              <span class="swatch" [style.background]="l.color">{{ l.code }}</span
+              >{{ l.label }}
+            </li>
+          }
+        </ul>
+      }
+      <h4>Plan</h4>
+      <ul>
+        @for (l of planLegend; track l.label) {
+          <li>
+            <span
+              class="swatch"
+              [class.line]="l.line"
+              [style.background]="l.line ? null : l.color"
+              [style.border-color]="l.border ?? l.color"
+            ></span
+            >{{ l.label }}
+          </li>
+        }
+      </ul>
+    </details>
     <div class="cube-wrap">
-      <!-- The plan is drawn from the top only; the other faces show where they are. -->
-      <div class="cube" aria-label="View: top">
-        <div class="ring" [style.transform]="'rotate(' + north() + 'deg)'">
-          <span class="n">N</span>
+      @if (is3d()) {
+        <div class="cube">
+          <!-- The wheel: drag it round to turn the view; N follows the hall's north. -->
+          <div
+            class="ring"
+            [style.transform]="'rotate(' + ringAngle() + 'deg)'"
+            (pointerdown)="ringDown($event)"
+            title="Drag to turn the view"
+          >
+            <span class="n">N</span>
+            <span class="cardinal e">E</span>
+            <span class="cardinal s">S</span>
+            <span class="cardinal w">W</span>
+          </div>
+          @for (f of faces; track f.id) {
+            <button
+              type="button"
+              class="face"
+              [class]="'face ' + f.id"
+              [class.on]="face() === f.id"
+              [attr.aria-pressed]="face() === f.id"
+              [attr.data-tour]="f.id === 'top' ? 'cube-top' : null"
+              (click)="setFace(f.id)"
+              [title]="f.title"
+            >
+              {{ f.label }}
+            </button>
+          }
         </div>
-        <span class="face back">BACK</span>
-        <span class="face left">LEFT</span>
-        <span class="face top">TOP</span>
-        <span class="face right">RIGHT</span>
-        <span class="face front">FRONT</span>
+      }
+      <div class="views">
+        <button type="button" class="home" (click)="home()" title="Back to the whole hall">
+          <i class="pi pi-home"></i> Home
+        </button>
+        <div class="dims" role="group" aria-label="2D or 3D" data-tour="view-switch">
+          <button
+            type="button"
+            [class.on]="!is3d()"
+            [attr.aria-pressed]="!is3d()"
+            (click)="setFace('top')"
+            title="The plan from above, to draw on"
+          >
+            2D
+          </button>
+          <button
+            type="button"
+            [class.on]="is3d()"
+            [attr.aria-pressed]="is3d()"
+            (click)="enter3d()"
+            title="The hall in 3D, to look round"
+          >
+            3D
+          </button>
+        </div>
       </div>
-      <button type="button" class="home" (click)="fit()" title="Fit the hall">
-        <i class="pi pi-home"></i> Home
-      </button>
     </div>
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>
@@ -250,6 +337,61 @@ const LABELLED = 1500;
       box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
       pointer-events: none;
     }
+    .legend {
+      position: absolute;
+      top: 44px;
+      left: 10px;
+      max-width: 210px;
+      max-height: calc(100% - 160px);
+      overflow: auto;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgb(255 255 255 / 0.94);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+      font: 12px/1.3 var(--app-font-family, sans-serif);
+      color: #1e293b;
+    }
+    .legend summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .legend h4 {
+      margin: 8px 0 4px;
+      font: 700 10px/1 var(--app-font-family, sans-serif);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .legend ul {
+      display: grid;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .legend li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .swatch {
+      display: grid;
+      place-items: center;
+      flex: none;
+      width: 20px;
+      height: 14px;
+      box-sizing: border-box;
+      border: 1px solid rgb(0 0 0 / 0.2);
+      border-radius: 3px;
+      font-size: 8px;
+      color: #fff;
+    }
+    .swatch.line {
+      height: 0;
+      border-width: 2px 0 0;
+      border-style: dashed;
+      border-radius: 0;
+    }
     .cube-wrap {
       position: absolute;
       top: 16px;
@@ -268,7 +410,6 @@ const LABELLED = 1500;
       height: 104px;
       padding: 8px;
       box-sizing: border-box;
-      pointer-events: none;
     }
     .ring {
       position: absolute;
@@ -277,25 +418,64 @@ const LABELLED = 1500;
       border: 1px solid #cbd5e1;
       background: rgb(255 255 255 / 0.9);
       box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+      cursor: grab;
+      touch-action: none;
+    }
+    .ring:active {
+      cursor: grabbing;
+    }
+    .n,
+    .cardinal {
+      position: absolute;
+      font: 700 9px/1 sans-serif;
+      color: #64748b;
+      pointer-events: none;
     }
     .n {
-      position: absolute;
       top: -2px;
       left: 50%;
       transform: translateX(-50%);
-      font: 700 11px/1 sans-serif;
+      font-size: 11px;
       color: #dc2626;
+    }
+    .cardinal.e {
+      right: 1px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .cardinal.s {
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .cardinal.w {
+      left: 1px;
+      top: 50%;
+      transform: translateY(-50%);
     }
     .face {
       position: relative;
+      z-index: 1;
       display: grid;
       place-items: center;
+      padding: 0;
       font: 600 8px/1 sans-serif;
       letter-spacing: 0.04em;
       color: #334155;
       background: #fff;
       border: 1px solid #cbd5e1;
       border-radius: 3px;
+      cursor: pointer;
+    }
+    .face:hover,
+    .face:focus-visible {
+      border-color: #2563eb;
+      color: #1d4ed8;
+    }
+    .face.on {
+      background: #1e293b;
+      border-color: #1e293b;
+      color: #fff;
     }
     .face.back {
       grid-area: 1 / 2;
@@ -325,9 +505,11 @@ const LABELLED = 1500;
       width: 44px;
       height: 44px;
       font-size: 10px;
-      background: #1e293b;
-      border-color: #1e293b;
-      color: #fff;
+    }
+    .views {
+      display: grid;
+      gap: 6px;
+      justify-items: center;
     }
     .home {
       display: flex;
@@ -345,6 +527,27 @@ const LABELLED = 1500;
     .home:hover,
     .home:focus-visible {
       background: #f1f5f9;
+    }
+    .dims {
+      display: flex;
+      padding: 2px;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+    }
+    .dims button {
+      min-width: 36px;
+      padding: 4px 8px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      color: #334155;
+      font: 600 12px/1.2 var(--app-font-family, sans-serif);
+      cursor: pointer;
+    }
+    .dims button.on {
+      background: #1e293b;
+      color: #fff;
     }
     .error {
       position: absolute;
@@ -366,8 +569,6 @@ export class PlannerCanvasComponent {
   readonly readonly = input(false);
   readonly showGrid = input(true);
   readonly showLabels = input(true);
-  /** Ways from booths to the nearest exit, drawn while Way out is on. */
-  readonly wayOut = input<WayOutPath[]>([]);
 
   readonly drawRect = output<Rect>();
   readonly drawObject = output<DrawObjectEvent>();
@@ -384,6 +585,47 @@ export class PlannerCanvasComponent {
   protected readonly error = signal('');
   protected readonly hint = signal('');
   protected readonly north = signal(0);
+  readonly is3d = signal(false);
+  /** The hall's own legend, or else what kinds of area the floor has. */
+  protected readonly hallLegend = computed(() => {
+    const f = this.floor();
+    const own = (f.legend ?? []).filter((l) => l.showInView !== false && l.label);
+    if (own.length) {
+      return own.map((l) => ({
+        label: l.label,
+        code: l.code ?? '',
+        color: l.color ?? (l.kind ? AREA_COLORS[l.kind] : '#cbd5e1'),
+      }));
+    }
+    const kinds = new Set<AreaKind>(
+      f.geometry ? f.geometry.objects.map((o) => o.kind as AreaKind) : f.areas.map((a) => a.kind),
+    );
+    kinds.delete('outside');
+    return [...kinds].map((k) => ({ label: AREA_LABELS[k], code: '', color: AREA_COLORS[k] }));
+  });
+  protected readonly planLegend: Array<{
+    label: string;
+    color: string;
+    border?: string;
+    line?: boolean;
+  }> = [
+    { label: 'Stall', color: STALL_FILL, border: STALL_EDGE },
+    { label: 'Open side', color: STALL_EDGE, line: true },
+    { label: 'Blocked stall', color: STALL_BLOCKED, border: '#94a3b8' },
+    { label: 'Seat', color: SEAT_FILL },
+    { label: 'Zone', color: 'rgb(59 130 246 / 0.15)', border: '#3b82f6' },
+    { label: 'Selected', color: 'rgb(29 78 216 / 0.15)', border: SELECTED },
+  ];
+  protected readonly face = signal<ViewFace>('top');
+  /** The wheel's turn: north, plus how far the view is turned. */
+  protected readonly ringAngle = signal(0);
+  protected readonly faces: Array<{ id: ViewFace; label: string; title: string }> = [
+    { id: 'back', label: 'BACK', title: 'The hall in 3D from the back' },
+    { id: 'left', label: 'LEFT', title: 'The hall in 3D from the left' },
+    { id: 'top', label: 'TOP', title: 'The plan from above (2D)' },
+    { id: 'right', label: 'RIGHT', title: 'The hall in 3D from the right' },
+    { id: 'front', label: 'FRONT', title: 'The hall in 3D from the front' },
+  ];
 
   private renderer?: T.WebGLRenderer;
   private readonly scene = new T.Scene();
@@ -394,9 +636,19 @@ export class PlannerCanvasComponent {
   private readonly gridGroup = new T.Group();
   /** The hall's text labels and helper cards (toilets, exits…), shown with the labels. */
   private readonly noteGroup = new T.Group();
-  private readonly wayGroup = new T.Group();
   private observer?: ResizeObserver;
   private extent: Rect = { x: 0, y: 0, width: 100, height: 100 };
+  /** The hall itself, without the labels around it. */
+  private hallExtent: Rect = { x: 0, y: 0, width: 100, height: 100 };
+  /** Degrees the 2D plan is turned clockwise on screen. */
+  private spin = 0;
+  private readonly raycaster = new T.Raycaster();
+  /** A booth being drawn in 3D. */
+  private readonly draft3 = new T.Group();
+  private readonly scene3 = new T.Scene();
+  private readonly group3 = new T.Group();
+  private readonly camera3 = new T.PerspectiveCamera(45, 1, 0.1, 20000);
+  private controls?: OrbitControls;
 
   private down: {
     px: number;
@@ -448,14 +700,29 @@ export class PlannerCanvasComponent {
       untracked(() => this.render());
     });
     effect(() => {
-      const paths = this.wayOut();
-      untracked(() => this.buildWayOut(paths));
-    });
-    effect(() => {
       const tool = this.tool();
       untracked(() => {
         this.cancel();
-        this.hint.set(HINTS[tool]);
+        // Drawing happens on the plan from above.
+        if (this.is3d() && !TOOLS_3D.has(tool)) this.leave3d();
+        this.setControlButtons();
+        this.hint.set(this.is3d() ? this.hint3d() : HINTS[tool]);
+      });
+    });
+    effect(() => {
+      const input = {
+        floor: this.floor(),
+        plan: this.plan(),
+        selection: this.selection(),
+        categoryColors: this.categoryColors(),
+        showGrid: this.showGrid(),
+        showLabels: this.showLabels(),
+      };
+      if (!this.is3d()) return;
+      untracked(() => {
+        dispose(this.group3);
+        buildScene3d(this.group3, input, this.hallExtent);
+        this.render();
       });
     });
     destroyRef.onDestroy(() => this.stop());
@@ -527,6 +794,12 @@ export class PlannerCanvasComponent {
   }
 
   zoomBy(factor: number): void {
+    if (this.is3d() && this.controls) {
+      const target = this.controls.target;
+      this.camera3.position.sub(target).divideScalar(factor).add(target);
+      this.controls.update();
+      return;
+    }
     this.camera.zoom = Math.max(0.05, Math.min(400, this.camera.zoom * factor));
     this.camera.updateProjectionMatrix();
     this.render();
@@ -555,7 +828,221 @@ export class PlannerCanvasComponent {
 
   /** The middle of what is in view, floor metres. */
   viewCentre(): Point {
+    if (this.is3d() && this.controls) return [this.controls.target.x, this.controls.target.z];
     return [this.camera.position.x, -this.camera.position.y];
+  }
+
+  // ---- view cube, wheel and 3D --------------------------------------------------------------
+
+  /** TOP is the plan to draw on; a side opens the hall in 3D, seen from that side. */
+  setFace(face: ViewFace): void {
+    if (face === 'top') this.leave3d();
+    else this.enter3d(AZIMUTH[face]);
+  }
+
+  /** The hall in 3D; from where it was last seen, or from `azimuth`. */
+  enter3d(azimuth?: number): void {
+    if (!this.renderer || !this.controls) return;
+    const opening = !this.is3d();
+    if (!opening && azimuth === undefined) return;
+    this.down = null;
+    this.cancel();
+    this.is3d.set(true);
+    this.controls.enabled = true;
+    this.setControlButtons();
+    this.place3d(azimuth ?? HOME_AZIMUTH);
+    this.hint.set(this.hint3d());
+    this.render();
+  }
+
+  private hint3d(): string {
+    return HINTS_3D[this.tool()] ?? HINTS_3D.select!;
+  }
+
+  /** In 3D the left button turns the view, pans with Pan, and draws with Booth. */
+  private setControlButtons(): void {
+    if (!this.controls) return;
+    const tool = this.tool();
+    this.controls.mouseButtons.LEFT =
+      tool === 'booth' ? null : tool === 'pan' ? T.MOUSE.PAN : T.MOUSE.ROTATE;
+  }
+
+  /** Where on the floor the pointer is in 3D, floor metres; null off the floor plane. */
+  private floorPoint(e: { clientX: number; clientY: number }): Point | null {
+    const r = this.renderer!.domElement.getBoundingClientRect();
+    this.raycaster.setFromCamera(
+      new T.Vector2(
+        ((e.clientX - r.left) / r.width) * 2 - 1,
+        -((e.clientY - r.top) / r.height) * 2 + 1,
+      ),
+      this.camera3,
+    );
+    const hit = new T.Vector3();
+    return this.raycaster.ray.intersectPlane(FLOOR_PLANE, hit) ? [hit.x, hit.z] : null;
+  }
+
+  /** In 3D: Booth draws on the floor; Select picks with a click (a drag turns the view). */
+  private down3d(e: PointerEvent): void {
+    if (e.button !== 0) return;
+    const p = this.floorPoint(e);
+    if (!p) return;
+    const tool = this.tool();
+    const base = { px: e.clientX, py: e.clientY, cam: [0, 0] as [number, number] };
+    if (tool === 'booth' && !this.readonly()) {
+      this.renderer!.domElement.setPointerCapture(e.pointerId);
+      this.down = { ...base, world: p, mode: 'draw' };
+    } else if (tool === 'select') {
+      this.down = { ...base, world: p, mode: 'none' };
+    }
+  }
+
+  private move3d(e: PointerEvent): void {
+    const d = this.down;
+    if (d?.mode !== 'draw' || Math.hypot(e.clientX - d.px, e.clientY - d.py) < CLICK_PX) return;
+    const p = this.floorPoint(e);
+    if (!p) return;
+    this.draftRect = cellsBetween(d.world, p);
+    this.buildDraft();
+  }
+
+  private up3d(e: PointerEvent): void {
+    const d = this.down;
+    if (!d) return;
+    const click = Math.hypot(e.clientX - d.px, e.clientY - d.py) < CLICK_PX;
+    const p = this.floorPoint(e);
+    if (d.mode === 'draw') {
+      const r = this.draftRect;
+      if (r && r.width > 0 && r.height > 0) this.drawRect.emit(r);
+      else if (click && p) this.placeAt.emit(cellCentre(p));
+    } else if (click && p) {
+      const hit = this.hit(p);
+      this.pick.emit(hit ? { kind: hit.kind, ids: [hit.id], additive: e.shiftKey } : null);
+    }
+    this.down = null;
+    this.draftRect = null;
+    this.buildDraft();
+  }
+
+  /** The booth being drawn in 3D: a box as tall as a shell stall. */
+  private buildDraft3d(): void {
+    dispose(this.draft3);
+    const r = this.draftRect;
+    if (r && r.width > 0 && r.height > 0) {
+      const box = new T.BoxGeometry(r.width, 2.5, r.height);
+      const mesh = new T.Mesh(
+        box,
+        new T.MeshBasicMaterial({
+          color: DRAFT,
+          transparent: true,
+          opacity: 0.25,
+          depthWrite: false,
+        }),
+      );
+      const edges = new T.LineSegments(
+        new T.EdgesGeometry(box),
+        new T.LineBasicMaterial({ color: DRAFT }),
+      );
+      for (const o of [mesh, edges]) o.position.set(r.x + r.width / 2, 1.25, r.y + r.height / 2);
+      this.draft3.add(mesh, edges);
+    }
+    this.render();
+  }
+
+  /** Back to the plan from above. */
+  leave3d(): void {
+    if (!this.is3d()) return;
+    this.is3d.set(false);
+    if (this.controls) this.controls.enabled = false;
+    this.draftRect = null;
+    dispose(this.draft3);
+    this.face.set('top');
+    this.hint.set(HINTS[this.tool()]);
+    this.applySpin();
+  }
+
+  /** The whole hall again: from above unturned, or in 3D from the opening side. */
+  home(): void {
+    if (this.is3d()) {
+      this.place3d(HOME_AZIMUTH);
+      this.render();
+      return;
+    }
+    this.spin = 0;
+    this.applySpin();
+    this.fit();
+  }
+
+  /** Drags the wheel: the view turns as far as the wheel does. */
+  protected ringDown(e: PointerEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    const ring = e.currentTarget as HTMLElement;
+    const box = ring.getBoundingClientRect();
+    const [cx, cy] = [box.left + box.width / 2, box.top + box.height / 2];
+    const angle = (ev: PointerEvent) =>
+      (Math.atan2(ev.clientX - cx, -(ev.clientY - cy)) * 180) / Math.PI;
+    const start = angle(e);
+    const from = this.is3d() ? this.azimuth3d() : this.spin;
+    ring.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const turn = angle(ev) - start;
+      if (this.is3d()) this.setAzimuth(from + turn);
+      else {
+        this.spin = normalise(from + turn);
+        this.applySpin();
+      }
+    };
+    const up = () => {
+      ring.removeEventListener('pointermove', move);
+      ring.removeEventListener('pointerup', up);
+      ring.removeEventListener('pointercancel', up);
+    };
+    ring.addEventListener('pointermove', move);
+    ring.addEventListener('pointerup', up);
+    ring.addEventListener('pointercancel', up);
+  }
+
+  /** Turns the 2D plan on screen; drawing still follows the hall's own axes. */
+  private applySpin(): void {
+    const a = (this.spin * Math.PI) / 180;
+    this.camera.up.set(-Math.sin(a), Math.cos(a), 0);
+    this.camera.lookAt(this.camera.position.x, this.camera.position.y, 0);
+    this.ringAngle.set(this.north() + this.spin);
+    this.render();
+  }
+
+  /** Puts the 3D camera round the middle of the hall, looking down at it. */
+  private place3d(azimuth: number): void {
+    const e = this.hallExtent;
+    const target = new T.Vector3(e.x + e.width / 2, 0, e.y + e.height / 2);
+    const distance = Math.max(e.width, e.height, 10) * 1.05;
+    const el = (ELEVATION * Math.PI) / 180;
+    const az = (azimuth * Math.PI) / 180;
+    const across = distance * Math.cos(el);
+    this.camera3.position.set(
+      target.x + across * Math.sin(az),
+      distance * Math.sin(el),
+      target.z + across * Math.cos(az),
+    );
+    this.controls!.target.copy(target);
+    this.controls!.update();
+  }
+
+  /** Where the 3D camera stands round the hall, degrees from the front. */
+  private azimuth3d(): number {
+    const t = this.controls?.target ?? new T.Vector3();
+    const d = this.camera3.position.clone().sub(t);
+    return (Math.atan2(d.x, d.z) * 180) / Math.PI;
+  }
+
+  private setAzimuth(degrees: number): void {
+    if (!this.controls) return;
+    const t = this.controls.target;
+    const d = this.camera3.position.clone().sub(t);
+    const across = Math.hypot(d.x, d.z);
+    const az = (degrees * Math.PI) / 180;
+    this.camera3.position.set(t.x + across * Math.sin(az), t.y + d.y, t.z + across * Math.cos(az));
+    this.controls.update();
   }
 
   // ---- setup --------------------------------------------------------------------------------
@@ -577,7 +1064,6 @@ export class PlannerCanvasComponent {
       this.gridGroup,
       this.noteGroup,
       this.planGroup,
-      this.wayGroup,
       this.draftGroup,
     );
     const el = this.renderer.domElement;
@@ -591,6 +1077,13 @@ export class PlannerCanvasComponent {
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKey);
+    this.scene3.background = new T.Color('#e8edf3');
+    this.scene3.add(this.group3, this.draft3);
+    this.controls = new OrbitControls(this.camera3, el);
+    this.controls.enabled = false;
+    // Never under the floor.
+    this.controls.maxPolarAngle = Math.PI / 2 - 0.05;
+    this.controls.addEventListener('change', () => this.render());
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(host);
     this.buildFloor(this.floor());
@@ -602,12 +1095,14 @@ export class PlannerCanvasComponent {
     this.observer?.disconnect();
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKey);
+    this.controls?.dispose();
+    dispose(this.group3);
+    dispose(this.draft3);
     for (const g of [
       this.floorGroup,
       this.gridGroup,
       this.noteGroup,
       this.planGroup,
-      this.wayGroup,
       this.draftGroup,
     ])
       dispose(g);
@@ -622,6 +1117,8 @@ export class PlannerCanvasComponent {
     const h = Math.max(1, host.clientHeight);
     this.renderer.setSize(w, h);
     const aspect = w / h;
+    this.camera3.aspect = aspect;
+    this.camera3.updateProjectionMatrix();
     const e = this.extent;
     const half = Math.max(e.height, e.width / aspect) * 0.55;
     this.camera.left = -half * aspect;
@@ -634,8 +1131,54 @@ export class PlannerCanvasComponent {
 
   private render(): void {
     if (!this.renderer) return;
+    if (this.is3d()) {
+      this.renderer.render(this.scene3, this.camera3);
+      const az = normalise(this.azimuth3d());
+      this.face.set(
+        Math.abs(az) <= 45
+          ? 'front'
+          : az > 45 && az <= 135
+            ? 'right'
+            : az < -45 && az >= -135
+              ? 'left'
+              : 'back',
+      );
+      this.ringAngle.set(this.north() + az);
+      const chips = this.zoneChips3d();
+      const r = this.draftRect;
+      if (r && r.width > 0 && r.height > 0) {
+        const v = new T.Vector3(r.x + r.width / 2, 2.7, r.y + r.height / 2).project(this.camera3);
+        const host = this.host().nativeElement;
+        chips.push({
+          x: ((v.x + 1) / 2) * host.clientWidth,
+          y: ((1 - v.y) / 2) * host.clientHeight,
+          text: `${fmt(r.width)} × ${fmt(r.height)} = ${fmt(r.width * r.height)} m²`,
+          kind: 'area',
+        });
+      }
+      this.chips.set(chips);
+      return;
+    }
     this.renderer.render(this.scene, this.camera);
     this.updateChips();
+  }
+
+  /** Zone names, where the zones are in the 3D view. */
+  private zoneChips3d(): Chip[] {
+    const host = this.host().nativeElement;
+    const chips: Chip[] = [];
+    for (const z of this.plan().zones) {
+      const [x, y] = centroid(z.polygon);
+      const v = new T.Vector3(x, 0.05, y).project(this.camera3);
+      if (v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) continue;
+      chips.push({
+        x: ((v.x + 1) / 2) * host.clientWidth,
+        y: ((1 - v.y) / 2) * host.clientHeight,
+        text: z.name,
+        kind: 'zone',
+      });
+    }
+    return chips;
   }
 
   // ---- scene --------------------------------------------------------------------------------
@@ -672,7 +1215,9 @@ export class PlannerCanvasComponent {
       addLine(g, rectPoints({ x: 0, y: 0, width: f.width, height: f.depth }), '#64748b', 4, true);
       this.extent = { x: 0, y: 0, width: f.width, height: f.depth };
     }
+    this.hallExtent = this.extent;
     this.north.set(f.north?.rotation ?? 0);
+    this.ringAngle.set(this.north() + this.spin);
     dispose(this.gridGroup);
     addGrid(this.gridGroup, this.extent);
     dispose(this.noteGroup);
@@ -778,6 +1323,10 @@ export class PlannerCanvasComponent {
 
   /** What is being drawn or moved, over the plan. */
   private buildDraft(): void {
+    if (this.is3d()) {
+      this.buildDraft3d();
+      return;
+    }
     dispose(this.draftGroup);
     const g = this.draftGroup;
     if (this.draftRect) {
@@ -864,37 +1413,6 @@ export class PlannerCanvasComponent {
     this.render();
   }
 
-  /** Way out: a line from each booth to its nearest exit, and the exits marked. */
-  private buildWayOut(paths: WayOutPath[]): void {
-    dispose(this.wayGroup);
-    const g = this.wayGroup;
-    if (paths.length) {
-      addSegments(
-        g,
-        paths.flatMap((p) => [p.from[0], -p.from[1], 30, p.to[0], -p.to[1], 30]),
-        EXIT,
-        30,
-        true,
-      );
-      const exits = new Map(paths.map((p) => [`${p.to[0]},${p.to[1]}`, p.to] as const));
-      const geom = new T.BufferGeometry();
-      geom.setAttribute(
-        'position',
-        new T.Float32BufferAttribute(
-          [...exits.values()].flatMap((p) => [p[0], -p[1], 31]),
-          3,
-        ),
-      );
-      const points = new T.Points(
-        geom,
-        new T.PointsMaterial({ color: EXIT, size: 12, sizeAttenuation: false, depthTest: false }),
-      );
-      points.renderOrder = 31;
-      g.add(points);
-    }
-    this.render();
-  }
-
   // ---- chips --------------------------------------------------------------------------------
 
   /** Lengths and areas of what is drawn, moved or selected; zone names. */
@@ -924,16 +1442,6 @@ export class PlannerCanvasComponent {
     if (this.draftCircle) {
       const { c, r } = this.draftCircle;
       chips.push({ ...this.screen(c), text: `r ${fmt(r)} m`, kind: 'length' });
-    }
-    const way = this.wayOut();
-    if (way.length <= WAY_OUT_CHIPS) {
-      for (const p of way) {
-        chips.push({
-          ...this.screen([(p.from[0] + p.to[0]) / 2, (p.from[1] + p.to[1]) / 2]),
-          text: `${fmt(p.metres)} m`,
-          kind: 'zone',
-        });
-      }
     }
     const measureTool = this.tool();
     if (this.measure.length && measureTool === 'measure-angle') {
@@ -1046,6 +1554,7 @@ export class PlannerCanvasComponent {
 
   private readonly onWheel = (e: WheelEvent) => {
     e.preventDefault();
+    if (this.is3d()) return;
     const before = this.world(e);
     this.zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15);
     const after = this.world(e);
@@ -1055,6 +1564,11 @@ export class PlannerCanvasComponent {
   };
 
   private readonly onDown = (e: PointerEvent) => {
+    // In 3D the orbit controls have the pointer, but for drawing a booth or picking.
+    if (this.is3d()) {
+      this.down3d(e);
+      return;
+    }
     this.host().nativeElement.focus({ preventScroll: true });
     const world = this.world(e);
     const base = {
@@ -1082,7 +1596,12 @@ export class PlannerCanvasComponent {
       this.down = { ...base, mode: 'pan' };
       return;
     }
-    if (tool === 'zone-rect' || tool === 'booth' || tool === 'rect' || tool === 'circle') {
+    if (CELL_TOOLS.has(tool)) {
+      // Kept as it is: the box is widened to whole grid cells as it is drawn.
+      this.down = { ...base, world, mode: 'draw' };
+      return;
+    }
+    if (tool === 'circle') {
       this.down = { ...base, world: this.snapped(world), mode: 'draw' };
       return;
     }
@@ -1114,6 +1633,10 @@ export class PlannerCanvasComponent {
   };
 
   private readonly onMove = (e: PointerEvent) => {
+    if (this.is3d()) {
+      this.move3d(e);
+      return;
+    }
     const world = this.world(e);
     if (
       (this.tool() === 'zone-poly' && this.polygon.length) ||
@@ -1138,8 +1661,10 @@ export class PlannerCanvasComponent {
       this.draftCircle = { c: d.world, r: Math.hypot(edge[0] - d.world[0], edge[1] - d.world[1]) };
       this.buildDraft();
     } else if (d.mode === 'draw' && far) {
-      const end = this.tool() === 'zoom-window' ? world : this.snapped(world);
-      this.draftRect = rectBetween(d.world, end);
+      const tool = this.tool();
+      this.draftRect = CELL_TOOLS.has(tool)
+        ? cellsBetween(d.world, world)
+        : rectBetween(d.world, tool === 'zoom-window' ? world : this.snapped(world));
       this.buildDraft();
     } else if (d.mode === 'marquee' && far) {
       this.draftRect = rectBetween(d.world, world);
@@ -1152,6 +1677,10 @@ export class PlannerCanvasComponent {
   };
 
   private readonly onUp = (e: PointerEvent) => {
+    if (this.is3d()) {
+      this.up3d(e);
+      return;
+    }
     const d = this.down;
     if (!d) return;
     const click = Math.hypot(e.clientX - d.px, e.clientY - d.py) < CLICK_PX;
@@ -1177,7 +1706,7 @@ export class PlannerCanvasComponent {
     } else if (d.mode === 'draw') {
       const r = this.draftRect;
       if (r && r.width > 0 && r.height > 0) this.drawRect.emit(r);
-      else if (click && tool === 'booth') this.placeAt.emit(this.snapped(world));
+      else if (click && tool === 'booth') this.placeAt.emit(cellCentre(world));
     } else if (d.mode === 'none' && tool === 'zone-poly' && click) {
       this.addCorner(this.snapped(world));
     } else if (d.mode === 'none' && tool === 'text' && click) {
@@ -1219,6 +1748,7 @@ export class PlannerCanvasComponent {
   };
 
   private readonly onDoubleClick = () => {
+    if (this.is3d()) return;
     if (this.tool() === 'measure-distance' && this.measure.length >= 2) {
       this.measureDone = true;
       this.pointer = null;
@@ -1387,8 +1917,36 @@ const HINTS: Record<PlannerTool, string> = {
 
 // ---- drawing helpers ------------------------------------------------------------------------
 
+/** Degrees in (-180, 180]. */
+function normalise(degrees: number): number {
+  const d = ((degrees % 360) + 360) % 360;
+  return d > 180 ? d - 360 : d;
+}
+
 function fmt(n: number): string {
   return (Math.round(n * 100) / 100).toLocaleString('en-IN');
+}
+
+/** Metres a grid cell is: the 1 m grid the plan draws. */
+const CELL = 1;
+/** Tools that draw a box of whole grid cells. */
+const CELL_TOOLS: ReadonlySet<PlannerTool> = new Set<PlannerTool>(['booth', 'zone-rect', 'rect']);
+
+/**
+ * The whole grid cells a drag touches: a drag started or ended part-way into a cell takes that
+ * cell in full.
+ */
+function cellsBetween(a: Point, b: Point): Rect {
+  const x0 = Math.floor(Math.min(a[0], b[0]) / CELL) * CELL;
+  const y0 = Math.floor(Math.min(a[1], b[1]) / CELL) * CELL;
+  const x1 = Math.max(x0 + CELL, Math.ceil(Math.max(a[0], b[0]) / CELL) * CELL);
+  const y1 = Math.max(y0 + CELL, Math.ceil(Math.max(a[1], b[1]) / CELL) * CELL);
+  return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+}
+
+/** The middle of the grid cell a point is in; a booth placed by a click is centred there. */
+function cellCentre(p: Point): Point {
+  return [Math.floor(p[0] / CELL) * CELL + CELL / 2, Math.floor(p[1] / CELL) * CELL + CELL / 2];
 }
 
 function rectBetween(a: Point, b: Point): Rect {

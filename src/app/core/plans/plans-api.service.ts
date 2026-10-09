@@ -44,4 +44,16 @@ export class PlansApi {
   ): Observable<StallPlanView> {
     return this.http.put<StallPlanView>(this.base(slug, eventId, hallId), { ...plan, revision });
   }
+
+  /** Publishes the saved plan; `revision` is the saved one the planner shows. */
+  publish(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    revision: number,
+  ): Observable<StallPlanView> {
+    return this.http.post<StallPlanView>(`${this.base(slug, eventId, hallId)}/publish`, {
+      revision,
+    });
+  }
 }

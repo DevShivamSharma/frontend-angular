@@ -76,6 +76,8 @@ export interface PlanContent {
 export interface StallPlanView extends PlanContent {
   revision: number;
   updatedAt: string | null;
+  /** The published revision; it may be older than the saved one. */
+  published: { revision: number; at: string } | null;
 }
 
 export interface PlannerView {
@@ -83,6 +85,7 @@ export interface PlannerView {
   plan: StallPlanView;
   canEdit: boolean;
   readOnlyReason: string | null;
+  canPublish: boolean;
 }
 
 /** A broken rule, and the zones, stalls or seats it is about (none: the whole plan). */
