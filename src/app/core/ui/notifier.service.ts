@@ -12,6 +12,11 @@ export class Notifier {
     this.messages.add({ severity: 'success', summary: message, life: 4000 });
   }
 
+  /** Something refused, with why: a rule a change would break. */
+  warn(message: string): void {
+    this.messages.add({ severity: 'warn', summary: message, life: 8000 });
+  }
+
   error(error: unknown, fallback?: string): void {
     this.messages.add({ severity: 'error', summary: errorMessage(error, fallback), life: 8000 });
   }

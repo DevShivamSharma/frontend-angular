@@ -109,12 +109,27 @@ export const ORG_ROUTES: Routes = [
               import('./events/event-page.component').then((m) => m.EventPageComponent),
           },
           {
+            path: ':eventId/halls/:hallId/planner',
+            title: 'Stall planner',
+            canActivate: [permissionGuard('layouts.view')],
+            canDeactivate: [(page: { canLeave(): Promise<boolean> | boolean }) => page.canLeave()],
+            loadComponent: () =>
+              import('./planner/planner-page.component').then((m) => m.PlannerPageComponent),
+          },
+          {
             path: ':eventId/halls/:hallId',
             title: 'Event hall',
             loadComponent: () =>
               import('./events/event-hall-page.component').then((m) => m.EventHallPageComponent),
           },
         ],
+      },
+      {
+        path: 'categories',
+        title: 'Stall categories',
+        canActivate: [permissionGuard('categories.manage')],
+        loadComponent: () =>
+          import('./categories/categories-page.component').then((m) => m.CategoriesPageComponent),
       },
       {
         path: 'rules',

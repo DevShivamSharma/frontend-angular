@@ -32,7 +32,10 @@ import { FloorViewComponent } from '../../../shared/floor/floor-view.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { RulesSummaryComponent } from '../rules/rules-summary.component';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { FormsModule } from '@angular/forms';
+import { CategoriesApi } from '../../../core/categories/categories-api.service';
+import type { CategoryRef } from '../../../core/categories/categories.models';
 
 const GROUPS: Array<{ key: RuleGroup; label: string }> = [
   { key: 'floor', label: 'The hall floor' },
@@ -57,6 +60,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
     PageHeaderComponent,
     RulesSummaryComponent,
     ToggleSwitchModule,
+    MultiSelectModule,
     FormsModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -79,7 +83,63 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
             {{ d.hall.width | number: '1.0-1' }} × {{ d.hall.depth | number: '1.0-1' }} m ·
             {{ d.hall.floorArea | number: '1.0-0' }} m² · {{ d.event.audience }} event
           </span>
+          @if (canPlan()) {
+            <a pButton [routerLink]="['planner']"
+              ><app-icon name="architecture" />{{
+                d.plan.revision ? 'Open stall planner' : 'Plan stalls'
+              }}</a
+            >
+          }
         </app-page-header>
+
+        @if (d.plan.revision) {
+          <p class="muted small nums plan-line">
+            Stall plan: {{ d.plan.stalls }} {{ d.plan.stalls === 1 ? 'stall' : 'stalls' }} ·
+            {{ d.plan.seats }} {{ d.plan.seats === 1 ? 'seat' : 'seats' }} · saved
+            {{ d.plan.revision }} {{ d.plan.revision === 1 ? 'time' : 'times' }}
+          </p>
+        }
+
+        <section class="panel">
+          <h2 class="section-title">Stall categories</h2>
+          @if (canManage()) {
+            <p class="muted small">
+              What stalls on this hall are sold as. The planner offers only these. Add categories
+              under Categories.
+            </p>
+            <div class="row">
+              <p-multiselect
+                class="grow-select"
+                [options]="categoryOptions()"
+                optionLabel="name"
+                optionValue="id"
+                optionDisabled="disabled"
+                [ngModel]="selectedCategories()"
+                (ngModelChange)="selectedCategories.set($event)"
+                placeholder="Choose categories"
+                [filter]="true"
+                display="chip"
+                ariaLabel="Stall categories of this hall"
+                appendTo="body"
+              />
+              <button
+                pButton
+                (click)="saveCategories()"
+                [disabled]="busy() || !categoriesChanged()"
+              >
+                Save categories
+              </button>
+            </div>
+          } @else if (d.categories.length) {
+            <p class="chips">
+              @for (c of d.categories; track c.id) {
+                <span class="status-chip">{{ c.name }}</span>
+              }
+            </p>
+          } @else {
+            <p class="muted small">The venue has not chosen categories for this hall yet.</p>
+          }
+        </section>
 
         <section class="panel floor">
           <app-floor-view [floor]="d.floor" />
@@ -154,6 +214,19 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
     .nums {
       font-variant-numeric: tabular-nums;
     }
+    .plan-line {
+      margin: -8px 0 0;
+    }
+    .grow-select {
+      flex: 1 1 320px;
+      min-width: 0;
+    }
+    .chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 0;
+    }
     .floor {
       display: grid;
       gap: 8px;
@@ -206,6 +279,7 @@ export class EventHallPageComponent {
 
   private readonly api = inject(EventsApi);
   private readonly rulesApi = inject(RulesApi);
+  private readonly categoriesApi = inject(CategoriesApi);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(Notifier);
   private readonly context = inject(OrgContextStore);
@@ -213,6 +287,25 @@ export class EventHallPageComponent {
   protected readonly slug = this.context.slug;
   protected readonly groups = GROUPS;
   protected readonly canManage = computed(() => this.context.can('events.manage'));
+  protected readonly canPlan = computed(() => this.context.can('layouts.view'));
+  /** The organisation's categories: active ones, and inactive ones the hall already sells. */
+  private readonly allCategories = signal<CategoryRef[]>([]);
+  protected readonly selectedCategories = signal<string[]>([]);
+  protected readonly categoryOptions = computed(() => {
+    const on = new Set(this.detail()?.categories.map((c) => c.id) ?? []);
+    return this.allCategories()
+      .filter((c) => c.status === 'active' || on.has(c.id))
+      .map((c) => ({
+        ...c,
+        name: c.status === 'active' ? c.name : `${c.name} (inactive)`,
+        disabled: c.status !== 'active' && !this.selectedCategories().includes(c.id),
+      }));
+  });
+  protected readonly categoriesChanged = computed(() => {
+    const saved = (this.detail()?.categories ?? []).map((c) => c.id).sort();
+    const now = [...this.selectedCategories()].sort();
+    return saved.join() !== now.join();
+  });
   protected readonly detail = signal<EventHallDetailView | null>(null);
   protected readonly catalogue = signal<RuleCatalogue | null>(null);
   protected readonly loading = signal(false);
@@ -233,12 +326,45 @@ export class EventHallPageComponent {
         firstValueFrom(this.api.hall(this.slug(), eventId, hallId)),
         this.catalogue() ?? firstValueFrom(this.rulesApi.catalogue(this.slug())),
       ]);
-      this.detail.set(detail);
+      this.show(detail);
       this.catalogue.set(catalogue);
+      if (this.canManage() && !this.allCategories().length) {
+        this.allCategories.set(await firstValueFrom(this.categoriesApi.list(this.slug())));
+      }
     } catch {
       // The error interceptor has shown it.
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** Shows the hall as the server has it, categories included. */
+  private show(detail: EventHallDetailView): void {
+    this.detail.set(detail);
+    this.selectedCategories.set(detail.categories.map((c) => c.id));
+  }
+
+  protected async saveCategories(): Promise<void> {
+    const d = this.detail();
+    if (!d) return;
+    this.busy.set(true);
+    try {
+      this.show(
+        await firstValueFrom(
+          this.api.setHallCategories(
+            this.slug(),
+            d.event.id,
+            d.hall.hallId,
+            this.selectedCategories(),
+          ),
+        ),
+      );
+      this.notifier.success('Categories saved.');
+    } catch {
+      // The error interceptor has shown it; show what is saved.
+      this.show(d);
+    } finally {
+      this.busy.set(false);
     }
   }
 

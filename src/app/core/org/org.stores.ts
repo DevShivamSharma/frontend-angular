@@ -21,10 +21,10 @@ export class OrgContextStore {
 
   /**
    * Whether the member may do this. An organiser's role may list more, but the server lets
-   * them reach events only, so nothing else is offered.
+   * them reach their events and those events' stall plans only, so nothing else is offered.
    */
   can(permission: string): boolean {
-    if (this.eventScoped() && !permission.startsWith('events.')) return false;
+    if (this.eventScoped() && !/^(events|layouts)\./.test(permission)) return false;
     return this.permissionSet().has(permission);
   }
 }

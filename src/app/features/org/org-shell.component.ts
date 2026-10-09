@@ -132,6 +132,9 @@ export class OrgShellComponent {
     if (this.context.can('venues.view')) {
       items.push({ label: 'Venues', icon: 'location_city', link: ['/', slug, 'venues'] });
     }
+    if (this.context.can('categories.manage')) {
+      items.push({ label: 'Categories', icon: 'category', link: ['/', slug, 'categories'] });
+    }
     if (this.context.can('rules.view')) {
       items.push({ label: 'Rules', icon: 'rule', link: ['/', slug, 'rules'] });
     }

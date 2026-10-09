@@ -19,7 +19,7 @@ import type { EventKind, EventView } from '../../../core/events/events.models';
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
-import { formatDays } from './event-dates';
+import { daysBetween, EventPhase, eventPhase, formatDays, today } from './event-dates';
 import { EventDialogComponent, EventDialogData } from './event-dialog.component';
 import { AppDialog } from '../../../core/ui/app-dialog.service';
 
@@ -81,26 +81,54 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
 
       <ul class="cards">
         @for (e of events(); track e.id) {
+          @let phase = phaseOf(e);
           <li>
-            <a class="card panel" [routerLink]="['/', slug(), 'events', e.id]">
-              <span class="when" aria-hidden="true">
-                <span class="day">{{ e.startsOn.slice(8, 10) }}</span>
-                <span class="mon">{{ month(e.startsOn) }}</span>
-              </span>
-              <span class="body">
-                <span class="name">
-                  {{ e.name }}
-                  <span class="status-chip is-neutral">{{ e.audience }}</span>
+            <a
+              class="event-card"
+              [class]="'phase-' + phase"
+              [routerLink]="['/', slug(), 'events', e.id]"
+            >
+              <span class="top">
+                <span class="when" aria-hidden="true">
+                  <span class="mon">{{ month(e.startsOn) }}</span>
+                  <span class="day">{{ e.startsOn.slice(8, 10) }}</span>
                 </span>
-                @if (e.organiserName) {
-                  <span class="muted">{{ e.organiserName }}</span>
-                }
-                <span class="muted small"
-                  >{{ days(e) }} · {{ e.hallCount }} {{ e.hallCount === 1 ? 'hall' : 'halls'
-                  }}{{ e.venueEventId ? ' · ' + e.venueEventId : '' }}</span
-                >
+                <span class="titles">
+                  <span class="name">{{ e.name }}</span>
+                  <span class="muted sub">
+                    {{
+                      e.organiserName ??
+                        (e.kind === 'internal' ? 'Internal event' : 'External event')
+                    }}
+                  </span>
+                </span>
+                <span class="phase">
+                  <span class="dot" aria-hidden="true"></span>{{ phaseLabel(e, phase) }}
+                </span>
               </span>
-              <app-icon class="chevron" name="chevron_right" />
+              <span class="meta">
+                <span><app-icon name="event" />{{ days(e) }}</span>
+                <span
+                  ><app-icon name="meeting_room" />{{ e.hallCount }}
+                  {{ e.hallCount === 1 ? 'hall' : 'halls' }}</span
+                >
+                <span class="tag">{{ e.audience }}</span>
+                @if (e.venueEventId) {
+                  <span class="id" [title]="'Venue system id ' + e.venueEventId"
+                    ><app-icon name="confirmation_number" />{{ e.venueEventId }}</span
+                  >
+                }
+              </span>
+              <span class="foot">
+                <span>{{
+                  e.hallCount
+                    ? 'Open halls and stall plans'
+                    : canManage()
+                      ? 'Add halls'
+                      : 'No halls yet'
+                }}</span>
+                <app-icon name="arrow_forward" />
+              </span>
             </a>
           </li>
         }
@@ -113,44 +141,88 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
       margin: 0;
       padding: 0;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
       gap: 16px;
     }
-    .card {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      color: inherit;
-      text-decoration: none;
+    .event-card {
+      --accent: var(--app-outline);
+      --accent-soft: var(--app-surface-container);
+      --accent-tint: color-mix(in srgb, var(--accent) 14%, var(--app-surface-container-lowest));
+      position: relative;
+      display: grid;
+      gap: 14px;
       height: 100%;
       box-sizing: border-box;
-      transition: border-color 120ms;
+      padding: 18px 18px 14px;
+      overflow: hidden;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 16px;
+      background: var(--app-surface-container-lowest);
+      box-shadow: var(--app-level1);
+      color: inherit;
+      text-decoration: none;
+      transition:
+        border-color 150ms ease,
+        box-shadow 150ms ease,
+        transform 150ms ease;
     }
-    .card:hover,
-    .card:focus-visible {
-      border-color: var(--app-primary);
+    .event-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto;
+      height: 4px;
+      background: var(--accent);
+    }
+    .event-card:hover,
+    .event-card:focus-visible {
+      border-color: var(--accent);
+      box-shadow: var(--app-level2);
+      transform: translateY(-1px);
+    }
+    .phase-upcoming {
+      --accent: var(--app-primary);
+      --accent-soft: var(--accent-tint);
+    }
+    .phase-build-up,
+    .phase-dismantling {
+      --accent: #d97706;
+      --accent-soft: #fef3c7;
+    }
+    .phase-live {
+      --accent: #16a34a;
+      --accent-soft: #dcfce7;
+    }
+    .top {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      min-width: 0;
     }
     .when {
       display: grid;
       place-items: center;
+      align-content: center;
       width: 52px;
-      height: 52px;
+      height: 56px;
       flex: none;
       border-radius: 12px;
-      background: var(--app-secondary-container);
-      color: var(--app-on-secondary-container);
-      line-height: 1.1;
-    }
-    .day {
-      font: var(--app-title-medium);
-      font-variant-numeric: tabular-nums;
+      background: var(--accent-soft);
+      color: var(--app-on-surface);
+      line-height: 1.05;
     }
     .mon {
       font: var(--app-label-small);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-weight: 700;
     }
-    .body {
+    .day {
+      font: var(--app-title-large);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .titles {
       display: grid;
       gap: 2px;
       min-width: 0;
@@ -158,17 +230,82 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
     }
     .name {
       font: var(--app-title-medium);
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .small {
+    .sub {
+      font: var(--app-body-medium);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .phase {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex: none;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--app-on-surface);
+      font: var(--app-label-medium);
+      white-space: nowrap;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .phase-live .dot {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--app-outline-variant);
+      color: var(--app-on-surface-variant);
       font: var(--app-body-small);
       font-variant-numeric: tabular-nums;
     }
-    .chevron {
-      color: var(--app-on-surface-variant);
+    .meta > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .meta app-icon {
+      font-size: 0.85rem;
+    }
+    .tag {
+      padding: 1px 8px;
+      border-radius: 6px;
+      background: var(--app-surface-container);
+      color: var(--app-on-surface);
+      font: var(--app-label-small);
+    }
+    .id {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--app-primary);
+      font: var(--app-label-large);
+    }
+    .foot app-icon {
+      transition: transform 150ms ease;
+    }
+    .event-card:hover .foot app-icon {
+      transform: translateX(3px);
     }
   `,
 })
@@ -204,6 +341,22 @@ export class EventsPageComponent {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private readonly today = today();
+
+  protected phaseOf(e: EventView): EventPhase {
+    return eventPhase(e, this.today);
+  }
+
+  protected phaseLabel(e: EventView, phase: EventPhase): string {
+    if (phase !== 'upcoming') {
+      return { 'build-up': 'Build-up', live: 'Live', dismantling: 'Dismantling', ended: 'Ended' }[
+        phase
+      ];
+    }
+    const n = daysBetween(this.today, e.startsOn);
+    return n === 1 ? 'Tomorrow' : n <= 60 ? `In ${n} days` : 'Upcoming';
   }
 
   protected days(e: EventView): string {

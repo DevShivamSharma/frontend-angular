@@ -1,5 +1,6 @@
 /** Mirrors the backend's events, their halls and organisers (Module D). */
 import type { CreatedInvitation, HallFloor, InvitationView, MemberView } from '../api/api.models';
+import type { CategoryRef } from '../categories/categories.models';
 import type { EventType, RuleId, RuleValues } from '../rules/rules.models';
 
 export type EventKind = 'internal' | 'external';
@@ -70,6 +71,10 @@ export interface EventHallDetailView {
   hall: EventHallView;
   floor: HallFloor;
   rules: EventHallRules;
+  /** The categories this hall sells; the planner offers only these. */
+  categories: CategoryRef[];
+  /** Stalls and seats on the hall's plan; revision 0 before the first save. */
+  plan: { stalls: number; seats: number; revision: number };
 }
 
 export interface EventPeople {

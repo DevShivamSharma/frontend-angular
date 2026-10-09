@@ -75,6 +75,18 @@ export class EventsApi {
     );
   }
 
+  setHallCategories(
+    slug: string,
+    id: string,
+    hallId: string,
+    categoryIds: string[],
+  ): Observable<EventHallDetailView> {
+    return this.http.put<EventHallDetailView>(
+      `${this.base(slug)}/${id}/halls/${hallId}/categories`,
+      { categoryIds },
+    );
+  }
+
   people(slug: string, id: string): Observable<EventPeople> {
     return this.http.get<EventPeople>(`${this.base(slug)}/${id}/people`);
   }
