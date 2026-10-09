@@ -1,5 +1,11 @@
 import type { FloorAreaKind as AreaKind, HallFloor } from '../../../core/api/api.models';
-import type { PlanSeat, PlanStall, PlanZone, StallSide } from '../../../core/plans/plans.models';
+import type {
+  PlanObject,
+  PlanSeat,
+  PlanStall,
+  PlanZone,
+  StallSide,
+} from '../../../core/plans/plans.models';
 import type { MultiPolygon, Point } from '../../../core/venues/floor-plan.models';
 
 /**
@@ -191,6 +197,69 @@ export function zoneAt(p: Point, zones: PlanZone[]): PlanZone | null {
 
 export function centre(r: Rect): Point {
   return [r.x + r.width / 2, r.y + r.height / 2];
+}
+
+/** Where the hall's ways out are: entry areas and helper cards that show an exit. */
+export function exitPoints(f: HallFloor): Point[] {
+  const fromAreas: Point[] = f.geometry
+    ? f.geometry.objects
+        .filter((o) => o.kind === 'entry')
+        .flatMap((o) => o.geometry.map((p) => centre(ringBox(p[0]))))
+    : f.areas.filter((a) => a.kind === 'entry').map((a) => centre(a));
+  const fromCards: Point[] = (f.iconGroups ?? [])
+    .filter((g) => g.icons.some((i) => i.kind === 'emergency-exit'))
+    .map((g) => [g.x, g.y]);
+  return [...fromAreas, ...fromCards];
+}
+
+// ---- drawings -------------------------------------------------------------------------------
+
+/** Metres a line of drawing text is tall; its width follows the text. */
+export const TEXT_HEIGHT = 1;
+
+export function segmentDistance(p: Point, a: Point, b: Point): number {
+  const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+  const len = dx * dx + dy * dy;
+  const t = len ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len)) : 0;
+  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+}
+
+/** The box a drawing's text takes, from where it starts. */
+export function textBox(o: Pick<PlanObject, 'points' | 'text'>): Rect {
+  const [x, y] = o.points[0];
+  const width = Math.max(1, (o.text ?? '').length) * TEXT_HEIGHT * 0.6;
+  return { x, y: y - TEXT_HEIGHT / 2, width, height: TEXT_HEIGHT };
+}
+
+/** The outline a drawing is drawn and picked by; a circle as a ring of 64 points. */
+export function objectOutline(o: Pick<PlanObject, 'kind' | 'points' | 'text'>): {
+  points: Point[];
+  closed: boolean;
+} {
+  const [a, b] = o.points;
+  switch (o.kind) {
+    case 'rect': {
+      const r = {
+        x: Math.min(a[0], b[0]),
+        y: Math.min(a[1], b[1]),
+        width: Math.abs(b[0] - a[0]),
+        height: Math.abs(b[1] - a[1]),
+      };
+      return { points: rectRing(r), closed: true };
+    }
+    case 'circle': {
+      const r = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const points = Array.from({ length: 64 }, (_, i) => {
+        const t = (i / 64) * Math.PI * 2;
+        return [a[0] + r * Math.cos(t), a[1] + r * Math.sin(t)] as Point;
+      });
+      return { points, closed: true };
+    }
+    case 'text':
+      return { points: rectRing(textBox(o)), closed: true };
+    default:
+      return { points: o.points, closed: false };
+  }
 }
 
 // ---- numbering ------------------------------------------------------------------------------

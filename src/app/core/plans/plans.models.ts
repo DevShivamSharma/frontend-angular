@@ -51,10 +51,26 @@ export interface PlanSeat {
   categoryId: string | null;
 }
 
+export type PlanObjectKind = 'line' | 'rect' | 'circle' | 'polyline' | 'text';
+
+/**
+ * A drawing on the plan that is not sold: a line, rectangle, circle, polyline or text. The rules
+ * do not check it. Points by kind: line 2, rect 2 opposite corners, circle the centre and a point
+ * on the edge, polyline 2 or more, text 1 (where it starts).
+ */
+export interface PlanObject {
+  id: string;
+  kind: PlanObjectKind;
+  points: Point[];
+  text: string | null;
+  color: string;
+}
+
 export interface PlanContent {
   zones: PlanZone[];
   stalls: PlanStall[];
   seats: PlanSeat[];
+  objects: PlanObject[];
 }
 
 export interface StallPlanView extends PlanContent {

@@ -14,12 +14,75 @@ import {
 import * as T from 'three';
 
 import type { FloorAreaKind as AreaKind, HallFloor } from '../../../core/api/api.models';
-import { PlanContent, PlanStall, stallLabel, StallSide } from '../../../core/plans/plans.models';
+import {
+  PlanContent,
+  PlanObject,
+  PlanObjectKind,
+  PlanStall,
+  stallLabel,
+  StallSide,
+} from '../../../core/plans/plans.models';
 import type { MultiPolygon, Point } from '../../../core/venues/floor-plan.models';
-import { pointInRing, polygonArea, Rect, ringBox, snap, stallRect } from './planner-geometry';
+import {
+  facilityCardCanvas,
+  iconGroupSize,
+  labelCanvas,
+  labelSize,
+} from '../../../shared/floor/floor-annotations';
+import {
+  objectOutline,
+  pointInRing,
+  polygonArea,
+  Rect,
+  ringBox,
+  segmentDistance,
+  snap,
+  stallRect,
+  textBox,
+} from './planner-geometry';
 import type { Selection, SelectionKind } from './planner.store';
 
-export type PlannerTool = 'select' | 'pan' | 'zone-rect' | 'zone-poly' | 'booth';
+export type PlannerTool =
+  | 'select'
+  | 'pan'
+  | 'zone-rect'
+  | 'zone-poly'
+  | 'booth'
+  | 'line'
+  | 'rect'
+  | 'circle'
+  | 'polyline'
+  | 'text'
+  | 'mirror-line'
+  | 'zoom-window'
+  | 'measure-distance'
+  | 'measure-area'
+  | 'measure-angle'
+  | 'measure-height';
+
+/** A drawing made with a drawing tool, for the page to add. */
+export interface DrawObjectEvent {
+  kind: PlanObjectKind;
+  points: Point[];
+}
+
+/** The way from a booth to the nearest exit. */
+export interface WayOutPath {
+  from: Point;
+  to: Point;
+  metres: number;
+}
+
+/** Tools that change nothing, so they work on a read-only plan too. */
+const VIEW_TOOLS: ReadonlySet<PlannerTool> = new Set<PlannerTool>([
+  'zoom-window',
+  'measure-distance',
+  'measure-area',
+  'measure-angle',
+  'measure-height',
+]);
+/** Points a click-by-click tool takes before it is done by itself. */
+const SHAPE_POINTS: Partial<Record<PlannerTool, number>> = { line: 2, 'mirror-line': 2 };
 
 export interface PickEvent {
   kind: SelectionKind;
@@ -64,6 +127,12 @@ const STALL_EDGE = '#15803d';
 const SEAT_FILL = '#a855f7';
 const SELECTED = '#1d4ed8';
 const DRAFT = '#ea580c';
+const MEASURE = '#6d28d9';
+const EXIT = '#16a34a';
+/** Pixels: a drawing within this of the pointer is under it. */
+const HIT_PX = 6;
+/** Way-out paths at most this many get their length written. */
+const WAY_OUT_CHIPS = 60;
 /** Pixels: a click that moved less than this is a click, not a drag. */
 const CLICK_PX = 5;
 /** Booths at most this many get their number drawn. */
@@ -89,18 +158,20 @@ const LABELLED = 1500;
     @if (hint()) {
       <p class="hint">{{ hint() }}</p>
     }
-    <div class="compass" [style.transform]="'rotate(' + north() + 'deg)'" aria-label="North">
-      <span>N</span>
-    </div>
-    <div class="zoom">
-      <button type="button" (click)="zoomBy(1.25)" aria-label="Zoom in" title="Zoom in">
-        <i class="pi pi-search-plus"></i>
-      </button>
-      <button type="button" (click)="zoomBy(0.8)" aria-label="Zoom out" title="Zoom out">
-        <i class="pi pi-search-minus"></i>
-      </button>
-      <button type="button" (click)="fit()" aria-label="Fit the hall" title="Fit the hall">
-        <i class="pi pi-expand"></i>
+    <div class="cube-wrap">
+      <!-- The plan is drawn from the top only; the other faces show where they are. -->
+      <div class="cube" aria-label="View: top">
+        <div class="ring" [style.transform]="'rotate(' + north() + 'deg)'">
+          <span class="n">N</span>
+        </div>
+        <span class="face back">BACK</span>
+        <span class="face left">LEFT</span>
+        <span class="face top">TOP</span>
+        <span class="face right">RIGHT</span>
+        <span class="face front">FRONT</span>
+      </div>
+      <button type="button" class="home" (click)="fit()" title="Fit the hall">
+        <i class="pi pi-home"></i> Home
       </button>
     </div>
     @if (error()) {
@@ -125,7 +196,18 @@ const LABELLED = 1500;
     }
     .tool-zone-rect,
     .tool-zone-poly,
-    .tool-booth {
+    .tool-booth,
+    .tool-line,
+    .tool-rect,
+    .tool-circle,
+    .tool-polyline,
+    .tool-text,
+    .tool-mirror-line,
+    .tool-zoom-window,
+    .tool-measure-distance,
+    .tool-measure-area,
+    .tool-measure-angle,
+    .tool-measure-height {
       cursor: crosshair;
     }
     .overlay {
@@ -168,60 +250,101 @@ const LABELLED = 1500;
       box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
       pointer-events: none;
     }
-    .compass {
+    .cube-wrap {
       position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: #fff;
-      border: 1px solid #cbd5e1;
+      top: 16px;
+      right: 16px;
       display: grid;
-      place-items: start center;
-      box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+      justify-items: center;
+      gap: 10px;
+    }
+    .cube {
+      position: relative;
+      display: grid;
+      grid-template-columns: 22px 44px 22px;
+      grid-template-rows: 22px 44px 22px;
+      place-items: center;
+      width: 104px;
+      height: 104px;
+      padding: 8px;
+      box-sizing: border-box;
       pointer-events: none;
     }
-    .compass span {
-      margin-top: 3px;
-      font: 700 12px/1 sans-serif;
+    .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1px solid #cbd5e1;
+      background: rgb(255 255 255 / 0.9);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+    }
+    .n {
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      font: 700 11px/1 sans-serif;
       color: #dc2626;
     }
-    .compass::after {
-      content: '';
-      position: absolute;
-      top: 17px;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-bottom: 14px solid #dc2626;
-      transform: translateX(-50%);
+    .face {
+      position: relative;
+      display: grid;
+      place-items: center;
+      font: 600 8px/1 sans-serif;
+      letter-spacing: 0.04em;
+      color: #334155;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
     }
-    .zoom {
-      position: absolute;
-      right: 12px;
-      bottom: 12px;
+    .face.back {
+      grid-area: 1 / 2;
+      width: 44px;
+      height: 16px;
+    }
+    .face.front {
+      grid-area: 3 / 2;
+      width: 44px;
+      height: 16px;
+    }
+    .face.left,
+    .face.right {
+      width: 16px;
+      height: 44px;
+      writing-mode: vertical-rl;
+    }
+    .face.left {
+      grid-area: 2 / 1;
+      transform: rotate(180deg);
+    }
+    .face.right {
+      grid-area: 2 / 3;
+    }
+    .face.top {
+      grid-area: 2 / 2;
+      width: 44px;
+      height: 44px;
+      font-size: 10px;
+      background: #1e293b;
+      border-color: #1e293b;
+      color: #fff;
+    }
+    .home {
       display: flex;
-      gap: 2px;
-      padding: 3px;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid #e2e8f0;
       border-radius: 8px;
       background: #fff;
-      box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
-    }
-    .zoom button {
-      width: 32px;
-      height: 32px;
-      border: 0;
-      border-radius: 6px;
-      background: none;
-      color: #334155;
+      color: #1e293b;
+      font: 500 13px/1.2 var(--app-font-family, sans-serif);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
       cursor: pointer;
     }
-    .zoom button:hover,
-    .zoom button:focus-visible {
-      background: #e2e8f0;
+    .home:hover,
+    .home:focus-visible {
+      background: #f1f5f9;
     }
     .error {
       position: absolute;
@@ -241,8 +364,15 @@ export class PlannerCanvasComponent {
   readonly snapStep = input(0.5);
   readonly categoryColors = input<ReadonlyMap<string, string>>(new Map());
   readonly readonly = input(false);
+  readonly showGrid = input(true);
+  readonly showLabels = input(true);
+  /** Ways from booths to the nearest exit, drawn while Way out is on. */
+  readonly wayOut = input<WayOutPath[]>([]);
 
   readonly drawRect = output<Rect>();
+  readonly drawObject = output<DrawObjectEvent>();
+  /** A line drawn with Mirror line: the selection is mirrored across it. */
+  readonly mirrorLine = output<[Point, Point]>();
   readonly drawPolygon = output<Point[]>();
   /** A booth placed by a click: its centre. */
   readonly placeAt = output<Point>();
@@ -261,6 +391,10 @@ export class PlannerCanvasComponent {
   private readonly floorGroup = new T.Group();
   private readonly planGroup = new T.Group();
   private readonly draftGroup = new T.Group();
+  private readonly gridGroup = new T.Group();
+  /** The hall's text labels and helper cards (toilets, exits…), shown with the labels. */
+  private readonly noteGroup = new T.Group();
+  private readonly wayGroup = new T.Group();
   private observer?: ResizeObserver;
   private extent: Rect = { x: 0, y: 0, width: 100, height: 100 };
 
@@ -274,6 +408,13 @@ export class PlannerCanvasComponent {
   } | null = null;
   private pointer: Point | null = null;
   private polygon: Point[] = [];
+  /** Points of a measure; done once a distance has two or an area is closed. */
+  private measure: Point[] = [];
+  private measureDone = false;
+  /** Points of a line, polyline or mirror line being drawn click by click. */
+  private shape: Point[] = [];
+  /** A circle being dragged out: its centre and radius. */
+  private draftCircle: { c: Point; r: number } | null = null;
   private draftRect: Rect | null = null;
   private moveOffset: Point = [0, 0];
   private spaceHeld = false;
@@ -295,7 +436,20 @@ export class PlannerCanvasComponent {
       this.plan();
       this.selection();
       this.categoryColors();
+      this.showLabels();
       untracked(() => this.buildPlan());
+    });
+    effect(() => {
+      this.gridGroup.visible = this.showGrid();
+      untracked(() => this.render());
+    });
+    effect(() => {
+      this.noteGroup.visible = this.showLabels();
+      untracked(() => this.render());
+    });
+    effect(() => {
+      const paths = this.wayOut();
+      untracked(() => this.buildWayOut(paths));
     });
     effect(() => {
       const tool = this.tool();
@@ -312,21 +466,50 @@ export class PlannerCanvasComponent {
   /** Drops a shape being drawn. */
   cancel(): void {
     this.polygon = [];
+    this.measure = [];
+    this.measureDone = false;
+    this.shape = [];
+    this.draftCircle = null;
     this.draftRect = null;
     this.down = null;
     this.buildDraft();
   }
 
-  /** Closes the polygon being drawn, when it has three corners. */
+  /**
+   * Closes the polygon being drawn, or the area being measured, when it has three corners; ends
+   * a polyline that has two.
+   */
   finishPolygon(): void {
+    if (this.tool() === 'polyline' && this.shape.length >= 2) {
+      const points = this.shape;
+      this.cancel();
+      this.drawObject.emit({ kind: 'polyline', points });
+      return;
+    }
+    if (this.tool() === 'measure-area' && !this.measureDone && this.measure.length >= 3) {
+      this.measureDone = true;
+      this.pointer = null;
+      this.buildDraft();
+      return;
+    }
     if (this.tool() !== 'zone-poly' || this.polygon.length < 3) return;
     const points = this.polygon;
     this.cancel();
     this.drawPolygon.emit(points);
   }
 
-  /** Takes back the last corner of the polygon being drawn. */
+  /** Takes back the last corner of the polygon being drawn or the measure being taken. */
   undoCorner(): boolean {
+    if (this.shape.length) {
+      this.shape = this.shape.slice(0, -1);
+      this.buildDraft();
+      return true;
+    }
+    if (this.measure.length && !this.measureDone) {
+      this.measure = this.measure.slice(0, -1);
+      this.buildDraft();
+      return true;
+    }
     if (!this.polygon.length) return false;
     this.polygon = this.polygon.slice(0, -1);
     this.buildDraft();
@@ -334,7 +517,13 @@ export class PlannerCanvasComponent {
   }
 
   get drawing(): boolean {
-    return this.polygon.length > 0 || this.draftRect !== null;
+    return (
+      this.polygon.length > 0 ||
+      this.measure.length > 0 ||
+      this.shape.length > 0 ||
+      this.draftRect !== null ||
+      this.draftCircle !== null
+    );
   }
 
   zoomBy(factor: number): void {
@@ -348,6 +537,20 @@ export class PlannerCanvasComponent {
     this.camera.position.set(e.x + e.width / 2, -(e.y + e.height / 2), 100);
     this.camera.zoom = 1;
     this.resize();
+  }
+
+  /** Fills the view with a box of the floor (Zoom window). */
+  zoomTo(r: Rect): void {
+    if (r.width <= 0 || r.height <= 0) return;
+    this.camera.position.x = r.x + r.width / 2;
+    this.camera.position.y = -(r.y + r.height / 2);
+    const fit = Math.min(
+      (this.camera.right - this.camera.left) / r.width,
+      (this.camera.top - this.camera.bottom) / r.height,
+    );
+    this.camera.zoom = Math.max(0.05, Math.min(400, fit));
+    this.camera.updateProjectionMatrix();
+    this.render();
   }
 
   /** The middle of what is in view, floor metres. */
@@ -369,7 +572,14 @@ export class PlannerCanvasComponent {
     host.appendChild(this.renderer.domElement);
     this.camera.near = 0.1;
     this.camera.far = 1000;
-    this.scene.add(this.floorGroup, this.planGroup, this.draftGroup);
+    this.scene.add(
+      this.floorGroup,
+      this.gridGroup,
+      this.noteGroup,
+      this.planGroup,
+      this.wayGroup,
+      this.draftGroup,
+    );
     const el = this.renderer.domElement;
     el.addEventListener('wheel', this.onWheel, { passive: false });
     el.addEventListener('pointerdown', this.onDown);
@@ -392,7 +602,15 @@ export class PlannerCanvasComponent {
     this.observer?.disconnect();
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKey);
-    for (const g of [this.floorGroup, this.planGroup, this.draftGroup]) dispose(g);
+    for (const g of [
+      this.floorGroup,
+      this.gridGroup,
+      this.noteGroup,
+      this.planGroup,
+      this.wayGroup,
+      this.draftGroup,
+    ])
+      dispose(g);
     this.renderer?.dispose();
     this.renderer?.domElement.remove();
   }
@@ -455,7 +673,15 @@ export class PlannerCanvasComponent {
       this.extent = { x: 0, y: 0, width: f.width, height: f.depth };
     }
     this.north.set(f.north?.rotation ?? 0);
-    addGrid(g, this.extent);
+    dispose(this.gridGroup);
+    addGrid(this.gridGroup, this.extent);
+    dispose(this.noteGroup);
+    addNotes(this.noteGroup, f);
+    // Labels and helper cards often sit beside the hall; fitting the view shows them too.
+    this.extent = ringBox([
+      ...rectPoints(this.extent),
+      ...noteBoxes(f).flatMap((b) => rectPoints(b)),
+    ]);
     this.render();
   }
 
@@ -471,6 +697,18 @@ export class PlannerCanvasComponent {
       const on = sel?.kind === 'zone' && selected.has(z.id);
       addPolygons(g, [[z.polygon]], z.color, on ? 0.22 : 0.12, 10);
       addLine(g, z.polygon, on ? SELECTED : z.color, 11, true);
+    }
+
+    // Drawings: outlines, and text where it is written.
+    for (const o of plan.objects) {
+      const color = sel?.kind === 'object' && selected.has(o.id) ? SELECTED : o.color;
+      if (o.kind === 'text') {
+        addText(g, o.text ?? '', textBox(o), color);
+        if (color === SELECTED) addLine(g, objectOutline(o).points, SELECTED, 16, true);
+        continue;
+      }
+      const { points, closed } = objectOutline(o);
+      addLine(g, points, color, 16, closed);
     }
 
     // Stalls: one mesh for all fills, lines for closed and open sides.
@@ -511,7 +749,7 @@ export class PlannerCanvasComponent {
       addSegments(g, open, STALL_EDGE, 21, true);
       addSegments(g, picked, SELECTED, 22, false);
     }
-    if (plan.stalls.length <= LABELLED) {
+    if (this.showLabels() && plan.stalls.length <= LABELLED) {
       for (const s of plan.stalls) addLabel(g, stallLabel(s), stallRect(s));
     }
 
@@ -561,6 +799,53 @@ export class PlannerCanvasComponent {
       points.renderOrder = 42;
       g.add(points);
     }
+    if (this.measure.length) {
+      let ring = this.measureRing();
+      // Height goes straight up or down first, then across to the second point.
+      if (this.tool() === 'measure-height' && ring.length >= 2) {
+        ring = [ring[0], [ring[0][0], ring[1][1]], ring[1]];
+      }
+      const closed = this.tool() === 'measure-area' && this.measureDone;
+      if (closed) addPolygons(g, [[ring]], MEASURE, 0.15, 40);
+      addLine(g, ring, MEASURE, 41, closed);
+      const geom = new T.BufferGeometry();
+      geom.setAttribute(
+        'position',
+        new T.Float32BufferAttribute(
+          this.measure.flatMap((p) => [p[0], -p[1], 42]),
+          3,
+        ),
+      );
+      const points = new T.Points(
+        geom,
+        new T.PointsMaterial({ color: MEASURE, size: 7, sizeAttenuation: false, depthTest: false }),
+      );
+      points.renderOrder = 42;
+      g.add(points);
+    }
+    if (this.shape.length) {
+      const line = this.pointer ? [...this.shape, this.pointer] : this.shape;
+      addLine(g, line, this.tool() === 'mirror-line' ? SELECTED : DRAFT, 41, false);
+    }
+    if (this.draftCircle) {
+      const { c, r } = this.draftCircle;
+      const ring = objectOutline({ kind: 'circle', points: [c, [c[0] + r, c[1]]], text: null });
+      addLine(g, ring.points, DRAFT, 41, true);
+    }
+    if (this.down?.mode === 'move' && this.down.move?.kind === 'object') {
+      const [dx, dy] = this.moveOffset;
+      const ids = new Set(this.down.move.ids);
+      for (const o of this.plan().objects.filter((x) => ids.has(x.id))) {
+        const { points, closed } = objectOutline(o);
+        addLine(
+          g,
+          points.map(([x, y]) => [x + dx, y + dy] as Point),
+          DRAFT,
+          41,
+          closed,
+        );
+      }
+    }
     if (this.down?.mode === 'move' && this.down.move) {
       const [dx, dy] = this.moveOffset;
       for (const r of this.boxesOf(this.down.move)) {
@@ -575,6 +860,37 @@ export class PlannerCanvasComponent {
           true,
         );
       }
+    }
+    this.render();
+  }
+
+  /** Way out: a line from each booth to its nearest exit, and the exits marked. */
+  private buildWayOut(paths: WayOutPath[]): void {
+    dispose(this.wayGroup);
+    const g = this.wayGroup;
+    if (paths.length) {
+      addSegments(
+        g,
+        paths.flatMap((p) => [p.from[0], -p.from[1], 30, p.to[0], -p.to[1], 30]),
+        EXIT,
+        30,
+        true,
+      );
+      const exits = new Map(paths.map((p) => [`${p.to[0]},${p.to[1]}`, p.to] as const));
+      const geom = new T.BufferGeometry();
+      geom.setAttribute(
+        'position',
+        new T.Float32BufferAttribute(
+          [...exits.values()].flatMap((p) => [p[0], -p[1], 31]),
+          3,
+        ),
+      );
+      const points = new T.Points(
+        geom,
+        new T.PointsMaterial({ color: EXIT, size: 12, sizeAttenuation: false, depthTest: false }),
+      );
+      points.renderOrder = 31;
+      g.add(points);
     }
     this.render();
   }
@@ -597,6 +913,69 @@ export class PlannerCanvasComponent {
         chips.push({
           ...this.screen(centroid(ring)),
           text: `${fmt(polygonArea(ring))} m²`,
+          kind: 'area',
+        });
+      }
+    }
+    if (this.shape.length) {
+      const line = this.pointer ? [...this.shape, this.pointer] : this.shape;
+      for (let i = 1; i < line.length; i++) chips.push(this.lengthChip(line[i - 1], line[i]));
+    }
+    if (this.draftCircle) {
+      const { c, r } = this.draftCircle;
+      chips.push({ ...this.screen(c), text: `r ${fmt(r)} m`, kind: 'length' });
+    }
+    const way = this.wayOut();
+    if (way.length <= WAY_OUT_CHIPS) {
+      for (const p of way) {
+        chips.push({
+          ...this.screen([(p.from[0] + p.to[0]) / 2, (p.from[1] + p.to[1]) / 2]),
+          text: `${fmt(p.metres)} m`,
+          kind: 'zone',
+        });
+      }
+    }
+    const measureTool = this.tool();
+    if (this.measure.length && measureTool === 'measure-angle') {
+      const ring = this.measureRing();
+      for (let i = 1; i < ring.length; i++) chips.push(this.lengthChip(ring[i - 1], ring[i]));
+      if (ring.length >= 3) {
+        const [a, b, c] = ring;
+        const turn = Math.abs(
+          Math.atan2(a[1] - b[1], a[0] - b[0]) - Math.atan2(c[1] - b[1], c[0] - b[0]),
+        );
+        const deg = (Math.min(turn, Math.PI * 2 - turn) * 180) / Math.PI;
+        chips.push({ ...this.screen(b), text: `${fmt(deg)}°`, kind: 'area' });
+      }
+    } else if (this.measure.length && measureTool === 'measure-height') {
+      const ring = this.measureRing();
+      if (ring.length >= 2) {
+        const [a, b] = ring;
+        chips.push({
+          ...this.screen([a[0], (a[1] + b[1]) / 2]),
+          text: `↕ ${fmt(Math.abs(b[1] - a[1]))} m`,
+          kind: 'area',
+        });
+      }
+    } else if (this.measure.length) {
+      const ring = this.measureRing();
+      const area = measureTool === 'measure-area';
+      const edges = area && this.measureDone ? [...ring, ring[0]] : ring;
+      for (let i = 1; i < edges.length; i++) chips.push(this.lengthChip(edges[i - 1], edges[i]));
+      if (area && ring.length >= 3) {
+        chips.push({
+          ...this.screen(centroid(ring)),
+          text: `${fmt(polygonArea(ring))} m²`,
+          kind: 'area',
+        });
+      } else if (!area && edges.length > 2) {
+        let total = 0;
+        for (let i = 1; i < edges.length; i++) {
+          total += Math.hypot(edges[i][0] - edges[i - 1][0], edges[i][1] - edges[i - 1][1]);
+        }
+        chips.push({
+          ...this.screen(edges[edges.length - 1]),
+          text: `Total ${fmt(total)} m`,
           kind: 'area',
         });
       }
@@ -691,15 +1070,29 @@ export class PlannerCanvasComponent {
       return;
     }
     if (e.button !== 0) return;
+    if (tool === 'zoom-window') {
+      this.down = { ...base, mode: 'draw' };
+      return;
+    }
+    if (VIEW_TOOLS.has(tool)) {
+      this.down = { ...base, mode: 'none' };
+      return;
+    }
     if (this.readonly()) {
       this.down = { ...base, mode: 'pan' };
       return;
     }
-    if (tool === 'zone-rect' || tool === 'booth') {
+    if (tool === 'zone-rect' || tool === 'booth' || tool === 'rect' || tool === 'circle') {
       this.down = { ...base, world: this.snapped(world), mode: 'draw' };
       return;
     }
-    if (tool === 'zone-poly') {
+    if (
+      tool === 'zone-poly' ||
+      tool === 'line' ||
+      tool === 'polyline' ||
+      tool === 'mirror-line' ||
+      tool === 'text'
+    ) {
       this.down = { ...base, mode: 'none' };
       return;
     }
@@ -722,7 +1115,11 @@ export class PlannerCanvasComponent {
 
   private readonly onMove = (e: PointerEvent) => {
     const world = this.world(e);
-    if (this.tool() === 'zone-poly' && this.polygon.length) {
+    if (
+      (this.tool() === 'zone-poly' && this.polygon.length) ||
+      (this.measure.length && !this.measureDone) ||
+      this.shape.length
+    ) {
       this.pointer = this.snapped(world);
       this.buildDraft();
     }
@@ -736,8 +1133,13 @@ export class PlannerCanvasComponent {
       this.camera.position.x = d.cam[0] + d.world[0] - now[0];
       this.camera.position.y = d.cam[1] - (d.world[1] - now[1]);
       this.render();
+    } else if (d.mode === 'draw' && far && this.tool() === 'circle') {
+      const edge = this.snapped(world);
+      this.draftCircle = { c: d.world, r: Math.hypot(edge[0] - d.world[0], edge[1] - d.world[1]) };
+      this.buildDraft();
     } else if (d.mode === 'draw' && far) {
-      this.draftRect = rectBetween(d.world, this.snapped(world));
+      const end = this.tool() === 'zoom-window' ? world : this.snapped(world);
+      this.draftRect = rectBetween(d.world, end);
       this.buildDraft();
     } else if (d.mode === 'marquee' && far) {
       this.draftRect = rectBetween(d.world, world);
@@ -755,12 +1157,39 @@ export class PlannerCanvasComponent {
     const click = Math.hypot(e.clientX - d.px, e.clientY - d.py) < CLICK_PX;
     const world = this.world(e);
     const tool = this.tool();
-    if (d.mode === 'draw') {
+    if (d.mode === 'draw' && tool === 'zoom-window') {
+      if (this.draftRect) this.zoomTo(this.draftRect);
+    } else if (d.mode === 'draw' && tool === 'circle') {
+      const c = this.draftCircle;
+      if (c && c.r > 0)
+        this.drawObject.emit({ kind: 'circle', points: [c.c, [c.c[0] + c.r, c.c[1]]] });
+    } else if (d.mode === 'draw' && tool === 'rect') {
+      const r = this.draftRect;
+      if (r && r.width > 0 && r.height > 0) {
+        this.drawObject.emit({
+          kind: 'rect',
+          points: [
+            [r.x, r.y],
+            [r.x + r.width, r.y + r.height],
+          ],
+        });
+      }
+    } else if (d.mode === 'draw') {
       const r = this.draftRect;
       if (r && r.width > 0 && r.height > 0) this.drawRect.emit(r);
       else if (click && tool === 'booth') this.placeAt.emit(this.snapped(world));
     } else if (d.mode === 'none' && tool === 'zone-poly' && click) {
       this.addCorner(this.snapped(world));
+    } else if (d.mode === 'none' && tool === 'text' && click) {
+      this.drawObject.emit({ kind: 'text', points: [this.snapped(world)] });
+    } else if (
+      d.mode === 'none' &&
+      click &&
+      (tool === 'line' || tool === 'polyline' || tool === 'mirror-line')
+    ) {
+      this.addShapePoint(this.snapped(world));
+    } else if (d.mode === 'none' && click && tool.startsWith('measure-')) {
+      this.addMeasurePoint(this.snapped(world));
     } else if (d.mode === 'marquee') {
       if (click) this.pick.emit(null);
       else if (this.draftRect) this.pick.emit(this.inBox(this.draftRect, e.shiftKey));
@@ -770,6 +1199,7 @@ export class PlannerCanvasComponent {
     }
     this.down = null;
     this.draftRect = null;
+    this.draftCircle = null;
     this.moveOffset = [0, 0];
     this.buildDraft();
   };
@@ -777,17 +1207,26 @@ export class PlannerCanvasComponent {
   private readonly onCancel = () => {
     this.down = null;
     this.draftRect = null;
+    this.draftCircle = null;
     this.buildDraft();
   };
 
   private readonly onLeave = () => {
-    if (this.polygon.length) {
+    if (this.polygon.length || this.shape.length || (this.measure.length && !this.measureDone)) {
       this.pointer = null;
       this.buildDraft();
     }
   };
 
-  private readonly onDoubleClick = () => this.finishPolygon();
+  private readonly onDoubleClick = () => {
+    if (this.tool() === 'measure-distance' && this.measure.length >= 2) {
+      this.measureDone = true;
+      this.pointer = null;
+      this.buildDraft();
+      return;
+    }
+    this.finishPolygon();
+  };
 
   private readonly onKey = (e: KeyboardEvent) => {
     if (
@@ -813,6 +1252,45 @@ export class PlannerCanvasComponent {
     this.buildDraft();
   }
 
+  /** A point of the measure; after a finished one, a click starts a new one. */
+  private addMeasurePoint(p: Point): void {
+    if (this.measureDone) {
+      this.measure = [];
+      this.measureDone = false;
+    }
+    const last = this.measure[this.measure.length - 1];
+    if (last && last[0] === p[0] && last[1] === p[1]) return;
+    this.measure = [...this.measure, p];
+    // An angle is three points (the corner in the middle); a height two.
+    const done = { 'measure-angle': 3, 'measure-height': 2 }[this.tool() as 'measure-angle'];
+    if (done && this.measure.length >= done) {
+      this.measureDone = true;
+      this.pointer = null;
+    }
+    this.buildDraft();
+  }
+
+  /** A point of a line, polyline or mirror line; a line or mirror line ends at its second. */
+  private addShapePoint(p: Point): void {
+    const last = this.shape[this.shape.length - 1];
+    if (last && last[0] === p[0] && last[1] === p[1]) return;
+    this.shape = [...this.shape, p];
+    const tool = this.tool();
+    if (this.shape.length >= (SHAPE_POINTS[tool] ?? Infinity)) {
+      const [a, b] = this.shape;
+      this.cancel();
+      if (tool === 'mirror-line') this.mirrorLine.emit([a, b]);
+      else this.drawObject.emit({ kind: 'line', points: [a, b] });
+      return;
+    }
+    this.buildDraft();
+  }
+
+  /** The measure with the point under the pointer while it is being taken. */
+  private measureRing(): Point[] {
+    return this.pointer && !this.measureDone ? [...this.measure, this.pointer] : this.measure;
+  }
+
   /** What is under a point: a seat, then a stall, then a zone. */
   private hit(p: Point): { kind: SelectionKind; id: string } | null {
     const plan = this.plan();
@@ -823,6 +1301,20 @@ export class PlannerCanvasComponent {
     }
     for (let i = plan.stalls.length - 1; i >= 0; i--) {
       if (at(stallRect(plan.stalls[i]))) return { kind: 'stall', id: plan.stalls[i].id };
+    }
+    // Drawings are picked near their outline; text anywhere in its box.
+    const near = HIT_PX * this.metresPerPixel();
+    for (let i = plan.objects.length - 1; i >= 0; i--) {
+      const o = plan.objects[i];
+      if (o.kind === 'text') {
+        if (at(textBox(o))) return { kind: 'object', id: o.id };
+        continue;
+      }
+      const { points, closed } = objectOutline(o);
+      const ring = closed ? [...points, points[0]] : points;
+      for (let j = 1; j < ring.length; j++) {
+        if (segmentDistance(p, ring[j - 1], ring[j]) <= near) return { kind: 'object', id: o.id };
+      }
     }
     for (let i = plan.zones.length - 1; i >= 0; i--) {
       if (pointInRing(p, plan.zones[i].polygon)) return { kind: 'zone', id: plan.zones[i].id };
@@ -842,7 +1334,17 @@ export class PlannerCanvasComponent {
     if (stalls.length) return { kind: 'stall', ids: stalls, additive };
     const seats = plan.seats.filter((s) => within(stallRect(s))).map((s) => s.id);
     if (seats.length) return { kind: 'seat', ids: seats, additive };
+    const objects = plan.objects
+      .filter((o) => within(ringBox(objectOutline(o).points)))
+      .map((o) => o.id);
+    if (objects.length) return { kind: 'object', ids: objects, additive };
     return null;
+  }
+
+  /** Floor metres one screen pixel spans at the current zoom. */
+  private metresPerPixel(): number {
+    const width = Math.max(1, this.host().nativeElement.clientWidth);
+    return (this.camera.right - this.camera.left) / this.camera.zoom / width;
   }
 
   private boxesOf(m: { kind: SelectionKind; ids: string[] }): Rect[] {
@@ -868,6 +1370,19 @@ const HINTS: Record<PlannerTool, string> = {
   'zone-poly':
     'Click each corner · Double-click or Enter to close · Backspace removes a corner · Esc to cancel',
   booth: 'Drag to draw a booth, or click to place 3 × 3 m · Esc to cancel',
+  line: 'Click where the line starts, then where it ends · Esc to cancel',
+  rect: 'Drag to draw a rectangle · Esc to cancel',
+  circle: 'Drag from the centre out to draw a circle · Esc to cancel',
+  polyline: 'Click each point · Double-click or Enter to finish · Backspace removes a point',
+  text: 'Click where the text goes, then write it in Properties',
+  'mirror-line':
+    'Click two points of the line to mirror the selected booths across (copies are made)',
+  'zoom-window': 'Drag a box around what to zoom to',
+  'measure-distance': 'Click points to measure · Double-click to finish · Esc to clear',
+  'measure-area':
+    'Click each corner · Double-click or Enter to close · Backspace removes a corner · Esc to clear',
+  'measure-angle': 'Click a point, then the corner, then a second point · Esc to clear',
+  'measure-height': 'Click two points to measure the height between them · Esc to clear',
 };
 
 // ---- drawing helpers ------------------------------------------------------------------------
@@ -1003,6 +1518,59 @@ function addGrid(g: T.Group, e: Rect): void {
     lines.renderOrder = 1;
     g.add(lines);
   }
+}
+
+/** Where the hall's text labels and helper cards are. */
+function noteBoxes(f: HallFloor): Rect[] {
+  return [
+    ...(f.labels ?? []).map((l) => ({ x: l.x, y: l.y, ...labelSize(f, l) })),
+    ...(f.iconGroups ?? [])
+      .filter((g) => g.icons.length)
+      .map((g) => ({ x: g.x, y: g.y, ...iconGroupSize(f, g) })),
+  ];
+}
+
+/** The hall's text labels and helper cards, where the hall pages draw them. */
+function addNotes(g: T.Group, f: HallFloor): void {
+  const sprite = (canvas: HTMLCanvasElement, x: number, y: number, w: number, h: number) => {
+    const map = new T.CanvasTexture(canvas);
+    map.colorSpace = T.SRGBColorSpace;
+    const s = new T.Sprite(new T.SpriteMaterial({ map, depthTest: false }));
+    s.position.set(x + w / 2, -(y + h / 2), 5);
+    s.scale.set(w, h, 1);
+    s.renderOrder = 5;
+    g.add(s);
+  };
+  for (const l of f.labels ?? []) {
+    const size = labelSize(f, l);
+    sprite(labelCanvas(l.text), l.x, l.y, size.width, size.height);
+  }
+  for (const group of f.iconGroups ?? []) {
+    const canvas = facilityCardCanvas(group);
+    if (!canvas) continue;
+    const size = iconGroupSize(f, group);
+    sprite(canvas, group.x, group.y, size.width, size.height);
+  }
+}
+
+/** A drawing's text, left-aligned in its box, in its colour. */
+function addText(g: T.Group, text: string, r: Rect, color: string): void {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(64, Math.round((r.width / r.height) * 96));
+  canvas.height = 96;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = color;
+  ctx.font = '64px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 0, 50, canvas.width);
+  const map = new T.CanvasTexture(canvas);
+  map.colorSpace = T.SRGBColorSpace;
+  const sprite = new T.Sprite(new T.SpriteMaterial({ map, depthTest: false }));
+  sprite.scale.set(r.width, r.height, 1);
+  sprite.position.set(r.x + r.width / 2, -(r.y + r.height / 2), 17);
+  sprite.renderOrder = 17;
+  g.add(sprite);
 }
 
 function addLabel(g: T.Group, text: string, r: Rect): void {

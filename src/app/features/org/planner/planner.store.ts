@@ -7,6 +7,7 @@ import type {
   PlanContent,
   PlanFinding,
   PlannerView,
+  PlanObject,
   PlanSeat,
   PlanStall,
   PlanZone,
@@ -14,13 +15,13 @@ import type {
 import { Notifier } from '../../../core/ui/notifier.service';
 import { plannerFloor, PlannerFloor } from './planner-geometry';
 
-export type SelectionKind = 'zone' | 'stall' | 'seat';
+export type SelectionKind = 'zone' | 'stall' | 'seat' | 'object';
 export interface Selection {
   kind: SelectionKind;
   ids: string[];
 }
 
-const EMPTY: PlanContent = { zones: [], stalls: [], seats: [] };
+const EMPTY: PlanContent = { zones: [], stalls: [], seats: [], objects: [] };
 /** Undo steps kept. */
 const HISTORY = 100;
 
@@ -66,12 +67,15 @@ export class PlannerStore {
   readonly selectedZone = computed(() => this.selected('zone', this.plan().zones));
   readonly selectedStalls = computed(() => this.selectedAll('stall', this.plan().stalls));
   readonly selectedSeats = computed(() => this.selectedAll('seat', this.plan().seats));
+  readonly selectedObjects = computed(() => this.selectedAll('object', this.plan().objects));
 
   load(slug: string, eventId: string, hallId: string, view: PlannerView): void {
     this.target = { slug, eventId, hallId };
     this.view.set(view);
     const { zones, stalls, seats, revision } = view.plan;
-    this.plan.set({ zones, stalls, seats });
+    // A plan saved before drawings existed has none.
+    const objects = view.plan.objects ?? [];
+    this.plan.set({ zones, stalls, seats, objects });
     this.revision.set(revision);
     this.undoStack.set([]);
     this.redoStack.set([]);
@@ -231,7 +235,9 @@ export class PlannerStore {
         ? this.plan().zones
         : s.kind === 'stall'
           ? this.plan().stalls
-          : this.plan().seats;
+          : s.kind === 'object'
+            ? this.plan().objects
+            : this.plan().seats;
     const have = new Set(list.map((i) => i.id));
     this.select({ kind: s.kind, ids: s.ids.filter((id) => have.has(id)) });
   }
@@ -243,7 +249,10 @@ export class PlannerStore {
       : null;
   }
 
-  private selectedAll<T extends PlanStall | PlanSeat>(kind: SelectionKind, list: T[]): T[] {
+  private selectedAll<T extends PlanStall | PlanSeat | PlanObject>(
+    kind: SelectionKind,
+    list: T[],
+  ): T[] {
     const s = this.selection();
     if (s?.kind !== kind) return [];
     const ids = new Set(s.ids);

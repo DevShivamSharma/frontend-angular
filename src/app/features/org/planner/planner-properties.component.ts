@@ -10,6 +10,8 @@ import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 
 import {
+  PlanObject,
+  PlanObjectKind,
   PlanSeat,
   PlanStall,
   PlanZone,
@@ -303,10 +305,39 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
             {{ seats().length === 1 ? 'seat' : seats().length + ' seats' }}
           </button>
         }
+      } @else if (objects().length) {
+        @let o = objects()[0];
+        <h3>
+          {{ objects().length === 1 ? objectNames[o.kind] : objects().length + ' drawings' }}
+        </h3>
+        @if (objects().length === 1) {
+          <label
+            >{{ o.kind === 'text' ? 'Text' : 'Label' }}
+            <input
+              pInputText
+              [ngModel]="o.text ?? ''"
+              (change)="objectText(o, $event)"
+              maxlength="120"
+              [disabled]="ro"
+            />
+          </label>
+        }
+        <label class="inline"
+          >Colour
+          <input type="color" [ngModel]="o.color" (change)="objectColor($event)" [disabled]="ro" />
+        </label>
+        <p class="muted small">Drawings are not sold and the rules do not check them.</p>
+        @if (!ro) {
+          <button pButton severity="danger" [outlined]="true" (click)="remove.emit()">
+            <app-icon name="delete" />Delete
+            {{ objects().length === 1 ? 'drawing' : objects().length + ' drawings' }}
+          </button>
+        }
       } @else {
         <h3>Properties</h3>
         <p class="muted small">
-          Select a zone, stall or seat to see and change it. Drag on the floor to select many.
+          Select a zone, stall, seat or drawing to see and change it. Drag on the floor to select
+          many.
         </p>
       }
     }
@@ -418,7 +449,17 @@ export class PlannerPropertiesComponent {
   readonly patch = output<StallPatch>();
   readonly zonePatch = output<Partial<Omit<PlanZone, 'id'>>>();
   readonly seatCategory = output<string | null>();
+  /** Changes to the selected drawings. */
+  readonly objectPatch = output<Partial<Pick<PlanObject, 'text' | 'color'>>>();
   readonly remove = output<void>();
+
+  protected readonly objectNames: Record<PlanObjectKind, string> = {
+    line: 'Line',
+    rect: 'Rectangle',
+    circle: 'Circle',
+    polyline: 'Polyline',
+    text: 'Text',
+  };
 
   protected readonly flags = FLAGS;
   protected readonly sideList = STALL_SIDES;
@@ -430,6 +471,7 @@ export class PlannerPropertiesComponent {
   protected readonly zone = computed(() => this.store().selectedZone());
   protected readonly stalls = computed(() => this.store().selectedStalls());
   protected readonly seats = computed(() => this.store().selectedSeats());
+  protected readonly objects = computed(() => this.store().selectedObjects());
 
   protected readonly zoneBox = computed(() => ringBox(this.zone()?.polygon ?? [[0, 0]]));
   protected readonly zoneArea = computed(() => polygonArea(this.zone()?.polygon ?? []));
@@ -473,6 +515,21 @@ export class PlannerPropertiesComponent {
   protected zoneColor(z: PlanZone, event: Event): void {
     const color = (event.target as HTMLInputElement).value;
     if (color !== z.color) this.zonePatch.emit({ color });
+  }
+
+  /** Text must have some; a label of another drawing may be cleared. */
+  protected objectText(o: PlanObject, event: Event): void {
+    const el = event.target as HTMLInputElement;
+    const text = el.value.trim();
+    if (o.kind === 'text' && !text) {
+      el.value = o.text ?? '';
+      return;
+    }
+    if (text !== (o.text ?? '')) this.objectPatch.emit({ text: text || null });
+  }
+
+  protected objectColor(event: Event): void {
+    this.objectPatch.emit({ color: (event.target as HTMLInputElement).value });
   }
 
   protected text(

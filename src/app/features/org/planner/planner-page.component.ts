@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   HostListener,
   inject,
   input,
@@ -19,7 +20,15 @@ import { firstValueFrom } from 'rxjs';
 
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { PlansApi } from '../../../core/plans/plans-api.service';
-import type { PlanSeat, PlanStall, PlanZone } from '../../../core/plans/plans.models';
+import {
+  PlanContent,
+  PlanObject,
+  PlanSeat,
+  PlanStall,
+  PlanZone,
+  stallLabel,
+  StallSide,
+} from '../../../core/plans/plans.models';
 import type { Point } from '../../../core/venues/floor-plan.models';
 import { AppDialog } from '../../../core/ui/app-dialog.service';
 import { ConfirmService } from '../../../core/ui/confirm.service';
@@ -32,20 +41,26 @@ import {
 } from './auto-booths-dialog.component';
 import { AutoSeatsData, AutoSeatsDialogComponent } from './auto-seats-dialog.component';
 import {
+  DrawObjectEvent,
   MoveEvent,
   PickEvent,
   PlannerCanvasComponent,
   PlannerTool,
+  WayOutPath,
 } from './planner-canvas.component';
 import {
   centre,
   DEFAULT_OPEN,
+  exitPoints,
   newId,
+  objectOutline,
   pointInRing,
   polygonArea,
+  Rect,
   rectRing,
   ringBox,
   round,
+  snap,
   stallNumbers,
   stallRect,
   ZONE_COLORS,
@@ -53,6 +68,8 @@ import {
 } from './planner-geometry';
 import { PlannerPropertiesComponent, StallPatch } from './planner-properties.component';
 import { PlannerStore } from './planner.store';
+import { RowData, RowDialogComponent } from './row-dialog.component';
+import { ScaleData, ScaleDialogComponent } from './scale-dialog.component';
 import { SeatsData, SeatsDialogComponent } from './seats-dialog.component';
 
 /** Colours of categories on the plan, in the order the hall lists them. */
@@ -67,12 +84,33 @@ const CATEGORY_COLORS = [
   '#bef264',
 ];
 
-interface RibbonTool {
-  id: PlannerTool;
-  label: string;
-  icon: string;
-  key: string;
-}
+/** A side of a stall after the stall turns a quarter clockwise. */
+const ROTATED: Record<StallSide, StallSide> = {
+  top: 'right',
+  right: 'bottom',
+  bottom: 'left',
+  left: 'top',
+};
+/** A side of a stall after it is mirrored left to right. */
+const MIRRORED: Record<StallSide, StallSide> = {
+  top: 'top',
+  right: 'left',
+  bottom: 'bottom',
+  left: 'right',
+};
+/** A side of a stall after it is mirrored top to bottom. */
+const FLIPPED: Record<StallSide, StallSide> = {
+  top: 'bottom',
+  right: 'right',
+  bottom: 'top',
+  left: 'left',
+};
+/** Rows the model tree shows; a search finds the rest. */
+const TREE_LIMIT = 200;
+/** Marks a file Export wrote, so Import knows it. */
+const PLAN_FILE_SCHEMA = 'stall-plan/1';
+/** Drawings start in slate; Properties changes it. */
+const OBJECT_COLOR = '#334155';
 
 /**
  * The stall planner of one hall of an event: zones of any shape, booths one by one or filled
@@ -95,161 +133,453 @@ interface RibbonTool {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (store.view(); as v) {
+      @let ro = !canEdit();
+      @let noStalls = !store.selectedStalls().length || ro || store.busy();
       <div class="planner">
-        <header class="top">
-          <a
-            pButton
-            [text]="true"
-            [routerLink]="['/', slug(), 'events', eventId(), 'halls', hallId()]"
-            pTooltip="Back to the hall"
-            aria-label="Back to the hall"
-            ><app-icon name="arrow_back"
-          /></a>
-          <div class="title">
-            <b>{{ v.hall.hall.name }}</b>
-            <span class="muted"
-              >{{ v.hall.event.name }} · floor v{{ v.hall.hall.floorVersion }} ·
-              {{ rulesOn() }} rules on</span
-            >
+        <nav class="ribbon" aria-label="Tools">
+          <div class="group">
+            <div class="tools">
+              <button
+                type="button"
+                class="tool"
+                (click)="importFile.click()"
+                [disabled]="ro || store.busy()"
+                pTooltip="Bring in a plan exported from the planner (.json)"
+              >
+                <app-icon name="upload_file" /><span>Import</span>
+              </button>
+              <input
+                #importFile
+                type="file"
+                accept=".json,application/json"
+                hidden
+                (change)="importPlan($event)"
+              />
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="exportPlan()"
+                  pTooltip="Download the plan as a file (.json)"
+                >
+                  <app-icon name="download" /><span>Export</span>
+                </button>
+              </div>
+            </div>
+            <span class="group-label"></span>
           </div>
-          <ol class="stepper" aria-label="Steps">
-            @for (step of steps(); track step.label; let i = $index) {
-              <li [class.done]="step.done" [class.now]="step.now">
-                <span class="dot">
-                  @if (step.done && !step.now) {
-                    <app-icon name="check" />
-                  } @else {
-                    {{ i + 1 }}
+          <div class="group">
+            <div class="tools">
+              <button
+                type="button"
+                class="tool"
+                [class.on]="tool() === 'zone-rect'"
+                (click)="setTool('zone-rect')"
+                [attr.aria-pressed]="tool() === 'zone-rect'"
+                [disabled]="ro"
+                pTooltip="Zone (Z)"
+              >
+                <app-icon name="grid_view" /><span>Zone</span>
+              </button>
+            </div>
+            <span class="group-label"></span>
+          </div>
+          <div class="group">
+            <div class="tools">
+              <button
+                type="button"
+                class="tool"
+                [class.on]="tool() === 'booth'"
+                (click)="setTool('booth')"
+                [attr.aria-pressed]="tool() === 'booth'"
+                [disabled]="ro"
+                pTooltip="Booth (B)"
+              >
+                <app-icon name="storefront" /><span>Booth</span>
+              </button>
+              <button
+                type="button"
+                class="tool auto"
+                (click)="autoBooths()"
+                [disabled]="ro || store.busy()"
+              >
+                <app-icon name="auto_awesome" /><span>Auto-booths</span>
+              </button>
+              <button
+                type="button"
+                class="tool"
+                (click)="toBooth()"
+                [disabled]="ro || store.busy() || !canMakeBooth()"
+                pTooltip="Make a booth of the selected zone or rectangle"
+              >
+                <app-icon name="crop_square" /><span>To booth</span>
+              </button>
+              <button type="button" class="tool" (click)="seats()" [disabled]="ro || store.busy()">
+                <app-icon name="event_seat" /><span>Seats</span>
+              </button>
+              <button
+                type="button"
+                class="tool auto seat"
+                (click)="autoSeats()"
+                [disabled]="ro || store.busy()"
+              >
+                <app-icon name="auto_awesome" /><span>Auto-seats</span>
+              </button>
+            </div>
+            <span class="group-label"></span>
+          </div>
+          <div class="group">
+            <div class="tools">
+              <button
+                type="button"
+                class="tool"
+                [class.on]="tool() === 'select'"
+                (click)="setTool('select')"
+                [attr.aria-pressed]="tool() === 'select'"
+                pTooltip="Select (V)"
+              >
+                <app-icon name="near_me" /><span>Select</span>
+              </button>
+              <button
+                type="button"
+                class="tool"
+                [class.on]="tool() === 'zone-poly'"
+                (click)="setTool('zone-poly')"
+                [attr.aria-pressed]="tool() === 'zone-poly'"
+                [disabled]="ro"
+                pTooltip="Polygon zone (P)"
+              >
+                <app-icon name="hexagon" /><span>Polygon</span>
+              </button>
+              <button
+                type="button"
+                class="tool"
+                [class.on]="tool() === 'text'"
+                (click)="setTool('text')"
+                [attr.aria-pressed]="tool() === 'text'"
+                [disabled]="ro"
+                pTooltip="Text on the plan (T)"
+              >
+                <app-icon name="object" /><span>Object</span>
+              </button>
+              @for (pair of drawTools; track $index) {
+                <div class="col">
+                  @for (t of pair; track t.id) {
+                    <button
+                      type="button"
+                      class="mini"
+                      [class.on]="tool() === t.id"
+                      (click)="setTool(t.id)"
+                      [attr.aria-pressed]="tool() === t.id"
+                      [disabled]="ro"
+                      [pTooltip]="t.tip"
+                    >
+                      <app-icon [name]="t.icon" /><span>{{ t.label }}</span>
+                    </button>
                   }
-                </span>
-                <span>{{ step.label }}</span>
-              </li>
-            }
-          </ol>
-          <span class="spacer"></span>
-          @if (canEdit()) {
-            <button
-              pButton
-              [text]="true"
-              (click)="store.undo()"
-              [disabled]="!store.canUndo() || store.busy()"
-              pTooltip="Undo (Ctrl+Z)"
-              aria-label="Undo"
-            >
-              <app-icon name="undo" />
-            </button>
-            <button
-              pButton
-              [text]="true"
-              (click)="store.redo()"
-              [disabled]="!store.canRedo() || store.busy()"
-              pTooltip="Redo (Ctrl+Y)"
-              aria-label="Redo"
-            >
-              <app-icon name="redo" />
-            </button>
-            <button
-              pButton
-              class="save"
-              (click)="save()"
-              [disabled]="store.busy() || !store.dirty()"
-            >
-              <app-icon name="save" />{{ store.dirty() ? 'Save' : 'Saved' }}
-            </button>
-          }
-        </header>
-
-        @if (canEdit()) {
-          <nav class="ribbon" aria-label="Tools">
-            <div class="group">
-              <div class="tools">
-                @for (t of pointerTools; track t.id) {
-                  <button
-                    type="button"
-                    class="tool"
-                    [class.on]="tool() === t.id"
-                    (click)="setTool(t.id)"
-                    [attr.aria-pressed]="tool() === t.id"
-                    [pTooltip]="t.label + ' (' + t.key + ')'"
-                  >
-                    <app-icon [name]="t.icon" /><span>{{ t.label }}</span>
-                  </button>
-                }
-              </div>
-              <span class="group-label">View</span>
+                </div>
+              }
             </div>
-            <div class="group">
-              <div class="tools">
-                @for (t of zoneTools; track t.id) {
-                  <button
-                    type="button"
-                    class="tool"
-                    [class.on]="tool() === t.id"
-                    (click)="setTool(t.id)"
-                    [attr.aria-pressed]="tool() === t.id"
-                    [pTooltip]="t.label + ' (' + t.key + ')'"
-                  >
-                    <app-icon [name]="t.icon" /><span>{{ t.label }}</span>
-                  </button>
-                }
-              </div>
-              <span class="group-label">Zones</span>
-            </div>
-            <div class="group">
-              <div class="tools">
+            <span class="group-label">Draw</span>
+          </div>
+          <div class="group">
+            <div class="tools">
+              <button
+                type="button"
+                class="tool"
+                [class.on]="tool() === 'pan'"
+                (click)="setTool('pan')"
+                [attr.aria-pressed]="tool() === 'pan'"
+                pTooltip="Pan (H)"
+              >
+                <app-icon name="move" /><span>Pan</span>
+              </button>
+              <div class="col">
                 <button
                   type="button"
-                  class="tool"
-                  [class.on]="tool() === 'booth'"
-                  (click)="setTool('booth')"
-                  [attr.aria-pressed]="tool() === 'booth'"
-                  pTooltip="Booth (B)"
+                  class="mini"
+                  (click)="copySelection()"
+                  [disabled]="noStalls"
+                  pTooltip="Copy the selected booths"
                 >
-                  <app-icon name="storefront" /><span>Booth</span>
+                  <app-icon name="content_copy" /><span>Copy</span>
                 </button>
                 <button
                   type="button"
-                  class="tool auto"
-                  (click)="autoBooths()"
-                  [disabled]="store.busy()"
+                  class="mini"
+                  (click)="splitSelection()"
+                  [disabled]="noStalls || store.selectedStalls().length !== 1"
+                  pTooltip="Split the selected booth in two along its longer side"
                 >
-                  <app-icon name="auto_awesome" /><span>Auto-booths</span>
-                </button>
-              </div>
-              <span class="group-label">Booths</span>
-            </div>
-            <div class="group">
-              <div class="tools">
-                <button type="button" class="tool" (click)="seats()" [disabled]="store.busy()">
-                  <app-icon name="event_seat" /><span>Seats</span>
+                  <app-icon name="call_split" /><span>Split</span>
                 </button>
                 <button
                   type="button"
-                  class="tool auto seat"
-                  (click)="autoSeats()"
-                  [disabled]="store.busy()"
-                >
-                  <app-icon name="auto_awesome" /><span>Auto-seats</span>
-                </button>
-              </div>
-              <span class="group-label">Seats</span>
-            </div>
-            <div class="group">
-              <div class="tools">
-                <button
-                  type="button"
-                  class="tool danger"
+                  class="mini danger"
                   (click)="removeSelection()"
-                  [disabled]="!store.selection() || store.busy()"
+                  [disabled]="!store.selection() || ro || store.busy()"
                   pTooltip="Delete (Del)"
                 >
                   <app-icon name="delete" /><span>Delete</span>
                 </button>
               </div>
-              <span class="group-label">Modify</span>
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="mergeSelection()"
+                  [disabled]="noStalls || store.selectedStalls().length < 2"
+                  pTooltip="Join the selected booths into one; together they must make a rectangle"
+                >
+                  <app-icon name="call_merge" /><span>Merge</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="rotateSelection()"
+                  [disabled]="noStalls"
+                  pTooltip="Turn the selected booths a quarter"
+                >
+                  <app-icon name="rotate" /><span>Rotate</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="rowOfBooths()"
+                  [disabled]="ro || store.busy()"
+                  pTooltip="Add booths side by side in a row"
+                >
+                  <app-icon name="rows" /><span>Row</span>
+                </button>
+              </div>
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="mirrorSelection('y')"
+                  [disabled]="noStalls"
+                  pTooltip="Mirror the selected booths top to bottom"
+                >
+                  <app-icon name="height" /><span>Mirror</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="tool() === 'mirror-line'"
+                  (click)="setTool('mirror-line')"
+                  [attr.aria-pressed]="tool() === 'mirror-line'"
+                  [disabled]="noStalls"
+                  pTooltip="Draw a line to mirror copies of the selected booths across"
+                >
+                  <app-icon name="line" /><span>Mirror line</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="scaleSelection()"
+                  [disabled]="noStalls"
+                  pTooltip="Make the selected booths bigger or smaller"
+                >
+                  <app-icon name="scale" /><span>Scale</span>
+                </button>
+              </div>
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="numberSelection()"
+                  [disabled]="noStalls"
+                  pTooltip="Number the selected booths from 1, row by row"
+                >
+                  <app-icon name="numbers" /><span>Number</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="mirrorSelection('x')"
+                  [disabled]="noStalls"
+                  pTooltip="Mirror the selected booths left to right"
+                >
+                  <app-icon name="flip" /><span>Mirror X</span>
+                </button>
+              </div>
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="store.undo()"
+                  [disabled]="!store.canUndo() || ro || store.busy()"
+                  pTooltip="Undo (Ctrl+Z)"
+                >
+                  <app-icon name="undo" /><span>Undo</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="store.redo()"
+                  [disabled]="!store.canRedo() || ro || store.busy()"
+                  pTooltip="Redo (Ctrl+Y)"
+                >
+                  <app-icon name="redo" /><span>Redo</span>
+                </button>
+              </div>
             </div>
-          </nav>
-        } @else {
+            <span class="group-label">Modify</span>
+          </div>
+          <div class="group">
+            <div class="tools">
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="tool() === 'measure-distance'"
+                  (click)="setTool('measure-distance')"
+                  [attr.aria-pressed]="tool() === 'measure-distance'"
+                >
+                  <app-icon name="measure" /><span>Distance</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="tool() === 'measure-area'"
+                  (click)="setTool('measure-area')"
+                  [attr.aria-pressed]="tool() === 'measure-area'"
+                >
+                  <app-icon name="area" /><span>Area</span>
+                </button>
+              </div>
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="tool() === 'measure-angle'"
+                  (click)="setTool('measure-angle')"
+                  [attr.aria-pressed]="tool() === 'measure-angle'"
+                >
+                  <app-icon name="angle" /><span>Angle</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="tool() === 'measure-height'"
+                  (click)="setTool('measure-height')"
+                  [attr.aria-pressed]="tool() === 'measure-height'"
+                >
+                  <app-icon name="height" /><span>Height</span>
+                </button>
+              </div>
+            </div>
+            <span class="group-label">Measure</span>
+          </div>
+          <div class="group">
+            <div class="tools">
+              <div class="col dense">
+                <button type="button" class="mini" (click)="zoom(1.25)">
+                  <app-icon name="zoom_in" /><span>Zoom in</span>
+                </button>
+                <button type="button" class="mini" (click)="zoom(0.8)">
+                  <app-icon name="zoom_out" /><span>Zoom out</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="splitView()"
+                  (click)="splitView.set(!splitView())"
+                  [attr.aria-pressed]="splitView()"
+                  pTooltip="A second view of the plan beside this one, to zoom on its own"
+                >
+                  <app-icon name="split_view" /><span>Split view</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="tool() === 'zoom-window'"
+                  (click)="setTool('zoom-window')"
+                  [attr.aria-pressed]="tool() === 'zoom-window'"
+                >
+                  <app-icon name="zoom_window" /><span>Zoom window</span>
+                </button>
+              </div>
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini toggle"
+                  [class.on]="showGrid()"
+                  (click)="showGrid.set(!showGrid())"
+                  [attr.aria-pressed]="showGrid()"
+                >
+                  <app-icon name="grid_on" /><span>Grid</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini toggle"
+                  [class.on]="showLabels()"
+                  (click)="showLabels.set(!showLabels())"
+                  [attr.aria-pressed]="showLabels()"
+                >
+                  <app-icon name="label" /><span>Labels</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini toggle"
+                  [class.on]="wayOutOn()"
+                  (click)="toggleWayOut()"
+                  [attr.aria-pressed]="wayOutOn()"
+                  pTooltip="Each booth's straight distance to the nearest exit"
+                >
+                  <app-icon name="way_out" /><span>Way out</span>
+                </button>
+              </div>
+            </div>
+            <span class="group-label">View</span>
+          </div>
+          <div class="group">
+            <div class="tools">
+              <div class="col">
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="tourOpen()"
+                  (click)="tourOpen.set(!tourOpen())"
+                  [attr.aria-pressed]="tourOpen()"
+                >
+                  <app-icon name="help" /><span>Help</span>
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="fullscreen()"
+                  (click)="toggleFullscreen()"
+                  [attr.aria-pressed]="fullscreen()"
+                >
+                  <app-icon name="fullscreen" /><span>Full</span>
+                </button>
+              </div>
+            </div>
+            <span class="group-label">Window</span>
+          </div>
+          <span class="spacer"></span>
+          <div class="actions">
+            @if (canEdit()) {
+              <button
+                pButton
+                class="save"
+                [class.saved]="!store.dirty()"
+                (click)="save()"
+                [disabled]="store.busy() || !store.dirty()"
+                pTooltip="Save (Ctrl+S)"
+              >
+                <app-icon [name]="store.dirty() ? 'save' : 'lock'" />{{
+                  store.dirty() ? 'Save' : 'Saved'
+                }}
+              </button>
+            }
+            <button type="button" class="publish soon" aria-disabled="true" pTooltip="Coming soon">
+              <app-icon name="check_circle" />Publish
+            </button>
+          </div>
+        </nav>
+        @if (ro) {
           <p class="readonly" role="status">
             <app-icon name="visibility" /> {{ v.readOnlyReason }} You are seeing the plan as it was
             last saved.
@@ -259,100 +589,313 @@ interface RibbonTool {
           <p-progressbar mode="indeterminate" class="busy" />
         }
 
-        <div class="body">
-          <aside class="side left" aria-label="Plan">
-            <h3>Plan</h3>
-            <dl class="counts">
-              <dt>Zones</dt>
-              <dd>{{ store.plan().zones.length }}</dd>
-              <dt>Stalls</dt>
-              <dd>{{ store.plan().stalls.length }}</dd>
-              <dt>Stall area</dt>
-              <dd>{{ stallArea() | number: '1.0-0' }} m²</dd>
-              <dt>Seats</dt>
-              <dd>{{ store.plan().seats.length | number }}</dd>
-              <dt>Hall</dt>
-              <dd>
-                {{ v.hall.hall.width | number: '1.0-1' }} ×
-                {{ v.hall.hall.depth | number: '1.0-1' }} m
-              </dd>
-            </dl>
-            <h3>Zones</h3>
-            @if (!store.plan().zones.length) {
-              <p class="muted small">No zones yet. Draw one with Zone or Polygon.</p>
-            }
-            <ul class="zones">
-              @for (z of store.plan().zones; track z.id) {
-                <li
-                  [class.on]="
-                    store.selection()?.kind === 'zone' && store.selection()?.ids?.[0] === z.id
-                  "
+        <div class="body" [class.no-left]="!leftOpen()" [class.no-right]="!rightOpen()">
+          @if (leftOpen()) {
+            <aside class="side left" aria-label="Plan">
+              <div class="side-head">
+                <h2>Plan</h2>
+                <button
+                  type="button"
+                  class="x"
+                  (click)="leftOpen.set(false)"
+                  aria-label="Close the plan panel"
                 >
+                  <app-icon name="close" />
+                </button>
+              </div>
+              <div class="side-body">
+                <a
+                  class="back"
+                  [routerLink]="['/', slug(), 'events', eventId(), 'halls', hallId()]"
+                  pTooltip="Back to the hall"
+                >
+                  <app-icon name="arrow_back" />
+                  <span class="title">
+                    <b>{{ v.hall.hall.name }}</b>
+                    <span class="muted"
+                      >{{ v.hall.event.name }} · floor v{{ v.hall.hall.floorVersion }} ·
+                      {{ rulesOn() }} rules on</span
+                    >
+                  </span>
+                </a>
+
+                <section class="card">
+                  <h3 class="card-title"><app-icon name="trending" />Sales overview</h3>
+                  @if (!store.plan().stalls.length) {
+                    <p class="small">
+                      No booths yet. Draw them with <b>Booth</b> (B), fill the hall with
+                      <b>Auto-booths</b>, or bring in a CAD drawing.
+                    </p>
+                  } @else {
+                    <p class="small">
+                      <b>{{ stats().total | number }}</b> booths,
+                      <b>{{ stats().saleable | number: '1.0-0' }} m²</b> to sell;
+                      <b>{{ stats().blocked | number }}</b> blocked.
+                    </p>
+                  }
                   <button
                     type="button"
-                    class="zone"
-                    (click)="store.select({ kind: 'zone', ids: [z.id] })"
+                    class="outline soon"
+                    aria-disabled="true"
+                    pTooltip="Coming soon"
                   >
-                    <span class="swatch" [style.background]="z.color"></span>
-                    <span class="zname">{{ z.name }}</span>
-                    <span class="muted nums">{{ area(z) | number: '1.0-0' }} m²</span>
+                    <app-icon name="file_import" />Import a DXF drawing
                   </button>
-                  @if (canEdit()) {
-                    <button
-                      type="button"
-                      class="x"
-                      (click)="removeZone(z)"
-                      [attr.aria-label]="'Delete ' + z.name"
-                      pTooltip="Delete zone"
-                    >
-                      <app-icon name="close" />
-                    </button>
+                </section>
+
+                <section class="card">
+                  <button
+                    type="button"
+                    class="card-toggle"
+                    (click)="zonesOpen.set(!zonesOpen())"
+                    [attr.aria-expanded]="zonesOpen()"
+                  >
+                    <app-icon name="grid_view" /><span>Zones</span>
+                    <span class="muted count">{{ store.plan().zones.length }}</span>
+                    <app-icon name="expand_more" class="chev" [class.open]="zonesOpen()" />
+                  </button>
+                  @if (zonesOpen()) {
+                    @if (!store.plan().zones.length) {
+                      <p class="muted small">No zones yet. Draw one with Zone or Polygon.</p>
+                    }
+                    <ul class="zones">
+                      @for (z of store.plan().zones; track z.id) {
+                        <li
+                          [class.on]="
+                            store.selection()?.kind === 'zone' &&
+                            store.selection()?.ids?.[0] === z.id
+                          "
+                        >
+                          <button
+                            type="button"
+                            class="zone"
+                            (click)="store.select({ kind: 'zone', ids: [z.id] })"
+                          >
+                            <span class="swatch" [style.background]="z.color"></span>
+                            <span class="zname">{{ z.name }}</span>
+                            <span class="muted nums">{{ area(z) | number: '1.0-0' }} m²</span>
+                          </button>
+                          @if (canEdit()) {
+                            <button
+                              type="button"
+                              class="x"
+                              (click)="removeZone(z)"
+                              [attr.aria-label]="'Delete ' + z.name"
+                              pTooltip="Delete zone"
+                            >
+                              <app-icon name="close" />
+                            </button>
+                          }
+                        </li>
+                      }
+                    </ul>
                   }
-                </li>
-              }
-            </ul>
-            @if (store.categories().length) {
-              <h3>Categories</h3>
-              <ul class="legend">
-                @for (c of store.categories(); track c.id; let i = $index) {
-                  <li><span class="swatch" [style.background]="colorOf(i)"></span>{{ c.name }}</li>
+                </section>
+
+                <section class="card">
+                  <h3 class="card-title">
+                    Model tree <span class="muted">({{ treeCount() | number }})</span>
+                  </h3>
+                  <label class="search">
+                    <app-icon name="search" />
+                    <input
+                      type="search"
+                      placeholder="Find in the model"
+                      [value]="treeQuery()"
+                      (input)="treeQuery.set($any($event.target).value)"
+                      aria-label="Find in the model"
+                    />
+                  </label>
+                  @if (tree().items.length) {
+                    <ul class="tree">
+                      @for (item of tree().items; track item.id) {
+                        <li>
+                          <button
+                            type="button"
+                            [class.on]="store.selection()?.ids?.includes(item.id)"
+                            (click)="store.select({ kind: item.kind, ids: [item.id] })"
+                          >
+                            @if (item.color) {
+                              <span class="swatch" [style.background]="item.color"></span>
+                            } @else {
+                              <app-icon name="storefront" />
+                            }
+                            <span class="zname">{{ item.label }}</span>
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                    @if (tree().more > 0) {
+                      <p class="muted small">
+                        {{ tree().more | number }} more; search to find them.
+                      </p>
+                    }
+                  } @else if (treeQuery()) {
+                    <p class="muted small">Nothing matches “{{ treeQuery() }}”.</p>
+                  }
+                </section>
+
+                @if (store.categories().length) {
+                  <section class="card">
+                    <h3 class="card-title">Categories</h3>
+                    <ul class="legend">
+                      @for (c of store.categories(); track c.id; let i = $index) {
+                        <li>
+                          <span class="swatch" [style.background]="colorOf(i)"></span>{{ c.name }}
+                        </li>
+                      }
+                    </ul>
+                  </section>
                 }
-              </ul>
-            }
-            <h3>Rules</h3>
-            <p class="muted small">
-              Every change is checked against the {{ rulesOn() }} rules on for this hall. A change
-              that breaks one is not made; the message says why.
-            </p>
-          </aside>
 
-          <app-planner-canvas
-            #canvas
-            class="canvas"
-            [floor]="v.hall.floor"
-            [plan]="store.plan()"
-            [selection]="store.selection()"
-            [tool]="tool()"
-            [snapStep]="snapStep()"
-            [categoryColors]="categoryColors()"
-            [readonly]="!canEdit()"
-            (drawRect)="drawn($event)"
-            (drawPolygon)="zoneFromPolygon($event)"
-            (placeAt)="placeBooth($event)"
-            (pick)="picked($event)"
-            (move)="moved($event)"
-          />
+                <section class="card">
+                  <h3 class="card-title">Rules</h3>
+                  <p class="muted small">
+                    Every change is checked against the {{ rulesOn() }} rules on for this hall. A
+                    change that breaks one is not made; the message says why.
+                  </p>
+                </section>
+              </div>
+            </aside>
+          }
 
-          <aside class="side right" aria-label="Properties">
-            <app-planner-properties
-              [store]="store"
-              [readonly]="!canEdit()"
-              (patch)="patchStalls($event)"
-              (zonePatch)="patchZone($event)"
-              (seatCategory)="seatCategory($event)"
-              (remove)="removeSelection()"
+          <div class="stage" [class.split]="splitView()">
+            <app-planner-canvas
+              #canvas
+              class="canvas"
+              [floor]="v.hall.floor"
+              [plan]="store.plan()"
+              [selection]="store.selection()"
+              [tool]="tool()"
+              [snapStep]="snapStep()"
+              [categoryColors]="categoryColors()"
+              [readonly]="ro"
+              [showGrid]="showGrid()"
+              [showLabels]="showLabels()"
+              [wayOut]="wayOut()"
+              (drawRect)="drawn($event)"
+              (drawPolygon)="zoneFromPolygon($event)"
+              (drawObject)="addObject($event)"
+              (mirrorLine)="mirrorAcross($event)"
+              (placeAt)="placeBooth($event)"
+              (pick)="picked($event)"
+              (move)="moved($event)"
             />
-          </aside>
+            @if (splitView()) {
+              <!-- The same plan again, to look at elsewhere: pan and zoom only. -->
+              <app-planner-canvas
+                class="canvas second"
+                [floor]="v.hall.floor"
+                [plan]="store.plan()"
+                [selection]="store.selection()"
+                tool="pan"
+                [categoryColors]="categoryColors()"
+                [readonly]="true"
+                [showGrid]="showGrid()"
+                [showLabels]="showLabels()"
+                [wayOut]="wayOut()"
+              />
+            }
+            @if (!leftOpen()) {
+              <button
+                type="button"
+                class="reopen left"
+                (click)="leftOpen.set(true)"
+                aria-label="Open the plan panel"
+              >
+                <app-icon name="left_panel_open" />
+              </button>
+            }
+            @if (!rightOpen()) {
+              <button
+                type="button"
+                class="reopen right"
+                (click)="rightOpen.set(true)"
+                aria-label="Open the properties panel"
+              >
+                <app-icon name="left_panel_close" />
+              </button>
+            }
+            <section class="tour" [class.closed]="!tourOpen()">
+              <button
+                type="button"
+                class="tour-head"
+                (click)="tourOpen.set(!tourOpen())"
+                [attr.aria-expanded]="tourOpen()"
+              >
+                <app-icon name="play" />
+                <b>Help &amp; guided tour</b>
+                <app-icon name="expand_more" class="chev" [class.open]="tourOpen()" />
+              </button>
+              @if (tourOpen()) {
+                <p class="small">
+                  Mark areas with <b>Zone</b> or <b>Polygon</b>, place stalls with <b>Booth</b> or
+                  <b>Auto-booths</b>, then <b>Save</b>. Every change is checked against this hall's
+                  rules.
+                </p>
+              }
+            </section>
+            <button type="button" class="ai soon" aria-disabled="true" pTooltip="Coming soon">
+              <app-icon name="auto_awesome" />AI Assistant
+            </button>
+          </div>
+
+          @if (rightOpen()) {
+            <aside class="side right" aria-label="Properties">
+              <div class="side-head">
+                <h2>Properties</h2>
+                <button
+                  type="button"
+                  class="x"
+                  (click)="rightOpen.set(false)"
+                  aria-label="Close the properties panel"
+                >
+                  <app-icon name="close" />
+                </button>
+              </div>
+              <div class="side-body">
+                <section class="card">
+                  <app-planner-properties
+                    [store]="store"
+                    [readonly]="ro"
+                    (patch)="patchStalls($event)"
+                    (zonePatch)="patchZone($event)"
+                    (seatCategory)="seatCategory($event)"
+                    (objectPatch)="patchObjects($event)"
+                    (remove)="removeSelection()"
+                  />
+                </section>
+                <section class="card">
+                  <h3 class="card-title">Hall Statistics</h3>
+                  <dl class="stats">
+                    <dt>Total Booths</dt>
+                    <dd>{{ stats().total | number }}</dd>
+                    <dt>Available</dt>
+                    <dd class="ok">{{ stats().available | number }}</dd>
+                    <dt>Reserved</dt>
+                    <dd class="bad">0</dd>
+                    <dt>Booked</dt>
+                    <dd class="bad">0</dd>
+                    <dt>Blocked</dt>
+                    <dd>{{ stats().blocked | number }}</dd>
+                    <dt>Zones</dt>
+                    <dd>{{ store.plan().zones.length }}</dd>
+                    <dt>Seats</dt>
+                    <dd>{{ store.plan().seats.length | number }}</dd>
+                    <dt>Hall Size</dt>
+                    <dd>
+                      {{ v.hall.hall.width | number: '1.0-1' }} ×
+                      {{ v.hall.hall.depth | number: '1.0-1' }} m
+                    </dd>
+                  </dl>
+                  <dl class="stats total">
+                    <dt>Total Saleable Area</dt>
+                    <dd>{{ stats().saleable | number: '1.0-0' }} m²</dd>
+                  </dl>
+                </section>
+              </div>
+            </aside>
+          }
         </div>
       </div>
     } @else {
@@ -371,83 +914,12 @@ interface RibbonTool {
       height: 100%;
       background: var(--app-surface);
     }
-    .top {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--app-outline-variant);
-      min-width: 0;
-      flex-wrap: wrap;
-    }
-    .title {
-      display: grid;
-      min-width: 0;
-    }
-    .title span {
-      font: var(--app-body-small);
-    }
     .spacer {
       flex: 1;
     }
-    .stepper {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      margin: 0 0 0 16px;
-      padding: 0;
-      list-style: none;
-      font: var(--app-label-medium);
-      color: var(--app-on-surface-variant);
-    }
-    .stepper li {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .stepper li + li::before {
-      content: '';
-      width: 28px;
-      border-top: 2px solid var(--app-outline-variant);
-    }
-    .stepper li.done + li::before,
-    .stepper li.done::before {
-      border-color: #16a34a;
-    }
-    .dot {
-      display: grid;
-      place-items: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid var(--app-outline-variant);
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .done {
-      color: #15803d;
-    }
-    .done .dot {
-      background: #16a34a;
-      border-color: #16a34a;
-      color: #fff;
-    }
-    .now {
-      color: var(--app-on-surface);
-    }
-    .now .dot {
-      background: var(--app-primary);
-      border-color: var(--app-primary);
-      color: var(--app-on-primary);
-    }
-    .save {
-      --p-button-primary-background: #16a34a;
-      --p-button-primary-border-color: #16a34a;
-      --p-button-primary-hover-background: #15803d;
-      --p-button-primary-hover-border-color: #15803d;
-    }
     .ribbon {
       display: flex;
+      align-items: stretch;
       gap: 0;
       padding: 4px 8px 0;
       border-bottom: 1px solid var(--app-outline-variant);
@@ -456,18 +928,27 @@ interface RibbonTool {
     }
     .group {
       display: grid;
+      grid-template-rows: 1fr auto;
       justify-items: center;
-      padding: 0 10px;
+      padding: 0 8px;
       border-right: 1px solid var(--app-outline-variant);
-    }
-    .group:last-child {
-      border-right: 0;
     }
     .tools {
       display: flex;
+      align-items: center;
       gap: 2px;
     }
+    .col {
+      display: grid;
+      align-content: center;
+      gap: 2px;
+      padding: 0 2px;
+    }
+    .col.dense {
+      gap: 0;
+    }
     .group-label {
+      min-height: 18px;
       padding: 2px 0 4px;
       font: var(--app-label-small);
       letter-spacing: 0.06em;
@@ -478,8 +959,8 @@ interface RibbonTool {
       display: grid;
       justify-items: center;
       gap: 4px;
-      min-width: 64px;
-      padding: 8px 8px 6px;
+      min-width: 56px;
+      padding: 8px 6px 6px;
       border: 0;
       border-radius: 8px;
       background: none;
@@ -491,13 +972,36 @@ interface RibbonTool {
     .tool app-icon {
       font-size: 1.15rem;
     }
-    .tool:hover:not(:disabled),
-    .tool:focus-visible {
+    .mini {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      color: var(--app-on-surface);
+      font: var(--app-label-small);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .mini app-icon {
+      font-size: 0.8rem;
+    }
+    .tool:hover:not(:disabled):not(.soon),
+    .tool:focus-visible,
+    .mini:hover:not(:disabled):not(.soon),
+    .mini:focus-visible {
       background: var(--app-surface-container);
     }
-    .tool.on {
+    .tool.on,
+    .mini.on {
       background: #1e293b;
       color: #fff;
+    }
+    .tool.on:hover,
+    .mini.on:hover {
+      background: #1e293b !important;
     }
     .tool.auto {
       color: #15803d;
@@ -505,12 +1009,45 @@ interface RibbonTool {
     .tool.seat {
       color: #7e22ce;
     }
-    .tool.danger {
+    .danger {
       color: var(--app-error);
     }
-    .tool:disabled {
+    .tool:disabled,
+    .mini:disabled {
       opacity: 0.45;
       cursor: default;
+    }
+    .soon {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 4px 0 12px;
+    }
+    .save {
+      --p-button-primary-background: #16a34a;
+      --p-button-primary-border-color: #16a34a;
+      --p-button-primary-hover-background: #15803d;
+      --p-button-primary-hover-border-color: #15803d;
+      gap: 6px;
+    }
+    .save.saved {
+      --p-button-primary-background: #94a3b8;
+      --p-button-primary-border-color: #94a3b8;
+    }
+    .publish {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #0f2a4a;
+      color: #fff;
+      font: var(--app-label-large);
     }
     .readonly {
       display: flex;
@@ -531,23 +1068,34 @@ interface RibbonTool {
     .body {
       flex: 1;
       display: grid;
-      grid-template-columns: 240px minmax(0, 1fr) 300px;
+      grid-template-columns: 256px minmax(0, 1fr) 260px;
       min-height: 0;
     }
+    .body.no-left {
+      grid-template-columns: minmax(0, 1fr) 260px;
+    }
+    .body.no-right {
+      grid-template-columns: 256px minmax(0, 1fr);
+    }
+    .body.no-left.no-right {
+      grid-template-columns: minmax(0, 1fr);
+    }
     @media (max-width: 1100px) {
-      .body {
-        grid-template-columns: minmax(0, 1fr) 280px;
+      .body,
+      .body.no-right {
+        grid-template-columns: minmax(0, 1fr) 260px;
+      }
+      .body.no-right {
+        grid-template-columns: minmax(0, 1fr);
       }
       .left {
         display: none !important;
       }
     }
     .side {
-      display: grid;
-      gap: 10px;
-      align-content: start;
-      padding: 14px;
-      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
       background: var(--app-surface-container-lowest);
     }
     .left {
@@ -556,61 +1104,244 @@ interface RibbonTool {
     .right {
       border-left: 1px solid var(--app-outline-variant);
     }
-    .side h3 {
-      margin: 6px 0 0;
-      font: var(--app-label-small);
-      letter-spacing: 0.08em;
+    .side-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 10px 10px 14px;
+      border-bottom: 1px solid var(--app-outline-variant);
+    }
+    .side-head h2 {
+      margin: 0;
+      font: var(--app-label-medium);
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+    }
+    .side-body {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      padding: 10px;
+      overflow: auto;
+    }
+    .back {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 4px;
+      border-radius: 8px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .back:hover {
+      background: var(--app-surface-container);
+    }
+    .title {
+      display: grid;
+      min-width: 0;
+    }
+    .title span {
+      font: var(--app-body-small);
+    }
+    .card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 10px;
+      background: var(--app-surface-container-lowest);
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font: var(--app-title-small);
+      font-weight: 700;
+    }
+    .card-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: var(--app-title-small);
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+    }
+    .card-toggle .count {
+      flex: 1;
+      font-weight: 400;
+    }
+    .chev {
+      transition: transform 0.15s;
+    }
+    .chev.open {
+      transform: rotate(180deg);
+    }
+    .outline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 8px;
+      background: none;
+      color: inherit;
+      font: var(--app-label-large);
+    }
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 8px;
       color: var(--app-on-surface-variant);
     }
-    .canvas {
+    .search input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: none;
+      background: none;
+      color: var(--app-on-surface);
+      font: var(--app-body-medium);
+    }
+    .search:focus-within {
+      border-color: var(--app-primary);
+    }
+    .stage {
+      position: relative;
       min-width: 0;
       min-height: 0;
     }
-    .counts {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 4px 12px;
-      margin: 0;
-      font-size: 13px;
+    .canvas {
+      position: absolute;
+      inset: 0;
     }
-    .counts dt {
-      color: var(--app-on-surface-variant);
+    .split .canvas {
+      right: 50%;
     }
-    .counts dd {
-      margin: 0;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
+    .split .canvas.second {
+      left: 50%;
+      right: 0;
+      border-left: 2px solid var(--app-outline-variant);
+    }
+    .reopen {
+      position: absolute;
+      top: 12px;
+      padding: 8px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 8px;
+      background: #fff;
+      color: #334155;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+    }
+    .reopen.left {
+      left: 12px;
+      top: 48px;
+    }
+    .reopen.right {
+      right: 140px;
+    }
+    .tour {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      width: min(370px, calc(100% - 200px));
+      padding: 10px 14px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+    }
+    .tour.closed {
+      width: auto;
+    }
+    .tour-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #1e293b;
+      font: var(--app-title-small);
+      cursor: pointer;
+      text-align: left;
+    }
+    .tour-head b {
+      flex: 1;
+    }
+    .tour p {
+      margin: 6px 0 0 30px;
+      color: #334155;
+    }
+    .ai {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 999px;
+      background: #0f2a4a;
+      color: #fff;
+      font: var(--app-label-large);
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
     }
     .zones,
-    .legend {
+    .legend,
+    .tree {
       list-style: none;
       margin: 0;
       padding: 0;
       display: grid;
       gap: 2px;
     }
+    .tree {
+      max-height: 240px;
+      overflow: auto;
+    }
     .zones li {
       display: flex;
       align-items: center;
       border-radius: 8px;
     }
-    .zones li.on {
+    .zones li.on,
+    .tree button.on {
       background: var(--app-secondary-container);
     }
-    .zone {
+    .zone,
+    .tree button {
       flex: 1;
       display: flex;
       gap: 8px;
       align-items: center;
+      width: 100%;
       min-width: 0;
       padding: 6px 8px;
       border: 0;
+      border-radius: 8px;
       background: none;
       color: inherit;
       font: var(--app-body-medium);
       text-align: left;
       cursor: pointer;
+    }
+    .tree button:hover {
+      background: var(--app-surface-container);
     }
     .zname {
       flex: 1;
@@ -649,6 +1380,33 @@ interface RibbonTool {
     .nums {
       font-variant-numeric: tabular-nums;
     }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto;
+      gap: 8px 10px;
+      margin: 0;
+      font-size: 13px;
+    }
+    .stats dt {
+      color: var(--app-on-surface-variant);
+    }
+    .stats dd {
+      margin: 0;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .stats .ok {
+      color: #16a34a;
+    }
+    .stats .bad {
+      color: var(--app-error);
+    }
+    .stats.total {
+      grid-template-columns: 1fr auto;
+      padding-top: 8px;
+      border-top: 1px solid var(--app-outline-variant);
+    }
   `,
 })
 export class PlannerPageComponent {
@@ -661,20 +1419,61 @@ export class PlannerPageComponent {
   private readonly dialog = inject(AppDialog);
   private readonly notifier = inject(Notifier);
   private readonly confirm = inject(ConfirmService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly slug = inject(OrgContextStore).slug;
   private readonly canvas = viewChild<PlannerCanvasComponent>('canvas');
 
   protected readonly tool = signal<PlannerTool>('select');
   protected readonly canEdit = this.store.canEdit;
 
-  protected readonly pointerTools: RibbonTool[] = [
-    { id: 'select', label: 'Select', icon: 'near_me', key: 'V' },
-    { id: 'pan', label: 'Pan', icon: 'swap_horiz', key: 'H' },
+  protected readonly showGrid = signal(true);
+  protected readonly showLabels = signal(true);
+  protected readonly leftOpen = signal(true);
+  protected readonly rightOpen = signal(true);
+  protected readonly zonesOpen = signal(true);
+  protected readonly tourOpen = signal(true);
+  protected readonly fullscreen = signal(false);
+  protected readonly treeQuery = signal('');
+  protected readonly splitView = signal(false);
+  protected readonly wayOutOn = signal(false);
+
+  /** Line, Rect, Circle and Polyline, two to a column as the ribbon shows them. */
+  protected readonly drawTools: Array<
+    Array<{ id: PlannerTool; label: string; icon: string; tip: string }>
+  > = [
+    [
+      { id: 'line', label: 'Line', icon: 'line', tip: 'Line (L)' },
+      { id: 'rect', label: 'Rect', icon: 'crop_square', tip: 'Rectangle (R)' },
+    ],
+    [
+      { id: 'circle', label: 'Circle', icon: 'circle', tip: 'Circle (C)' },
+      { id: 'polyline', label: 'Polyline', icon: 'polyline', tip: 'Polyline' },
+    ],
   ];
-  protected readonly zoneTools: RibbonTool[] = [
-    { id: 'zone-rect', label: 'Zone', icon: 'crop_square', key: 'Z' },
-    { id: 'zone-poly', label: 'Polygon', icon: 'polyline', key: 'P' },
-  ];
+
+  /** A zone, or one drawn rectangle, can become a booth. */
+  protected readonly canMakeBooth = computed(() => {
+    const objects = this.store.selectedObjects();
+    return !!this.store.selectedZone() || (objects.length === 1 && objects[0].kind === 'rect');
+  });
+  /** Way out: from each booth's middle straight to the nearest exit of the hall. */
+  protected readonly wayOut = computed<WayOutPath[]>(() => {
+    const v = this.store.view();
+    if (!this.wayOutOn() || !v) return [];
+    const exits = exitPoints(v.hall.floor);
+    if (!exits.length) return [];
+    return this.store.plan().stalls.map((s) => {
+      const from = centre(stallRect(s));
+      let to = exits[0];
+      for (const e of exits) {
+        if (
+          Math.hypot(e[0] - from[0], e[1] - from[1]) < Math.hypot(to[0] - from[0], to[1] - from[1])
+        )
+          to = e;
+      }
+      return { from, to, metres: Math.hypot(to[0] - from[0], to[1] - from[1]) };
+    });
+  });
 
   /** The 1 m grid profile asks for whole metres; else half-metre steps. */
   protected readonly snapStep = computed(() =>
@@ -684,22 +1483,37 @@ export class PlannerPageComponent {
   protected readonly categoryColors = computed(
     () => new Map(this.store.categories().map((c, i) => [c.id, this.colorOf(i)] as const)),
   );
-  protected readonly stallArea = computed(() =>
-    this.store.plan().stalls.reduce((sum, s) => sum + s.width * s.depth, 0),
+  /** Booths of the plan; reserved and booked come with bookings, not the plan. */
+  protected readonly stats = computed(() => {
+    const stalls = this.store.plan().stalls;
+    const open = stalls.filter((s) => !s.isBlocked);
+    return {
+      total: stalls.length,
+      blocked: stalls.length - open.length,
+      available: open.filter((s) => s.isActive).length,
+      saleable: open.reduce((sum, s) => sum + s.width * s.depth, 0),
+    };
+  });
+  protected readonly treeCount = computed(
+    () => this.store.plan().zones.length + this.store.plan().stalls.length,
   );
-  protected readonly steps = computed(() => {
+  /** Zones and stalls matching the search, the first {@link TREE_LIMIT} of them. */
+  protected readonly tree = computed(() => {
+    const q = this.treeQuery().trim().toLowerCase();
     const p = this.store.plan();
-    const t = this.tool();
-    return [
-      { label: 'Zones', done: p.zones.length > 0, now: t === 'zone-rect' || t === 'zone-poly' },
-      { label: 'Booths', done: p.stalls.length > 0, now: t === 'booth' },
-      { label: 'Seats', done: p.seats.length > 0, now: false },
-      {
-        label: 'Save',
-        done: this.store.revision() > 0 && !this.store.dirty(),
-        now: this.store.dirty(),
-      },
-    ];
+    const zones = p.zones
+      .filter((z) => !q || z.name.toLowerCase().includes(q))
+      .map((z) => ({ kind: 'zone' as const, id: z.id, label: z.name, color: z.color }));
+    const stalls = p.stalls
+      .filter((s) => !q || stallLabel(s).toLowerCase().includes(q))
+      .map((s) => ({
+        kind: 'stall' as const,
+        id: s.id,
+        label: `Stall ${stallLabel(s)}`,
+        color: null,
+      }));
+    const all = [...zones, ...stalls];
+    return { items: all.slice(0, TREE_LIMIT), more: all.length - TREE_LIMIT };
   });
 
   constructor() {
@@ -734,6 +1548,11 @@ export class PlannerPageComponent {
     if (this.store.dirty()) event.preventDefault();
   }
 
+  @HostListener('document:fullscreenchange')
+  protected fullscreenChanged(): void {
+    this.fullscreen.set(document.fullscreenElement === this.host.nativeElement);
+  }
+
   @HostListener('window:keydown', ['$event'])
   protected key(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
@@ -763,9 +1582,19 @@ export class PlannerPageComponent {
       e.preventDefault();
       this.removeSelection();
     } else if (!ctrl && !e.altKey) {
-      const tool = ({ v: 'select', h: 'pan', z: 'zone-rect', p: 'zone-poly', b: 'booth' } as const)[
-        e.key.toLowerCase() as 'v'
-      ];
+      const tool = (
+        {
+          v: 'select',
+          h: 'pan',
+          z: 'zone-rect',
+          p: 'zone-poly',
+          b: 'booth',
+          l: 'line',
+          r: 'rect',
+          c: 'circle',
+          t: 'text',
+        } as const
+      )[e.key.toLowerCase() as 'v'];
       if (tool) this.setTool(tool);
     }
   }
@@ -780,6 +1609,122 @@ export class PlannerPageComponent {
 
   protected area(z: PlanZone): number {
     return polygonArea(z.polygon);
+  }
+
+  protected zoom(factor: number): void {
+    this.canvas()?.zoomBy(factor);
+  }
+
+  protected toggleFullscreen(): void {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void this.host.nativeElement.requestFullscreen();
+  }
+
+  protected toggleWayOut(): void {
+    const v = this.store.view();
+    if (!this.wayOutOn() && v && !exitPoints(v.hall.floor).length) {
+      this.notifier.warn('This hall has no exits marked: add an entry area or an exit helper.');
+      return;
+    }
+    this.wayOutOn.set(!this.wayOutOn());
+  }
+
+  // ---- import and export --------------------------------------------------------------------
+
+  /** The plan as a file, to keep or to bring into another hall's planner. */
+  protected exportPlan(): void {
+    const v = this.store.view();
+    if (!v) return;
+    const file = {
+      schema: PLAN_FILE_SCHEMA,
+      hall: v.hall.hall.name,
+      event: v.hall.event.name,
+      exportedAt: new Date().toISOString(),
+      plan: this.store.plan(),
+    };
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' }),
+    );
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${v.hall.event.name} - ${v.hall.hall.name} plan.json`.replace(
+      /[\\/:*?"<>|]/g,
+      '',
+    );
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Replaces the plan with one from an exported file, after asking. Everything gets new ids, so
+   * a plan can be brought in twice or into another hall; the rules check it as any change.
+   */
+  protected async importPlan(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    let content: PlanContent;
+    try {
+      const parsed = JSON.parse(await file.text()) as { schema?: string; plan?: PlanContent };
+      if (parsed.schema !== PLAN_FILE_SCHEMA || !parsed.plan) throw new Error();
+      content = parsed.plan;
+      if (![content.zones, content.stalls, content.seats].every(Array.isArray)) throw new Error();
+    } catch {
+      this.notifier.warn('That file is not a plan exported from the planner.');
+      return;
+    }
+    const ok = await this.confirm.confirm({
+      title: 'Replace the plan?',
+      message: `The plan of this hall is replaced by the one in “${file.name}”. Undo brings it back.`,
+      confirmLabel: 'Replace',
+      destructive: true,
+    });
+    if (!ok) return;
+    const zoneIds = new Map(content.zones.map((z) => [z.id, newId()] as const));
+    const zone = (id: string | null) => (id ? (zoneIds.get(id) ?? null) : null);
+    const next: PlanContent = {
+      zones: content.zones.map((z) => ({ ...z, id: zoneIds.get(z.id)! })),
+      stalls: content.stalls.map((s) => ({ ...s, id: newId(), zoneId: zone(s.zoneId) })),
+      seats: content.seats.map((s) => ({ ...s, id: newId(), zoneId: zone(s.zoneId) })),
+      objects: (content.objects ?? []).map((o) => ({ ...o, id: newId() })),
+    };
+    const ids = [...next.zones, ...next.stalls, ...next.seats, ...next.objects].map((i) => i.id);
+    if (await this.store.change(next, ids, null)) {
+      this.notifier.success(
+        `Plan brought in: ${next.stalls.length.toLocaleString('en-IN')} booths, ${next.zones.length} zones.`,
+      );
+    }
+  }
+
+  // ---- drawings -----------------------------------------------------------------------------
+
+  /** A drawing from a drawing tool; text starts as “Text”, to write in Properties. */
+  protected async addObject(e: DrawObjectEvent): Promise<void> {
+    const plan = this.store.plan();
+    const object: PlanObject = {
+      id: newId(),
+      kind: e.kind,
+      points: e.points.map(([x, y]) => [round(x), round(y)] as Point),
+      text: e.kind === 'text' ? 'Text' : null,
+      color: OBJECT_COLOR,
+    };
+    const ok = await this.store.change(
+      { ...plan, objects: [...plan.objects, object] },
+      [object.id],
+      { kind: 'object', ids: [object.id] },
+    );
+    if (ok && e.kind === 'text') this.tool.set('select');
+  }
+
+  protected async patchObjects(patch: Partial<Pick<PlanObject, 'text' | 'color'>>): Promise<void> {
+    const ids = new Set(this.store.selectedObjects().map((o) => o.id));
+    if (!ids.size) return;
+    const plan = this.store.plan();
+    await this.store.change(
+      { ...plan, objects: plan.objects.map((o) => (ids.has(o.id) ? { ...o, ...patch } : o)) },
+      [...ids],
+    );
   }
 
   // ---- drawing ------------------------------------------------------------------------------
@@ -812,6 +1757,7 @@ export class PlannerPageComponent {
     // Stalls and seats already inside join the zone.
     const inside = (i: PlanStall | PlanSeat) => pointInRing(centre(stallRect(i)), zone.polygon);
     const next = {
+      ...plan,
       zones: [...plan.zones, zone],
       stalls: plan.stalls.map((s) => (inside(s) ? { ...s, zoneId: zone.id } : s)),
       seats: plan.seats.map((s) => (inside(s) ? { ...s, zoneId: zone.id } : s)),
@@ -909,6 +1855,18 @@ export class PlannerPageComponent {
         ...plan,
         stalls: plan.stalls.map((s) => (ids.has(s.id) ? this.rezone(shift(s)) : s)),
       };
+    } else if (e.kind === 'object') {
+      next = {
+        ...plan,
+        objects: plan.objects.map((o) =>
+          ids.has(o.id)
+            ? {
+                ...o,
+                points: o.points.map(([x, y]) => [round(x + e.dx), round(y + e.dy)] as Point),
+              }
+            : o,
+        ),
+      };
     } else {
       next = { ...plan, seats: plan.seats.map((s) => (ids.has(s.id) ? this.rezone(shift(s)) : s)) };
     }
@@ -918,6 +1876,311 @@ export class PlannerPageComponent {
   /** The zone an item is in after it moved. */
   private rezone<T extends PlanStall | PlanSeat>(i: T): T {
     return { ...i, zoneId: zoneAt(centre(stallRect(i)), this.store.plan().zones)?.id ?? null };
+  }
+
+  // ---- modify -------------------------------------------------------------------------------
+
+  /** Copies of the selected booths, beside them to the right, with the next free numbers. */
+  protected async copySelection(): Promise<void> {
+    const selected = this.store.selectedStalls();
+    if (!selected.length) return;
+    const plan = this.store.plan();
+    const box = ringBox(selected.flatMap((s) => rectRing(stallRect(s))));
+    const dx = round(box.width + this.snapStep());
+    const copies: PlanStall[] = [];
+    for (const s of selected) {
+      const [number] = stallNumbers([...plan.stalls, ...copies], s.islandNumber, 'numbers', 1, '');
+      copies.push(this.rezone({ ...s, id: newId(), stallNumber: number, x: round(s.x + dx) }));
+    }
+    const ids = copies.map((c) => c.id);
+    await this.store.change({ ...plan, stalls: [...plan.stalls, ...copies] }, ids, {
+      kind: 'stall',
+      ids,
+    });
+  }
+
+  /** Turns each selected booth a quarter clockwise about its middle; open sides turn too. */
+  protected async rotateSelection(): Promise<void> {
+    const ids = new Set(this.store.selectedStalls().map((s) => s.id));
+    if (!ids.size) return;
+    const plan = this.store.plan();
+    const next = {
+      ...plan,
+      stalls: plan.stalls.map((s) => {
+        if (!ids.has(s.id)) return s;
+        const [cx, cy] = centre(stallRect(s));
+        return this.rezone({
+          ...s,
+          x: round(cx - s.depth / 2),
+          y: round(cy - s.width / 2),
+          width: s.depth,
+          depth: s.width,
+          openSides: s.openSides.map((side) => ROTATED[side]),
+        });
+      }),
+    };
+    await this.store.change(next, [...ids]);
+  }
+
+  /**
+   * Mirrors the selected booths within the box around them: left to right (x, Mirror X) or top
+   * to bottom (y, Mirror).
+   */
+  protected async mirrorSelection(axis: 'x' | 'y'): Promise<void> {
+    const selected = this.store.selectedStalls();
+    if (!selected.length) return;
+    const ids = new Set(selected.map((s) => s.id));
+    const box = ringBox(selected.flatMap((s) => rectRing(stallRect(s))));
+    const plan = this.store.plan();
+    const next = {
+      ...plan,
+      stalls: plan.stalls.map((s) =>
+        ids.has(s.id)
+          ? this.rezone(
+              this.mirrored(s, axis, axis === 'x' ? box.x * 2 + box.width : box.y * 2 + box.height),
+            )
+          : s,
+      ),
+    };
+    await this.store.change(next, [...ids]);
+  }
+
+  /**
+   * Copies of the selected booths mirrored across a drawn line. Booths stay square to the hall,
+   * so the line counts as across or up and down, whichever it is closer to.
+   */
+  protected async mirrorAcross([a, b]: [Point, Point]): Promise<void> {
+    const selected = this.store.selectedStalls();
+    if (!selected.length) return;
+    const across = Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]);
+    const plan = this.store.plan();
+    const copies: PlanStall[] = [];
+    for (const s of selected) {
+      const flipped = across
+        ? this.mirrored(s, 'y', a[1] + b[1])
+        : this.mirrored(s, 'x', a[0] + b[0]);
+      const [number] = stallNumbers([...plan.stalls, ...copies], s.islandNumber, 'numbers', 1, '');
+      copies.push(this.rezone({ ...flipped, id: newId(), stallNumber: number }));
+    }
+    const ids = copies.map((c) => c.id);
+    if (
+      await this.store.change({ ...plan, stalls: [...plan.stalls, ...copies] }, ids, {
+        kind: 'stall',
+        ids,
+      })
+    ) {
+      this.tool.set('select');
+    }
+  }
+
+  /** A booth mirrored across the line where x (or y) is `twice / 2`. */
+  private mirrored(s: PlanStall, axis: 'x' | 'y', twice: number): PlanStall {
+    return axis === 'x'
+      ? {
+          ...s,
+          x: round(twice - s.x - s.width),
+          openSides: s.openSides.map((side) => MIRRORED[side]),
+        }
+      : {
+          ...s,
+          y: round(twice - s.y - s.depth),
+          openSides: s.openSides.map((side) => FLIPPED[side]),
+        };
+  }
+
+  /** Splits the selected booth in two halves across its longer side; the new half is numbered next. */
+  protected async splitSelection(): Promise<void> {
+    const [s] = this.store.selectedStalls();
+    if (!s || this.store.selectedStalls().length !== 1) return;
+    const plan = this.store.plan();
+    const wide = s.width >= s.depth;
+    const half = round((wide ? s.width : s.depth) / 2);
+    const first: PlanStall = wide ? { ...s, width: half } : { ...s, depth: half };
+    const [number] = stallNumbers(plan.stalls, s.islandNumber, 'numbers', 1, '');
+    const second: PlanStall = this.rezone(
+      wide
+        ? {
+            ...s,
+            id: newId(),
+            stallNumber: number,
+            x: round(s.x + half),
+            width: round(s.width - half),
+          }
+        : {
+            ...s,
+            id: newId(),
+            stallNumber: number,
+            y: round(s.y + half),
+            depth: round(s.depth - half),
+          },
+    );
+    await this.store.change(
+      {
+        ...plan,
+        stalls: [...plan.stalls.map((x) => (x.id === s.id ? this.rezone(first) : x)), second],
+      },
+      [s.id, second.id],
+      { kind: 'stall', ids: [s.id, second.id] },
+    );
+  }
+
+  /**
+   * Joins the selected booths into the first of them, when together they fill a rectangle
+   * exactly; the others are removed.
+   */
+  protected async mergeSelection(): Promise<void> {
+    const selected = this.store.selectedStalls();
+    if (selected.length < 2) return;
+    const box = ringBox(selected.flatMap((s) => rectRing(stallRect(s))));
+    const area = selected.reduce((sum, s) => sum + s.width * s.depth, 0);
+    if (Math.abs(area - box.width * box.height) > 0.01) {
+      this.notifier.warn('Not merged: the booths must fill a rectangle together, with no gaps.');
+      return;
+    }
+    const [keep] = selected;
+    const gone = new Set(selected.slice(1).map((s) => s.id));
+    const merged = this.rezone({
+      ...keep,
+      x: round(box.x),
+      y: round(box.y),
+      width: round(box.width),
+      depth: round(box.height),
+    });
+    const plan = this.store.plan();
+    await this.store.change(
+      {
+        ...plan,
+        stalls: plan.stalls
+          .filter((s) => !gone.has(s.id))
+          .map((s) => (s.id === keep.id ? merged : s)),
+      },
+      [keep.id],
+      { kind: 'stall', ids: [keep.id] },
+    );
+  }
+
+  /** Booths side by side in a row, in the middle of the view or of the selected zone. */
+  protected rowOfBooths(): void {
+    const zone = this.store.selectedZone();
+    const at = zone ? centre(ringBox(zone.polygon)) : (this.canvas()?.viewCentre() ?? [0, 0]);
+    this.dialog
+      .open<Rect[]>(RowDialogComponent, {
+        data: { at, snapStep: this.snapStep() } satisfies RowData,
+        width: 'min(460px, 94vw)',
+      })
+      .subscribe(async (boxes) => {
+        if (!boxes?.length) return;
+        const plan = this.store.plan();
+        const numbers = stallNumbers(plan.stalls, null, 'numbers', boxes.length, '');
+        const stalls = boxes.map((b, i) => this.newStall(b, numbers[i]));
+        const ids = stalls.map((s) => s.id);
+        await this.store.change({ ...plan, stalls: [...plan.stalls, ...stalls] }, ids, {
+          kind: 'stall',
+          ids,
+        });
+      });
+  }
+
+  /** Grows or shrinks each selected booth about its middle. */
+  protected scaleSelection(): void {
+    const selected = this.store.selectedStalls();
+    if (!selected.length) return;
+    this.dialog
+      .open<number>(ScaleDialogComponent, {
+        data: { count: selected.length } satisfies ScaleData,
+        width: 'min(380px, 94vw)',
+      })
+      .subscribe(async (factor) => {
+        if (!factor || factor === 1) return;
+        const ids = new Set(selected.map((s) => s.id));
+        const step = this.snapStep();
+        const plan = this.store.plan();
+        const next = {
+          ...plan,
+          stalls: plan.stalls.map((s) => {
+            if (!ids.has(s.id)) return s;
+            const [cx, cy] = centre(stallRect(s));
+            const width = Math.max(step, snap(s.width * factor, step));
+            const depth = Math.max(step, snap(s.depth * factor, step));
+            return this.rezone({
+              ...s,
+              x: round(cx - width / 2),
+              y: round(cy - depth / 2),
+              width,
+              depth,
+            });
+          }),
+        };
+        await this.store.change(next, [...ids]);
+      });
+  }
+
+  /** Makes a booth of the selected zone (its box) or drawn rectangle, which it replaces. */
+  protected async toBooth(): Promise<void> {
+    const zone = this.store.selectedZone();
+    const [object] = this.store.selectedObjects();
+    const ring = zone
+      ? zone.polygon
+      : object?.kind === 'rect'
+        ? objectOutline(object).points
+        : null;
+    if (!ring) return;
+    const box = ringBox(ring);
+    if (zone && Math.abs(polygonArea(zone.polygon) - box.width * box.height) > 0.01) {
+      this.notifier.warn('Only a rectangular zone can become a booth.');
+      return;
+    }
+    const plan = this.store.plan();
+    const [number] = stallNumbers(plan.stalls, null, 'numbers', 1, '');
+    const out = <T extends PlanStall | PlanSeat>(i: T): T =>
+      zone && i.zoneId === zone.id ? { ...i, zoneId: null } : i;
+    const rest = {
+      ...plan,
+      zones: zone ? plan.zones.filter((z) => z.id !== zone.id) : plan.zones,
+      stalls: plan.stalls.map(out),
+      seats: plan.seats.map(out),
+      objects: object ? plan.objects.filter((o) => o.id !== object.id) : plan.objects,
+    };
+    const stall = {
+      ...this.newStall(box, number),
+      zoneId: zoneAt(centre(box), rest.zones)?.id ?? null,
+    };
+    await this.store.change({ ...rest, stalls: [...rest.stalls, stall] }, [stall.id], {
+      kind: 'stall',
+      ids: [stall.id],
+    });
+  }
+
+  /**
+   * Numbers the selected booths from 1 under their island, row by row from the top-left,
+   * skipping numbers other booths of the island have.
+   */
+  protected async numberSelection(): Promise<void> {
+    const selected = this.store.selectedStalls();
+    if (!selected.length) return;
+    const ids = new Set(selected.map((s) => s.id));
+    const plan = this.store.plan();
+    const others = plan.stalls.filter((s) => !ids.has(s.id));
+    const ordered = [...selected].sort((a, b) => round(a.y, 0.1) - round(b.y, 0.1) || a.x - b.x);
+    const byIsland = new Map<string, PlanStall[]>();
+    for (const s of ordered) {
+      const key = s.islandNumber ?? '';
+      byIsland.set(key, [...(byIsland.get(key) ?? []), s]);
+    }
+    const numbers = new Map<string, string>();
+    for (const [island, stalls] of byIsland) {
+      const next = stallNumbers(others, island || null, 'numbers', stalls.length, '1');
+      stalls.forEach((s, i) => numbers.set(s.id, next[i]));
+    }
+    await this.store.change(
+      {
+        ...plan,
+        stalls: plan.stalls.map((s) =>
+          numbers.has(s.id) ? { ...s, stallNumber: numbers.get(s.id)! } : s,
+        ),
+      },
+      [...ids],
+    );
   }
 
   // ---- properties ---------------------------------------------------------------------------
@@ -972,6 +2235,7 @@ export class PlannerPageComponent {
       ...plan,
       stalls: sel.kind === 'stall' ? plan.stalls.filter((s) => !ids.has(s.id)) : plan.stalls,
       seats: sel.kind === 'seat' ? plan.seats.filter((s) => !ids.has(s.id)) : plan.seats,
+      objects: sel.kind === 'object' ? plan.objects.filter((o) => !ids.has(o.id)) : plan.objects,
     });
   }
 
@@ -981,6 +2245,7 @@ export class PlannerPageComponent {
     const out = <T extends PlanStall | PlanSeat>(i: T): T =>
       i.zoneId === zone.id ? { ...i, zoneId: null } : i;
     this.store.remove({
+      ...plan,
       zones: plan.zones.filter((z) => z.id !== zone.id),
       stalls: plan.stalls.map(out),
       seats: plan.seats.map(out),
