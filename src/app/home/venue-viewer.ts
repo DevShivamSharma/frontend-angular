@@ -326,7 +326,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         lightCommand(false);
         const detailView = new URLSearchParams(location.search).get('view');
         const fitDetailWidth = (aspect: number) =>
-            ['itpo-office', 'gate9', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
+            ['itpo-office', 'gate9', 'gate6-road', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
         const waterViews: Record<string, { position: Triple; target: Triple; label: string }> = {
             'fountain': { position: [160, 78, 345], target: [67, 2, 250], label: 'Musical Fountain' },
             'cc-cascade': { position: [-125, 67, 265], target: [-207, 3, 205], label: 'Convention Centre · Cascades' },
@@ -338,6 +338,11 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             controls.target.set(...waterView.target);
             controls.update();
             events.status(waterView.label);
+        } else if (detailView === 'gate6-road') {
+            camera.position.set(-235, 265, 720);
+            controls.target.set(-15, 2, 355);
+            controls.update();
+            events.status('Gate 6 · Road and entrance');
         } else if (new URLSearchParams(location.search).get('view') === 'cc-forecourt') {
             camera.position.copy(W(10.685, 141.551, 220));
             controls.target.copy(W(-284.315, -123.449, 5));

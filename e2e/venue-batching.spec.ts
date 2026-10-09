@@ -34,3 +34,20 @@ test('venue batching retains transparent sort order and floor visibility hierarc
   expect(root.children).toEqual(original);
   expect(floor.children).toHaveLength(2); expect(floor.visible).toBe(false);
 });
+
+test('batching preserves every road furniture instance and shared buffers', () => {
+  const root = new T.Group(), material = new T.MeshStandardMaterial();
+  const geometry = new T.BoxGeometry(), dispose = { count: 0 };
+  geometry.addEventListener('dispose', () => dispose.count++);
+  const instances = new T.InstancedMesh(geometry, material, 3);
+  for (let i = 0; i < instances.count; i++)
+    instances.setMatrixAt(i, new T.Matrix4().makeTranslation(i * 12, 1, 8));
+  root.add(instances, new T.Mesh(geometry, material), new T.Mesh(geometry, material));
+  const matrices = instances.instanceMatrix.array.slice();
+  batchVenue(root, () => null, () => 'same');
+  expect(instances.parent).toBe(root);
+  expect(instances.count).toBe(3);
+  expect(instances.instanceMatrix.array).toEqual(matrices);
+  expect(root.children).toHaveLength(2);
+  expect(dispose.count).toBe(0);
+});

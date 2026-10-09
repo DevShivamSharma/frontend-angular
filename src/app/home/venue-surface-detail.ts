@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { addFrontGarden, addItpoWalkway } from './venue-edge-detail';
+import { addFrontGarden, addItpoWalkway, addGate6Road } from './venue-edge-detail';
 import { addItpoExterior } from './venue-itpo-exterior';
 
 const PAVING_REPEAT_METRES = 32;
@@ -14,6 +14,7 @@ export function prepareVenueSurfaceDetail(root: T.Group): void {
     addFrontGarden(root);
     addItpoWalkway(root);
     addItpoExterior(root);
+    addGate6Road(root);
     root.updateMatrixWorld(true);
     const materials = new Map<string, T.MeshStandardMaterial>();
     const replaced = new Set<T.BufferGeometry>();

@@ -11,7 +11,7 @@ export function batchVenue(root: T.Group, classify: (object: T.Object3D) => stri
     const inverseRoot = root.matrixWorld.clone().invert();
     const bins = new Map<string, T.Mesh[]>();
     root.traverse(object => {
-        if (!(object instanceof T.Mesh) || object instanceof T.SkinnedMesh || object.children.length ||
+        if (!(object instanceof T.Mesh) || object instanceof T.SkinnedMesh || object instanceof T.InstancedMesh || object.children.length ||
             Array.isArray(object.material) || object.material.transparent || object.morphTargetInfluences) return;
         for (let node: T.Object3D | null = object; node; node = node.parent)
             if (node.userData['cc_level'] || node.userData['interiorRoof'] || /^(OUTER_GROUND|CONTEXT_GROUND)$/.test(node.name)) return;
