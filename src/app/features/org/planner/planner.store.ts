@@ -52,6 +52,8 @@ export class PlannerStore {
   readonly dirty = signal(false);
   /** Goes up when a change is refused, so fields that showed it go back to the plan. */
   readonly refused = signal(0);
+  /** Why the last change was refused, as the toast said it; the assistant reports it. */
+  readonly lastRefusal = signal<string | null>(null);
   /** A check or save is running; tools wait for it. */
   readonly busy = signal(false);
 
@@ -155,6 +157,14 @@ export class PlannerStore {
     this.commit(next, null);
   }
 
+  /**
+   * Back to a plan this store held before (the assistant's "Undo"), as one undo step. That plan
+   * passed the rules when it was made, so it needs no check.
+   */
+  restore(earlier: PlanContent): void {
+    this.commit(earlier, null);
+  }
+
   /** The findings about `changed` were the plan to become `next`; null when the check failed. */
   async check(next: PlanContent, changed: string[]): Promise<PlanFinding[] | null> {
     this.busy.set(true);
@@ -173,9 +183,9 @@ export class PlannerStore {
   refuse(findings: PlanFinding[]): void {
     this.refused.update((n) => n + 1);
     const more = findings.length - 1;
-    this.notifier.warn(
-      `Not done: ${findings[0].message}${more ? ` (${more} more ${more === 1 ? 'rule' : 'rules'} broken)` : ''}`,
-    );
+    const message = `${findings[0].message}${more ? ` (${more} more ${more === 1 ? 'rule' : 'rules'} broken)` : ''}`;
+    this.lastRefusal.set(message);
+    this.notifier.warn(`Not done: ${message}`);
   }
 
   undo(): void {

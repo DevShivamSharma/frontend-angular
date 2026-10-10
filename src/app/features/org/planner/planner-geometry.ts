@@ -375,6 +375,37 @@ export function fillBooths(
   return best;
 }
 
+// ---- auto zones -----------------------------------------------------------------------------
+
+/**
+ * Zones on a grid over the floor's outline, about 36 × 24 m each (at most 3 × 3), with an aisle
+ * of `aisle` metres between them and kept `aisle` clear of the outline. Only zones that lie
+ * wholly inside the outline are kept.
+ */
+export function zoneGrid(floor: PlannerFloor, aisle: number): Rect[] {
+  const outline = floor.floor[0]?.[0];
+  if (!outline) return [];
+  const box = ringBox(outline);
+  const cols = Math.min(3, Math.max(1, Math.round(box.width / 36)));
+  const rows = Math.min(3, Math.max(1, Math.round(box.height / 24)));
+  const width = (box.width - aisle * (cols + 1)) / cols;
+  const height = (box.height - aisle * (rows + 1)) / rows;
+  if (width <= 0 || height <= 0) return [];
+  const out: Rect[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const zone = {
+        x: round(box.x + aisle + c * (width + aisle)),
+        y: round(box.y + aisle + r * (height + aisle)),
+        width: round(width),
+        height: round(height),
+      };
+      if (rectInRing(zone, outline)) out.push(zone);
+    }
+  }
+  return out;
+}
+
 // ---- seats ----------------------------------------------------------------------------------
 
 export type Front = 'top' | 'bottom' | 'left' | 'right';
