@@ -375,6 +375,262 @@ export function fillBooths(
   return best;
 }
 
+// ---- booths in rows, the way a hall is cut --------------------------------------------------
+
+/** A place for a booth in rows: which line and island it is in, and how it opens. */
+export interface BoothPlace extends Rect {
+  /** Line of booths, top first, from 0. */
+  line: number;
+  /** Lines back to back make one island; a line on its own is an island too. From 0. */
+  island: number;
+  /** Place in its line, left first, from 0. */
+  place: number;
+  openSides: StallSide[];
+  /** Open on two sides or more: the end of a line, onto a cross-aisle. */
+  corner: boolean;
+}
+
+export interface RowFill {
+  /** Where to fill: a zone's outline, or the hall's. */
+  region: Point[];
+  width: number;
+  depth: number;
+  /** Between islands, and the cross-aisles: the passage width the rules ask for. */
+  aisle: number;
+  /** Kept from the region's edge, metres; rounded up to the grid. */
+  margin: number;
+  /** Booths in a line before a cross-aisle; 0: none. */
+  crossEvery: number;
+  /** Most booths; null: as many as fit. */
+  count: number | null;
+  pillarClearance: number;
+  /** Try the rows a few grid squares either way, so pillars fall in aisles. */
+  shiftForPillars: boolean;
+  /** Keep booths that have a pillar in them. */
+  sellPillarStands: boolean;
+  /** Line ends next to a cross-aisle open onto it too. */
+  corners: boolean;
+  /**
+   * A line of booths along each side wall, backs to it, opening onto an aisle; the rows inside
+   * start past that aisle, and their ends open onto it.
+   */
+  wallLines: boolean;
+  /** What booths keep off: around exits, under curtains, at service points. */
+  keepClear: Rect[];
+  /**
+   * A booth near a corner keeps this far from at least one of the two walls there, so the corner
+   * stays open (the corner rule); 0: no such rule.
+   */
+  cornerClear: number;
+  /** The plan's grid, metres: rows start on it. */
+  grid: number;
+}
+
+/**
+ * Booths in rows, as halls are cut: lines of booths side by side, two lines back to back to an
+ * island, an aisle between islands, and a cross-aisle every few booths. The first line, along the
+ * top, opens onto the aisle below it; the line across opens up onto the same aisle. So every open
+ * side faces an aisle, never the back of another booth. Rows start on the grid, a margin in from
+ * the edge, and the room left over is shared out on both sides.
+ */
+export function fillRows(
+  fill: RowFill,
+  floor: PlannerFloor,
+  stalls: PlanStall[],
+  seats: PlanSeat[],
+): BoothPlace[] {
+  const { width: w, depth: d, aisle, grid } = fill;
+  if (w <= 0 || d <= 0 || aisle < 0 || grid <= 0) return [];
+  const box = ringBox(fill.region);
+  const up = (v: number) => Math.ceil(v / grid - EPS) * grid;
+  const down = (v: number) => Math.floor(v / grid + EPS) * grid;
+  const x0 = up(box.x + fill.margin);
+  const y0 = up(box.y + fill.margin);
+  const W = down(box.x + box.width - fill.margin) - x0;
+  const H = down(box.y + box.height - fill.margin) - y0;
+  if (W < w || H < d) return [];
+  /** Room past the last line, to the region's edge: an open side needs the aisle there. */
+  const below = (end: number) => box.y + box.height - end;
+
+  // Lines down the region: one opening down, then islands of a line opening up and one down.
+  const lines: Array<{ y: number; open: StallSide; island: number }> = [];
+  lines.push({ y: 0, open: 'bottom', island: 0 });
+  let y = d + aisle;
+  for (let island = 1; y + d <= H + EPS; island++) {
+    lines.push({ y, open: 'top', island });
+    // The second line of the island opens down, so it needs an aisle below it.
+    if (y + 2 * d <= H + EPS && below(y0 + y + 2 * d) >= aisle - EPS) {
+      lines.push({ y: y + d, open: 'bottom', island });
+      y += 2 * d + aisle;
+    } else {
+      y += d + aisle;
+    }
+  }
+  const last = lines[lines.length - 1];
+  const usedH = last.y + d;
+
+  // Booths along a line: side by side, a cross-aisle after every `crossEvery`. With lines
+  // along the side walls, the rows inside keep a line and an aisle from each.
+  const perSegment = fill.crossEvery > 0 ? fill.crossEvery : Infinity;
+  const segments = (length: number, size: number) => {
+    const out: Array<{ at: number; start: boolean; end: boolean }> = [];
+    for (let at = 0; at + size <= length + EPS;) {
+      let n = 0;
+      while (n < perSegment && at + size <= length + EPS) {
+        out.push({ at, start: n === 0, end: false });
+        at += size;
+        n++;
+      }
+      out[out.length - 1].end = true;
+      at += aisle;
+    }
+    return out;
+  };
+  const sideRoom = fill.wallLines ? d + aisle : 0;
+  const innerW = W - 2 * sideRoom;
+  const xs = innerW >= w ? segments(innerW, w) : [];
+  const usedW = xs.length ? xs[xs.length - 1].at + w : 0;
+
+  // Shared out on both sides, on the grid; the last line keeps its aisle if it opens down.
+  const slackY =
+    last.open === 'bottom' && lines.length > 1
+      ? Math.min((H - usedH) / 2, below(y0 + usedH) - aisle)
+      : (H - usedH) / 2;
+  const centreX = down(Math.max(0, (innerW - usedW) / 2));
+  const centreY = down(Math.max(0, slackY));
+
+  const taken = [...stalls.map(stallRect), ...seats.map(stallRect)];
+  const pillars = floor.pillars.map((p) => grow(p, fill.pillarClearance));
+  /** Whether a booth may go there: in the region, on open floor, clear of what it must be. */
+  const fits = (r: Rect) => {
+    if (!rectInRing(fill.margin > 0 ? grow(r, fill.margin - EPS) : r, fill.region)) return false;
+    if (!onOpenFloor(r, floor)) return false;
+    if (taken.some((t) => overlaps(r, t))) return false;
+    if (fill.keepClear.some((k) => overlaps(r, k))) return false;
+    if (fill.cornerClear > 0) {
+      const c = fill.cornerClear - EPS;
+      const side = r.x - box.x < c || box.x + box.width - (r.x + r.width) < c;
+      const end = r.y - box.y < c || box.y + box.height - (r.y + r.height) < c;
+      if (side && end) return false;
+    }
+    return fill.sellPillarStands || !pillars.some((p) => overlaps(r, p));
+  };
+  const lastIsland = lines[lines.length - 1].island;
+
+  const place = (ox: number, oy: number): BoothPlace[] => {
+    const out: BoothPlace[] = [];
+    const left = x0 + sideRoom + centreX + ox;
+    const top = y0 + centreY + oy;
+    lines.forEach((ln, line) => {
+      xs.forEach((pos, i) => {
+        const r = { x: round(left + pos.at), y: round(top + ln.y), width: w, height: d };
+        if (!fits(r)) return;
+        const open: StallSide[] = [ln.open];
+        // An end opens onto a cross-aisle (corner booths), or onto the aisle along a side line,
+        // or onto the edge when the aisle fits there.
+        const first = i === 0;
+        const final = i === xs.length - 1;
+        const gapLeft = first ? r.x - box.x : aisle;
+        const gapRight = final ? box.x + box.width - (r.x + w) : aisle;
+        const opensLeft = first ? fill.corners || fill.wallLines : fill.corners;
+        const opensRight = final ? fill.corners || fill.wallLines : fill.corners;
+        if (pos.start && opensLeft && gapLeft >= aisle - EPS) open.push('left');
+        if (pos.end && opensRight && gapRight >= aisle - EPS) open.push('right');
+        out.push({
+          ...r,
+          line,
+          island: ln.island,
+          place: i,
+          openSides: open,
+          corner: open.length > 1,
+        });
+      });
+    });
+    if (fill.wallLines) {
+      // Down each side wall: booths turned to face in, their backs to the wall.
+      const ys = segments(H, w);
+      const columns: Array<{ x: number; open: StallSide }> = [
+        { x: x0, open: 'right' },
+        { x: x0 + W - d, open: 'left' },
+      ];
+      columns.forEach((col, k) => {
+        ys.forEach((pos, i) => {
+          const r = { x: round(col.x), y: round(y0 + pos.at), width: d, height: w };
+          if (!fits(r)) return;
+          const open: StallSide[] = [col.open];
+          if (fill.corners) {
+            const gapTop = i === 0 ? r.y - box.y : aisle;
+            const gapBottom = i === ys.length - 1 ? box.y + box.height - (r.y + w) : aisle;
+            if (pos.start && gapTop >= aisle - EPS) open.push('top');
+            if (pos.end && gapBottom >= aisle - EPS) open.push('bottom');
+          }
+          out.push({
+            ...r,
+            line: lines.length + k,
+            island: lastIsland + 1 + k,
+            place: i,
+            openSides: open,
+            corner: open.length > 1,
+          });
+        });
+      });
+    }
+    return fill.count !== null ? out.slice(0, fill.count) : out;
+  };
+
+  let best = place(0, 0);
+  if (fill.shiftForPillars && floor.pillars.length && !fill.sellPillarStands) {
+    // A few grid squares either way; the shift that keeps most booths wins.
+    const reach = fill.wallLines ? 0 : 3;
+    for (let ox = -reach; ox <= reach; ox++) {
+      for (let oy = -3; oy <= 3; oy++) {
+        if (!ox && !oy) continue;
+        const tried = place(ox * grid, oy * grid);
+        if (tried.length > best.length) best = tried;
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * What booths keep off by the hall's rules, as boxes: the clearance round each emergency exit,
+ * under and beside fire curtains, and round service points. Only for the rules that are on.
+ */
+export function keepClearOf(
+  f: HallFloor,
+  values: { emergencyExitClearance: number; curtainClearance: number; facilityClearance: number },
+  on: (rule: string) => boolean,
+): Rect[] {
+  const out: Rect[] = [];
+  if (on('EMERGENCY_EXIT_ACCESS')) {
+    const c = values.emergencyExitClearance;
+    for (const g of f.iconGroups ?? []) {
+      if (g.icons.some((i) => i.kind === 'emergency-exit')) {
+        out.push({ x: g.x - c, y: g.y - c, width: 2 * c, height: 2 * c });
+      }
+    }
+  }
+  const areas: Array<{ kind: AreaKind; box: Rect }> = f.geometry
+    ? f.geometry.objects.flatMap((o) =>
+        o.geometry.map((p) => ({ kind: o.kind as AreaKind, box: ringBox(p[0]) })),
+      )
+    : f.areas.map((a) => ({ kind: a.kind, box: a }));
+  for (const a of areas) {
+    if (a.kind === 'fire_curtain' && on('SMOKE_CURTAIN'))
+      out.push(grow(a.box, values.curtainClearance));
+    if (a.kind === 'utility' && on('FACILITY_ACCESS'))
+      out.push(grow(a.box, values.facilityClearance));
+  }
+  return out;
+}
+
+/** The floor stalls may use, m²: the hall's outline less what blocks it. */
+export function standArea(floor: PlannerFloor): number {
+  const outline = floor.floor.reduce((sum, poly) => sum + polygonArea(poly[0] ?? []), 0);
+  return Math.max(0, outline - floor.blocked.reduce((sum, b) => sum + b.width * b.height, 0));
+}
+
 // ---- auto zones -----------------------------------------------------------------------------
 
 /**

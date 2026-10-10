@@ -34,6 +34,8 @@ export interface HallDetailsInput {
 export interface NewHallInput extends HallDetailsInput {
   width: number;
   depth: number;
+  /** Corners of a hall that is not a rectangle, in metres; its size then comes from them. */
+  outline?: Array<[number, number]>;
 }
 
 export interface ItpoFile {

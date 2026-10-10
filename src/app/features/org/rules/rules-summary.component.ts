@@ -10,7 +10,7 @@ import type {
   RuleValues,
 } from '../../../core/rules/rules.models';
 
-const GROUPS: Array<{ key: RuleGroup; label: string }> = [
+export const GROUPS: Array<{ key: RuleGroup; label: string }> = [
   { key: 'floor', label: 'The hall floor' },
   { key: 'access', label: 'Passages and access' },
   { key: 'stalls', label: 'Stalls' },
@@ -20,7 +20,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
 const m = (n: number) => `${n} m`;
 
 /** The value a rule checks with, in words; rules without a value have none. */
-const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
+export const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
   peripheralClearance: (v) => `${m(v.peripheralClearance)} from the hall's walls`,
   openSideAccess: (v) =>
     `${m(v.passageWidth.B2B)} clear (B2B), ${m(v.passageWidth.B2C)} clear (B2C)`,

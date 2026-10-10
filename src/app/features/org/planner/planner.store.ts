@@ -113,11 +113,18 @@ export class PlannerStore {
    * out, and the rest are added as one undo step. A rule broken by the plan as a whole refuses
    * them all. Returns how many were added and left out.
    */
-  async addPassing(add: {
-    stalls?: PlanStall[];
-    seats?: PlanSeat[];
-  }): Promise<{ added: number; dropped: number } | null> {
-    const base = this.plan();
+  async addPassing(
+    add: {
+      stalls?: PlanStall[];
+      seats?: PlanSeat[];
+    },
+    /** Booths taken away in the same step: a plan made afresh replaces them. */
+    replacing: ReadonlySet<string> = new Set(),
+  ): Promise<{ added: number; dropped: number } | null> {
+    const now = this.plan();
+    const base = replacing.size
+      ? { ...now, stalls: now.stalls.filter((s) => !replacing.has(s.id)) }
+      : now;
     let stalls = add.stalls ?? [];
     let seats = add.seats ?? [];
     const total = stalls.length + seats.length;

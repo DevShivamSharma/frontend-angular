@@ -1,4 +1,4 @@
-import { computed, effect, Injectable, signal, untracked } from '@angular/core';
+import { computed, DOCUMENT, effect, inject, Injectable, signal, untracked } from '@angular/core';
 
 import { TourEnd, TourOptions, TourStep } from './tour.models';
 
@@ -12,6 +12,7 @@ const ADVANCE_MS = 800;
  */
 @Injectable()
 export class TourService<C = unknown> {
+  private readonly document = inject(DOCUMENT);
   readonly active = signal(false);
   readonly index = signal(0);
   readonly status = signal<'pending' | 'done'>('pending');
@@ -56,11 +57,11 @@ export class TourService<C = unknown> {
 
   next(): void {
     if (this.isLast()) this.end('finish');
-    else void this.go(this.index() + 1);
+    else void this.go(this.index() + 1, 1);
   }
 
   back(): void {
-    if (!this.isFirst()) void this.go(this.index() - 1);
+    if (!this.isFirst()) void this.go(this.index() - 1, -1);
   }
 
   /** Moves on without doing the step. */
@@ -83,17 +84,40 @@ export class TourService<C = unknown> {
     this.options.removeMade?.();
   }
 
-  private async go(i: number): Promise<void> {
+  /**
+   * Shows step `i`. A step whose target is not on screen after it got ready (a panel a narrow
+   * screen hides) is passed over, the way the person was going.
+   */
+  private async go(i: number, direction: 1 | -1 = 1): Promise<void> {
     clearTimeout(this.timer);
     this.index.set(i);
     this.status.set('pending');
     const step = this.steps()[i];
-    if (!step?.before) return;
+    if (!step) return;
+    // A dropdown left open by the last step (a category list) would cover this one: a click
+    // outside closes it, as it would for the person.
+    this.document.body.click();
     this.preparing.set(true);
     try {
-      await step.before(this.ctx);
+      await step.before?.(this.ctx);
+      if (step.target) {
+        // Lets what `before` opened render before looking for it.
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
     } finally {
       if (this.index() === i) this.preparing.set(false);
     }
+    if (this.index() !== i || !step.target || this.shown(step.target)) return;
+    const next = i + direction;
+    if (next < 0) return;
+    if (next >= this.total()) this.end('finish');
+    else void this.go(next, direction);
+  }
+
+  private shown(selector: string): boolean {
+    const el = this.document.querySelector<HTMLElement>(selector);
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
   }
 }

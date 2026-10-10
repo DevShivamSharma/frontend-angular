@@ -87,7 +87,12 @@ interface LogItem {
         >
           <app-icon [name]="voiceOn() ? 'volume_up' : 'volume_off'" />
         </button>
-        <button type="button" class="icon-btn" (click)="closed.emit()" aria-label="Close the assistant">
+        <button
+          type="button"
+          class="icon-btn"
+          (click)="closed.emit()"
+          aria-label="Close the assistant"
+        >
           <app-icon name="close" />
         </button>
       </header>
@@ -532,7 +537,11 @@ export class PlannerAssistantComponent {
         if (!turn.calls.length) break;
         for (const call of turn.calls) {
           if (run !== this.run) return;
-          const at = this.add({ kind: 'action', text: `${toolLabel(call.name)}…`, state: 'running' });
+          const at = this.add({
+            kind: 'action',
+            text: `${toolLabel(call.name)}…`,
+            state: 'running',
+          });
           const outcome = await runTool(this.ctx(), call.name, call.args ?? {});
           if (run !== this.run) return;
           this.update(at, { text: outcome.summary, state: outcome.ok ? 'ok' : 'failed' });
@@ -547,7 +556,10 @@ export class PlannerAssistantComponent {
           });
         }
         if (round === MAX_ROUNDS - 1) {
-          this.add({ kind: 'assistant', text: 'I stopped after several steps. Tell me how to go on.' });
+          this.add({
+            kind: 'assistant',
+            text: 'I stopped after several steps. Tell me how to go on.',
+          });
         }
       }
       this.finishCommand();
@@ -685,5 +697,7 @@ export class PlannerAssistantComponent {
 }
 
 function asObject(v: unknown): Record<string, unknown> {
-  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : { value: v };
+  return v && typeof v === 'object' && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : { value: v };
 }

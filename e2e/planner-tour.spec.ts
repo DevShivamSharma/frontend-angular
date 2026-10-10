@@ -18,7 +18,7 @@ const floor = {
   legend: [],
 };
 
-async function mockOrganiser(page: Page) {
+async function mockOrganiser(page: Page, options: { categories: boolean } = { categories: true }) {
   await page.route('**/api/**', async (route) => {
     const req = route.request();
     const path = new URL(req.url()).pathname;
@@ -107,7 +107,7 @@ async function mockOrganiser(page: Page) {
               values: { passageWidth: { B2B: 3, B2C: 4 } },
               drawingProfile: 'grid',
             },
-            categories: [{ id: 'c1', name: 'Premium', status: 'active' }],
+            categories: options.categories ? [{ id: 'c1', name: 'Premium', status: 'active' }] : [],
             plan: { stalls: 0, seats: 0, revision: 0 },
           },
         },
@@ -117,6 +117,8 @@ async function mockOrganiser(page: Page) {
 }
 
 async function drag(page: Page, from: [number, number], to: [number, number]) {
+  // Lets the popover finish gliding to its place first.
+  await page.waitForTimeout(400);
   const box = (await page.locator('app-planner-canvas canvas').boundingBox())!;
   const p = (f: [number, number]) => ({
     x: box.x + box.width * f[0],
@@ -133,12 +135,16 @@ test('an organiser is taken round the planner, and what the tour made goes', asy
   await page.setViewportSize({ width: 1600, height: 960 });
   await mockOrganiser(page);
   await page.goto('/venue/events/ev/halls/h5/planner');
+  // The hall's rules come first; the tour starts after them.
+  await page.getByRole('button', { name: 'Start planning' }).click();
 
   const dialog = page.getByRole('dialog');
   const step = (n: number, title: string) =>
-    expect(dialog).toContainText(new RegExp(`Step ${n} of 18[\\s\\S]*${title}`));
+    expect(dialog).toContainText(new RegExp(`Step ${n} of 20[\\s\\S]*${title}`));
   const button = (name: string) => dialog.getByRole('button', { name, exact: true });
   const canvasAt = async (fx: number, fy: number) => {
+    // The popover glides to its new place for 300 ms; a click meanwhile could land on it.
+    await page.waitForTimeout(400);
     const box = (await page.locator('app-planner-canvas canvas').boundingBox())!;
     await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
   };
@@ -168,29 +174,36 @@ test('an organiser is taken round the planner, and what the tour made goes', asy
   // No "Do it for me": every step is done by hand, or skipped.
   await expect(dialog.getByRole('button', { name: 'Do it for me' })).toHaveCount(0);
   await canvasAt(0.25, 0.35);
-  await step(7, 'Back to Select');
+  // A rule at work: a booth on the passage is refused, and the tour moves on.
+  await step(7, 'See a rule at work');
+  await canvasAt(0.14, 0.5);
+  await expect(page.locator('p-toast')).toContainText('Stands on a passage');
+  await step(8, 'Back to Select');
   await page.keyboard.press('v');
-  await step(8, 'Select your booth');
+  await step(9, 'Select your booth');
   await canvasAt(0.25, 0.35);
-  await step(9, 'Give it a category');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/tour-9.png` });
+  await step(10, 'Give it a category');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/tour-10.png` });
   await page.locator('[data-tour="stall-categories"] p-multiselect').click();
   await page.getByRole('option', { name: 'Premium' }).click();
-  await step(10, 'Copy it');
+  await step(11, 'Open a side');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/tour-11.png` });
+  await page.locator('[data-tour="open-sides"]').getByRole('button', { name: 'right' }).click();
+  await step(12, 'Copy it');
   await page.keyboard.press('Control+d');
-  await step(11, 'Undo it');
+  await step(13, 'Undo it');
   await page.keyboard.press('Control+z');
-  await step(12, 'See it in 3D');
+  await step(14, 'See it in 3D');
   await page.keyboard.press('3');
-  await step(13, 'Back to the plan');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/tour-13.png` });
+  await step(15, 'Back to the plan');
   await page.locator('[data-tour="cube-top"]').click();
-  await step(14, 'Fill a hall in one go');
+  await step(16, 'Fill a hall in one go');
   for (const [n, title] of [
-    [15, 'Change many at once'],
-    [16, 'Measure and look'],
-    [17, 'Save, then publish'],
-    [18, 'You’re ready'],
+    [17, 'Change many at once'],
+    [18, 'Measure and look'],
+    // An architect saves; the organiser admin publishes.
+    [19, 'Save your work'],
+    [20, 'You’re ready'],
   ] as const) {
     await button('Next').click();
     await step(n, title);
@@ -209,6 +222,7 @@ test('an organiser is taken round the planner, and what the tour made goes', asy
 
   // Not by itself again; Help starts it, Esc leaves it.
   await page.reload();
+  await page.getByRole('button', { name: 'Start planning' }).click();
   await expect(page.locator('app-planner-canvas canvas')).toBeVisible();
   await page.waitForTimeout(800);
   await expect(dialog).toHaveCount(0);
@@ -216,4 +230,35 @@ test('an organiser is taken round the planner, and what the tour made goes', asy
   await step(1, 'Welcome');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
+});
+
+test('on a narrow screen the hidden plan panel is passed over, and a hall without categories says so', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await mockOrganiser(page, { categories: false });
+  await page.goto('/venue/events/ev/halls/h5/planner');
+  // The hall's rules come first; the tour starts after them.
+  await page.getByRole('button', { name: 'Start planning' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Step 1 of 20');
+  await dialog.getByRole('button', { name: 'Start', exact: true }).click();
+  // Step 2, the plan panel, is hidden at this width: the tour goes straight to step 3.
+  await expect(dialog).toContainText(/Step 3 of 20[\s\S]*Pick the Zone tool/);
+  // Passing the other action steps by; a booth is drawn, so Properties has it to show.
+  for (let i = 0; i < 10; i++) {
+    const text = await dialog.innerText();
+    if (text.includes('Categories come from the venue')) break;
+    if (text.includes('Draw a booth')) {
+      await page.waitForTimeout(400);
+      const box = (await page.locator('app-planner-canvas canvas').boundingBox())!;
+      await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.35);
+      await expect(dialog).not.toContainText('Draw a booth');
+      continue;
+    }
+    await dialog.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.waitForTimeout(150);
+  }
+  await expect(dialog).toContainText('Categories come from the venue');
+  await expect(dialog).not.toContainText('Your turn');
 });

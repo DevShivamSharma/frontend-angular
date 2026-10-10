@@ -12,7 +12,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TooltipModule } from 'primeng/tooltip';
@@ -20,6 +20,8 @@ import { firstValueFrom } from 'rxjs';
 
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { PlansApi } from '../../../core/plans/plans-api.service';
+import { RulesApi } from '../../../core/rules/rules-api.service';
+import type { RuleCatalogue } from '../../../core/rules/rules.models';
 import {
   PlanContent,
   PlanObject,
@@ -39,12 +41,16 @@ import {
   AutoBoothsDialogComponent,
   FillRegion,
 } from './auto-booths-dialog.component';
+import {
+  PlanHallData,
+  PlanHallDialogComponent,
+  PlanHallResult,
+} from './plan-hall-dialog.component';
+import type { PlanBrief } from './planner-plan';
+import { PlannerRulesData, PlannerRulesDialogComponent } from './planner-rules-dialog.component';
 import { AutoSeatsData, AutoSeatsDialogComponent } from './auto-seats-dialog.component';
-import { FullDemoDialogComponent } from './full-demo-dialog.component';
-import { FullDemoPanelComponent } from './full-demo-panel.component';
 import { PlannerAgentCtx } from './planner-agent';
 import { PlannerAssistantComponent } from './planner-assistant.component';
-import { DemoConfig, FullDemoService } from './full-demo.service';
 import {
   DrawObjectEvent,
   MoveEvent,
@@ -137,10 +143,9 @@ const OBJECT_COLOR = '#334155';
     PlannerCanvasComponent,
     PlannerPropertiesComponent,
     TourOverlayComponent,
-    FullDemoPanelComponent,
     PlannerAssistantComponent,
   ],
-  providers: [PlannerStore, TourService, FullDemoService],
+  providers: [PlannerStore, TourService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (store.view(); as v) {
@@ -218,6 +223,15 @@ const OBJECT_COLOR = '#334155';
                 [disabled]="ro || store.busy()"
               >
                 <app-icon name="auto_awesome" /><span>Auto-booths</span>
+              </button>
+              <button
+                type="button"
+                class="tool auto"
+                (click)="planHall()"
+                [disabled]="ro || store.busy()"
+                pTooltip="Lay out the whole hall or a zone: pick one of a few complete layouts"
+              >
+                <app-icon name="dashboard" /><span>Plan hall</span>
               </button>
               <button
                 type="button"
@@ -776,6 +790,16 @@ const OBJECT_COLOR = '#334155';
                     Every change is checked against the {{ rulesOn() }} rules on for this hall. A
                     change that breaks one is not made; the message says why.
                   </p>
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    [outlined]="true"
+                    class="see-rules"
+                    (click)="showRules()"
+                  >
+                    <app-icon name="rule" />See the rules
+                  </button>
                 </section>
               </div>
             </aside>
@@ -837,60 +861,37 @@ const OBJECT_COLOR = '#334155';
                 <app-icon name="left_panel_close" />
               </button>
             }
-            @if (demo.active()) {
-              <app-full-demo-panel />
-            } @else {
-              <section class="tour" [class.closed]="!tourOpen()">
-                <button
-                  type="button"
-                  class="tour-head"
-                  (click)="tourOpen.set(!tourOpen())"
-                  [attr.aria-expanded]="tourOpen()"
-                >
-                  <app-icon name="play" />
-                  <b>Help &amp; guided tour</b>
-                  <app-icon name="expand_more" class="chev" [class.open]="tourOpen()" />
-                </button>
-                @if (tourOpen()) {
-                  @if (tourFor()) {
-                    <p class="small">
-                      New here, or showing someone round? The guided tour takes you step by step:
-                      it lights up one thing, you do it, and it moves on by itself.
-                    </p>
-                    <div class="tour-actions">
-                      <button pButton type="button" (click)="startTour()">
-                        <app-icon name="play" />Start the guided tour
-                      </button>
-                    </div>
-                  } @else {
-                    <p class="small">
-                      Mark areas with <b>Zone</b> or <b>Polygon</b>, place stalls with
-                      <b>Booth</b> or <b>Auto-booths</b>, then <b>Save</b>. Every change is checked
-                      against this hall's rules.
-                    </p>
-                  }
+            <section class="tour" [class.closed]="!tourOpen()">
+              <button
+                type="button"
+                class="tour-head"
+                (click)="tourOpen.set(!tourOpen())"
+                [attr.aria-expanded]="tourOpen()"
+              >
+                <app-icon name="play" />
+                <b>Help &amp; guided tour</b>
+                <app-icon name="expand_more" class="chev" [class.open]="tourOpen()" />
+              </button>
+              @if (tourOpen()) {
+                @if (tourFor()) {
                   <p class="small">
-                    Or watch the whole flow: the <b>full demo</b> makes a new hall and does each
-                    step itself, from a drawing to a 3D tour.
+                    New here, or showing someone round? The guided tour takes you step by step: it
+                    lights up one thing, you do it, and it moves on by itself.
                   </p>
                   <div class="tour-actions">
-                    <button
-                      pButton
-                      [outlined]="true"
-                      type="button"
-                      (click)="fullDemo()"
-                      [disabled]="!!demoBlocker()"
-                      [pTooltip]="demoBlocker() ?? ''"
-                    >
-                      <app-icon name="play" />Full demo: hall to 3D
+                    <button pButton type="button" (click)="startTour()">
+                      <app-icon name="play" />Start the guided tour
                     </button>
                   </div>
-                  @if (demoBlocker(); as why) {
-                    <p class="small muted">{{ why }}</p>
-                  }
+                } @else {
+                  <p class="small">
+                    Mark areas with <b>Zone</b> or <b>Polygon</b>, place stalls with <b>Booth</b> or
+                    <b>Auto-booths</b>, then <b>Save</b>. Every change is checked against this
+                    hall's rules.
+                  </p>
                 }
-              </section>
-            }
+              }
+            </section>
             @if (assistantOpen()) {
               <app-planner-assistant
                 [slug]="slug()"
@@ -1515,6 +1516,9 @@ export class PlannerPageComponent {
   protected readonly store = inject(PlannerStore);
   private readonly api = inject(PlansApi);
   private readonly dialog = inject(AppDialog);
+  private readonly rulesApi = inject(RulesApi);
+  /** Labels of the rules, loaded once; null when they could not be. */
+  private rulesCatalogue: Promise<RuleCatalogue | null> | null = null;
   private readonly notifier = inject(Notifier);
   private readonly confirm = inject(ConfirmService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -1522,8 +1526,6 @@ export class PlannerPageComponent {
   protected readonly slug = this.context.slug;
   private readonly auth = inject(AuthService);
   protected readonly tour = inject<TourService<PlannerTourCtx>>(TourService);
-  protected readonly demo = inject(FullDemoService);
-  private readonly router = inject(Router);
   /** The guided tour is for the organiser's admin and architect. */
   protected readonly tourFor = computed(() => this.context.eventScoped());
   private readonly canvas = viewChild<PlannerCanvasComponent>('canvas');
@@ -1614,10 +1616,27 @@ export class PlannerPageComponent {
     try {
       const view = await firstValueFrom(this.api.get(this.slug(), eventId, hallId));
       this.store.load(this.slug(), eventId, hallId, view);
+      // The hall's rules come first, before any drawing; the first-visit tour after them.
+      await this.showRules();
       this.autoTour();
     } catch {
       // The error interceptor has shown it.
     }
+  }
+
+  /** The rules on for this hall, read only: shown when the planner opens, and from Rules. */
+  protected async showRules(): Promise<void> {
+    const view = this.store.view();
+    if (!view) return;
+    this.rulesCatalogue ??= firstValueFrom(this.rulesApi.catalogue(this.slug())).catch(() => null);
+    const catalogue = await this.rulesCatalogue;
+    await firstValueFrom(
+      this.dialog.open<void>(PlannerRulesDialogComponent, {
+        data: { hall: view.hall, catalogue } satisfies PlannerRulesData,
+        width: 'min(640px, 96vw)',
+      }),
+      { defaultValue: undefined },
+    );
   }
 
   /** Leaving with unsaved changes asks first (see the route's guard). */
@@ -1647,8 +1666,6 @@ export class PlannerPageComponent {
     if (target?.closest('input, textarea, select, [contenteditable], .p-dialog')) return;
     // The tour has the keyboard on its info steps; on "Your turn" steps shortcuts work.
     if (this.tour.active() && !this.tour.step()?.action) return;
-    // The full demo is drawing: keys would change the plan under it.
-    if (this.demo.active() && !this.demo.finished()) return;
     if (!this.canEdit()) return;
     const ctrl = e.ctrlKey || e.metaKey;
     const canvas = this.canvas();
@@ -2386,6 +2403,36 @@ export class PlannerPageComponent {
       });
   }
 
+  /**
+   * Opens Plan hall, from what the AI assistant understood when it asks; resolves to what was
+   * added, or null when the person closed it.
+   */
+  protected async planHall(
+    brief?: Partial<PlanBrief>,
+    options: { regionId?: string; afresh?: boolean } = {},
+  ): Promise<{ added: number; dropped: number; replaced: number; label: string } | null> {
+    if (!this.store.view()) return null;
+    const regions = this.regions();
+    const regionId = regions.regions.some((r) => r.id === options.regionId)
+      ? options.regionId!
+      : regions.regionId;
+    const chosen = await firstValueFrom(
+      this.dialog.open<PlanHallResult>(PlanHallDialogComponent, {
+        data: {
+          store: this.store,
+          ...regions,
+          regionId,
+          brief,
+          afresh: options.afresh,
+        } satisfies PlanHallData,
+        width: 'min(1080px, 96vw)',
+      }),
+    );
+    if (!chosen?.stalls.length) return null;
+    const result = await this.addMany({ stalls: chosen.stalls }, 'booth', chosen.replacing);
+    return result && { ...result, replaced: chosen.replacing.length, label: chosen.label };
+  }
+
   protected seats(): void {
     const zone = this.store.selectedZone();
     const at = zone ? centre(ringBox(zone.polygon)) : (this.canvas()?.viewCentre() ?? [0, 0]);
@@ -2420,9 +2467,10 @@ export class PlannerPageComponent {
   private async addMany(
     add: { stalls?: PlanStall[]; seats?: PlanSeat[] },
     what: 'booth' | 'seat',
-  ): Promise<void> {
-    const result = await this.store.addPassing(add);
-    if (!result) return;
+    replacing: string[] = [],
+  ): Promise<{ added: number; dropped: number } | null> {
+    const result = await this.store.addPassing(add, new Set(replacing));
+    if (!result) return null;
     const name = (n: number) => `${n.toLocaleString('en-IN')} ${what}${n === 1 ? '' : 's'}`;
     if (result.dropped) {
       this.notifier.warn(
@@ -2431,6 +2479,7 @@ export class PlannerPageComponent {
     } else {
       this.notifier.success(`${name(result.added)} added.`);
     }
+    return result;
   }
 
   /** What Publish does now, or why it cannot. */
@@ -2490,7 +2539,13 @@ export class PlannerPageComponent {
       memo: {},
     };
     this.tourOpen.set(false);
-    this.tour.start(plannerTour(this.canEdit()), ctx, {
+    const view = this.store.view();
+    const steps = plannerTour({
+      canEdit: this.canEdit(),
+      canPublish: view?.canPublish ?? false,
+      hasCategories: this.store.categories().some((c) => c.status === 'active'),
+    });
+    this.tour.start(steps, ctx, {
       onEnd: (reason) => {
         this.tourSeen(reason === 'skip');
         this.tourOpen.set(true);
@@ -2556,60 +2611,10 @@ export class PlannerPageComponent {
     removeZone: (zone) => this.removeZone(zone),
     addZone: (polygon) => this.addZone(polygon),
     addBooth: (r) => this.addBooth(r),
+    planHall: (brief, options) => this.planHall(brief, options),
     exportPlan: () => this.exportPlan(),
-    fullDemo: () => this.fullDemo(),
     openProperties: () => this.rightOpen.set(true),
   };
-
-  // ---- full demo ----------------------------------------------------------------------------
-
-  /**
-   * Why the full demo cannot start here, or null. It makes a venue hall, imports a drawing into
-   * it and adds it to the event, so it needs those permissions as well as editing the plan.
-   */
-  protected readonly demoBlocker = computed(() => {
-    if (!this.canEdit()) return 'The full demo needs a plan you may edit.';
-    const can = (p: string) => this.context.can(p);
-    if (!can('venues.manage') || !can('halls.import') || !can('events.manage')) {
-      return "The full demo makes a new hall in the venue: ask the venue's admin to run it.";
-    }
-    if (this.tour.active()) return 'Finish the guided tour first.';
-    return null;
-  });
-
-  /**
-   * Asks how to run the full demo, then runs it in a new hall. This hall's unsaved changes are
-   * never dropped for it: they are saved, or undone, first.
-   */
-  protected fullDemo(): void {
-    if (this.demoBlocker() || this.demo.active()) return;
-    if (this.store.dirty()) {
-      this.notifier.warn(
-        'Save or undo your changes first: the demo opens a new hall, and this one stays as it is.',
-      );
-      return;
-    }
-    this.dialog
-      .open<DemoConfig>(FullDemoDialogComponent, { width: 'min(560px, 96vw)' })
-      .subscribe((config) => {
-        if (!config || this.store.dirty()) return;
-        this.tourOpen.set(false);
-        this.tool.set('select');
-        this.demo.start(
-          {
-            store: this.store,
-            canvas: () => this.canvas(),
-            slug: this.slug(),
-            eventId: this.eventId(),
-            hallId: this.hallId(),
-            openHall: (hallId) =>
-              this.router.navigate(['/', this.slug(), 'events', this.eventId(), 'halls', hallId, 'planner']),
-            openProperties: () => this.rightOpen.set(true),
-          },
-          config,
-        );
-      });
-  }
 
   private tourKeys(): { seen: string; off: string } | null {
     const user = this.auth.user()?.id;
@@ -2633,7 +2638,7 @@ export class PlannerPageComponent {
   /** Opens the tour by itself the first time an organiser opens a planner. */
   private autoTour(): void {
     const keys = this.tourKeys();
-    if (!this.tourFor() || !this.canEdit() || !keys || this.demo.active()) return;
+    if (!this.tourFor() || !this.canEdit() || !keys) return;
     try {
       if (localStorage.getItem(keys.seen) || localStorage.getItem(keys.off)) return;
     } catch {

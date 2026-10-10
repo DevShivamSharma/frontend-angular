@@ -11,7 +11,6 @@ import type { Point } from '../../../core/venues/floor-plan.models';
 import type { PlannerCanvasComponent } from './planner-canvas.component';
 import {
   centre,
-  fillBooths,
   fillSeats,
   type Front,
   letters,
@@ -22,13 +21,20 @@ import {
   rectRing,
   ringBox,
   round,
-  stallNumbers,
   stallRect,
   zoneAt,
   zoneGrid,
   ZONE_COLORS,
 } from './planner-geometry';
 import type { StallPatch } from './planner-properties.component';
+import {
+  boothsOf,
+  defaultBrief,
+  type Numbering,
+  type PlanBrief,
+  planOptions,
+  planSetting,
+} from './planner-plan';
 import type { PlannerStore } from './planner.store';
 
 /**
@@ -45,7 +51,12 @@ export interface PlannerAgentCtx {
   /** The hall's passage width, metres. */
   passage: () => number;
   /** Asks the person in a dialog; true when they agree. */
-  confirm: (title: string, message: string, label: string, destructive?: boolean) => Promise<boolean>;
+  confirm: (
+    title: string,
+    message: string,
+    label: string,
+    destructive?: boolean,
+  ) => Promise<boolean>;
   /** The page's handlers; each acts on the store's selection, as its button does. */
   copySelection: () => Promise<void>;
   rotateSelection: () => Promise<void>;
@@ -60,8 +71,12 @@ export interface PlannerAgentCtx {
   removeZone: (zone: PlanZone) => void;
   addZone: (polygon: Point[]) => Promise<boolean>;
   addBooth: (r: Rect) => Promise<boolean>;
+  /** Opens Plan hall with what the assistant understood; null when the person closed it. */
+  planHall: (
+    brief: Partial<PlanBrief>,
+    options: { regionId?: string; afresh?: boolean },
+  ) => Promise<{ added: number; dropped: number; replaced: number; label: string } | null>;
   exportPlan: () => void;
-  fullDemo: () => void;
   openProperties: () => void;
 }
 
@@ -80,7 +95,11 @@ const TOUR_MS = 12_000;
 type Args = Record<string, unknown>;
 
 /** Runs one tool; an unknown tool or a refused change is an outcome, never an exception. */
-export async function runTool(ctx: PlannerAgentCtx, name: string, args: Args): Promise<ToolOutcome> {
+export async function runTool(
+  ctx: PlannerAgentCtx,
+  name: string,
+  args: Args,
+): Promise<ToolOutcome> {
   const tool = TOOLS[name];
   if (!tool) return fail(`There is no tool “${name}”.`);
   if (tool.edits && !ctx.store.canEdit()) return fail('This plan is read-only for you.');
@@ -250,7 +269,8 @@ const TOOLS: Record<string, Tool> = {
       const zone = findZone(ctx, str(a['zone']) ?? '');
       const patch: Partial<Omit<PlanZone, 'id'>> = {};
       if (str(a['name'])) patch.name = str(a['name'])!;
-      if (str(a['color']) && /^#[0-9a-f]{6}$/i.test(str(a['color'])!)) patch.color = str(a['color'])!;
+      if (str(a['color']) && /^#[0-9a-f]{6}$/i.test(str(a['color'])!))
+        patch.color = str(a['color'])!;
       if (!Object.keys(patch).length) return fail('Say the new name or colour.');
       ctx.store.select({ kind: 'zone', ids: [zone.id] });
       const done = await change(ctx, () => ctx.patchZone(patch));
@@ -267,51 +287,78 @@ const TOOLS: Record<string, Tool> = {
     },
   },
   // ---- booths ----------------------------------------------------------------------------------
+  plan_hall: {
+    label: 'Planning the hall',
+    edits: true,
+    run: async (ctx, a) => {
+      const zone = str(a['zone']);
+      const regionId =
+        zone && !/^(the )?(whole )?hall$/i.test(zone.trim()) ? findZone(ctx, zone).id : 'hall';
+      const done = await ctx.planHall(briefArgs(ctx, a), {
+        regionId,
+        afresh: a['replace'] === true,
+      });
+      if (!done) {
+        return {
+          ok: false,
+          summary: 'Plan hall closed without a layout; nothing changed',
+          result: {
+            error:
+              'The person closed Plan hall without choosing a layout; nothing changed. Do not ' +
+              'open it again unless they ask.',
+          },
+        };
+      }
+      return ok(
+        `Laid out ${done.added} booths (${done.label})` +
+          (done.dropped ? `, ${done.dropped} left out by rules` : ''),
+        {
+          done:
+            `The person chose the layout “${done.label}”; its ${done.added} booths are now on ` +
+            'the plan. Nothing is left to choose. The plan is not saved yet.',
+          added: done.added,
+          leftOutByRules: done.dropped,
+          replaced: done.replaced,
+        },
+      );
+    },
+  },
   auto_booths: {
     label: 'Filling with booths',
     edits: true,
     run: async (ctx, a) => {
       const store = ctx.store;
-      const width = positive(a['width']) ?? 3;
-      const depth = positive(a['depth']) ?? 3;
-      const aisle = positive(a['aisle']) ?? ctx.passage();
-      const count = a['count'] === undefined ? null : clampInt(a['count'], 1, 3000, 3000);
+      const brief = briefArgs(ctx, a);
       const regions = fillRegions(ctx, str(a['zone']));
       if (regions.some((r) => r.id === 'hall')) {
         const yes = await ctx.confirm(
           'Fill the whole hall with booths?',
-          `The assistant wants to fill the whole hall with ${width} × ${depth} m booths. Undo takes them away.`,
+          `The assistant wants to fill the whole hall with ${brief.width ?? 3} × ${brief.depth ?? 3} m booths. Undo takes them away.`,
           'Fill the hall',
         );
         if (!yes) return fail('The person said no.');
       }
       let added = 0;
       let dropped = 0;
+      const layouts: string[] = [];
       for (const region of regions) {
+        const view = store.view();
         const floor = store.floor();
-        if (!floor) return fail('The hall floor is not loaded.');
-        const plan = store.plan();
-        const places = fillBooths(
-          {
-            region: region.ring,
-            width,
-            depth,
-            aisle,
-            margin: 0.5,
-            count,
-            pillarClearance: 0.5,
-            shiftForPillars: true,
-            sellPillarStands: false,
-          },
-          floor,
-          plan.stalls,
-          plan.seats,
-        );
-        if (!places.length) continue;
-        const result = await store.addPassing({ stalls: booths(ctx, region.island, places) });
+        if (!view || !floor) return fail('The hall floor is not loaded.');
+        const { setting } = planSetting(view, floor, store.plan(), region.ring, false);
+        const full: PlanBrief = {
+          ...defaultBrief(setting),
+          // A zone's booths are numbered under its name, unless a prefix is asked for.
+          ...(region.island ? { prefix: region.island, numbering: 'numbers' as const } : {}),
+          ...brief,
+        };
+        const best = planOptions(full, setting)[0];
+        if (!best) continue;
+        const result = await store.addPassing({ stalls: boothsOf(best, full, setting) });
         if (result) {
           added += result.added;
           dropped += result.dropped;
+          layouts.push(best.label);
         }
       }
       if (!added) {
@@ -323,6 +370,7 @@ const TOOLS: Record<string, Tool> = {
         added,
         leftOutByRules: dropped,
         regions: regions.map((r) => r.name),
+        layouts,
       });
     },
   },
@@ -559,7 +607,9 @@ const TOOLS: Record<string, Tool> = {
       const steps = clampInt(a['steps'], 1, 20, 1);
       let n = 0;
       for (; n < steps && ctx.store.canUndo(); n++) ctx.store.undo();
-      return n ? ok(`Undid ${n} step${n === 1 ? '' : 's'}`, { undone: n }) : fail('Nothing to undo.');
+      return n
+        ? ok(`Undid ${n} step${n === 1 ? '' : 's'}`, { undone: n })
+        : fail('Nothing to undo.');
     },
   },
   redo: {
@@ -569,7 +619,9 @@ const TOOLS: Record<string, Tool> = {
       const steps = clampInt(a['steps'], 1, 20, 1);
       let n = 0;
       for (; n < steps && ctx.store.canRedo(); n++) ctx.store.redo();
-      return n ? ok(`Redid ${n} step${n === 1 ? '' : 's'}`, { redone: n }) : fail('Nothing to redo.');
+      return n
+        ? ok(`Redid ${n} step${n === 1 ? '' : 's'}`, { redone: n })
+        : fail('Nothing to redo.');
     },
   },
   save: {
@@ -578,7 +630,8 @@ const TOOLS: Record<string, Tool> = {
     run: async (ctx) => {
       const store = ctx.store;
       if (!store.dirty()) return ok('Nothing new to save', { revision: store.revision() });
-      if (!(await store.save())) return fail('The plan was not saved; the message on screen says why.');
+      if (!(await store.save()))
+        return fail('The plan was not saved; the message on screen says why.');
       return ok(`Saved as version ${store.revision()}`, { revision: store.revision() });
     },
   },
@@ -588,7 +641,8 @@ const TOOLS: Record<string, Tool> = {
     run: async (ctx) => {
       const store = ctx.store;
       if (!store.view()?.canPublish) return fail('You may not publish stall plans here.');
-      if (store.dirty() || !store.revision()) return fail('Save the plan first: the saved plan is what is published.');
+      if (store.dirty() || !store.revision())
+        return fail('Save the plan first: the saved plan is what is published.');
       if (store.upToDate()) return ok(`Version ${store.revision()} is already published`, {});
       const p = store.published();
       const yes = await ctx.confirm(
@@ -601,14 +655,6 @@ const TOOLS: Record<string, Tool> = {
       if (!yes) return fail('The person said no.');
       if (!(await store.publish())) return fail('Not published; the message on screen says why.');
       return ok(`Published version ${store.revision()}`, { published: store.revision() });
-    },
-  },
-  run_full_demo: {
-    label: 'Opening the full demo',
-    edits: true,
-    run: async (ctx) => {
-      ctx.fullDemo();
-      return ok('Opened the full demo setup', { opened: true });
     },
   },
 };
@@ -763,39 +809,41 @@ function fillRegions(ctx: PlannerAgentCtx, zone: string | null): FillRegion[] {
   const v = ctx.store.view()!;
   const floor = ctx.store.floor()!;
   const ring =
-    floor.floor[0]?.[0] ?? rectRing({ x: 0, y: 0, width: v.hall.floor.width, height: v.hall.floor.depth });
+    floor.floor[0]?.[0] ??
+    rectRing({ x: 0, y: 0, width: v.hall.floor.width, height: v.hall.floor.depth });
   return [{ id: 'hall', name: 'the whole hall', ring, island: null }];
 }
 
-/** Places as booths, numbered under the island; rows open towards each other, as Auto-booths. */
-function booths(ctx: PlannerAgentCtx, island: string | null, places: Rect[]): PlanStall[] {
-  const plan = ctx.store.plan();
-  const numbers = stallNumbers(plan.stalls, island, 'numbers', places.length, '');
-  const rows = [...new Set(places.map((r) => r.y))].sort((a, b) => a - b);
-  const facing = (r: Rect): StallSide[] => (rows.indexOf(r.y) % 2 ? ['top'] : ['bottom']);
-  return places.map((r, i) => ({
-    id: newId(),
-    zoneId: zoneAt(centre(r), plan.zones)?.id ?? null,
-    islandNumber: island,
-    stallNumber: numbers[i],
-    x: r.x,
-    y: r.y,
-    width: r.width,
-    depth: r.height,
-    openSides: facing(r),
-    scheme: 'shell',
-    categoryIds: [],
-    isPremium: false,
-    isBlocked: false,
-    isFnb: false,
-    isBranding: false,
-    isHorseshoe: false,
-    isMarqueeAvailable: false,
-    isRestrictedForOverseas: false,
-    isActive: true,
-    location: null,
-    description: null,
-  }));
+const NUMBERINGS: readonly Numbering[] = ['line', 'island', 'numbers', 'letters'];
+const WALL_LINES: ReadonlyArray<PlanBrief['wallLines']> = ['auto', 'yes', 'no'];
+
+/** The plan a tool call asks for, in Plan hall's terms; what it leaves out keeps its default. */
+function briefArgs(ctx: PlannerAgentCtx, a: Args): Partial<PlanBrief> {
+  const brief: Partial<PlanBrief> = {};
+  const width = positive(a['width']);
+  const depth = positive(a['depth']);
+  const aisle = positive(a['aisle']);
+  if (width) brief.width = Math.min(width, 60);
+  if (depth) brief.depth = Math.min(depth, 60);
+  if (aisle) brief.aisle = Math.min(aisle, 20);
+  const wall = str(a['wall_lines']);
+  if (wall && WALL_LINES.includes(wall as PlanBrief['wallLines'])) {
+    brief.wallLines = wall as PlanBrief['wallLines'];
+  }
+  if (typeof a['corners'] === 'boolean') brief.corners = a['corners'];
+  const numbering = str(a['numbering']);
+  if (numbering && NUMBERINGS.includes(numbering as Numbering)) {
+    brief.numbering = numbering as Numbering;
+  }
+  const prefix = str(a['prefix']);
+  if (prefix !== null) brief.prefix = prefix.slice(0, 20);
+  if (Array.isArray(a['categories'])) {
+    brief.categoryIds = a['categories'].map((c) => findCategory(ctx, String(c)).id);
+  }
+  if (a['count'] !== undefined && a['count'] !== null) {
+    brief.count = clampInt(a['count'], 1, 3000, 3000);
+  }
+  return brief;
 }
 
 /** The booth changes a tool call asks for, in Properties' terms. */
@@ -818,7 +866,8 @@ function stallPatch(ctx: PlannerAgentCtx, a: Args): StallPatch {
     );
     patch.openSides = [...new Set(sides)];
   }
-  if (typeof a['description'] === 'string') patch.description = a['description'].slice(0, 500) || null;
+  if (typeof a['description'] === 'string')
+    patch.description = a['description'].slice(0, 500) || null;
   if (str(a['island'])) patch.islandNumber = str(a['island'])!.slice(0, 10);
   return patch;
 }
@@ -868,7 +917,9 @@ function summary(ctx: PlannerAgentCtx) {
     return m;
   };
   return {
-    hall: v ? { name: v.hall.hall.name, width: v.hall.floor.width, depth: v.hall.floor.depth } : null,
+    hall: v
+      ? { name: v.hall.hall.name, width: v.hall.floor.width, depth: v.hall.floor.depth }
+      : null,
     unsavedChanges: store.dirty(),
     savedVersion: store.revision(),
     publishedVersion: store.published()?.revision ?? null,

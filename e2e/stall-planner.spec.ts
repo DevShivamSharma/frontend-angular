@@ -69,6 +69,40 @@ async function mockPlanner(page: Page, eventScoped = false) {
           ],
         },
       });
+    if (path.endsWith('/rules/catalogue'))
+      return route.fulfill({
+        json: {
+          rules: [
+            {
+              id: 'hallBoundary',
+              label: 'Inside the hall',
+              description: 'A stall stays within the hall walls.',
+              reference: 'ITPO 2.1',
+              group: 'floor',
+              available: true,
+            },
+            {
+              id: 'PASSAGE',
+              label: 'Passages kept clear',
+              description: 'No stall on a marked passage.',
+              reference: 'ITPO 3.4',
+              group: 'access',
+              available: true,
+            },
+          ],
+          limits: [],
+          profiles: [
+            {
+              id: 'grid',
+              label: 'Grid',
+              description: 'Whole metres.',
+              gridMetres: 1,
+              noRotation: true,
+              maxSide: null,
+            },
+          ],
+        },
+      });
     if (path.endsWith('/plan/check')) {
       const body = req.postDataJSON();
       checks.push(body);
@@ -190,6 +224,18 @@ test('every tool of the ribbon, the view cube, the wheel and 3D work', async ({ 
   await page.setViewportSize({ width: 1600, height: 960 });
   const { saves, publishes } = await mockPlanner(page);
   await page.goto('/venue/events/ev/halls/h5/planner');
+  // Before anything else, the rules on for this hall, read only, with this event's values.
+  const rules = page.locator('app-planner-rules-dialog');
+  await expect(rules).toContainText('Rules for Hall 5');
+  await expect(rules).toContainText('Inside the hall');
+  await expect(rules).toContainText('Passages kept clear');
+  await expect(rules).toContainText('3 m clear (B2B)');
+  // One without a catalogue entry is named from its id.
+  await expect(rules).toContainText('Stall overlap');
+  await expect(rules.locator('input, p-checkbox, p-toggleswitch')).toHaveCount(0);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/rules-on-open.png` });
+  await rules.getByRole('button', { name: 'Start planning' }).click();
+  await expect(rules).toHaveCount(0);
   await expect(page.locator('app-planner-canvas canvas')).toBeVisible();
   // The legend: the hall's areas, and what the plan draws.
   const legend = page.locator('app-planner-canvas details.legend');
@@ -198,6 +244,9 @@ test('every tool of the ribbon, the view cube, the wheel and 3D work', async ({ 
   await expect(legend).toContainText('Open side');
   // The view cube is for 3D only.
   await expect(page.locator('app-planner-canvas .cube')).toHaveCount(0);
+  // The help card is folded away, so it covers none of the floor the test clicks on.
+  const help = page.locator('.tour-head');
+  if ((await help.getAttribute('aria-expanded')) === 'true') await help.click();
 
   // Zone, then booths: one refused on the passage, one made.
   await tool(page, 'Zone').click();
@@ -356,6 +405,55 @@ test('every tool of the ribbon, the view cube, the wheel and 3D work', async ({ 
   await expect(page.locator('nav.ribbon').getByRole('button', { name: 'Published' })).toBeVisible();
   expect(publishes).toEqual([1]);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/planner-published.png` });
+});
+
+test('Plan hall offers whole layouts, checked by the rules, and starts afresh in one step', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 960 });
+  await mockPlanner(page);
+  await page.goto('/venue/events/ev/halls/h5/planner');
+  // The hall's rules come first; read, then on to planning.
+  await page.getByRole('button', { name: 'Start planning' }).click();
+  await expect(page.locator('app-planner-canvas canvas')).toBeVisible();
+
+  await tool(page, 'Plan hall').click();
+  const dialog = page.getByRole('dialog');
+  const layouts = dialog.getByRole('radio');
+  await expect(layouts.first()).toBeVisible();
+  expect(await layouts.count()).toBeLessThanOrEqual(3);
+  // Each layout is checked with the hall's rules: the mocked check refuses the passage.
+  await expect(layouts.first()).not.toContainText('Checking the hall');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/plan-hall.png` });
+
+  // Bigger booths, by line under H5-, Premium for all.
+  await dialog.getByRole('button', { name: '6 × 3' }).click();
+  await dialog.getByPlaceholder('e.g. H6-').fill('H5-');
+  await dialog.locator('p-multiselect').click();
+  await page.getByRole('option', { name: 'Premium' }).click();
+  await page.keyboard.press('Escape');
+  await layouts.first().click();
+  await expect(layouts.first()).toHaveAttribute('aria-checked', 'true');
+  const use = dialog.getByRole('button', { name: /^Use layout A/ });
+  const offered = Number((await use.innerText()).match(/\(([\d,]+) booths\)/)![1].replace(',', ''));
+  await use.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(stat(page, 'Total Booths')).toHaveText(String(offered));
+
+  // Again, afresh: the booths there are replaced, not added to; one Undo brings them back.
+  await tool(page, 'Plan hall').click();
+  await dialog.getByText(/Start afresh/).click();
+  await dialog.getByRole('button', { name: '3 × 3' }).click();
+  await expect(layouts.first()).not.toContainText('Checking the hall');
+  const again = Number(
+    (await dialog.getByRole('button', { name: /^Use layout/ }).innerText())
+      .match(/\(([\d,]+) booths\)/)![1]
+      .replace(',', ''),
+  );
+  await dialog.getByRole('button', { name: /^Use layout/ }).click();
+  await expect(stat(page, 'Total Booths')).toHaveText(String(again));
+  await tool(page, 'Undo').click();
+  await expect(stat(page, 'Total Booths')).toHaveText(String(offered));
 });
 
 test('the venue admin adds categories one by one and from a CSV', async ({ page }) => {

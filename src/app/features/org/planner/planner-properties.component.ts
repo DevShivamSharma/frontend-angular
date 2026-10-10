@@ -161,7 +161,7 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
         </div>
         <p class="muted small nums">{{ s.width * s.depth | number: '1.0-2' }} m²</p>
         <span class="lbl">Open sides</span>
-        <div class="sides" role="group" aria-label="Open sides">
+        <div class="sides" role="group" aria-label="Open sides" data-tour="open-sides">
           @for (side of sideList; track side) {
             <button
               type="button"

@@ -38,10 +38,10 @@ const HELPERS = [
           }
         </select>
       </label>
-      <button type="button" (click)="addHelper()" [disabled]="floor().iconGroups.length >= 200">
+      <button class="pbutton" type="button" (click)="addHelper()" [disabled]="floor().iconGroups.length >= 200">
         Add helper
       </button>
-      <button type="button" (click)="addText()" [disabled]="floor().labels.length >= 200">
+      <button class="pbutton" type="button" (click)="addText()" [disabled]="floor().labels.length >= 200">
         Add text label
       </button>
     </div>
@@ -198,6 +198,9 @@ const HELPERS = [
     .muted {
       color: var(--app-on-surface-variant);
     }
+      .pbutton{
+          margin-top: 22px !important;
+      }
     .toolbar,
     .preview-tools {
       display: flex;

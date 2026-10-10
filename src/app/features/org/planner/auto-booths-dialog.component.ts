@@ -23,18 +23,21 @@ import type { Point } from '../../../core/venues/floor-plan.models';
 import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
 import { IconComponent } from '../../../shared/icon.component';
 import {
+  BoothPlace,
   centre,
   fillBooths,
+  fillRows,
+  keepClearOf,
   newId,
-  NumberStyle,
   overlaps,
   pointInRing,
   Rect,
   ringBox,
-  stallNumbers,
   stallRect,
+  standArea,
   zoneAt,
 } from './planner-geometry';
+import { Numbering, numberPlaces } from './planner-plan';
 import type { PlannerStore } from './planner.store';
 
 export interface FillRegion {
@@ -62,6 +65,17 @@ const SIZES = [
   { label: '6 × 3', value: '6x3' },
   { label: 'Custom', value: 'custom' },
 ];
+
+/** How booths are laid out: in rows as halls are cut, or each on its own with aisles round it. */
+type Layout = 'rows' | 'single';
+/** A cross-aisle at least this often, metres, whatever the booth size. */
+const CROSS_AISLE_METRES = 30;
+const CROSS_AISLE_BOOTHS = 10;
+/** The plan's grid: rows start on it, and the margin is at least one square. */
+const GRID = 1;
+
+/** A place in the preview, with its id; `meta` when it came from a row layout. */
+type Candidate = Rect & { id: string; meta?: BoothPlace };
 
 /** Server checks of the preview wait for typing to pause this long. */
 const CHECK_DELAY = 450;
@@ -106,6 +120,24 @@ const CHECK_DELAY = 450;
           (ngModelChange)="regionId.set($event)"
           appendTo="body"
         />
+        <span class="lbl">Layout</span>
+        <p-selectbutton
+          [options]="layouts"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          [ngModel]="layout()"
+          (ngModelChange)="layout.set($event)"
+          ariaLabel="Layout"
+        />
+        <p class="muted small">
+          @if (layout() === 'rows') {
+            Lines of booths side by side, two lines back to back, an aisle between them and a
+            cross-aisle every few booths. Every open side faces an aisle.
+          } @else {
+            Every booth on its own, with an aisle all round it.
+          }
+        </p>
         <span class="lbl">Booth size (m)</span>
         <p-selectbutton
           [options]="sizes"
@@ -139,7 +171,7 @@ const CHECK_DELAY = 450;
             />
           </label>
           <label
-            >Aisle between booths (m)
+            >Aisle (m)
             <p-inputnumber
               [ngModel]="aisle()"
               (ngModelChange)="aisle.set($event ?? 0)"
@@ -158,7 +190,55 @@ const CHECK_DELAY = 450;
               [maxFractionDigits]="2"
             />
           </label>
+          @if (layout() === 'rows') {
+            <label
+              >Cross-aisle after (booths)
+              <p-inputnumber
+                [ngModel]="crossEvery()"
+                (ngModelChange)="crossEvery.set($event)"
+                [min]="0"
+                [max]="200"
+                [placeholder]="'' + autoCross()"
+              />
+            </label>
+          }
         </div>
+        <p class="muted small">
+          Rows start on the grid, {{ margin() }} m in from the edge; what is left over is shared on
+          both sides.
+          @if (wallRule()) {
+            The hall's rules keep {{ wallRule() }} m from the walls.
+          }
+        </p>
+        @if (margin() < wallRule()) {
+          <p class="warn small">
+            <app-icon name="warning" /> Less than the {{ wallRule() }} m the rules keep from the
+            walls: booths along them cannot be added.
+          </p>
+        }
+        @if (layout() === 'rows') {
+          <label class="check">
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="corners()"
+              (ngModelChange)="corners.set($event)"
+            />
+            Line ends open on two sides (corner booths)
+          </label>
+          <label class="check">
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="wallLines()"
+              (ngModelChange)="wallLines.set($event)"
+            />
+            A line along each side wall, facing in
+          </label>
+          @if (corners() && cornerCategory()) {
+            <p class="muted small">
+              Corner booths also get the {{ cornerCategory()!.name }} category.
+            </p>
+          }
+        }
         <div class="or"><span>or</span></div>
         <label
           >Booths
@@ -224,26 +304,28 @@ const CHECK_DELAY = 450;
             />
           </label>
           <label
-            >Start at
-            <input
-              pInputText
-              [ngModel]="startAt()"
-              (ngModelChange)="startAt.set($event)"
-              maxlength="6"
-              placeholder="next free"
-            />
-          </label>
-          <label
-            >Numbers
+            >Numbering
             <p-select
-              [options]="styles"
+              [options]="numberings"
               optionLabel="label"
               optionValue="value"
-              [ngModel]="style()"
-              (ngModelChange)="style.set($event)"
+              [ngModel]="numbering()"
+              (ngModelChange)="numbering.set($event)"
               appendTo="body"
             />
           </label>
+          @if (numbering() === 'numbers' || numbering() === 'letters') {
+            <label
+              >Start at
+              <input
+                pInputText
+                [ngModel]="startAt()"
+                (ngModelChange)="startAt.set($event)"
+                maxlength="6"
+                placeholder="next free"
+              />
+            </label>
+          }
           <label
             >Scheme
             <p-select
@@ -288,6 +370,14 @@ const CHECK_DELAY = 450;
           <dd>{{ width() }} × {{ depth() }} m · {{ width() * depth() | number: '1.0-2' }} m²</dd>
           <dt>Sellable area</dt>
           <dd>{{ chosen().length * width() * depth() | number: '1.0-0' }} m²</dd>
+          @if (layout() === 'rows') {
+            <dt>Corner booths</dt>
+            <dd>{{ cornerCount() }}</dd>
+          }
+          @if (utilisation(); as u) {
+            <dt>Floor used</dt>
+            <dd [class.bad]="u.over">{{ u.used | number: '1.0-0' }}% of {{ u.limit }}%</dd>
+          }
         </dl>
         <svg
           class="preview"
@@ -322,6 +412,7 @@ const CHECK_DELAY = 450;
               [attr.width]="c.width"
               [attr.height]="c.height"
               class="cand"
+              [class.corner]="c.meta?.corner"
               [class.bad]="bad().has(c.id)"
               [class.off]="excluded().has(c.id)"
               (click)="toggle(c.id)"
@@ -511,6 +602,9 @@ const CHECK_DELAY = 450;
       stroke-width: 0.1;
       cursor: pointer;
     }
+    .cand.corner {
+      fill: #4ade80;
+    }
     .cand.bad {
       fill: #fca5a5;
       stroke: #dc2626;
@@ -528,9 +622,15 @@ export class AutoBoothsDialogComponent {
   private readonly store = this.data.store;
 
   protected readonly sizes = SIZES;
-  protected readonly styles = [
-    { label: '1, 2, 3…', value: 'numbers' },
-    { label: 'A, B, C…', value: 'letters' },
+  protected readonly layouts = [
+    { label: 'Rows back to back', value: 'rows' },
+    { label: 'Each on its own', value: 'single' },
+  ];
+  protected readonly numberings: Array<{ label: string; value: Numbering }> = [
+    { label: 'By line: A1, A2… B1…', value: 'line' },
+    { label: 'By island: 1-A, 1-B… 2-A…', value: 'island' },
+    { label: 'In order: 1, 2, 3…', value: 'numbers' },
+    { label: 'In order: A, B, C…', value: 'letters' },
   ];
   protected readonly schemes = [
     { label: 'Shell', value: 'shell' },
@@ -540,19 +640,40 @@ export class AutoBoothsDialogComponent {
     this.store.categories().filter((c) => c.status === 'active'),
   );
 
+  /** A cross-aisle every ten booths, or every 30 m with big booths. */
+  protected readonly autoCross = computed(() =>
+    Math.max(1, Math.min(CROSS_AISLE_BOOTHS, Math.floor(CROSS_AISLE_METRES / this.width()))),
+  );
+  /** The hall's category for corner booths, when it sells one. */
+  protected readonly cornerCategory = computed(
+    () => this.categories().find((c) => /corner/i.test(c.name)) ?? null,
+  );
   protected readonly regionId = signal(this.data.regionId);
   protected readonly size = signal('3x3');
   protected readonly width = signal(3);
   protected readonly depth = signal(3);
+  private readonly rules = this.store.view()!.hall.rules;
+  private readonly ruleOn = (id: string) =>
+    (this.rules.switches as Record<string, boolean>)[id] !== false;
+  /** What the hall's rules keep from the walls; 0 when that rule is off. */
+  protected readonly wallRule = signal(
+    this.ruleOn('peripheralClearance') ? this.rules.values.peripheralClearance : 0,
+  );
+  protected readonly layout = signal<Layout>('rows');
   protected readonly aisle = signal(this.data.passage);
-  protected readonly margin = signal(0);
+  /** From the edge: what the rules keep from the walls, and at least one grid square. */
+  protected readonly margin = signal(Math.max(GRID, this.wallRule()));
+  /** Null: as often as {@link autoCross}. */
+  protected readonly crossEvery = signal<number | null>(null);
+  protected readonly corners = signal(true);
+  protected readonly wallLines = signal(false);
+  protected readonly numbering = signal<Numbering>('line');
   protected readonly count = signal<number | null>(null);
   protected readonly pillarClear = signal(0.5);
   protected readonly shift = signal(true);
   protected readonly sellPillar = signal(false);
   protected readonly prefix = signal('');
   protected readonly startAt = signal('');
-  protected readonly style = signal<NumberStyle>('numbers');
   protected readonly scheme = signal<StallScheme>('shell');
   protected readonly categoryIds = signal<string[]>([]);
 
@@ -588,31 +709,78 @@ export class AutoBoothsDialogComponent {
   );
 
   /** The places the settings make, each with an id that stays while the settings do. */
-  protected readonly candidates = computed<Array<Rect & { id: string }>>(() => {
+  protected readonly candidates = computed<Candidate[]>(() => {
     const floor = this.store.floor();
-    if (!floor) return [];
+    const view = this.store.view();
+    if (!floor || !view) return [];
     const plan = this.store.plan();
-    return fillBooths(
+    if (this.layout() === 'single') {
+      return fillBooths(
+        {
+          region: this.region().ring,
+          width: this.width(),
+          depth: this.depth(),
+          aisle: this.aisle(),
+          margin: this.margin(),
+          count: this.count(),
+          pillarClearance: this.pillarClear(),
+          shiftForPillars: this.shift(),
+          sellPillarStands: this.sellPillar(),
+        },
+        floor,
+        plan.stalls,
+        plan.seats,
+      ).map((r) => ({ ...r, id: newId() }));
+    }
+    return fillRows(
       {
         region: this.region().ring,
         width: this.width(),
         depth: this.depth(),
         aisle: this.aisle(),
         margin: this.margin(),
+        crossEvery: this.crossEvery() ?? this.autoCross(),
         count: this.count(),
         pillarClearance: this.pillarClear(),
         shiftForPillars: this.shift(),
         sellPillarStands: this.sellPillar(),
+        corners: this.corners(),
+        keepClear: keepClearOf(view.hall.floor, this.rules.values, this.ruleOn),
+        cornerClear: this.ruleOn('cornerKeepOut') ? this.data.passage : 0,
+        wallLines: this.wallLines(),
+        grid: GRID,
       },
       floor,
       plan.stalls,
       plan.seats,
-    ).map((r) => ({ ...r, id: newId() }));
+    ).map((meta) => ({
+      x: meta.x,
+      y: meta.y,
+      width: meta.width,
+      height: meta.height,
+      id: newId(),
+      meta,
+    }));
   });
 
   protected readonly chosen = computed(() =>
     this.candidates().filter((c) => !this.excluded().has(c.id) && !this.bad().has(c.id)),
   );
+  protected readonly cornerCount = computed(
+    () => this.chosen().filter((c) => c.meta?.corner).length,
+  );
+  /** How much of the hall's stall floor the stalls would cover, against the rule's limit. */
+  protected readonly utilisation = computed(() => {
+    const floor = this.store.floor();
+    if (!floor || !this.ruleOn('maxUtilization')) return null;
+    const area = standArea(floor);
+    if (!area) return null;
+    const stalls = this.store.plan().stalls.reduce((sum, s) => sum + s.width * s.depth, 0);
+    const added = this.chosen().reduce((sum, c) => sum + c.width * c.height, 0);
+    const used = ((stalls + added) / area) * 100;
+    const limit = Math.round(this.rules.values.maxUtilization * 100);
+    return { used, limit, over: used > limit };
+  });
 
   constructor() {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -674,44 +842,53 @@ export class AutoBoothsDialogComponent {
     this.bad.set(bad);
   }
 
-  /** The places as booths, numbered in order. */
-  private booths(places: Array<Rect & { id: string }>): PlanStall[] {
-    const island = this.prefix().trim() || null;
-    const numbers = stallNumbers(
+  /** The places as booths, numbered and opened as the layout says. */
+  private booths(places: Candidate[]): PlanStall[] {
+    const zones = this.store.plan().zones;
+    const numbers = this.numbersFor(places);
+    // Each on its own: rows open towards each other in pairs, onto the aisle between them.
+    const rows = [...new Set(places.map((r) => r.y))].sort((a, b) => a - b);
+    const facing = (r: Candidate): StallSide[] =>
+      r.meta?.openSides ?? (rows.indexOf(r.y) % 2 ? ['top'] : ['bottom']);
+    const corner = this.corners() ? this.cornerCategory()?.id : undefined;
+    return places.map((r, i) => {
+      const categoryIds = [...this.categoryIds()];
+      if (corner && r.meta?.corner && !categoryIds.includes(corner)) categoryIds.push(corner);
+      return {
+        id: r.id,
+        zoneId: zoneAt(centre(r), zones)?.id ?? null,
+        islandNumber: numbers[i].island,
+        stallNumber: numbers[i].stall,
+        x: r.x,
+        y: r.y,
+        width: r.width,
+        depth: r.height,
+        openSides: facing(r),
+        scheme: this.scheme(),
+        categoryIds,
+        isPremium: false,
+        isBlocked: false,
+        isFnb: false,
+        isBranding: false,
+        isHorseshoe: false,
+        isMarqueeAvailable: false,
+        isRestrictedForOverseas: false,
+        isActive: true,
+        location: null,
+        description: null,
+      };
+    });
+  }
+
+  /** Island and stall number of each place, as the numbering chosen says. */
+  private numbersFor(places: Candidate[]): Array<{ island: string | null; stall: string }> {
+    return numberPlaces(
+      places.map((p) => ({ ...p, line: p.meta?.line, island: p.meta?.island })),
       this.store.plan().stalls,
-      island,
-      this.style(),
-      places.length,
+      this.numbering(),
+      this.prefix(),
       this.startAt(),
     );
-    const zones = this.store.plan().zones;
-    // Rows open towards each other in pairs: the first onto the aisle below it, the next onto
-    // the same aisle above it. So no open side faces the closed side of the row across.
-    const rows = [...new Set(places.map((r) => r.y))].sort((a, b) => a - b);
-    const facing = (r: Rect): StallSide[] => (rows.indexOf(r.y) % 2 ? ['top'] : ['bottom']);
-    return places.map((r, i) => ({
-      id: r.id,
-      zoneId: zoneAt(centre(r), zones)?.id ?? null,
-      islandNumber: island,
-      stallNumber: numbers[i],
-      x: r.x,
-      y: r.y,
-      width: r.width,
-      depth: r.height,
-      openSides: facing(r),
-      scheme: this.scheme(),
-      categoryIds: [...this.categoryIds()],
-      isPremium: false,
-      isBlocked: false,
-      isFnb: false,
-      isBranding: false,
-      isHorseshoe: false,
-      isMarqueeAvailable: false,
-      isRestrictedForOverseas: false,
-      isActive: true,
-      location: null,
-      description: null,
-    }));
   }
 
   protected add(): void {

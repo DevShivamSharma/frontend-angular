@@ -148,6 +148,8 @@ async function openCreate(page: Page) {
 test('manually creates, places and drags helpers, saves legends, then edits saved positions', async ({
   page,
 }) => {
+  // Long: create, place, drag, save and edit again; under a full parallel run it nears 30 s.
+  test.setTimeout(60_000);
   const api = await mockManualHall(page);
   await page.setViewportSize({ width: 1440, height: 1100 });
   await openCreate(page);
@@ -242,4 +244,69 @@ test('manual helpers can be removed and unnamed entries block saving on a narrow
   await dialog.getByRole('button', { name: 'Remove legend', exact: true }).click();
   await expect(dialog.getByRole('button', { name: 'Create hall', exact: true })).toBeEnabled();
   expect(await dialog.evaluate((el) => el.scrollWidth > el.clientWidth + 1)).toBe(false);
+});
+
+test('draws a hall of any shape: a cinema fan by its measurements, and an outline clicked on the grid', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  const { creates } = await mockManualHall(page);
+  await page.goto('/venue/venues/venue-id');
+  await page.getByRole('button', { name: 'Add hall', exact: false }).click();
+  await page.getByRole('menuitem', { name: 'Draw by size', exact: false }).click();
+  const dialog = page.getByRole('dialog');
+  await page.getByLabel('Name', { exact: true }).fill('Auditorium');
+  const shapes = dialog.getByRole('radiogroup', { name: 'Hall shape' });
+  await expect(shapes.getByRole('radio', { name: 'Rectangle' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+
+  // A cinema: a fan from the screen, measured by its screen, depth and angle.
+  await shapes.getByRole('radio', { name: 'Cinema / auditorium' }).click();
+  await expect(dialog).toContainText('A fan widening from the screen or stage');
+  await page.getByLabel('Screen / stage width').fill('20');
+  await expect(dialog.locator('p.area')).toContainText('m² of floor');
+  await expect(dialog.locator('app-hall-annotations-editor')).toBeVisible();
+  if (process.env['PW_SHOTS']) {
+    await dialog.locator('app-hall-annotations-editor').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${process.env['PW_SHOTS']}/hall-cinema.png` });
+  }
+
+  // Measurements that make no hall say why, and nothing can be created.
+  await shapes.getByRole('radio', { name: 'L-shape' }).click();
+  await page.getByLabel('Corner cut-out width').fill('60');
+  await expect(dialog.getByRole('alert')).toContainText('cut-out must be smaller');
+  await expect(dialog.getByRole('button', { name: 'Create hall' })).toBeDisabled();
+
+  // Any other outline: its corners clicked on the grid, snapped to half a metre.
+  await shapes.getByRole('radio', { name: 'Custom' }).click();
+  const grid = dialog.getByRole('img', { name: 'Click to add a corner of the hall' });
+  const box = (await grid.boundingBox())!;
+  for (const [fx, fy] of [
+    [0.1, 0.1],
+    [0.8, 0.15],
+    [0.7, 0.85],
+    [0.15, 0.7],
+  ]) {
+    await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+  }
+  const corners = dialog.getByLabel(/Corners, in order/);
+  await expect(corners).toHaveValue(/^([\d.]+, [\d.]+\n){3}[\d.]+, [\d.]+$/);
+  // A typed corner moves it.
+  const typed = (await corners.inputValue()).split('\n');
+  typed[0] = '0, 0';
+  await corners.fill(typed.join('\n'));
+  await page.screenshot({ path: test.info().outputPath('custom-hall.png') });
+  await dialog.getByRole('button', { name: 'Create hall' }).click();
+
+  await expect.poll(() => creates.length).toBe(1);
+  const sent = creates[0];
+  expect(sent.outline).toHaveLength(4);
+  expect(sent.outline[0]).toEqual([0, 0]);
+  for (const [x, y] of sent.outline) {
+    expect((x * 2) % 1).toBe(0);
+    expect((y * 2) % 1).toBe(0);
+  }
+  expect(sent.width).toBe(Math.max(...sent.outline.map((p: number[]) => p[0])));
 });
