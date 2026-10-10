@@ -26,6 +26,7 @@ import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { AppPreset } from './core/theme/app-preset';
 import { ThemeService } from './core/theme/theme.service';
+import { ColorSchemeService } from './core/theme/color-scheme.service';
 import { AppTitleStrategy } from './core/ui/app-title.strategy';
 
 export const appConfig: ApplicationConfig = {
@@ -48,7 +49,7 @@ export const appConfig: ApplicationConfig = {
         preset: AppPreset,
         // Follows the device's light or dark setting, as the app's own tokens do. In a CSS
         // layer, so a component's own styles always win over PrimeNG's without !important.
-        options: { darkModeSelector: 'system', cssLayer: { name: 'primeng' } },
+        options: { darkModeSelector: '.app-dark', cssLayer: { name: 'primeng' } },
       },
       ripple: false,
     }),
@@ -59,5 +60,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(AuthService).restore()),
     // The platform's colours until a route applies an organisation's.
     provideAppInitializer(() => inject(ThemeService).reset()),
+    // Light or dark as chosen (or as the device is), before anything shows.
+    provideAppInitializer(() => void inject(ColorSchemeService)),
   ],
 };

@@ -29,7 +29,7 @@ form {
 }
 
 .group-toggle {
-  display: block;
+  display: flex;
   margin-bottom: 8px;
   font: var(--app-title-small);
 }
@@ -40,7 +40,7 @@ form {
 }
 
 .description {
-  margin: -8px 0 6px 40px;
+  margin: 2px 0 10px 30px;
   font: var(--app-body-small);
 }
 

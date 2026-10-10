@@ -29,6 +29,13 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   'event.person_added': { label: 'Gave organiser an event', icon: 'person_add' },
   'event.person_removed': { label: 'Removed organiser from event', icon: 'person_remove' },
   'event.invitation_revoked': { label: 'Cancelled organiser invitation', icon: 'cancel' },
+  'event.hall_categories_changed': { label: 'Changed categories of event hall', icon: 'category' },
+  'category.created': { label: 'Added stall category', icon: 'category' },
+  'category.updated': { label: 'Changed stall category', icon: 'category' },
+  'category.deleted': { label: 'Deleted stall category', icon: 'delete' },
+  'category.imported': { label: 'Imported stall categories', icon: 'upload_file' },
+  'plan.saved': { label: 'Saved stall plan', icon: 'save' },
+  'plan.published': { label: 'Published stall plan', icon: 'check_circle' },
 };
 
 export function auditLabel(action: string): string {

@@ -1022,18 +1022,18 @@ const OBJECT_COLOR = '#334155';
     }
     .tool.on,
     .mini.on {
-      background: #1e293b;
-      color: #fff;
+      background: var(--app-on-surface);
+      color: var(--app-surface);
     }
     .tool.on:hover,
     .mini.on:hover {
-      background: #1e293b !important;
+      background: var(--app-on-surface) !important;
     }
     .tool.auto {
-      color: #15803d;
+      color: light-dark(#15803d, #4ade80);
     }
     .tool.seat {
-      color: #7e22ce;
+      color: light-dark(#7e22ce, #c084fc);
     }
     .danger {
       color: var(--app-error);
@@ -1048,10 +1048,15 @@ const OBJECT_COLOR = '#334155';
       cursor: not-allowed;
     }
     .actions {
+      position: sticky;
+      right: 0;
+      z-index: 1;
       display: flex;
       align-items: center;
       gap: 8px;
       padding: 0 4px 0 12px;
+      background: var(--app-surface-container-lowest);
+      box-shadow: -12px 0 12px -8px rgb(0 0 0 / 0.12);
     }
     .save {
       --p-button-primary-background: #16a34a;
@@ -1430,8 +1435,8 @@ const OBJECT_COLOR = '#334155';
     }
     .stats {
       display: grid;
-      grid-template-columns: 1fr auto 1fr auto;
-      gap: 8px 10px;
+      grid-template-columns: 1fr auto;
+      gap: 6px 12px;
       margin: 0;
       font-size: 13px;
     }

@@ -15,6 +15,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { IconComponent } from './icon.component';
+import { ThemeToggleComponent } from './theme-toggle.component';
 import { TooltipModule } from 'primeng/tooltip';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -68,6 +69,7 @@ function storeCollapsed(collapsed: boolean): void {
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
+    ThemeToggleComponent,
   ],
   templateUrl: './shell-layout.component.html',
   styleUrl: './shell-layout.component.scss',

@@ -1,12 +1,6 @@
 @use 'primeicons/primeicons.css';
 
 /*
- * Layer order: our element defaults first, PrimeNG's components over them. Rules outside any
- * layer (the rest of this file) still win over both, so component touches below apply.
- */
-@layer base, primeng;
-
-/*
  * The platform look. Colours are `--app-*` tokens that ThemeService computes from an
  * organisation's colour at runtime (and PrimeNG's primary palette with them); its font
  * replaces --app-font-family. Every component below reads only these tokens.
@@ -51,11 +45,12 @@ h3 {
   margin: 0;
 }
 
-/* In the base layer, so a link styled as a button (`<a pButton>`) keeps its button colours. */
-@layer base {
-  a {
-    color: var(--app-primary);
-  }
+/*
+ * Links in the primary colour; not a link styled as a button (`<a pButton>`), which keeps its
+ * button colours. (Rules here sit outside PrimeNG's layer, so they would win over it.)
+ */
+a:not(.p-button) {
+  color: var(--app-primary);
 }
 
 /* Keyboard focus is always visible. */
@@ -64,7 +59,6 @@ h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {
@@ -194,7 +188,7 @@ h3 {
   margin-bottom: 16px;
   min-width: 0;
 
-  >* {
+  > * {
     min-width: 0;
   }
 
@@ -206,7 +200,7 @@ h3 {
     margin-bottom: 0;
   }
 
-  >label {
+  > label {
     font: var(--app-label-large);
     color: var(--app-on-surface);
   }
@@ -323,7 +317,7 @@ h3 {
 }
 
 /* Table header labels, quieter than the data. */
-.p-datatable .p-datatable-thead>tr>th {
+.p-datatable .p-datatable-thead > tr > th {
   font: var(--app-label-medium);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -331,7 +325,7 @@ h3 {
   background: transparent;
 }
 
-.p-datatable .p-datatable-tbody>tr {
+.p-datatable .p-datatable-tbody > tr {
   background: transparent;
 }
 

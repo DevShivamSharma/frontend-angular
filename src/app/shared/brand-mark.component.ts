@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 
+import { ColorSchemeService } from '../core/theme/color-scheme.service';
 import { readableOn } from './readable-color';
 
 /**
  * An organisation's logo, or a monogram of its name when it has none (or the logo fails to
- * load). On a dark device it prefers the dark-surface logo.
+ * load). In dark mode it prefers the dark-surface logo.
  */
 @Component({
   selector: 'app-brand-mark',
@@ -12,9 +13,6 @@ import { readableOn } from './readable-color';
   template: `
     @if (logo() && !failed()) {
       <picture>
-        @if (logoDarkUrl()) {
-          <source [srcset]="logoDarkUrl()" media="(prefers-color-scheme: dark)" />
-        }
         <img
           [src]="logo()"
           [alt]="name() + ' logo'"
@@ -78,7 +76,11 @@ export class BrandMarkComponent {
 
   protected readonly failed = signal(false);
   protected readonly textColor = computed(() => readableOn(this.color() ?? ''));
-  protected readonly logo = computed(() => this.logoUrl());
+  private readonly schemes = inject(ColorSchemeService);
+  /** In dark mode (chosen, or the device's), the dark-surface logo when there is one. */
+  protected readonly logo = computed(() =>
+    this.schemes.dark() && this.logoDarkUrl() ? this.logoDarkUrl() : this.logoUrl(),
+  );
   protected readonly initials = computed(() =>
     this.name()
       .split(/[\s()-]+/)

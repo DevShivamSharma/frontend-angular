@@ -44,7 +44,7 @@ p {
   font-size: 12px;
   color: var(--fp-m);
 }
-a,
+a:not(.p-button),
 .text-button,
 summary {
   color: var(--fp-p);

@@ -8,6 +8,7 @@ import {
   Output,
   signal,
 } from '@angular/core';
+import { ButtonModule } from 'primeng/button';
 import { ImportMode, CSV_LESSONS, PDF_LESSONS } from './import-tour.data';
 import { AppDialog, dialogData, DialogRef } from '../../core/ui/app-dialog.service';
 
@@ -24,6 +25,7 @@ interface TourAction {
 @Component({
   selector: 'app-import-tour',
   standalone: true,
+  imports: [ButtonModule],
   template: `<div class="help" [class.compact]="compact">
     @if (!compact) {
       <div>
@@ -41,7 +43,9 @@ interface TourAction {
         }
       </div>
     }
-    <button type="button" (click)="open()">Start import tour</button>
+    <button pButton type="button" [outlined]="true" (click)="open()">
+      <i class="pi pi-question-circle" aria-hidden="true"></i>Start import tour
+    </button>
   </div>`,
   styles: `
     .help {
@@ -62,13 +66,6 @@ interface TourAction {
     }
     button {
       flex: none;
-      border: 1px solid var(--app-primary);
-      color: var(--app-primary);
-      background: var(--app-surface);
-      padding: 10px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      font: inherit;
     }
     summary {
       cursor: pointer;
