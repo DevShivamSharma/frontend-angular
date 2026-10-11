@@ -28,8 +28,8 @@ export function campusRoute(nav: VisitorNavigation, goal: T.Vector3): T.Vector3[
 }
 
 /** The shipped mesh buffers, without loading textures or requiring a WebGL context. */
-export function visitorGeometry() {
-  const bytes = fs.readFileSync('src/assets/venue/IITF_2026_ARCHITECTURAL.glb');
+export function visitorGeometry(path = 'src/assets/venue/IITF_2026_ARCHITECTURAL.glb') {
+  const bytes = fs.readFileSync(path);
   const length = bytes.readUInt32LE(12), json = JSON.parse(bytes.subarray(20, 20 + length).toString());
   const binary = bytes.subarray(28 + length), root = new T.Group();
   const nodes = json.nodes.map((n: any) => {

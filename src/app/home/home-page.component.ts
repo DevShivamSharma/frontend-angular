@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, NgZone, OnDestroy, ViewEncapsulation, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, Injector, NgZone, OnDestroy, ViewEncapsulation, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgTemplateOutlet } from '@angular/common';
 import { VenueDataService } from './venue-data.service';
@@ -29,6 +29,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   private readonly homeButton = viewChild.required<ElementRef<HTMLButtonElement>>('homeButton');
   private markerPointer: { x: number; y: number } | null = null;
   private readonly zone = inject(NgZone);
+  private readonly injector = inject(Injector);
   private readonly data = inject(VenueDataService);
   private viewer?: VenueViewer;
   private destroyed = false;
@@ -80,8 +81,9 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
           interiorsReady:(halls,error)=>this.zone.run(()=>{this.interiorHalls.set(halls);this.interiorError.set(error??'');}),
           visitorReady:destinations=>this.zone.run(()=>{this.visitorDestinations.set(destinations);this.visitorReady.set(true);}),
           visitorState:state=>this.zone.run(()=>{
+            if(this.destroyed)return;
             const wasActive=this.visitor().active;this.visitor.set(state);
-            if(wasActive&&!state.active){this.activeView.set('overview');this.activeLevel.set(0);this.group.set(null);requestAnimationFrame(()=>this.visitButton()?.nativeElement.focus({preventScroll:true}));}
+            if(wasActive&&!state.active){this.activeView.set('overview');this.activeLevel.set(0);this.group.set(null);afterNextRender(()=>this.visitButton()?.nativeElement.focus({preventScroll:true}),{injector:this.injector});}
           }),
           interiorState:state=>this.zone.run(()=>{
             const previous=this.interior();this.interior.set(state);
@@ -155,6 +157,8 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   visitorRelease(input:VisitorInput):void {this.zone.runOutsideAngular(()=>this.viewer?.visitorInput(input,false));}
   visitorClick(input:VisitorInput,event:MouseEvent):void {if(event.detail===0)this.zone.runOutsideAngular(()=>this.viewer?.visitorStep(input));}
   visitorDestination(id:string):void {this.zone.runOutsideAngular(()=>this.viewer?.visitorDestination(id));}
+  visitorGo():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorGo());}
+  visitorStopAutoWalk():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorStopAutoWalk());}
   visitorFaster():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorFaster());}
   visitorRestart():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorRestart());}
   visitorFloor(level:number):void {this.zone.runOutsideAngular(()=>this.viewer?.visitorFloor(level));}

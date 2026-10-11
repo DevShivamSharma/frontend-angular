@@ -22,15 +22,26 @@ Saved Layout panel needs one, and a failed list load stays silent, exactly as in
 The venue home (`/`) has a **Visit as a Person** button. A male visitor starts outside
 Gate 6, with a third-person camera. Use W/A/S/D to walk, arrow keys to turn, drag to
 look, and Shift or **Walk faster** for longer campus distances. On phones, hold the
-direction buttons. Select **Find an entrance** for a direction and distance; it
-does not teleport the visitor. Doors open on approach. Walk through them to enter
-or leave a hall. **Exit visit** or Escape returns to the normal overview.
+direction buttons. Select a hall under **Find an entrance**, then choose **Go to
+hall** to move the visitor quickly along a clear route and through its entrance.
+The visitor stops inside the selected hall. **Stop**, W/A/S/D, arrow keys or the
+direction buttons interrupt auto-walk; changing the destination cancels the old
+route. Buildings, water and interior furniture remain collision obstacles. If
+no clear route exists, a message explains how to retry. You can also travel from
+one hall to another; return to CC Level 1 before leaving an upper floor. Doors
+open on approach. **Exit visit** or Escape returns to the normal overview.
+Entrance openings remain visible throughout the visit. Automatic travel slows
+smoothly near gates, opens sliding doors early, and eases to a stop inside the hall.
 
 Available interiors are Hall 1–5, Hall 14 and Convention Centre levels 1–3. The CC
 level buttons switch between the existing furnished floors; return to Level 1 to
 walk back outside. Other buildings can be explored from the campus. The visitor
-uses existing hall/furniture collision data plus lightweight building and water
-footprints. Entrances and the modelled CC podium approach are illustrative, not
+uses a 0.6 m radius, 1.9 m tall body collider against the actual building, pillar
+and furniture triangles, indexed by position and floor height. Manual movement
+and auto-walk share these checks and use short substeps to prevent tunnelling
+at speed. Doorway cuts are shared by rendering and collision, including the
+entrance aprons and CC ramp. Building and water footprints also keep visitors
+out of inaccessible interiors and pools. Entrances and the CC approach are illustrative, not
 surveyed access routes. No external avatar download or backend change is needed.
 
 The original **Walk inside**, guided tours and GLB exports remain in the normal
@@ -41,6 +52,9 @@ and dispose their visual resources.
 
 Run `npx playwright test e2e/visitor-mode.spec.ts` for geometry, input, transitions,
 resource cleanup and browser coverage. The tests use the checked-in venue model.
+`e2e/visitor-collision.spec.ts` covers animated body clearance, thin/rotated walls,
+pillars, furniture, floor separation and furnished CC access. Auto-walk controller
+and browser coverage is in `e2e/visitor-auto-walk.spec.ts`.
 
 ## API base URL
 

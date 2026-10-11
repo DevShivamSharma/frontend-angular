@@ -119,20 +119,24 @@
   </button>
 } @else {
   <section class="visitor-panel" aria-label="Visitor navigation">
-    <div class="visitor-heading"><strong>{{ visitor().location }}</strong><span class="visitor-live">On foot</span></div>
-    @if (!visitor().hall) {
+    <div class="visitor-heading"><strong>{{ visitor().location }}</strong><span class="visitor-live">{{ visitor().autoWalking ? 'Auto-walking' : 'On foot' }}</span></div>
       @if (visitorDestinations().length) {
         <label for="visitor-destination">Find an entrance</label>
         <div class="visitor-destination">
-          <select id="visitor-destination" [value]="visitor().destination" (change)="visitorDestination($any($event.target).value)">
+          <select id="visitor-destination" [value]="visitor().destination" [disabled]="visitor().transitioning" (change)="visitorDestination($any($event.target).value)">
             @for (destination of visitorDestinations(); track destination.id) { <option [value]="destination.id">{{ destination.label }}</option> }
           </select>
           <span class="visitor-distance" [attr.aria-label]="visitor().distance + ' metres to selected entrance'">
             <svg viewBox="0 0 24 24" aria-hidden="true" [style.transform]="'rotate(' + visitor().bearing + 'deg)'"><path d="m6 12 6-8 6 8M12 4v16"/></svg>{{ visitor().distance }} m
           </span>
         </div>
+        <div class="visitor-travel">
+          <button type="button" class="visitor-go" [disabled]="!visitor().destination || visitor().transitioning || visitor().autoWalking" (click)="visitorGo()">Go to hall</button>
+          @if (visitor().autoWalking) {
+            <button type="button" class="visitor-stop" (click)="visitorStopAutoWalk()">Stop</button>
+          }
+        </div>
       } @else { <p>Interiors are unavailable. You can still explore the campus.</p> }
-    }
     @if (visitor().hall.startsWith('cc-level')) {
       <div class="visitor-floors" role="group" aria-label="Convention Centre floors">
         @for (level of [1, 2, 3]; track level) {

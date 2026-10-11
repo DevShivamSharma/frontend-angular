@@ -1,5 +1,7 @@
 import * as T from 'three';
 import { InteriorHall, InteriorObstacle, hallToWorld, worldToHall, walkable } from './venue-interiors';
+import { createVisitorCollisionWorld, VisitorCollisionWorld, VISITOR_RADIUS } from './visitor-collision';
+import { VISITOR_RAMP_LANDING } from './visitor-doorway';
 
 export type GroundPoint = [number, number];
 export interface VisitorPortal {
@@ -17,6 +19,7 @@ export interface VisitorNavigation {
   bounds: T.Box2;
   spawn: T.Vector3;
   heading: number;
+  geometry?: VisitorCollisionWorld;
 }
 const cross = (a: GroundPoint, b: GroundPoint, p: GroundPoint) =>
   (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
@@ -84,8 +87,8 @@ export function createPortal(hall: InteriorHall, obstacles: InteriorObstacle[], 
   return { hall, position: candidates[0].position, outward: candidates[0].outward, width: 4.4,
     approach: hall.level ? 30 : 10 };
 }
-/** Read the unbatched model once. Only lightweight convex polygons are used per step. */
-export function createVisitorNavigation(root: T.Group, halls: InteriorHall[], obstacles: Map<string, InteriorObstacle[]>): VisitorNavigation {
+/** Read the unbatched model once, before disconnected meshes are merged for rendering. */
+export function createVisitorNavigation(root: T.Group, halls: InteriorHall[], obstacles: Map<string, InteriorObstacle[]>, interiorLayer?: T.Group): VisitorNavigation {
   const points = new Map<string, GroundPoint[]>(), hazards: GroundPoint[][] = [];
   const bounds = new T.Box2();
   root.updateMatrixWorld(true);
@@ -116,23 +119,44 @@ export function createVisitorNavigation(root: T.Group, halls: InteriorHall[], ob
     -Math.sqrt(3) / 2 * -302 + .5 * 151);
   bounds.expandByPoint(new T.Vector2(spawn.x, spawn.z)).expandByScalar(22);
   return { portals, buildings,
-    hazards, bounds, spawn, heading: Math.PI * 5 / 6 };
+    hazards, bounds, spawn, heading: Math.PI * 5 / 6,
+    geometry: createVisitorCollisionWorld(root, portals, interiorLayer,
+      Math.max(3, ...halls.map(h => h.center.y + h.height))) };
+}
+export function visitorGroundHeight(nav: VisitorNavigation, point: T.Vector3, hall?: InteriorHall): number {
+  const ramp = nav.portals.find(p => p.hall.level && (!hall || hall.id === p.hall.id) && inDoorway(p, point));
+  if (ramp) return T.MathUtils.lerp(ramp.position.y, .24,
+    T.MathUtils.clamp((portalCoordinates(ramp, point).along - VISITOR_RAMP_LANDING) / (ramp.approach - VISITOR_RAMP_LANDING), 0, 1));
+  if (hall) {
+    const local = worldToHall(hall, point);
+    return hall.center.y + (hall.elevation?.(local.x, local.z) ?? 0);
+  }
+  return Math.hypot(point.x - nav.spawn.x, point.z - nav.spawn.z) < 34 ? .35 : .24;
+}
+export function visitorBodyClear(nav: VisitorNavigation, point: T.Vector3, hall?: InteriorHall): boolean {
+  return !nav.geometry?.blocked(new T.Vector3(point.x, visitorGroundHeight(nav, point, hall), point.z));
+}
+export function visitorHallWalkable(nav: VisitorNavigation, hall: InteriorHall, obstacles: InteriorObstacle[], point: T.Vector3): boolean {
+  const local = worldToHall(hall, point);
+  return walkable(hall, obstacles, local.x, local.z) && visitorBodyClear(nav, point, hall);
 }
 export function campusWalkable(nav: VisitorNavigation, point: T.Vector3): boolean {
   if (!nav.bounds.containsPoint(new T.Vector2(point.x, point.z))) return false;
-  if (nav.hazards.some(p => inFootprint(p, point.x, point.z, -.45))) return false;
+  if (nav.hazards.some(p => inFootprint(p, point.x, point.z, -VISITOR_RADIUS))) return false;
   return !nav.buildings.some(building => {
-    if (!inFootprint(building.polygon, point.x, point.z, -.45)) return false;
+    if (!inFootprint(building.polygon, point.x, point.z, -VISITOR_RADIUS)) return false;
     const portal = nav.portals.find(p => (p.hall.level ? 'cc' : p.hall.id) === building.id);
-    return !portal || !inDoorway(portal, point);
-  });
+    return !portal || !inDoorway(portal, point, -VISITOR_RADIUS);
+  }) && visitorBodyClear(nav, point);
 }
 /** Substeps stop a slow frame or fast walking from tunnelling through walls. */
 export function slideVisitor(position: T.Vector3, dx: number, dz: number, allowed: (p: T.Vector3) => boolean): number {
   const startX = position.x, startZ = position.z;
-  const count = Math.max(1, Math.ceil(Math.hypot(dx, dz) / .18));
+  const count = Math.max(1, Math.ceil(Math.hypot(dx, dz) / .12));
   const trial = position.clone();
   for (let i = 0; i < count; i++) {
+    trial.copy(position); trial.x += dx / count; trial.z += dz / count;
+    if (allowed(trial)) { position.copy(trial); continue; }
     trial.copy(position); trial.x += dx / count;
     if (allowed(trial)) position.x = trial.x;
     trial.copy(position); trial.z += dz / count;

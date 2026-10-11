@@ -129,13 +129,19 @@ test('one controller crosses every doorway both ways, changes CC floors and rest
       const heading = Math.atan2(-door.outward.x, -door.outward.z);
       pointer('pointerdown', 0); pointer('pointermove', (visitor.heading - heading) / .004); pointer('pointerup', 0);
       visitor.input('forward', true);
-      for (let i = 0; i < 50; i++) visitor.update(now += 40);
+      for (let i = 0; i < 50; i++) {
+        visitor.update(now += 40);
+        expect(nav.geometry!.blocked(visitor.position), `${door.hall.id} manual entry body clearance`).toBe(false);
+      }
       visitor.input('forward', false);
       expect(state?.hall, door.hall.id + ' entered').toBe(door.hall.id);
       expect(visibleInterior).toBe(door.hall.id);
       expect(visitor.position.y).toBeCloseTo(door.hall.center.y);
       visitor.input('backward', true);
-      for (let i = 0; i < 55; i++) visitor.update(now += 40);
+      for (let i = 0; i < 55; i++) {
+        visitor.update(now += 40);
+        expect(nav.geometry!.blocked(visitor.position), `${door.hall.id} manual exit body clearance`).toBe(false);
+      }
       visitor.input('backward', false);
       expect(state?.hall, door.hall.id + ' exited').toBe('');
       expect(visibleInterior).toBeUndefined();
