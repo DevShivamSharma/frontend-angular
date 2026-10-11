@@ -8,7 +8,8 @@ import { findVisitorPath, visitorSegmentClear } from '../src/app/home/visitor-ro
 import { createVenueVisitor, INITIAL_VISITOR_STATE, VisitorState } from '../src/app/home/venue-visitor';
 import { referenceVenueGeometry } from './venue-reference-fixture';
 
-test.use({ viewport: { width: 1440, height: 900 },
+// Trace screenshots add GPU readbacks during this real-time walking test.
+test.use({ trace: 'off', viewport: { width: 1440, height: 900 },
   launchOptions: { args: process.platform === 'win32' ? ['--use-angle=d3d11'] : ['--enable-unsafe-swiftshader'] } });
 
 test('routing goes around thin obstacles, rejects sealed destinations and keeps every segment clear', () => {
@@ -93,7 +94,8 @@ test('avatar auto-walk reaches every actual hall, can travel between halls and s
 });
 
 test('Go to hall moves the furnished viewer avatar, supports Stop and arrives inside the selected hall', async ({ page }) => {
-  test.setTimeout(180000);
+  // Includes loading the full venue, two real-time trips, and floor switching.
+  test.setTimeout(300000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   page.on('console', message => { if (/Shader Error|VALIDATE_STATUS|WebGLProgram.*error/i.test(message.text())) errors.push(message.text()); });
   await page.route('https://api.indiatradefair.com/**', r => r.fulfill({ json: { data: { list: [], total: 0 } } }));
@@ -119,7 +121,11 @@ test('Go to hall moves the furnished viewer avatar, supports Stop and arrives in
   await page.screenshot({ path: 'test-results/auto-walk-desktop.png' });
   // The same command must exit a furnished hall before travelling to a second destination.
   await page.getByLabel('Find an entrance').selectOption('cc-level1'); await go.click();
-  await expect.poll(async () => (await state()).autoWalking, { timeout: 60000 }).toBe(false);
+  const tripStarted = performance.now();
+  // The fitted Hall 1 foyer changes the campus route; include its exit and the
+  // long CC approach at walking speed, with headroom for real GPU frame timing.
+  await expect.poll(async () => (await state()).autoWalking, { timeout: 90000 }).toBe(false);
+  await test.info().attach('cc-arrival', { body: JSON.stringify({ seconds: (performance.now() - tripStarted) / 1000, state: await state() }), contentType: 'application/json' });
   expect((await state()).hint, JSON.stringify(await state())).toContain('Arrived');
   expect((await state()).hall).toBe('cc-level1');
   await page.getByRole('button', { name: 'Level 2', exact: true }).click();

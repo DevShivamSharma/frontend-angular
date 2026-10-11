@@ -20,6 +20,7 @@ import { Triple, Destination, VenueInformation, venueAsset } from './venue.model
 import { createVenueInteriors, InteriorState } from './venue-interiors';
 import { createVisitorNavigation } from './visitor-navigation';
 import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor';
+import { createVenueSecurityGuards } from './venue-security-guards';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; }
@@ -123,6 +124,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         let pendingInterior: (()=>void) | undefined;
         let interiors:Awaited<ReturnType<typeof createVenueInteriors>>|undefined,daylight=true;
         let water: ReturnType<typeof createVenueWater> | undefined;
+        let securityGuards: Awaited<ReturnType<typeof createVenueSecurityGuards>> | undefined;
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
         const frames = createVenueRenderLoop(updateFrame, renderFrame);
         const invalidate = () => { ambientOcclusion.invalidate(); if (prepared) frames.invalidate(); };
@@ -352,6 +354,15 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         cleanups.push(() => appearance.dispose());
         water = createVenueWater(root);
         cleanups.push(() => water?.dispose());
+        try {
+            securityGuards = await createVenueSecurityGuards({ renderer, navigation: visitorNavigation, asset, signal });
+            scene.add(securityGuards.group);
+            cleanups.push(() => securityGuards?.dispose());
+        } catch (error) {
+            signal.throwIfAborted();
+            // A failed optional asset must never leave invisible collision bodies.
+            console.warn('Entrance security could not load. Reload to retry.', error);
+        }
         visitor = createVenueVisitor({root,scene,camera,canvas,navigation:visitorNavigation,
             interiorLayer:interiors?.layer,
             halls:interiors?.halls??[],obstacles:interiors?.obstacles??new Map(),signal,invalidate,
@@ -500,6 +511,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             return Boolean(changed || walking || visiting || tween || pendingInterior || globe?.transitioning || flowing);
         }
         function renderFrame() {
+            if (securityGuards?.update(camera, innerHeight, !globe?.isGlobe || globe.transitioning))
+                renderer.shadowMap.needsUpdate = true;
             // Use the same antialiased materials, lighting and cached shadows for every frame.
             // AO uses the same distance fade during movement and at rest.
             renderer.setRenderTarget(null);

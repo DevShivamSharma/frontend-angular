@@ -54,6 +54,7 @@
     @if (hasInterior(id)) {
       @if (isWalking(id)) {
         <p class="walk-status" role="status">{{ interior().touring ? (interior().paused ? 'Tour paused' : 'Guided tour') : 'Walking' }} · {{ label }}</p>
+        @if (interior().planNote) { <p class="walk-hint walk-plan-note">{{ interior().planNote }}</p> }
         <div class="walk-action-grid">
           @if (interior().touring) { <button class="walk-primary" type="button" (click)="pauseInterior()">{{ interior().paused ? 'Resume tour' : 'Pause tour' }}</button> }
           @else { <button class="walk-primary" type="button" (click)="startWalkthrough(id,true)">Guided tour</button> }

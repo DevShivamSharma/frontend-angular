@@ -1,6 +1,8 @@
 import * as T from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { buildCCInteriors, CCRoomVisit } from './cc-interiors';
+import { buildHallPlanInterior } from './hall-plan-interiors';
+import { findVisitorPath } from './visitor-routing';
 
 type Point = [number, number];
 export interface InteriorHall {
@@ -25,6 +27,7 @@ export interface InteriorState {
   touring: boolean;
   paused: boolean;
   preview?: boolean;
+  planNote?: string;
 }
 const cross = (a: Point, b: Point, c: Point) =>
   (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
@@ -64,7 +67,7 @@ export function measureInteriorHalls(root: T.Object3D): InteriorHall[] {
     });
     return found;
   };
-  for (const id of ['1', '2', '3', '4', '5', '14']) {
+  for (const id of ['1', '2', '3', '4', '5', '6', '14']) {
     const roof = named(
       `PHOTO_HALL_${id} ${['1', '14'].includes(id) ? 'standing seam roof' : 'roof'}`,
     );
@@ -124,7 +127,7 @@ export function measureInteriorHalls(root: T.Object3D): InteriorHall[] {
       height: Math.min(...points.map((p) => p.y)) - 0.7,
       outline: localOutline,
       entrance,
-      roofs: [roof],
+      roofs: [roof, named(`ROOF_LABEL_H${id}`)].filter((o): o is T.Object3D => !!o),
     });
   }
   return halls;
@@ -170,6 +173,20 @@ export interface InteriorObstacle {
   maxX: number;
   minZ: number;
   maxZ: number;
+  /** Exact footprint for rotated plan walls; the AABB is only a broad phase. */
+  polygon?: Point[];
+}
+function obstacleContains(b: InteriorObstacle, x: number, z: number, radius = b.polygon ? .6 : .45): boolean {
+  if (x <= b.minX-radius || x >= b.maxX+radius || z <= b.minZ-radius || z >= b.maxZ+radius) return false;
+  if (!b.polygon) return true;
+  let inside=false;
+  for (let i=0,j=b.polygon.length-1;i<b.polygon.length;j=i++) {
+    const a=b.polygon[j],c=b.polygon[i],dx=c[0]-a[0],dz=c[1]-a[1];
+    const t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));
+    if ((x-a[0]-t*dx)**2+(z-a[1]-t*dz)**2<radius*radius) return true;
+    if ((a[1]>z)!==(c[1]>z) && x<(c[0]-a[0])*(z-a[1])/(c[1]-a[1])+a[0]) inside=!inside;
+  }
+  return inside;
 }
 export function walkable(
   hall: InteriorHall,
@@ -179,9 +196,7 @@ export function walkable(
 ): boolean {
   return (
     insideHall(hall, x, z, 1.4) &&
-    !obstacles.some(
-      (b) => x > b.minX - 0.45 && x < b.maxX + 0.45 && z > b.minZ - 0.45 && z < b.maxZ + 0.45,
-    )
+    !obstacles.some(b => obstacleContains(b,x,z))
   );
 }
 
@@ -206,8 +221,9 @@ export async function createVenueInteriors(options: {
   layer.userData = {
     source: 'bharat-mandapam-default.glb',
     sourceSha256: '69b16158f53d49d1288376523e17fc2df3504f247efdbcb93628d88b7ddeea94',
+    planSources: ['hall1.pdf', 'hall 2-5.pdf', 'hall6.pdf', 'hall14.pdf'],
     adaptation:
-      'Reusable components fitted to existing roof footprints; illustrative furnishing, not a surveyed plan',
+      'Supplied hall plans uniformly fitted to retained exterior shells; room heights and Hall 1 elevation are unverified. Existing CC interiors retained.',
   };
   const names = [
     'stand-island',
@@ -232,6 +248,7 @@ export async function createVenueInteriors(options: {
     obstacles = new Map<string, InteriorObstacle[]>(),
     pointLights = new Map<string, T.PointLight[]>();
   const emissive = new Set<T.MeshStandardMaterial>();
+  const planInteriors: NonNullable<ReturnType<typeof buildHallPlanInterior>>[] = [];
   const adaptedGeometries = new Set<T.BufferGeometry>();
   const sourceResources = () => {
     const geoms = new Set<T.BufferGeometry>(),
@@ -286,6 +303,23 @@ export async function createVenueInteriors(options: {
       clearance: 3,
       centralAisleX: 0,
     };
+    const planInterior=buildHallPlanInterior(hall,group,blocks);
+    if(planInterior) {
+      planInteriors.push(planInterior);
+      group.userData['suppliedPlan']=planInterior.group.userData;
+      const points=hall.route??[],safe=(p:T.Vector3)=>walkable(hall,blocks,p.x,p.z);
+      const route:Point[]=[];
+      const bounds=new T.Box2(new T.Vector2(-hall.width/2-3,-hall.depth/2-3),new T.Vector2(hall.width/2+3,hall.depth/2+3));
+      for(const target of points) {
+        const goal=new T.Vector3(target[0],0,target[1]);
+        if(!safe(goal))continue;
+        if(!route.length){route.push(target);continue;}
+        if(Math.hypot(target[0]-route[route.length-1][0],target[1]-route[route.length-1][1])<1)continue;
+        const last=route[route.length-1],path=findVisitorPath(new T.Vector3(last[0],0,last[1]),goal,bounds,safe,1);
+        if(path)route.push(...path.slice(1).map(p=>[p.x,p.z] as Point));
+      }
+      hall.route=route;
+    }
     function place(
       name: string,
       x: number,
@@ -334,10 +368,10 @@ export async function createVenueInteriors(options: {
       return object;
     }
     // Keep furniture at its authored scale and reserve the central and perimeter aisles.
-    for (const x of [-21, -9, 9, 21])
+    for (const x of planInterior ? [] : [-21, -9, 9, 21])
       if (Math.abs(x) + 3.2 < hall.width / 2 - 3 && hall.depth > 47)
         place('stand-island', x, 0.02, 0, new T.Vector3(1, 1, 1), true);
-    for (const x of [-9, 9])
+    for (const x of planInterior ? [] : [-9, 9])
       place('reception-counter', x, 0, hall.depth / 2 - 6, new T.Vector3(1, 1, 1), true);
     // Only the architectural panels change dimensions; all texture coordinates are retained.
     let w = hall.width,
@@ -386,7 +420,7 @@ export async function createVenueInteriors(options: {
       if (beam) beam.rotation.y = Math.PI / 2;
       place('linear-light', 0, hall.height - 1.7, z, new T.Vector3((w - 4) / 112, 1, 0.5));
     }
-    for (const x of [-w / 2 + 1, w / 2 - 1])
+    for (const x of planInterior ? [] : [-w / 2 + 1, w / 2 - 1])
       for (let z = -d / 2 + 6; z < d / 2 - 4; z += 15)
         place('stone-column', x, 0, z, new T.Vector3(0.7, hall.height / 9.5, 0.7), true);
     for (const x of [-w / 4, w / 4])
@@ -446,6 +480,8 @@ export async function createVenueInteriors(options: {
       touring,
       paused,
       preview: !!preview && !active,
+      planNote: (()=>{const h=active??preview;const plan=planInteriors.find(p=>p.registration.plan.id===h?.id);
+        return plan?`${plan.registration.plan.floor} · Plan fitted to existing building; dimensions are approximate.`:undefined;})(),
     });
   function ccVisibility() {
     const selected = visitorHall?.level ? visitorHall : active?.level ? active : preview;
@@ -498,12 +534,12 @@ export async function createVenueInteriors(options: {
       [0, 0],
       [0, edge],
     ];
-    const entry = h.level ? h.entrance : [0, edge];
+    const entry = h.level ? h.entrance : h.route?.[0] ?? [0, edge];
     camera.position.copy(
       hallToWorld(h, entry[0], 1.7 + (h.elevation?.(entry[0], entry[1]) ?? 0), entry[1]),
     );
     yaw = Math.PI - h.angle;
-    if (h.level && route.length > 1)
+    if (h.route && route.length > 1)
       yaw = Math.atan2(route[1][0] - entry[0], route[1][1] - entry[1]) - h.angle;
     pitch = 0;
     look();
@@ -656,7 +692,7 @@ export async function createVenueInteriors(options: {
         } else {
           delta.setLength(Math.min(delta.length(), dt * 3));
           move(delta.x, delta.y);
-          const desired = active.level
+          const desired = active.route
             ? Math.atan2(delta.x, delta.y) - active.angle
             : routeIndex < 4
               ? Math.PI - active.angle
@@ -683,6 +719,7 @@ export async function createVenueInteriors(options: {
       groups.get(h.id)!.traverse((o) => {
         if (o.userData['interiorCeiling']) o.visible = !cut;
         if (o.userData['planLabel']) o.visible = !!preview;
+        if (o.userData['hallPlanLabel']) o.visible = h === near;
       });
       pointLights.get(h.id)!.forEach((l) => {
         l.visible = h === near;
@@ -697,6 +734,7 @@ export async function createVenueInteriors(options: {
       });
     }
     for (const m of emissive) m.emissiveIntensity = options.daylight() ? 0.7 : 2.2;
+    planInteriors.forEach(p=>p.setDaylight(options.daylight()));
     return moving;
   }
   return {
@@ -769,6 +807,7 @@ export async function createVenueInteriors(options: {
       layer.removeFromParent();
       sourceResources();
       cc.dispose();
+      planInteriors.forEach(p=>p.dispose());
       adaptedGeometries.forEach((g) => g.dispose());
       pointLights.clear();
       groups.clear();

@@ -170,8 +170,12 @@ void main() {
   vec3 direction = normalize(cameraRotation * ray);
   vec2 uv = vec2(atan(direction.z, direction.x) / (2.0 * PI) + 0.5,
                  asin(clamp(direction.y, -1.0, 1.0)) / PI + 0.5);
-  vec4 localSample = texture2D(localSky, uv);
-  vec3 localColor = fromSrgb(localSample.rgb);
+  vec4 localSample = vec4(0.0);
+  vec3 localColor = vec3(0.0);
+  if (spaceMix < 1.0) {
+    localSample = texture2D(localSky, uv);
+    localColor = fromSrgb(localSample.rgb);
+  }
   // A broad preliminary cone keeps noise work off all other background pixels.
   // Screen derivatives soften only the disc's edge, regardless of panorama/DPR.
   if (!daylight && spaceMix < 1.0 && dot(direction, moonDirection) > 0.99988) {
@@ -191,8 +195,10 @@ void main() {
       localColor = mix(localColor, moonColor, disc * localSample.a);
     }
   }
-  vec3 spaceColor = fromSrgb(texture2D(spaceSky, uv).rgb);
-  gl_FragColor = vec4(mix(localColor, spaceColor, spaceMix), 1.0);
+  vec3 color = localColor;
+  // Only flights need both panoramas. Local and orbital views sample one.
+  if (spaceMix > 0.0) color = mix(color, fromSrgb(texture2D(spaceSky, uv).rgb), spaceMix);
+  gl_FragColor = vec4(color, 1.0);
   #include <colorspace_fragment>
 }`;
 

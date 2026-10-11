@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { InteriorHall, InteriorObstacle, hallToWorld, worldToHall, walkable } from './venue-interiors';
-import { createVisitorCollisionWorld, VisitorCollisionWorld, VISITOR_RADIUS } from './visitor-collision';
+import { createVisitorCollisionWorld, VisitorCollisionWorld, VISITOR_RADIUS, VISITOR_HEIGHT, VISITOR_STEP } from './visitor-collision';
 import { VISITOR_RAMP_LANDING } from './visitor-doorway';
 
 export type GroundPoint = [number, number];
@@ -12,6 +12,15 @@ export interface VisitorPortal {
   width: number;
   approach: number;
 }
+/** The renderer and movement share these exact standing body locations. */
+export interface VisitorGuardPlacement {
+  id: string;
+  portalId: string;
+  position: T.Vector3;
+  heading: number;
+  radius: number;
+  height: number;
+}
 export interface VisitorNavigation {
   portals: VisitorPortal[];
   buildings: { id: string; polygon: GroundPoint[] }[];
@@ -20,6 +29,8 @@ export interface VisitorNavigation {
   spawn: T.Vector3;
   heading: number;
   geometry?: VisitorCollisionWorld;
+  /** Assign only after the corresponding visible guard instances were created. */
+  guards?: VisitorGuardPlacement[];
 }
 const cross = (a: GroundPoint, b: GroundPoint, p: GroundPoint) =>
   (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
@@ -134,7 +145,13 @@ export function visitorGroundHeight(nav: VisitorNavigation, point: T.Vector3, ha
   return Math.hypot(point.x - nav.spawn.x, point.z - nav.spawn.z) < 34 ? .35 : .24;
 }
 export function visitorBodyClear(nav: VisitorNavigation, point: T.Vector3, hall?: InteriorHall): boolean {
-  return !nav.geometry?.blocked(new T.Vector3(point.x, visitorGroundHeight(nav, point, hall), point.z));
+  const ground = visitorGroundHeight(nav, point, hall);
+  for (const guard of nav.guards ?? []) {
+    if (guard.position.y + guard.height <= ground + VISITOR_STEP || guard.position.y >= ground + VISITOR_HEIGHT) continue;
+    const radius = VISITOR_RADIUS + guard.radius + .03;
+    if ((point.x - guard.position.x) ** 2 + (point.z - guard.position.z) ** 2 < radius * radius) return false;
+  }
+  return !nav.geometry?.blocked(new T.Vector3(point.x, ground, point.z));
 }
 export function visitorHallWalkable(nav: VisitorNavigation, hall: InteriorHall, obstacles: InteriorObstacle[], point: T.Vector3): boolean {
   const local = worldToHall(hall, point);

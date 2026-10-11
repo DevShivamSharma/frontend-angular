@@ -5,7 +5,7 @@ test.use({ trace: 'off', viewport: { width: 1440, height: 1000 }, reducedMotion:
 } });
 
 test('venue sky: day and night stay visible through resizing and globe travel without an idle render loop', async ({ page }, info) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {
@@ -23,12 +23,15 @@ test('venue sky: day and night stay visible through resizing and globe travel wi
   });
   const draws = () => page.evaluate(() => (window as any).__skyDraws as number);
   const settle = async () => {
-    await page.evaluate(() => { (window as any).__skyQuiet = { count: -1, since: performance.now() }; });
-    await page.waitForFunction(() => {
-      const state = (window as any).__skyQuiet, count = (window as any).__skyDraws;
-      if (state.count !== count) { state.count = count; state.since = performance.now(); }
-      return performance.now() - state.since > 700;
-    }, undefined, { timeout: 15_000 });
+    // Sample actual GPU calls from the test clock. An idle, demand-rendered
+    // page does not need animation-frame polling to prove that it has stopped.
+    await expect.poll(async () => {
+      const before = await draws();
+      // Geographic navigation performs one deliberate wake-up after its 1.8s
+      // cooldown. Drain that check before asserting sustained idle behavior.
+      await page.waitForTimeout(2200);
+      return (await draws()) - before;
+    }, { timeout: 30_000, message: 'The camera flight and sky settle without repeated GPU work' }).toBe(0);
   };
   const idle = async () => {
     await settle();
