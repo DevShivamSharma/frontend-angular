@@ -32,6 +32,16 @@ export function visitorGeometry(path = 'src/assets/venue/IITF_2026_ARCHITECTURAL
   const bytes = fs.readFileSync(path);
   const length = bytes.readUInt32LE(12), json = JSON.parse(bytes.subarray(20, 20 + length).toString());
   const binary = bytes.subarray(28 + length), root = new T.Group();
+  const materials = (json.materials ?? []).map((m: any) => {
+    const material = new T.MeshStandardMaterial();
+    material.name = m.name ?? ''; material.userData = m.extras ?? {};
+    const pbr = m.pbrMetallicRoughness ?? {};
+    if (pbr.baseColorFactor) material.color.fromArray(pbr.baseColorFactor);
+    material.roughness = pbr.roughnessFactor ?? 1; material.metalness = pbr.metallicFactor ?? 1;
+    material.side = m.doubleSided ? T.DoubleSide : T.FrontSide;
+    material.transparent = m.alphaMode === 'BLEND'; material.opacity = pbr.baseColorFactor?.[3] ?? 1;
+    return material;
+  });
   const nodes = json.nodes.map((n: any) => {
     const group = new T.Group(); group.name = (n.name ?? '').replace(/ /g, '_'); group.userData = n.extras ?? {};
     for (const p of json.meshes[n.mesh]?.primitives ?? []) {
@@ -49,7 +59,7 @@ export function visitorGeometry(path = 'src/assets/venue/IITF_2026_ARCHITECTURAL
         }
         geometry.setIndex(new T.BufferAttribute(indices, 1));
       }
-      group.add(new T.Mesh(geometry, new T.MeshStandardMaterial()));
+      group.add(new T.Mesh(geometry, materials[p.material] ?? new T.MeshStandardMaterial()));
     }
     if (n.translation) group.position.fromArray(n.translation);
     if (n.rotation) group.quaternion.fromArray(n.rotation);

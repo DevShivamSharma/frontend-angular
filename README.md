@@ -56,6 +56,11 @@ resource cleanup and browser coverage. The tests use the checked-in venue model.
 pillars, furniture, floor separation and furnished CC access. Auto-walk controller
 and browser coverage is in `e2e/visitor-auto-walk.spec.ts`.
 
+Video-based venue updates and building/gate coverage are documented in
+[Venue reconstruction from video references](docs/venue-video-reconstruction.md).
+The document distinguishes verified frontage and material changes from inherited
+geometry, approximate dimensions and areas still needing references.
+
 ## API base URL
 
 Configured once in `src/app/app.config.ts` via the `API_BASE_URL` token

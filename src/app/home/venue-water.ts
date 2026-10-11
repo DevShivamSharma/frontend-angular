@@ -54,11 +54,13 @@ export function prepareVenueFountainJets(root: T.Group) {
 export function createVenueWater(root: T.Group) {
   const time = { value: 0 };
   const surfaces = new Map<T.MeshStandardMaterial, WaterKind>();
-  const meshes: T.Mesh[] = [];
+  const meshes: { mesh: T.Mesh; patches: T.Box3[] }[] = [];
   const frustum = new T.Frustum(), projection = new T.Matrix4();
+  const eye = new T.Vector3(), closest = new T.Vector3();
   let lastTime: number | undefined;
   let disposed = false;
 
+  root.updateMatrixWorld(true);
   root.traverse(object => {
     if (!(object instanceof T.Mesh)) return;
     let water = false;
@@ -72,7 +74,26 @@ export function createVenueWater(root: T.Group) {
     }
     if (water) {
       object.castShadow = false;
-      meshes.push(object);
+      // Batching can join several distant pools. Testing that single enormous
+      // bounding sphere keeps water awake even when only dry ground is visible.
+      // Local triangle patches retain the actual pool coverage without new draws.
+      const cells = new Map<string, T.Box3>();
+      const positions = object.geometry.getAttribute('position'), index = object.geometry.index;
+      const vertices = [new T.Vector3(), new T.Vector3(), new T.Vector3()];
+      const center = new T.Vector3();
+      for (let i = 0; i < (index?.count ?? positions.count); i += 3) {
+        center.set(0, 0, 0);
+        for (let k = 0; k < 3; k++) {
+          vertices[k].fromBufferAttribute(positions, index?.getX(i + k) ?? i + k).applyMatrix4(object.matrixWorld);
+          center.add(vertices[k]);
+        }
+        center.multiplyScalar(1 / 3);
+        const key = `${Math.floor(center.x / 48)},${Math.floor(center.z / 48)}`;
+        const bounds = cells.get(key) ?? new T.Box3();
+        for (const point of vertices) bounds.expandByPoint(point);
+        cells.set(key, bounds);
+      }
+      meshes.push({ mesh: object, patches: [...cells.values()] });
     }
   });
 
@@ -145,20 +166,34 @@ export function createVenueWater(root: T.Group) {
   refreshMaterials();
   return {
     refreshMaterials,
-    /** Keep rendering only while water is in the local camera view. */
-    update(now: number, camera: T.Camera, enabled: boolean) {
+    /** Animate resolvable water detail. Distant pools remain rendered, but their
+     * subpixel ripples no longer keep the entire campus/GPU awake. */
+    update(now: number, camera: T.Camera, enabled: boolean, viewportHeight = 1000) {
       if (disposed || !enabled) { lastTime = undefined; return false; }
       camera.updateMatrixWorld();
       projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       frustum.setFromProjectionMatrix(projection);
-      const visible = meshes.some(mesh => {
+      eye.setFromMatrixPosition(camera.matrixWorld);
+      let motion = 0;
+      for (const { mesh, patches } of meshes) {
+        let visible = true;
         for (let node: T.Object3D | null = mesh; node; node = node.parent)
-          if (!node.visible) return false;
-        return frustum.intersectsObject(mesh);
-      });
-      if (!visible) { lastTime = undefined; return false; }
+          if (!node.visible) { visible = false; break; }
+        if (!visible) continue;
+        for (const bounds of patches) {
+          if (!frustum.intersectsBox(bounds)) continue;
+          bounds.clampPoint(eye, closest);
+          const distance = Math.max(1, eye.distanceTo(closest));
+          const pixelsPerMetre = viewportHeight * camera.projectionMatrix.elements[5] / 2 /
+            ((camera as T.PerspectiveCamera).isPerspectiveCamera ? distance : 1);
+          // The visible wave/turbulence features are roughly one metre. Slow
+          // continuously as they shrink from five pixels to two, then sleep.
+          motion = Math.max(motion, T.MathUtils.smoothstep(pixelsPerMetre, 2, 5));
+        }
+      }
+      if (motion <= 0) { lastTime = undefined; return false; }
       // Cap resumed deltas: a hidden tab must not jump through minutes of animation.
-      if (lastTime !== undefined) time.value += Math.min(.1, Math.max(0, (now - lastTime) / 1000));
+      if (lastTime !== undefined) time.value += Math.min(.1, Math.max(0, (now - lastTime) / 1000)) * motion;
       lastTime = now;
       return true;
     },

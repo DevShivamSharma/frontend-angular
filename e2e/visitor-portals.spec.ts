@@ -57,7 +57,7 @@ test('the real gate is visible before arrival on desktop and mobile', async ({ p
   await page.route('https://api.indiatradefair.com/**', r => r.fulfill({ json: { data: { list: [], total: 0 } } }));
   await page.goto('/'); await expect(page.locator('#loading')).toBeHidden({ timeout: 90000 });
   await page.getByRole('button', { name: 'Visit as a Person', exact: true }).click();
-  await page.getByRole('button', { name: 'Switch to daylight' }).click();
+  await expect(page.getByRole('button', { name: 'Switch to evening' })).toBeVisible();
   await page.getByLabel('Find an entrance').selectOption('hall1');
   await page.getByRole('button', { name: 'Go to hall', exact: true }).click();
   await page.waitForFunction(() => {

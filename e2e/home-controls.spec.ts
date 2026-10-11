@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test.use({ trace: 'off', launchOptions: {
+// Continuous fountain animation is checked separately. This verifies that every
+// control wakes a stationary scene and that reduced motion lets it sleep again.
+test.use({ trace: 'off', reducedMotion: 'reduce', launchOptions: {
   args: process.platform === 'win32' ? ['--use-angle=d3d11'] : ['--enable-unsafe-swiftshader']
 } });
 
@@ -52,9 +54,9 @@ for (const appearance of ['natural', 'color']) test(appearance + ' home: renderi
   await wakes(async () => { releaseEarth(); });
   await wakes(() => page.getByRole('button', { name: 'Zoom in', exact: true }).click());
   await wakes(() => page.getByRole('button', { name: 'Zoom out', exact: true }).click());
-  await wakes(() => page.getByRole('button', { name: 'Switch to daylight', exact: true }).click());
-  await expect(page.getByRole('button', { name: 'Switch to evening', exact: true })).toBeVisible();
   await wakes(() => page.getByRole('button', { name: 'Switch to evening', exact: true }).click());
+  await expect(page.getByRole('button', { name: 'Switch to daylight', exact: true })).toBeVisible();
+  await wakes(() => page.getByRole('button', { name: 'Switch to daylight', exact: true }).click());
   await page.locator('#halls-group').click();
   await wakes(() => page.locator('#hall-menu [data-view="hall1"]').click());
   await expect(page.locator('#hall-menu [data-view="hall1"]')).toHaveClass(/active/);
@@ -94,7 +96,7 @@ for (const appearance of ['natural', 'color']) test(appearance + ' home: renderi
   });
   await page.getByRole('link', { name: 'Stall planner' }).click();
   await expect(page.locator('app-home-page')).toHaveCount(0);
-  await expect(page.locator('app-planner-page')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Select hall', exact: true })).toBeVisible();
   expect(await page.evaluate(() => (window as any).__homeContext.isContextLost())).toBe(true);
   const homeDraws = await page.evaluate(() => (window as any).__homeDraws);
   await page.waitForTimeout(800);

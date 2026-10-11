@@ -14,14 +14,15 @@ interface Pose { position: T.Vector3; target: T.Vector3; }
 interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
 type Kind = 'road' | 'building' | 'water' | 'park';
 interface Geography { features: { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][] }[]; }
-interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onLocalMapReady?: () => void; onSatelliteReady?: () => void; markerElement?: HTMLElement; }
+interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onAtmosphereChange?: (spaceMix: number) => void; onLocalMapReady?: () => void; onSatelliteReady?: () => void; markerElement?: HTMLElement; }
 
-export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onLocalMapReady,onSatelliteReady,markerElement}: GlobeOptions) {
+export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onAtmosphereChange,onLocalMapReady,onSatelliteReady,markerElement}: GlobeOptions) {
   const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background instanceof T.Color ? scene.background.clone() : new T.Color('#e5e7e5');
   const naturalBackground = localBackground.clone();
   const skyBackground = new T.Color('#17232c'), background = localBackground.clone();
   const flightRotation = new T.Quaternion(), flightDirection = new T.Vector3();
-  scene.background = background;
+  // A supplied sky owns the background, including daylight/night selection.
+  if (!onAtmosphereChange) scene.background = background;
   const group=new T.Group();group.name='Geographic context — Delhi to Earth';scene.add(group);
   const earthGroup=new T.Group();earthGroup.position.copy(center);earthGroup.visible=false;group.add(earthGroup);
   const groundGroup=new T.Group();groundGroup.name='OpenStreetMap Delhi context';group.add(groundGroup);
@@ -210,7 +211,8 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     Object.values(contextMaterials).forEach(m=>m.opacity=groundOpacity);
     satellite.setOpacity(groundOpacity);
     updateMarker?.(mode === 'globe' && !transition && altitude > 180000);
-    background.copy(localBackground).lerp(skyBackground,planetMix);
+    if (onAtmosphereChange) onAtmosphereChange(planetMix);
+    else background.copy(localBackground).lerp(skyBackground,planetMix);
     const near=altitude>15000?Math.max(5,altitude/1800):Math.max(1,Math.min(32,distance/55));
     const far=altitude>4800?R*18:12000;
     if(Math.abs(camera.near-near)>.02||camera.far!==far){camera.near=near;camera.far=far;camera.updateProjectionMatrix();}

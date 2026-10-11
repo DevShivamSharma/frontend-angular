@@ -180,7 +180,7 @@ test.describe('visitor in the real viewer', () => {
     const nav = createVisitorNavigation(root, halls, new Map());
     await page.goto('/'); await expect(page.locator('#loading')).toBeHidden({ timeout: 90000 });
     await page.getByRole('button', { name: 'Visit as a Person', exact: true }).click();
-    await page.getByRole('button', { name: 'Switch to daylight' }).click();
+    await expect(page.getByRole('button', { name: 'Switch to evening' })).toBeVisible();
     const state = () => page.evaluate(() => (window as any).ng.getComponent(document.querySelector('app-home-page')).visitor()) as Promise<VisitorState>;
     async function walkTo(goal: T.Vector3) {
       const s = await state(), delta = goal.clone().sub(new T.Vector3(...s.position));
@@ -240,7 +240,7 @@ test.describe('visitor in the real viewer', () => {
     await launch.click();
     await expect(page.getByRole('region', { name: 'Visitor navigation' })).toContainText('Gate 6');
     await expect(page.locator('#navigation')).toBeHidden();
-    await page.getByRole('button', { name: 'Switch to daylight' }).click();
+    await expect(page.getByRole('button', { name: 'Switch to evening' })).toBeVisible();
     fs.mkdirSync('.impeccable/review', { recursive: true });
     await page.screenshot({ path: '.impeccable/review/desktop.png' });
     const distance = await page.locator('.visitor-distance').textContent();
@@ -266,7 +266,7 @@ test.describe('visitor in the real viewer', () => {
     test.setTimeout(120000); await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/'); await expect(page.locator('#loading')).toBeHidden({ timeout: 90000 });
     await page.getByRole('button', { name: 'Visit as a Person', exact: true }).click();
-    await page.getByRole('button', { name: 'Switch to daylight' }).click();
+    await expect(page.getByRole('button', { name: 'Switch to evening' })).toBeVisible();
     const before = await page.locator('.visitor-distance').textContent();
     const button = page.getByRole('button', { name: 'Walk forward', exact: true }), bounds = (await button.boundingBox())!;
     await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2); await page.mouse.down();

@@ -150,11 +150,11 @@ test.describe('interior viewer', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/?interior=hall1&interiors=off');
     await expect(page.locator('#loading')).toBeHidden({ timeout: 90000 });
-    await page.getByRole('button', { name: 'Switch to daylight' }).click();
+    await expect(page.getByRole('button', { name: 'Switch to evening' })).toBeVisible();
     await page.screenshot({ path: info.outputPath('before-hall1.png') });
     await page.goto('/?interior=hall1');
     await expect(page.locator('#loading')).toBeHidden({ timeout: 90000 });
-    await page.getByRole('button', { name: 'Switch to daylight' }).click();
+    await expect(page.getByRole('button', { name: 'Switch to evening' })).toBeVisible();
     await page.screenshot({ path: info.outputPath('after-hall1-day.png') });
     await expect(page.getByRole('button', { name: 'Exit walkthrough' })).toBeVisible();
     await page.getByRole('button', { name: 'Walk forward', exact: true }).click();

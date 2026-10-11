@@ -45,7 +45,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly detailsVisible = signal(false);
   readonly selection = signal(0);
   readonly status = signal('Bharat Mandapam');
-  readonly daylight = signal(false);
+  readonly daylight = signal(true);
   readonly appearance = signal<VenueAppearance>('natural');
   readonly appearanceBusy = signal(false);
   readonly scenery = signal<VenueScenery>('satellite');
@@ -196,5 +196,9 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   setScenery(scenery: VenueScenery): void { this.scenery.set(scenery); this.zone.runOutsideAngular(() => this.viewer?.setScenery(scenery)); }
   retry(): void { if (this.loading.stages().venue.state === 'error') location.reload(); else void this.loading.retry(); }
   @HostListener('window:keydown', ['$event']) keyDown(event: KeyboardEvent): void { if (event.key === 'Escape' && !this.plan().isOpen) this.closeDetails(); }
-  ngOnDestroy(): void { this.destroyed = true; this.loading.destroy(); this.zone.runOutsideAngular(() => this.viewer?.dispose()); }
+  ngOnDestroy(): void {
+    this.destroyed = true; this.loading.destroy();
+    const viewer = this.viewer; this.viewer = undefined;
+    this.zone.runOutsideAngular(() => viewer?.dispose());
+  }
 }

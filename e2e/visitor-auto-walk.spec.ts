@@ -6,7 +6,7 @@ import { measureCCLevels } from '../src/app/home/cc-interiors';
 import { createVisitorNavigation, campusWalkable } from '../src/app/home/visitor-navigation';
 import { findVisitorPath, visitorSegmentClear } from '../src/app/home/visitor-routing';
 import { createVenueVisitor, INITIAL_VISITOR_STATE, VisitorState } from '../src/app/home/venue-visitor';
-import { visitorGeometry } from './visitor-fixture';
+import { referenceVenueGeometry } from './venue-reference-fixture';
 
 test.use({ viewport: { width: 1440, height: 900 },
   launchOptions: { args: process.platform === 'win32' ? ['--use-angle=d3d11'] : ['--enable-unsafe-swiftshader'] } });
@@ -25,7 +25,7 @@ test('routing goes around thin obstacles, rejects sealed destinations and keeps 
 
 test('avatar auto-walk reaches every actual hall, can travel between halls and stops on interruption', () => {
   test.setTimeout(90000);
-  const root = visitorGeometry(), halls = [...measureInteriorHalls(root), ...measureCCLevels(root)];
+  const root = referenceVenueGeometry(), halls = [...measureInteriorHalls(root), ...measureCCLevels(root)];
   const nav = createVisitorNavigation(root, halls, new Map());
   const previous = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
   class Element extends EventTarget {
@@ -99,7 +99,7 @@ test('Go to hall moves the furnished viewer avatar, supports Stop and arrives in
   await page.route('https://api.indiatradefair.com/**', r => r.fulfill({ json: { data: { list: [], total: 0 } } }));
   await page.goto('/'); await expect(page.locator('#loading')).toBeHidden({ timeout: 90000 });
   await page.getByRole('button', { name: 'Visit as a Person', exact: true }).click();
-  await page.getByRole('button', { name: 'Switch to daylight' }).click();
+  await expect(page.getByRole('button', { name: 'Switch to evening' })).toBeVisible();
   const state = () => page.evaluate(() => (window as any).ng.getComponent(document.querySelector('app-home-page')).visitor()) as Promise<VisitorState>;
   const go = page.getByRole('button', { name: 'Go to hall', exact: true });
   await page.getByLabel('Find an entrance').selectOption('hall1');

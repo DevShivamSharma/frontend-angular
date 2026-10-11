@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { createSurfaceMaps, SurfaceMaps, SurfaceTexture } from './architectural-textures';
 import { createHall14EntranceDetail } from './hall14-detail';
+import { applyReferenceFinish } from './venue-reference-materials';
 
 type Finish = SurfaceTexture | 'glass' | 'steel';
 const DETAIL_KEY = 'venueDetailFinish';
@@ -8,6 +9,7 @@ const buildingName = /HALL|^PHOTO_CC|^PHOTO_ITPO|office|kiosk|pavilion|shelter|s
 const protectedName = /label|sign|lettering|floor[ _]plan|floor[ _]plate|ground|paving|apron|kerb|road|path|pool|fountain|basin|sculpture|parking|garden|planting|tree|lawn/i;
 
 function finishFor(material: T.MeshStandardMaterial): Finish | null {
+  if (material.userData['referenceMaterial']) return null;
   const category = material.userData['architecturalCategory'];
   if (category === 'glazing' || category === 'transparent_canopy') return 'glass';
   if (category === 'structure') return 'steel';
@@ -69,7 +71,7 @@ export function prepareVenueArchitecturalDetail(root: T.Group): void {
   });
   replacedGeometry.forEach(g => g.dispose()); replacedMaterials.forEach(m => m.dispose());
   // Hall 14's approved sample now lives at its actual position in the venue.
-  if (coverage.has('hall14')) {
+  if (coverage.has('hall14') && !root.userData['referenceHall14Prepared']) {
     const entrance = createHall14EntranceDetail();
     entrance.position.set(-223.60107421875, 0, 4.908121585845947);
     entrance.rotation.y = Math.PI / 3; root.add(entrance);
@@ -101,6 +103,7 @@ export function createArchitecturalFinishes(anisotropy: number) {
   const maps = new Map<SurfaceTexture, SurfaceMaps>();
   const textures = new Set<T.Texture>();
   function apply(material: T.MeshStandardMaterial, natural: boolean, finish = material.userData[DETAIL_KEY] as Finish | undefined) {
+    if (applyReferenceFinish(material)) return;
     if (!finish) return;
     material.userData[DETAIL_KEY] = finish;
     if (finish === 'glass') {

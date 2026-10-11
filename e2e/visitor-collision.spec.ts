@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
 import * as T from 'three';
 import { createVisitorCollisionWorld, VISITOR_RADIUS, VISITOR_HEIGHT } from '../src/app/home/visitor-collision';
-import { createVisitorNavigation, campusWalkable, slideVisitor, visitorGroundHeight } from '../src/app/home/visitor-navigation';
+import { createVisitorNavigation, campusWalkable, slideVisitor, visitorGroundHeight, visitorBodyClear, portalCoordinates } from '../src/app/home/visitor-navigation';
 import { measureInteriorHalls } from '../src/app/home/venue-interiors';
 import { measureCCLevels, buildCCInteriors } from '../src/app/home/cc-interiors';
 import { planVisitorRoute } from '../src/app/home/visitor-routing';
 import { visitorGeometry } from './visitor-fixture';
+import { referenceVenueGeometry } from './venue-reference-fixture';
 import { createVisitorAvatar } from '../src/app/home/visitor-avatar';
 
 test('body collider encloses the animated character including feet and swinging arms', () => {
@@ -31,7 +32,7 @@ test('furnished CC entrance has a body-clear route through its actual partitions
   const ctx = new Proxy({}, { get: (_, key) => key === 'measureText' ? (() => ({ width: 100 })) : (() => {}) });
   globalThis.document = { createElement: () => ({ getContext: () => ctx }) } as any;
   try {
-    const root = visitorGeometry();
+    const root = referenceVenueGeometry();
     const kit = new Map(['stand-island', 'reception-counter', 'ceiling-light', 'steel-beam', 'stone-column', 'floor-deck', 'ceiling-deck', 'linear-light', 'hall-point-light']
       .map(name => [name, visitorGeometry(`src/assets/venue/interiors/${name}.glb`)]));
     const cc = buildCCInteriors(root, kit), layer = new T.Group();
@@ -89,7 +90,7 @@ test('mesh collision keeps gaps between pillars, blocks furniture and respects b
 
 test('actual campus collision covers gate piers, office walls and all hall routes', () => {
   test.setTimeout(120000);
-  const root = visitorGeometry(), halls = [...measureInteriorHalls(root), ...measureCCLevels(root)];
+  const root = referenceVenueGeometry(), halls = [...measureInteriorHalls(root), ...measureCCLevels(root)];
   const nav = createVisitorNavigation(root, halls, new Map());
   expect(campusWalkable(nav, nav.spawn), 'Gate 6 spawn must have body clearance').toBe(true);
   for (const pattern of [/PHOTO_GATE_6_left_sandstone_pier/, /PHOTO_ITPO_office_sandstone_structure/]) {
@@ -110,6 +111,19 @@ test('actual campus collision covers gate piers, office walls and all hall route
       p.y = visitorGroundHeight(nav, p, d < -2.2 ? destination.hall : undefined);
       const source = nav.geometry!.obstacleAt(p);
       expect(source, `${destination.hall.id} doorway at ${d}`).toBeUndefined();
+    }
+    // Exercise the manual mover's substeps in both directions against the same
+    // prepared roof/frontage geometry as the shipping viewer, including CC slope.
+    const allowed = (p: T.Vector3) => visitorBodyClear(nav, p,
+      portalCoordinates(destination, p).along < -2.2 ? destination.hall : undefined);
+    for (const [from, to] of [[destination.approach, -5], [-5, destination.approach]]) {
+      const position = destination.position.clone().addScaledVector(destination.outward, from);
+      const target = destination.position.clone().addScaledVector(destination.outward, to);
+      expect(allowed(position), `${destination.hall.id} manual sweep start`).toBe(true);
+      slideVisitor(position, target.x - position.x, target.z - position.z, allowed);
+      expect(Math.hypot(position.x - target.x, position.z - target.z),
+        `${destination.hall.id} manual ${from > to ? 'entry' : 'exit'} reaches its clear endpoint`).toBeLessThan(.01);
+      expect(allowed(position), `${destination.hall.id} manual sweep end`).toBe(true);
     }
     const route = planVisitorRoute(nav, new Map(), undefined, nav.spawn, destination);
     expect(route, `Clear route to ${destination.hall.id}`).not.toBeNull();
