@@ -385,15 +385,6 @@ test('every tool of the ribbon, the view cube, the wheel and 3D work', async ({ 
   await expect(stat(page, 'Zones')).toHaveText('0');
   await expect(stat(page, 'Total Booths')).toHaveText(String(booths + 1));
 
-  // Export, then import the file back.
-  const download = page.waitForEvent('download');
-  await page.locator('nav.ribbon').getByRole('button', { name: 'Export' }).click();
-  const file = await (await download).path();
-  await page.locator('nav.ribbon input[type=file]').setInputFiles(file!);
-  await page.getByRole('button', { name: 'Replace' }).click();
-  await expect(page.locator('p-toast')).toContainText('Plan brought in');
-  await expect(stat(page, 'Total Booths')).toHaveText(String(booths + 1));
-
   // Save, then publish.
   await page.locator('nav.ribbon').getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('nav.ribbon').getByRole('button', { name: 'Saved' })).toBeVisible();
@@ -529,4 +520,129 @@ test('the venue admin adds categories one by one and from a CSV', async ({ page 
   ]);
   await expect(page.locator('p-toast')).toContainText('1 category added; 1 skipped');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/categories.png` });
+});
+
+/** What the server reads from Hall 5's CAD plan: two stalls and an L-shape. */
+function drawingResult() {
+  const rect = (x: number, z: number, w: number, d: number) => [
+    { x, z },
+    { x: x + w, z },
+    { x: x + w, z: z + d },
+    { x, z: z + d },
+  ];
+  const stall = (key: string, outline: Array<{ x: number; z: number }>) => ({
+    key,
+    group: '5',
+    blockId: '05-01',
+    letter: key,
+    name: `05-01 ${key}`,
+    outline,
+    openEdges: [2],
+    area: 9,
+    shape: outline.length === 4 ? 'rectangle' : 'L-shape',
+    category: key === 'A' ? 'premium' : 'standard',
+    labels: { area: null, dims: null, texts: [] },
+    confidence: 'high',
+    issues: [],
+    include: true,
+    outlinePt: outline,
+  });
+  return {
+    page: { width: 1000, height: 1000, rotation: 0 },
+    layers: [],
+    usedLayers: true,
+    groups: [
+      {
+        group: '5',
+        pitchX: 10,
+        pitchY: 10,
+        originX: 0,
+        originY: 0,
+        rms: 0,
+        gridLines: 30,
+        dimensionChecks: 0,
+        dimensionMaxError: null,
+        usesHalfMetres: false,
+      },
+    ],
+    stalls: [
+      stall('A', rect(0, 0, 3, 3)),
+      stall('B', rect(3, 0, 3, 3)),
+      stall('C', [
+        { x: 6, z: 0 },
+        { x: 12, z: 0 },
+        { x: 12, z: 6 },
+        { x: 9, z: 6 },
+        { x: 9, z: 3 },
+        { x: 6, z: 3 },
+      ]),
+    ],
+    excluded: [],
+    unresolved: [{ texts: ['05-02 A'], x: 10, y: 10, reason: 'No closed outline around it.' }],
+    issues: [],
+    hall: { groups: ['5'], drawingHalls: ['5', '6'], matchedByName: true },
+  };
+}
+
+test('stalls come in from a CAD plan PDF, only this hall’s, and a plan of another hall is refused', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 960 });
+  await mockPlanner(page);
+  let wrong = true;
+  await page.route('**/plan/drawing?*', (route) =>
+    wrong
+      ? route.fulfill({
+          status: 422,
+          json: {
+            statusCode: 422,
+            message:
+              'Wrong plan: this drawing is of Hall 8, not Hall 5. Upload the plan of Hall 5.',
+          },
+        })
+      : route.fulfill({ json: drawingResult() }),
+  );
+  await page.goto('/venue/events/ev/halls/h5/planner');
+  await page.getByRole('button', { name: 'Start planning' }).click();
+  const pdf = {
+    name: 'Hall plan.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4'),
+  };
+
+  // Import takes CAD plans only: anything else is turned away.
+  await page
+    .locator('nav.ribbon input[type=file]')
+    .setInputFiles({ name: 'plan.json', mimeType: 'application/json', buffer: Buffer.from('{}') });
+  await expect(page.locator('p-toast')).toContainText('Choose the hall’s CAD plan as a PDF file.');
+  await expect(page.locator('app-drawing-import-dialog')).toHaveCount(0);
+
+  // Another hall's plan: the server says so, and nothing changes.
+  await page.locator('nav.ribbon input[type=file]').setInputFiles(pdf);
+  const dialog = page.locator('app-drawing-import-dialog');
+  await expect(dialog.getByRole('alert')).toContainText('Wrong plan: this drawing is of Hall 8');
+  await expect(dialog.getByRole('button', { name: /^Import/ })).toBeDisabled();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  // This hall's plan, from the Plan panel's button: its stalls, the other hall left out.
+  wrong = false;
+  await page.locator('section.card input[type=file]').setInputFiles(pdf);
+  await expect(dialog).toContainText('Hall 5 of the drawing is Hall 5.');
+  await expect(dialog).toContainText("The drawing's other halls (6) are left out.");
+  const stats = dialog.locator('dl.stats');
+  await expect(stats).toContainText(/In the drawing\s*3/);
+  await expect(stats).toContainText(/L-shaped: draw by hand\s*1/);
+  await dialog.getByText('1 stall to draw by hand').click();
+  await expect(dialog).toContainText('05-01 C');
+  await dialog.getByText(/the drawing raised/).click();
+  await expect(dialog).toContainText('05-02 A: No closed outline around it.');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/cad-import.png` });
+  // On the open floor, clear of the passage: both rectangles come in, one undo takes them away.
+  await dialog.getByRole('button', { name: 'Import 2 stalls' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(stat(page, 'Total Booths')).toHaveText('2');
+  await expect(page.locator('p-toast')).toContainText('2 booths added');
+  await tool(page, 'Undo').click();
+  await expect(stat(page, 'Total Booths')).toHaveText('0');
 });

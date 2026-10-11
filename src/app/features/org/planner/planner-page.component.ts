@@ -47,6 +47,11 @@ import {
   PlanHallResult,
 } from './plan-hall-dialog.component';
 import type { PlanBrief } from './planner-plan';
+import {
+  DrawingImportData,
+  DrawingImportDialogComponent,
+  DrawingImportOutcome,
+} from './drawing-import-dialog.component';
 import { PlannerRulesData, PlannerRulesDialogComponent } from './planner-rules-dialog.component';
 import { AutoSeatsData, AutoSeatsDialogComponent } from './auto-seats-dialog.component';
 import { PlannerAgentCtx } from './planner-agent';
@@ -120,7 +125,7 @@ const FLIPPED: Record<StallSide, StallSide> = {
 };
 /** Rows the model tree shows; a search finds the rest. */
 const TREE_LIMIT = 200;
-/** Marks a file Export wrote, so Import knows it. */
+/** Marks a plan file the planner writes (the assistant's export_plan). */
 const PLAN_FILE_SCHEMA = 'stall-plan/1';
 /** Drawings start in slate; Properties changes it. */
 const OBJECT_COLOR = '#334155';
@@ -161,27 +166,17 @@ const OBJECT_COLOR = '#334155';
                 class="tool"
                 (click)="importFile.click()"
                 [disabled]="ro || store.busy()"
-                pTooltip="Bring in a plan exported from the planner (.json)"
+                pTooltip="Import this hall's stalls from a CAD plan exported as PDF"
               >
                 <app-icon name="upload_file" /><span>Import</span>
               </button>
               <input
                 #importFile
                 type="file"
-                accept=".json,application/json"
+                accept=".pdf,application/pdf"
                 hidden
                 (change)="importPlan($event)"
               />
-              <div class="col">
-                <button
-                  type="button"
-                  class="mini"
-                  (click)="exportPlan()"
-                  pTooltip="Download the plan as a file (.json)"
-                >
-                  <app-icon name="download" /><span>Export</span>
-                </button>
-              </div>
             </div>
             <span class="group-label"></span>
           </div>
@@ -671,12 +666,20 @@ const OBJECT_COLOR = '#334155';
                   }
                   <button
                     type="button"
-                    class="outline soon"
-                    aria-disabled="true"
-                    pTooltip="Coming soon"
+                    class="outline"
+                    (click)="cadFile.click()"
+                    [disabled]="ro || store.busy()"
+                    pTooltip="The stalls of this hall from a CAD plan exported as PDF"
                   >
-                    <app-icon name="file_import" />Import a DXF drawing
+                    <app-icon name="file_import" />Import stalls from a CAD plan
                   </button>
+                  <input
+                    #cadFile
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    hidden
+                    (change)="importPlan($event)"
+                  />
                 </section>
 
                 <section class="card">
@@ -1766,42 +1769,35 @@ export class PlannerPageComponent {
    * Replaces the plan with one from an exported file, after asking. Everything gets new ids, so
    * a plan can be brought in twice or into another hall; the rules check it as any change.
    */
-  protected async importPlan(event: Event): Promise<void> {
+  /** The stalls of this hall from a CAD plan PDF, reviewed in a dialog before they are added. */
+  private importDrawing(file: File): void {
+    this.dialog
+      .open<DrawingImportOutcome>(DrawingImportDialogComponent, {
+        data: {
+          store: this.store,
+          slug: this.slug(),
+          eventId: this.eventId(),
+          hallId: this.hallId(),
+          file,
+        } satisfies DrawingImportData,
+        width: 'min(1100px, 96vw)',
+      })
+      .subscribe((outcome) => {
+        if (outcome?.stalls.length)
+          void this.addMany({ stalls: outcome.stalls }, 'booth', outcome.replacing);
+      });
+  }
+
+  protected importPlan(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    let content: PlanContent;
-    try {
-      const parsed = JSON.parse(await file.text()) as { schema?: string; plan?: PlanContent };
-      if (parsed.schema !== PLAN_FILE_SCHEMA || !parsed.plan) throw new Error();
-      content = parsed.plan;
-      if (![content.zones, content.stalls, content.seats].every(Array.isArray)) throw new Error();
-    } catch {
-      this.notifier.warn('That file is not a plan exported from the planner.');
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+      this.notifier.warn('Choose the hall’s CAD plan as a PDF file.');
       return;
     }
-    const ok = await this.confirm.confirm({
-      title: 'Replace the plan?',
-      message: `The plan of this hall is replaced by the one in “${file.name}”. Undo brings it back.`,
-      confirmLabel: 'Replace',
-      destructive: true,
-    });
-    if (!ok) return;
-    const zoneIds = new Map(content.zones.map((z) => [z.id, newId()] as const));
-    const zone = (id: string | null) => (id ? (zoneIds.get(id) ?? null) : null);
-    const next: PlanContent = {
-      zones: content.zones.map((z) => ({ ...z, id: zoneIds.get(z.id)! })),
-      stalls: content.stalls.map((s) => ({ ...s, id: newId(), zoneId: zone(s.zoneId) })),
-      seats: content.seats.map((s) => ({ ...s, id: newId(), zoneId: zone(s.zoneId) })),
-      objects: (content.objects ?? []).map((o) => ({ ...o, id: newId() })),
-    };
-    const ids = [...next.zones, ...next.stalls, ...next.seats, ...next.objects].map((i) => i.id);
-    if (await this.store.change(next, ids, null)) {
-      this.notifier.success(
-        `Plan brought in: ${next.stalls.length.toLocaleString('en-IN')} booths, ${next.zones.length} zones.`,
-      );
-    }
+    this.importDrawing(file);
   }
 
   // ---- drawings -----------------------------------------------------------------------------

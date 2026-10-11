@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
+import type { DrawingImportResult } from './drawing-import.models';
 import type { PlanContent, PlanFinding, PlannerView, StallPlanView } from './plans.models';
 
 /** The stall plan of a hall of an event. */
@@ -17,6 +18,37 @@ export class PlansApi {
 
   get(slug: string, eventId: string, hallId: string): Observable<PlannerView> {
     return this.http.get<PlannerView>(this.base(slug, eventId, hallId));
+  }
+
+  /** The stalls of a hall's CAD plan PDF, per hall of the drawing, for review. Nothing is saved. */
+  readDrawing(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    file: Blob,
+    page = 1,
+  ): Observable<DrawingImportResult> {
+    const body = new FormData();
+    body.append('file', file, 'plan.pdf');
+    return this.http.post<DrawingImportResult>(
+      `${this.base(slug, eventId, hallId)}/drawing?page=${page}`,
+      body,
+    );
+  }
+
+  /** The same CAD plan PDF as a DXF drawing, its layers kept, for a CAD program. */
+  drawingDxf(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    file: Blob,
+    page = 1,
+  ): Observable<Blob> {
+    const body = new FormData();
+    body.append('file', file, 'plan.pdf');
+    return this.http.post(`${this.base(slug, eventId, hallId)}/drawing/dxf?page=${page}`, body, {
+      responseType: 'blob',
+    });
   }
 
   /** The rules the plan breaks because of `changed`, or as a whole. */
