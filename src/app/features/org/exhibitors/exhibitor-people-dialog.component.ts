@@ -15,7 +15,7 @@ import { FieldComponent } from '../../../shared/field.component';
 export interface ExhibitorPeopleDialogData {
   slug: string;
   exhibitor: ExhibitorView;
-  /** Members with `bookings.manage` invite; others only see who books for it. */
+  /** Members with `bookings.manage` and `stalls.book` invite (the server needs both); others only see who books for it. */
   canInvite: boolean;
 }
 
@@ -90,6 +90,8 @@ export interface ExhibitorPeopleDialogData {
             <app-copy-link [url]="link.url" />
           </div>
         }
+      } @else {
+        <p class="muted small">Only the venue team can invite an exhibitor's people.</p>
       }
     </div>
     <div class="dialog-actions">

@@ -159,6 +159,7 @@ import { StallMapComponent } from './stall-map.component';
                 <app-empty-state
                   icon="grid_on"
                   heading="The published plan of this hall has no stalls"
+                  text="Publish this hall's plan again to sell its stalls."
                 />
               }
             } @else if (mapError(); as message) {
@@ -215,7 +216,7 @@ import { StallMapComponent } from './stall-map.component';
                     </td>
                     <td>
                       {{ statusLabels[b.status] }}
-                      @if (b.holdExpiresAt) {
+                      @if (b.status === 'held' && b.holdExpiresAt) {
                         <br /><span class="muted small"
                           >until {{ b.holdExpiresAt | date: 'd MMM, HH:mm' }}</span
                         >

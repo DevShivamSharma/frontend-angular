@@ -316,7 +316,9 @@ export class ExhibitorsPageComponent {
     const data: ExhibitorPeopleDialogData = {
       slug: this.slug(),
       exhibitor,
-      canInvite: this.canManage(),
+      // The Exhibitor role carries stalls.book, so the server lets only someone who holds it
+      // invite for it, besides bookings.manage.
+      canInvite: this.canManage() && this.context.can('stalls.book'),
     };
     this.dialog.open(ExhibitorPeopleDialogComponent, { data });
   }
