@@ -1,8 +1,10 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
 
+import { httpStatus } from '../../../core/api/http-error';
 import type { CategoryRef } from '../../../core/categories/categories.models';
 import { PlansApi } from '../../../core/plans/plans-api.service';
+import { publishRefusal } from '../../../core/plans/plan-refusal';
 import type {
   PlanContent,
   PlanFinding,
@@ -343,8 +345,10 @@ export class PlannerStore {
       await this.refreshFlags();
       this.notifier.success(`Stall plan published (version ${done.revision}).`);
       return true;
-    } catch {
-      // The error interceptor has shown it.
+    } catch (error) {
+      // A 409 is a refusal to read, not a failure: a booked stall would change, or the plan was
+      // saved meanwhile. The interceptor leaves it to us; every other error it has shown.
+      if (httpStatus(error) === 409) this.notifier.warn(publishRefusal(error));
       return false;
     } finally {
       this.busy.set(false);

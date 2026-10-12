@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
+import { quiet } from '../api/error-toast.interceptor';
 import type { DrawingImportResult } from './drawing-import.models';
 import type {
   PlanContent,
@@ -84,16 +85,21 @@ export class PlansApi {
     return this.http.put<StallPlanView>(this.base(slug, eventId, hallId), { ...plan, revision });
   }
 
-  /** Publishes the saved plan; `revision` is the saved one the planner shows. */
+  /**
+   * Publishes the saved plan; `revision` is the saved one the planner shows. A 409 (saved
+   * meanwhile, or a booked stall would change) is the planner's to say, in full.
+   */
   publish(
     slug: string,
     eventId: string,
     hallId: string,
     revision: number,
   ): Observable<StallPlanView> {
-    return this.http.post<StallPlanView>(`${this.base(slug, eventId, hallId)}/publish`, {
-      revision,
-    });
+    return this.http.post<StallPlanView>(
+      `${this.base(slug, eventId, hallId)}/publish`,
+      { revision },
+      quiet(409),
+    );
   }
 
   /** External events: sends the saved plan to the venue for approval. */
