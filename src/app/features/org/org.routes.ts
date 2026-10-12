@@ -132,6 +132,13 @@ export const ORG_ROUTES: Routes = [
           import('./categories/categories-page.component').then((m) => m.CategoriesPageComponent),
       },
       {
+        path: 'exhibitors',
+        title: 'Exhibitors',
+        canActivate: [permissionGuard('bookings.view')],
+        loadComponent: () =>
+          import('./exhibitors/exhibitors-page.component').then((m) => m.ExhibitorsPageComponent),
+      },
+      {
         path: 'rules',
         title: 'Rules',
         canActivate: [permissionGuard('rules.view')],
