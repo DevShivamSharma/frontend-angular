@@ -120,9 +120,10 @@ export function holdUntil(b: BookingView): string {
 /**
  * Paise as rupees, grouped as India writes them: ₹1,00,000 for whole rupees, ₹10.50 otherwise.
  * Refunds can be part of a rupee, and rounding them would show a sum that was never paid back.
+ * `exact` always shows two decimals (₹1,00,000.00), for the ledger.
  */
-export function paise(amount: number): string {
-  if (amount % 100 === 0) return rupees(amount / 100);
+export function paise(amount: number, exact = false): string {
+  if (!exact && amount % 100 === 0) return rupees(amount / 100);
   return `₹${(amount / 100).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

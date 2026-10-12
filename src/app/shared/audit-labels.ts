@@ -50,6 +50,15 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   'booking.moved': { label: 'Moved booking', icon: 'swap_horiz' },
   'booking.cancelled': { label: 'Cancelled booking', icon: 'cancel' },
   'booking.expired': { label: 'Hold ran out', icon: 'hourglass_empty' },
+  'payment.ordered': { label: 'Created payment order', icon: 'receipt_long' },
+  'payment.paid': { label: 'Payment received', icon: 'payments' },
+  'payment.failed': { label: 'Payment failed', icon: 'credit_card_off' },
+  'payment.mismatch': { label: 'Payment amount did not match', icon: 'report' },
+  'refund.requested': { label: 'Requested refund', icon: 'undo' },
+  'refund.processed': { label: 'Refund processed', icon: 'currency_rupee' },
+  'refund.failed': { label: 'Refund failed', icon: 'error' },
+  'settlement.closed': { label: 'Closed settlement', icon: 'lock' },
+  'settlement.paid_out': { label: 'Recorded payout', icon: 'account_balance' },
 };
 
 export function auditLabel(action: string): string {
@@ -69,5 +78,7 @@ export function auditIsWarning(action: string): boolean {
     'membership.removed',
     'event.cancelled',
     'booking.cancelled',
+    'payment.mismatch',
+    'refund.failed',
   ].includes(action);
 }

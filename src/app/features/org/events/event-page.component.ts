@@ -37,6 +37,7 @@ import { AddHallsDialogComponent, AddHallsData } from './add-halls-dialog.compon
 import { formatDay, formatDays } from './event-dates';
 import { EventExhibitorsComponent } from './event-exhibitors.component';
 import { EventDialogComponent, EventDialogData } from './event-dialog.component';
+import { EventSettlementComponent } from './event-settlement.component';
 import { FieldComponent } from '../../../shared/field.component';
 import { InputTextModule } from 'primeng/inputtext';
 import { AppDialog } from '../../../core/ui/app-dialog.service';
@@ -56,6 +57,7 @@ import { SelectModule } from 'primeng/select';
     CopyLinkComponent,
     EmptyStateComponent,
     EventExhibitorsComponent,
+    EventSettlementComponent,
     PageHeaderComponent,
     FieldComponent,
     InputTextModule,
@@ -221,6 +223,10 @@ import { SelectModule } from 'primeng/select';
 
         @if (canSeeBookings()) {
           <app-event-exhibitors [event]="e" />
+        }
+
+        @if (canSeeSettlement() && e.bookingChannel === 'platform_portal' && e.status !== 'draft') {
+          <app-event-settlement [event]="e" />
         }
 
         @if (e.kind === 'external' && canManage()) {
@@ -422,6 +428,7 @@ export class EventPageComponent {
   protected readonly eventScoped = this.context.eventScoped;
   protected readonly canManage = computed(() => this.context.can('events.manage'));
   protected readonly canSeeBookings = computed(() => this.context.can('bookings.view'));
+  protected readonly canSeeSettlement = computed(() => this.context.can('reports.view'));
   protected readonly event = signal<EventDetailView | null>(null);
   protected readonly people = signal<EventPeople | null>(null);
   protected readonly roles = signal<AssignableRoleView[]>([]);

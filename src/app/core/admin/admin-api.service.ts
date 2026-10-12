@@ -29,6 +29,7 @@ export interface NewOrganisation {
   slug: string;
   primaryColor: string;
   bookingMode: BookingMode;
+  platformFeePercent: number;
   features: OrganisationFeatures;
   limits: OrganisationLimits;
   firstAdmin: { email: string };
@@ -92,7 +93,9 @@ export class AdminApi {
 
   updateOrganisation(
     id: string,
-    change: Partial<Pick<OrganisationView, 'name' | 'bookingMode' | 'features' | 'limits'>>,
+    change: Partial<
+      Pick<OrganisationView, 'name' | 'bookingMode' | 'platformFeePercent' | 'features' | 'limits'>
+    >,
   ): Observable<OrganisationView> {
     return this.http.patch<OrganisationView>(`${this.base}/organisations/${id}`, change);
   }

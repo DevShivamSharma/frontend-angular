@@ -157,6 +157,7 @@ export class OrganisationDetailPageComponent {
     this.slugForm.reset({ slug: organisation.slug });
     this.plan.reset({
       bookingMode: organisation.bookingMode,
+      platformFeePercent: organisation.platformFeePercent,
       features: organisation.features,
       limits: organisation.limits,
     });

@@ -59,6 +59,15 @@ export function slugAvailable(
 export function planForm(fb: NonNullableFormBuilder) {
   return fb.group({
     bookingMode: fb.control<BookingMode>('own_portal'),
+    platformFeePercent: [
+      0,
+      [
+        Validators.required,
+        Validators.min(0),
+        Validators.max(100),
+        Validators.pattern(/^\d{1,3}(\.\d{1,2})?$/),
+      ],
+    ],
     features: fb.group({
       aiAssist: false,
       pdfPlot: true,
@@ -77,6 +86,7 @@ export type PlanForm = ReturnType<typeof planForm>;
 
 export interface PlanValue {
   bookingMode: BookingMode;
+  platformFeePercent: number;
   features: OrganisationFeatures;
   limits: OrganisationLimits;
 }
@@ -103,6 +113,21 @@ export interface PlanValue {
             >
           </ng-template>
         </p-select>
+      </app-field>
+      <app-field
+        label="Platform fee (% of what an event keeps after refunds)"
+        error="0 to 100, two decimals at most"
+        for="plan-platform-fee"
+      >
+        <input
+          id="plan-platform-fee"
+          pInputText
+          type="number"
+          formControlName="platformFeePercent"
+          min="0"
+          max="100"
+          step="0.01"
+        />
       </app-field>
 
       <h2 class="section-title">Features</h2>

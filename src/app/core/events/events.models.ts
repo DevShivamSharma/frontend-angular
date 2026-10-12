@@ -1,5 +1,6 @@
 /** Mirrors the backend's events, their halls and organisers (Module D). */
 import type { CreatedInvitation, HallFloor, InvitationView, MemberView } from '../api/api.models';
+import type { PaymentStatus } from '../bookings/bookings.models';
 import type { CategoryRef } from '../categories/categories.models';
 import type { EventType, RuleId, RuleValues } from '../rules/rules.models';
 
@@ -137,4 +138,56 @@ export interface NewExhibitorInput extends ExhibitorInput {
 export interface ExhibitorPeople {
   members: MemberView[];
   invitations: InvitationView[];
+}
+
+/** Open until the settlement is closed (live figures); then it waits for the payout, then it is settled. */
+export type SettlementStatus = 'open' | 'closing' | 'settled';
+
+/** The money of an event, in paise (backend `SettlementFigures`). */
+export interface SettlementFigures {
+  grossPaise: number;
+  refundedPaise: number;
+  gatewayFeePaise: number;
+  platformFeePercent: number;
+  platformFeePaise: number;
+  netPayablePaise: number;
+}
+
+/** One captured payment of the event, as the ledger lists it. */
+export interface SettlementPaymentView {
+  id: string;
+  bookingId: string;
+  stallLabel: string;
+  exhibitorName: string;
+  status: PaymentStatus;
+  method: string | null;
+  paidAt: string;
+  amountPaise: number;
+  /** Razorpay's fee; null when it was never reported. */
+  feePaise: number | null;
+  refundedPaise: number;
+  pendingRefundPaise: number;
+}
+
+/** An event's settlement (backend `SettlementView`). */
+export interface SettlementView {
+  eventId: string;
+  status: SettlementStatus;
+  /** Live while open; frozen at close. */
+  figures: SettlementFigures;
+  /** Payments whose gateway fee is unknown and counted as 0. */
+  feeUnknown: number;
+  /** Why it cannot be closed now; null when it can. */
+  closeRefusal: string | null;
+  closedAt: string | null;
+  payout: { payeeName: string; bankDetails: string; reference: string; settledAt: string } | null;
+  settledAt: string | null;
+  payments: SettlementPaymentView[];
+}
+
+/** The bank transfer to the payee, recorded by hand. */
+export interface PayoutInput {
+  payeeName: string;
+  bankDetails: string;
+  reference: string;
 }

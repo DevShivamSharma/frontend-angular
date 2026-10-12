@@ -82,6 +82,7 @@ export interface OrganisationView {
   status: OrganisationStatus;
   suspendedReason: string | null;
   bookingMode: BookingMode;
+  platformFeePercent: number;
   features: OrganisationFeatures;
   limits: OrganisationLimits;
   config: OrganisationConfig;
