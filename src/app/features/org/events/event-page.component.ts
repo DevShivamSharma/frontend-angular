@@ -35,6 +35,7 @@ import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { AddHallsDialogComponent, AddHallsData } from './add-halls-dialog.component';
 import { formatDay, formatDays } from './event-dates';
+import { EventExhibitorsComponent } from './event-exhibitors.component';
 import { EventDialogComponent, EventDialogData } from './event-dialog.component';
 import { FieldComponent } from '../../../shared/field.component';
 import { InputTextModule } from 'primeng/inputtext';
@@ -54,6 +55,7 @@ import { SelectModule } from 'primeng/select';
     TooltipModule,
     CopyLinkComponent,
     EmptyStateComponent,
+    EventExhibitorsComponent,
     PageHeaderComponent,
     FieldComponent,
     InputTextModule,
@@ -90,6 +92,11 @@ import { SelectModule } from 'primeng/select';
               >{{ statusLabel(e.status) }}</span
             >
           </span>
+          @if (canSeeBookings()) {
+            <a pButton [outlined]="true" [routerLink]="['bookings']"
+              ><app-icon name="confirmation_number" />Bookings</a
+            >
+          }
           @if (canManage() && !eventScoped()) {
             @switch (e.status) {
               @case ('draft') {
@@ -211,6 +218,10 @@ import { SelectModule } from 'primeng/select';
             }
           </ul>
         </section>
+
+        @if (canSeeBookings()) {
+          <app-event-exhibitors [event]="e" />
+        }
 
         @if (e.kind === 'external' && canManage()) {
           <section class="panel">
@@ -410,6 +421,7 @@ export class EventPageComponent {
   protected readonly slug = this.context.slug;
   protected readonly eventScoped = this.context.eventScoped;
   protected readonly canManage = computed(() => this.context.can('events.manage'));
+  protected readonly canSeeBookings = computed(() => this.context.can('bookings.view'));
   protected readonly event = signal<EventDetailView | null>(null);
   protected readonly people = signal<EventPeople | null>(null);
   protected readonly roles = signal<AssignableRoleView[]>([]);

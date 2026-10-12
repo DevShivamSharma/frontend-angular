@@ -109,6 +109,15 @@ export const ORG_ROUTES: Routes = [
               import('./events/event-page.component').then((m) => m.EventPageComponent),
           },
           {
+            path: ':eventId/bookings',
+            title: 'Bookings',
+            canActivate: [permissionGuard('bookings.view')],
+            loadComponent: () =>
+              import('./bookings/event-bookings-page.component').then(
+                (m) => m.EventBookingsPageComponent,
+              ),
+          },
+          {
             path: ':eventId/halls/:hallId/planner',
             title: 'Stall planner',
             canActivate: [permissionGuard('layouts.view')],
