@@ -148,6 +148,34 @@ export const ORG_ROUTES: Routes = [
           import('./exhibitors/exhibitors-page.component').then((m) => m.ExhibitorsPageComponent),
       },
       {
+        path: 'portal',
+        canActivate: [permissionGuard('stalls.book')],
+        children: [
+          {
+            path: '',
+            title: 'My events',
+            loadComponent: () =>
+              import('./portal/portal-events-page.component').then(
+                (m) => m.PortalEventsPageComponent,
+              ),
+          },
+          {
+            path: 'bookings',
+            title: 'My bookings',
+            loadComponent: () =>
+              import('./portal/portal-bookings-page.component').then(
+                (m) => m.PortalBookingsPageComponent,
+              ),
+          },
+          {
+            path: 'events/:eventId/halls/:hallId',
+            title: 'Choose a stall',
+            loadComponent: () =>
+              import('./portal/portal-hall-page.component').then((m) => m.PortalHallPageComponent),
+          },
+        ],
+      },
+      {
         path: 'rules',
         title: 'Rules',
         canActivate: [permissionGuard('rules.view')],

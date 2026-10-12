@@ -22,10 +22,12 @@ export class OrgContextStore {
   /**
    * Whether the member may do this. An organiser's role may list more, but the server lets
    * them reach their events, those events' stall plans and, with a bookings role, their
-   * exhibitors and bookings only, so nothing else is offered.
+   * exhibitors and bookings only; an exhibitor's user (stalls.book, payments.*) reaches the
+   * portal. Nothing else is offered.
    */
   can(permission: string): boolean {
-    if (this.eventScoped() && !/^(events|layouts|bookings)\./.test(permission)) return false;
+    if (this.eventScoped() && !/^(events|layouts|bookings|stalls|payments)\./.test(permission))
+      return false;
     return this.permissionSet().has(permission);
   }
 }

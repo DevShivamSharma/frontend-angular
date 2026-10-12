@@ -56,7 +56,15 @@ export class OrgShellComponent {
     const slug = this.context.slug();
     const items: NavItem[] = [{ label: 'Home', icon: 'home', link: ['/', slug], exact: true }];
     if (this.context.eventScoped()) {
-      items.push({ label: 'My events', icon: 'event', link: ['/', slug, 'events'] });
+      if (this.context.can('events.view')) {
+        items.push({ label: 'My events', icon: 'event', link: ['/', slug, 'events'] });
+      }
+      if (this.context.can('stalls.book')) {
+        items.push(
+          { label: 'My events', icon: 'event', link: ['/', slug, 'portal'], exact: true },
+          { label: 'My bookings', icon: 'receipt_long', link: ['/', slug, 'portal', 'bookings'] },
+        );
+      }
       if (this.context.can('bookings.view')) {
         items.push({ label: 'Exhibitors', icon: 'storefront', link: ['/', slug, 'exhibitors'] });
       }

@@ -1,3 +1,4 @@
+import type { EventStatus } from '../events/events.models';
 import { rupees } from '../plans/stall-price';
 import type { BookingStatus, BookingView, MapStallView, StallState } from './bookings.models';
 
@@ -21,6 +22,22 @@ export const STALL_STATE_LABELS: Record<StallState, string> = {
   not_for_sale: 'Not for sale',
 };
 
+/** Stall colours on the portal's hall plan; `mine` is the exhibitor's own stalls. */
+export const STALL_STATE_COLORS: Record<StallState, string> = {
+  free: '#16a34a',
+  held: '#f59e0b',
+  booked: '#dc2626',
+  not_for_sale: '#94a3b8',
+};
+export const MINE_COLOR = '#2563eb';
+
+export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  draft: 'Draft',
+  scheduled: 'Scheduled',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
 export function isActive(status: BookingStatus): boolean {
   return status === 'held' || status === 'confirmed';
 }
@@ -35,6 +52,21 @@ export function canMove(b: BookingView): boolean {
 
 export function canCancel(b: BookingView): boolean {
   return isActive(b.status) && (b.event.status === 'draft' || b.event.status === 'scheduled');
+}
+
+/** An exhibitor lets go of a hold while the event is a draft or scheduled. */
+export function canLetGo(b: BookingView): boolean {
+  return b.status === 'held' && (b.event.status === 'draft' || b.event.status === 'scheduled');
+}
+
+/** When a hold runs out, as HH:mm. */
+export function holdUntil(b: BookingView): string {
+  if (!b.holdExpiresAt) return '';
+  return new Date(b.holdExpiresAt).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 }
 
 /** Paise as whole rupees, grouped as India writes them: ₹1,00,000. */

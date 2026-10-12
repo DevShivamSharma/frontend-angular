@@ -54,7 +54,7 @@ export interface PublishedStallView {
 
 export interface MapStallView extends PublishedStallView {
   state: StallState;
-  booking: { id: string; exhibitor: string; status: BookingStatus } | null;
+  booking: { id: string; exhibitorId: string; exhibitor: string; status: BookingStatus } | null;
 }
 
 export interface StallMapView {
@@ -76,4 +76,57 @@ export interface NewBookingInput {
   exhibitorId: string;
   note: string | null;
   confirm: boolean;
+}
+
+/** What an exhibitor's own users see first: their company and the events they may book at. */
+export interface PortalView {
+  exhibitor: { id: string; name: string };
+  /** Null while the organisation takes bookings online; otherwise why not. */
+  closedReason: string | null;
+  events: PortalEventView[];
+}
+
+export interface PortalEventView {
+  id: string;
+  name: string;
+  status: EventStatus;
+  startsOn: string;
+  endsOn: string;
+  organiserName: string | null;
+  /** Null while its stalls can be held here; otherwise why not. */
+  closedReason: string | null;
+  halls: Array<{ hallId: string; name: string; published: boolean; freeStalls: number }>;
+}
+
+/** A hold the exhibitor asks for; the exhibitor comes from their access, not from here. */
+export interface PortalHoldInput {
+  eventId: string;
+  hallId: string;
+  stallId: string;
+  note: string | null;
+}
+
+/** Razorpay Checkout's options from the server (M6). `keyId` null: the log transport. */
+export interface CheckoutView {
+  keyId: string | null;
+  orderId: string;
+  /** Paise, as Checkout takes it. */
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  prefill: { name: string; email: string; contact: string };
+  holdExpiresAt: string;
+}
+
+export interface PortalHoldView {
+  booking: BookingView;
+  /** Null in M5, for a free stall, or when the order could not be made (`paymentError`). */
+  checkout: CheckoutView | null;
+  paymentError: string | null;
+}
+
+export interface PaymentResultView {
+  booking: BookingView;
+  outcome: 'confirmed' | 'revived' | 'already_paid' | 'refunding' | 'pending';
 }
