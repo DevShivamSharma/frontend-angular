@@ -2881,8 +2881,35 @@ export class PlannerPageComponent {
     setTimeout(() => this.startTour(), 400);
   }
 
+  /**
+   * Saves the plan. On an external event the organiser is then asked whether to send it for
+   * approval; saving alone never sends it.
+   */
   protected async save(): Promise<void> {
     if (!this.store.dirty() || this.store.busy()) return;
-    await this.store.save();
+    if (!(await this.store.save())) return;
+    if (this.store.view()?.canSubmit) await this.offerApproval();
+  }
+
+  private async offerApproval(): Promise<void> {
+    const venue = this.context.context()?.organisation.name ?? 'the venue';
+    const unpriced = this.store.unpriced().length;
+    if (unpriced) {
+      const ok = await this.confirm.confirm({
+        title: 'Plan saved',
+        message: `To send it to ${venue} for approval, every stall for sale needs a price first: ${unpriced} ${unpriced === 1 ? 'has' : 'have'} none.`,
+        confirmLabel: 'Open pricing',
+        cancelLabel: 'Not now',
+      });
+      if (ok) this.openPricing();
+      return;
+    }
+    const ok = await this.confirm.confirm({
+      title: 'Plan saved. Send it for approval?',
+      message: `Version ${this.store.revision()} goes to ${venue}, who get an email. Until they answer, the plan cannot be changed; you can take it back. Or keep working, and send it later with Send for approval.`,
+      confirmLabel: 'Send for approval',
+      cancelLabel: 'Not now',
+    });
+    if (ok) await this.store.review('submit');
   }
 }

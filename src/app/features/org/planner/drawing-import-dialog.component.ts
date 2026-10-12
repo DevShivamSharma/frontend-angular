@@ -28,6 +28,7 @@ import {
   placeStalls,
   type QuarterTurn,
   toPlanStall,
+  unnumbered,
 } from './drawing-import';
 import type { PlannerStore } from './planner.store';
 
@@ -86,7 +87,12 @@ const CHECK_DELAY = 500;
               @if (r.hall.matchedByName) {
                 <app-icon name="check_circle" />
                 <span>
-                  Hall {{ r.hall.groups.join(', ') }} of the drawing is {{ hallName() }}.
+                  @if (r.hall.groups.length > 1) {
+                    Halls {{ r.hall.groups.slice(0, -1).join(', ') }} and
+                    {{ r.hall.groups.at(-1) }} of the drawing are {{ hallName() }}.
+                  } @else {
+                    Hall {{ r.hall.groups[0] }} of the drawing is {{ hallName() }}.
+                  }
                   @if (otherHalls().length) {
                     The drawing's other halls ({{ otherHalls().join(', ') }}) are left out.
                   }
@@ -204,7 +210,9 @@ const CHECK_DELAY = 500;
                   }
                   <dt>L-shaped: draw by hand</dt>
                   <dd>{{ byHand().length }}</dd>
-                  <dt>Off the open floor</dt>
+                  <dt>No number in the drawing</dt>
+                  <dd>{{ unnumbered().length }}</dd>
+                  <dt>Off the hall floor</dt>
                   <dd [class.bad]="offFloor()">{{ offFloor() }}</dd>
                 </dl>
                 <ul class="legend" aria-label="Colours">
@@ -518,7 +526,13 @@ export class DrawingImportDialogComponent {
   protected readonly importable = computed(() => this.prepared().stalls);
   protected readonly byHand = computed(() =>
     this.placed()
-      .filter((p) => !p.rect)
+      .filter((p) => !p.rect && !unnumbered(p.stall))
+      .map((p) => p.stall.name),
+  );
+  /** Stalls the drawing gives no number: left out. */
+  protected readonly unnumbered = computed(() =>
+    this.placed()
+      .filter((p) => unnumbered(p.stall))
       .map((p) => p.stall.name),
   );
   protected readonly offFloor = computed(

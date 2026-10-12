@@ -30,6 +30,8 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
     published: null as { revision: number; at: string } | null,
     calls: [] as Array<{ step: string; body: unknown }>,
     findings: [] as Array<{ ruleId: string; message: string; ids: string[] }>,
+    revision: 1,
+    saves: 0,
   };
   if (side === 'venue') {
     server.review = {
@@ -79,7 +81,7 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
       },
       plan: {
         ...planner.plan,
-        revision: 1,
+        revision: server.revision,
         published: server.published,
         review: server.review,
         stalls: organiser
@@ -174,6 +176,14 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
         if (step === 'approve') server.published = { revision: body.revision, at: now };
       }
       return route.fulfill({ json: view().plan });
+    }
+    if (path.endsWith('/plan/check')) return route.fulfill({ json: { findings: [] } });
+    if (path.endsWith('/plan') && req.method() === 'PUT') {
+      server.saves++;
+      server.revision++;
+      return route.fulfill({
+        json: { ...view().plan, ...req.postDataJSON(), revision: server.revision },
+      });
     }
     if (path.endsWith('/plan')) return route.fulfill({ json: view() });
     return route.fulfill({ status: 404, json: { message: 'Not mocked ' + path } });
@@ -326,4 +336,38 @@ test('leaving the planner closes its dialogs and toasts', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Open stall planner' })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.p-dialog-mask')).toHaveCount(0);
+});
+
+test('after a save the organiser is asked whether to send the plan for approval', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 960 });
+  const server = await mockApproval(page, 'organiser');
+  await page.goto('/itpo/events/ev/halls/h11/planner');
+  await page.getByRole('button', { name: 'Start planning' }).click();
+  const booth = async (fx: number) => {
+    await page.locator('nav.ribbon').getByRole('button', { name: 'Booth', exact: true }).click();
+    const box = (await page.locator('app-planner-canvas canvas').boundingBox())!;
+    await page.mouse.click(box.x + box.width * fx, box.y + box.height * 0.3);
+  };
+  const dialog = page.getByRole('dialog');
+
+  // Saved, not sent: "Not now" keeps it here.
+  await booth(0.45);
+  await actions(page).getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toContainText('Plan saved. Send it for approval?');
+  await expect(dialog).toContainText('Version 2 goes to ITPO');
+  await dialog.getByRole('button', { name: 'Not now' }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(server.saves).toBe(1);
+  expect(server.calls).toEqual([]);
+  await expect(actions(page).getByRole('button', { name: 'Send for approval' })).toBeEnabled();
+
+  // Saved again, and sent this time.
+  await booth(0.55);
+  await actions(page).getByRole('button', { name: 'Save' }).click();
+  await dialog.getByRole('button', { name: 'Send for approval' }).click();
+  await expect(page.getByText('Sent for approval. You will get an email')).toBeVisible();
+  expect(server.calls).toEqual([{ step: 'submit', body: { revision: 3 } }]);
+  await expect(actions(page).getByRole('button', { name: 'Withdraw' })).toBeVisible();
 });

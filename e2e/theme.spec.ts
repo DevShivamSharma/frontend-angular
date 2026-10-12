@@ -92,3 +92,27 @@ test('the theme is chosen in the top bar and kept', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(html).toHaveClass(/app-dark/);
 });
+
+test('as the device, it is dark when the device is, on load and the moment the device changes', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await mockOrg(page);
+  await page.goto('/venue/categories');
+  const html = page.locator('html');
+  await expect(page.getByRole('button', { name: /^Theme:/ })).toHaveAccessibleName(
+    'Theme: As the device',
+  );
+  await expect(html).toHaveClass(/app-dark/);
+  await expect(html).toHaveCSS('color-scheme', 'dark');
+
+  // The device turns light, then dark again: no reload needed.
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(html).not.toHaveClass(/app-dark/);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(html).toHaveClass(/app-dark/);
+
+  // And after a reload.
+  await page.reload();
+  await expect(html).toHaveClass(/app-dark/);
+});

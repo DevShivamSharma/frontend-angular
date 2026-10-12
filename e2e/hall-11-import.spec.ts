@@ -85,13 +85,11 @@ test('Hall 11 of the IITF 2026 plan lands on ITPO’s Hall 11 exactly as drawn, 
   await page.goto('/itpo/events/ev/halls/h11/planner');
   await page.getByRole('button', { name: 'Start planning' }).click();
 
-  await page
-    .locator('nav.ribbon input[type=file]')
-    .setInputFiles({
-      name: 'IITF-2026 H-8,9,10 & 11.pdf',
-      mimeType: 'application/pdf',
-      buffer: Buffer.from('%PDF-1.4'),
-    });
+  await page.locator('nav.ribbon input[type=file]').setInputFiles({
+    name: 'IITF-2026 H-8,9,10 & 11.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4'),
+  });
   const dialog = page.locator('app-drawing-import-dialog');
   await expect(dialog).toContainText('Hall 11 of the drawing is Hall 11.');
   await expect(dialog).toContainText("The drawing's other halls (10, 9, 8) are left out.");
@@ -101,7 +99,7 @@ test('Hall 11 of the IITF 2026 plan lands on ITPO’s Hall 11 exactly as drawn, 
   );
   await expect(dialog.locator('dl.stats')).toContainText(/In the drawing\s*71/);
   await expect(dialog.locator('dl.stats')).toContainText(/L-shaped: draw by hand\s*2/);
-  await expect(dialog.locator('dl.stats')).toContainText(/Off the open floor\s*0/);
+  await expect(dialog.locator('dl.stats')).toContainText(/Off the hall floor\s*0/);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/hall-11-review.png` });
   await dialog.getByRole('button', { name: 'Import 69 stalls' }).click();
   await expect(dialog).toHaveCount(0);

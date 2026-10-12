@@ -73,6 +73,8 @@ export interface PlanSetting {
     emergencyExitClearance: number;
     curtainClearance: number;
     facilityClearance: number;
+    /** Kept clear round pillars: the Pillars rule's clearance when it is on. */
+    pillarClearance: number;
     maxUtilization: number;
   };
 }
@@ -139,6 +141,7 @@ export function planSetting(
         emergencyExitClearance: values.emergencyExitClearance ?? 3,
         curtainClearance: values.curtainClearance ?? 1,
         facilityClearance: values.facilityClearance ?? 1,
+        pillarClearance: on('PILLAR') ? Math.max(0.5, values.pillarClearance ?? 1) : 0.5,
         maxUtilization: values.maxUtilization ?? 0.7,
       },
     },
@@ -208,7 +211,7 @@ export function planOptions(brief: PlanBrief, setting: PlanSetting): PlanOption[
               Math.min(CROSS_AISLE_BOOTHS, Math.floor(CROSS_AISLE_METRES / w)),
             ),
             count: brief.count,
-            pillarClearance: 0.5,
+            pillarClearance: rules.pillarClearance,
             shiftForPillars: true,
             sellPillarStands: false,
             corners: brief.corners,
@@ -384,6 +387,7 @@ function transposeFloor(f: PlannerFloor): PlannerFloor {
     depth: f.width,
     floor: f.floor.map((poly) => poly.map((ring) => ring.map(([x, y]) => [y, x] as Point))),
     blocked: f.blocked.map(transposeRect),
+    structure: f.structure.map(transposeRect),
     pillars: f.pillars.map(transposeRect),
   };
 }

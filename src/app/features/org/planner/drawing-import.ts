@@ -163,6 +163,8 @@ const CELL = 0.5;
 
 /** Share of the drawing's grid that must land on open floor for a placement to count as exact. */
 const ON_FLOOR = 0.97;
+/** How far (m) the drawing's grid may reach past the hall's outline while it is searched. */
+const OVERHANG = 3;
 /** Cells a coarse search scores at most; the fine search scores them all. */
 const COARSE_CELLS = 1500;
 
@@ -184,32 +186,58 @@ export function registeredAlignment(
     .sort((a, b) => area(b) - area(a));
   const gridAreas = result.gridAreas ?? [];
   if (!floors.length || !gridAreas.length || !groups.length) return null;
-  const mask = FloorMask.forFloor(floor);
+  // The drawing's grid covers the hall's passages too: only walls, voids and the outside are off.
+  const mask = FloorMask.forStructure(floor);
+  // One page, one scale: the halls of the drawing keep their places to each other, and are
+  // laid on the floor together, as one.
+  const frame = frameOffsets(result, groups);
   for (const rotation of [0, 180, 90, 270] as QuarterTurn[]) {
+    const placed = groups.flatMap((g) => {
+      const at = turn(frame[g], rotation);
+      return gridAreas
+        .filter((a) => a.group === g)
+        .map((a) =>
+          a.outline.map((p) => turn(p, rotation)).map((p) => ({ x: p.x + at.x, z: p.z + at.z })),
+        );
+    });
+    if (!placed.length) continue;
+    const box = bounds(placed.flat());
+    // Every half-metre cell of the drawing's grid: on the floor counts for, off it against.
+    const cells = placed.flatMap((outline) => cellCentres(outline));
+    const score = (d: DrawingPoint, sample: DrawingPoint[] = cells) => {
+      let n = 0;
+      for (const c of sample) n += mask.free({ x: c.x + d.x, z: c.z + d.z }) ? 1 : -1;
+      return n;
+    };
+    const hall = floors.find(
+      (f) =>
+        Math.abs(f.maxX - f.minX - (box.maxX - box.minX)) <= SAME_SIZE &&
+        Math.abs(f.maxZ - f.minZ - (box.maxZ - box.minZ)) <= SAME_SIZE,
+    );
+    const found = hall
+      ? searchAround({ x: hall.minX - box.minX, z: hall.minZ - box.minZ }, SEARCH, score)
+      : searchWithin(box, mask.box, cells, score);
+    if (!found || found.score < cells.length * (2 * ON_FLOOR - 1)) continue;
+    // The page's halls are drawn apart, each on its own walls, and their distances to each
+    // other come to the half metre: each settles on its walls, near where the drawing puts it.
     const offsets: Record<string, DrawingPoint> = {};
     for (const g of groups) {
-      const areas = gridAreas.filter((a) => a.group === g).sort((a, b) => b.area - a.area);
-      if (!areas.length) break;
-      const box = bounds(areas[0].outline.map((p) => turn(p, rotation)));
-      // Every half-metre cell of the drawing's grid: on the floor counts for, off it against.
-      const cells = areas.flatMap((a) => cellCentres(a.outline.map((p) => turn(p, rotation))));
-      const score = (d: DrawingPoint, sample: DrawingPoint[] = cells) => {
-        let n = 0;
-        for (const c of sample) n += mask.free({ x: c.x + d.x, z: c.z + d.z }) ? 1 : -1;
-        return n;
-      };
-      const hall = floors.find(
-        (f) =>
-          Math.abs(f.maxX - f.minX - (box.maxX - box.minX)) <= SAME_SIZE &&
-          Math.abs(f.maxZ - f.minZ - (box.maxZ - box.minZ)) <= SAME_SIZE,
-      );
-      const found = hall
-        ? searchAround({ x: hall.minX - box.minX, z: hall.minZ - box.minZ }, SEARCH, score)
-        : searchWithin(box, mask.box, cells, score);
-      if (!found || found.score < cells.length * (2 * ON_FLOOR - 1)) break;
-      offsets[g] = { x: clean(found.d.x), z: clean(found.d.z) };
+      const at = turn(frame[g], rotation);
+      const own = gridAreas
+        .filter((a) => a.group === g)
+        .flatMap((a) => cellCentres(a.outline.map((p) => turn(p, rotation))));
+      const start = { x: found.d.x + at.x, z: found.d.z + at.z };
+      const settled =
+        groups.length > 1
+          ? searchAround(start, SEARCH, (d) => {
+              let n = 0;
+              for (const c of own) n += mask.free({ x: c.x + d.x, z: c.z + d.z }) ? 1 : -1;
+              return n;
+            }).d
+          : start;
+      offsets[g] = { x: clean(settled.x), z: clean(settled.z) };
     }
-    if (groups.every((g) => offsets[g])) return { rotation, offsets };
+    return { rotation, offsets };
   }
   return null;
 }
@@ -247,8 +275,10 @@ function searchWithin(
   cells: DrawingPoint[],
   score: (d: DrawingPoint, sample?: DrawingPoint[]) => number,
 ): { d: DrawingPoint; score: number } | null {
-  const [x0, x1] = [hall.minX - box.minX, hall.maxX - box.maxX];
-  const [z0, z1] = [hall.minZ - box.minZ, hall.maxZ - box.maxZ];
+  // The grid may reach a little past the hall's outline (over its walls); the score counts
+  // such cells against it.
+  const [x0, x1] = [hall.minX - box.minX - OVERHANG, hall.maxX - box.maxX + OVERHANG];
+  const [z0, z1] = [hall.minZ - box.minZ - OVERHANG, hall.maxZ - box.maxZ + OVERHANG];
   if (x1 < x0 || z1 < z0) return null;
   const stride = Math.max(1, Math.ceil(cells.length / COARSE_CELLS));
   const sample = cells.filter((_, i) => i % stride === 0);
@@ -295,13 +325,23 @@ export class FloorMask {
     }
   }
 
+  /** Where stalls may stand: the floor, clear of everything that blocks them. */
   static forFloor(floor: PlannerFloor): FloorMask {
+    return FloorMask.within(floor, floor.blocked);
+  }
+
+  /** The floor itself, passages and no-build areas included: what a drawing of the hall covers. */
+  static forStructure(floor: PlannerFloor): FloorMask {
+    return FloorMask.within(floor, floor.structure);
+  }
+
+  private static within(floor: PlannerFloor, off: ReadonlyArray<Rect>): FloorMask {
     return new FloorMask(floorBounds(floor), (p) => {
       const at: Point = [p.x, p.z];
       return (
         floor.floor.some(
           (poly) => pointInRing(at, poly[0]) && !poly.slice(1).some((h) => pointInRing(at, h)),
-        ) && !floor.blocked.some((b) => inBox(at, b))
+        ) && !off.some((b) => inBox(at, b))
       );
     });
   }
@@ -480,7 +520,9 @@ export function placeStalls(
   floor: PlannerFloor,
   excluded: ReadonlySet<string> = new Set(),
 ): PlacedStall[] {
-  const mask = FloorMask.forFloor(floor);
+  // Off the hall (a wall, a void, the outside) a stall cannot be; on a passage or a no-build
+  // area the hall's rules decide, as for a stall drawn there.
+  const mask = FloorMask.forStructure(floor);
   return result.stalls
     .filter((s) => groups.includes(s.group))
     .map((stall) => {
@@ -489,13 +531,23 @@ export function placeStalls(
       const onFloor = cellCentres(outline).every((p) => mask.free(p));
       const skip = excluded.has(stall.key)
         ? 'Left out in the review'
-        : !rect
-          ? `${stall.shape === 'L-shape' ? 'L-shaped' : 'Not a rectangle'}: draw it by hand`
-          : !onFloor
-            ? 'Off the open floor'
-            : null;
+        : unnumbered(stall)
+          ? 'No stall number in the drawing: not imported'
+          : !rect
+            ? `${stall.shape === 'L-shape' ? 'L-shaped' : 'Not a rectangle'}: draw it by hand`
+            : !onFloor
+              ? 'Off the hall floor: on a wall or outside the hall'
+              : null;
       return { stall, outline, rect, onFloor, skip };
     });
+}
+
+/**
+ * Whether the drawing gives the stall no number: no block was read for it, so the server named
+ * it by its key ("Stall s116"). Such a stall is not brought in.
+ */
+export function unnumbered(stall: Pick<DrawingStall, 'name' | 'key'>): boolean {
+  return stall.name === `Stall ${stall.key}`;
 }
 
 /** The stall's outline as a planner rectangle, when it is one: four corners, sides square. */

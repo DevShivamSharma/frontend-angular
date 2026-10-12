@@ -55,7 +55,12 @@ interface ShownRule {
           <ul class="rules">
             @for (r of g.rules; track r.id) {
               <li>
-                <app-icon name="check_circle" class="on" />
+                @if (r.waitingFor) {
+                  <!-- On, but nothing to check yet: no tick. -->
+                  <app-icon name="hourglass_empty" class="waiting" />
+                } @else {
+                  <app-icon name="check_circle" class="on" />
+                }
                 <div class="rule">
                   <span class="name"
                     >{{ r.label }}
@@ -71,8 +76,7 @@ interface ShownRule {
                   }
                   @if (r.waitingFor) {
                     <span class="muted small"
-                      ><app-icon name="hourglass_empty" /> Takes effect with:
-                      {{ r.waitingFor }}</span
+                      >Not checked yet. Takes effect with: {{ r.waitingFor }}</span
                     >
                   }
                 </div>
@@ -145,6 +149,10 @@ interface ShownRule {
     }
     .on {
       color: light-dark(#15803d, #4ade80);
+      flex: 0 0 auto;
+    }
+    .waiting {
+      color: var(--app-on-surface-variant);
       flex: 0 0 auto;
     }
     .rule {

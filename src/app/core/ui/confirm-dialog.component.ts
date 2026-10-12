@@ -10,6 +10,8 @@ export interface ConfirmDialogData {
   title: string;
   message: string;
   confirmLabel: string;
+  /** The other button; Cancel unless said. */
+  cancelLabel?: string;
   /** Styles the confirm button as destructive. */
   destructive?: boolean;
   /** Asks for a reason, which becomes the dialog's result. */
@@ -41,7 +43,7 @@ export interface ConfirmDialogData {
       <button
         pButton
         type="button"
-        label="Cancel"
+        [label]="data.cancelLabel ?? 'Cancel'"
         [text]="true"
         severity="secondary"
         (click)="ref.close()"

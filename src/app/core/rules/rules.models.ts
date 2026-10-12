@@ -14,6 +14,7 @@ export type RuleId =
   | 'FOYER'
   | 'PARTITION'
   | 'SMOKE_CURTAIN'
+  | 'PILLAR'
   | 'cornerKeepOut'
   | 'internalZones'
   | 'eventSeparation'
@@ -62,6 +63,8 @@ export interface RuleValues {
   curtainClearance: number;
   facilityClearance: number;
   partitionClearance: number;
+  /** Kept free around pillars; absent from rules saved before the Pillars rule. */
+  pillarClearance?: number;
   emergencyExitClearance: number;
   sizeStep: number;
   maxUtilization: number;

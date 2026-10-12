@@ -24,6 +24,9 @@ export interface Rect {
 const EPS = 1e-6;
 
 /** Floor kinds a stall or seat may not stand on (pillars are kept clear by the dialogs). */
+/** What is not floor at all: no drawing of the hall puts its grid there. */
+const STRUCTURE: ReadonlySet<AreaKind> = new Set(['outside', 'wall', 'void']);
+
 const BLOCKING: ReadonlySet<AreaKind> = new Set([
   'outside',
   'wall',
@@ -143,6 +146,11 @@ export interface PlannerFloor {
   floor: MultiPolygon;
   /** Boxes of what nothing may stand on. */
   blocked: Rect[];
+  /**
+   * Boxes of what is not floor at all (walls, voids, the outside), as against passages and
+   * no-build areas, which are floor kept clear. A drawing of the hall is laid by these.
+   */
+  structure: Rect[];
   /** Boxes of pillars; stalls may be built around them, seats may not. */
   pillars: Rect[];
 }
@@ -157,6 +165,9 @@ export function plannerFloor(f: HallFloor): PlannerFloor {
       blocked: g.objects
         .filter((o) => BLOCKING.has(o.kind as AreaKind))
         .flatMap((o) => o.geometry.map((p) => ringBox(p[0]))),
+      structure: g.objects
+        .filter((o) => STRUCTURE.has(o.kind as AreaKind))
+        .flatMap((o) => o.geometry.map((p) => ringBox(p[0]))),
       pillars: g.objects
         .filter((o) => o.kind === 'column')
         .flatMap((o) => o.geometry.map((p) => ringBox(p[0]))),
@@ -168,6 +179,9 @@ export function plannerFloor(f: HallFloor): PlannerFloor {
     floor: [[rectRing({ x: 0, y: 0, width: f.width, height: f.depth })]],
     blocked: f.areas
       .filter((a) => BLOCKING.has(a.kind))
+      .map((a) => ({ x: a.x, y: a.y, width: a.width, height: a.height })),
+    structure: f.areas
+      .filter((a) => STRUCTURE.has(a.kind))
       .map((a) => ({ x: a.x, y: a.y, width: a.width, height: a.height })),
     pillars: f.areas
       .filter((a) => a.kind === 'column')

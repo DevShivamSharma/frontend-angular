@@ -181,7 +181,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
                       <p-toggleswitch
                         [ngModel]="d.rules.switches[r.id]"
                         (ngModelChange)="toggle(r.id, $event)"
-                        [disabled]="!r.available || busy()"
+                        [disabled]="busy()"
                         [ariaLabel]="r.label"
                       />
                       <span class="rule">

@@ -271,7 +271,7 @@ const CHECK_DELAY = 450;
             <p-inputnumber
               [ngModel]="pillarClear()"
               (ngModelChange)="pillarClear.set($event ?? 0)"
-              [min]="0"
+              [min]="pillarRule ?? 0"
               [max]="10"
               [maxFractionDigits]="2"
             />
@@ -285,9 +285,15 @@ const CHECK_DELAY = 450;
               [binary]="true"
               [ngModel]="sellPillar()"
               (ngModelChange)="sellPillar.set($event)"
+              [disabled]="pillarRule !== null"
             />
             Sell the stands that have a pillar in them
           </label>
+          @if (pillarRule !== null) {
+            <p class="muted small">
+              This hall's Pillars rule keeps booths {{ pillarRule }} m clear of every pillar.
+            </p>
+          }
           <p class="muted small">
             Off, those places are skipped. Emergency exits are always kept clear.
           </p>
@@ -669,7 +675,9 @@ export class AutoBoothsDialogComponent {
   protected readonly wallLines = signal(false);
   protected readonly numbering = signal<Numbering>('line');
   protected readonly count = signal<number | null>(null);
-  protected readonly pillarClear = signal(0.5);
+  /** The hall's Pillars rule: its clearance when on, else null. */
+  protected readonly pillarRule = pillarRuleOf(this.data.store);
+  protected readonly pillarClear = signal(Math.max(0.5, this.pillarRule ?? 0.5));
   protected readonly shift = signal(true);
   protected readonly sellPillar = signal(false);
   protected readonly prefix = signal('');
@@ -894,4 +902,11 @@ export class AutoBoothsDialogComponent {
   protected add(): void {
     this.ref.close(this.booths(this.chosen()));
   }
+}
+
+/** The clearance of the hall's Pillars rule when it is on; null when it is off. */
+function pillarRuleOf(store: PlannerStore): number | null {
+  const rules = store.view()?.hall.rules;
+  if (!rules || (rules.switches as Record<string, boolean>)['PILLAR'] === false) return null;
+  return rules.values.pillarClearance ?? 1;
 }

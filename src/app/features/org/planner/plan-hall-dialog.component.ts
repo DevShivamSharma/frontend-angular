@@ -545,6 +545,7 @@ export class PlanHallDialogComponent {
         emergencyExitClearance: 3,
         curtainClearance: 1,
         facilityClearance: 1,
+        pillarClearance: 1,
         maxUtilization: 0.7,
       },
     });

@@ -36,6 +36,7 @@ function setting(width: number, depth: number, patch: Partial<PlanSetting> = {})
       emergencyExitClearance: 3,
       curtainClearance: 1,
       facilityClearance: 1,
+      pillarClearance: 1,
       maxUtilization: 0.7,
     },
     ...patch,
