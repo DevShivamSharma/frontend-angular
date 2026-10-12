@@ -4,7 +4,7 @@ import { createVisitorPortals } from './visitor-portals';
 import { VisitorNavigation, VisitorPortal, campusWalkable, inDoorway, portalCoordinates, slideVisitor, visitorHallWalkable, visitorGroundHeight } from './visitor-navigation';
 import { VISITOR_RADIUS } from './visitor-collision';
 import { InteriorHall, InteriorObstacle, hallToWorld } from './venue-interiors';
-import { planVisitorRoute } from './visitor-routing';
+import { findVisitorPath, planVisitorRoute } from './visitor-routing';
 
 export interface VisitorState {
   active: boolean;
@@ -16,6 +16,8 @@ export interface VisitorState {
   fast: boolean;
   transitioning: boolean;
   autoWalking: boolean;
+  jumping: boolean;
+  nearbyEntrance?: { id: string; label: string };
   hint: string;
   position: [number, number, number];
   heading: number;
@@ -23,7 +25,7 @@ export interface VisitorState {
 }
 export const INITIAL_VISITOR_STATE: VisitorState = {
   active: false, location: 'Gate 6', hall: '', destination: '', distance: 0, bearing: 0,
-  fast: false, transitioning: false, autoWalking: false, hint: '', position: [0, 0, 0], heading: 0,
+  fast: false, transitioning: false, autoWalking: false, jumping: false, hint: '', position: [0, 0, 0], heading: 0,
 };
 export type VisitorInput = 'forward' | 'backward' | 'left' | 'right';
 
@@ -35,7 +37,10 @@ export function createVenueVisitor(options: {
   showInterior: (id?: string) => void; changed: (state: VisitorState) => void; exit: () => void;
 }) {
   const { root, scene, camera, canvas, navigation: nav, signal, invalidate } = options;
-  const avatar = createVisitorAvatar(); scene.add(avatar.root); avatar.root.visible = false;
+  const avatar = createVisitorAvatar({ invalidate, failed: () => {
+    actionHint = 'Your avatar could not load. Exit and re-enter to retry; the default visitor is available.';
+    publish(); invalidate();
+  } }); scene.add(avatar.root); avatar.root.visible = false;
   const doors = createVisitorPortals(root, nav.portals, scene, options.interiorLayer);
   const position = nav.spawn.clone(), target = new T.Vector3(), desired = new T.Vector3();
   const ray = new T.Raycaster(), blockers: T.Object3D[] = [];
@@ -50,24 +55,32 @@ export function createVenueVisitor(options: {
   let savedCamera: { position: T.Vector3; quaternion: T.Quaternion; fov: number; near: number } | undefined;
   let actionHint = '';
   let autoRoute: T.Vector3[] = [], waypoint = 0, autoSpeed = 0;
+  let jumpOffset = 0, jumpVelocity = 0, jumping = false;
+  const jumpGravity = 20;
+
+  function nearbyEntrance() {
+    if (!active || hall || floorChange) return;
+    return nav.portals.filter(p => {
+      const relative = portalCoordinates(p, position);
+      return Math.abs(relative.across) < p.width / 2 + 3 && relative.along > -2.2 && relative.along < p.approach + 4;
+    }).sort((a, b) => position.distanceToSquared(a.position) - position.distanceToSquared(b.position))[0];
+  }
 
   function packet(): VisitorState {
     const destination = nav.portals.find(p => p.hall.id === targetId);
     const delta = destination?.position.clone().sub(position);
-    const near = nav.portals.find(p => {
-      const relative = portalCoordinates(p, position);
-      return Math.abs(relative.across) < 7 && relative.along > -8 && relative.along < p.approach + 8;
-    });
+    const near = nearbyEntrance();
     const heading = delta ? Math.atan2(delta.x, delta.z) : yaw;
     const atGate = position.distanceTo(nav.spawn) < 30;
     return { active, location: hall?.label ?? (atGate ? 'Gate 6 · Arrival' : 'Campus'), hall: hall?.id ?? '',
       destination: targetId, distance: delta ? Math.round(Math.hypot(delta.x, delta.z)) : 0,
       bearing: Math.atan2(Math.sin(yaw - heading), Math.cos(yaw - heading)) * 180 / Math.PI,
-      fast, transitioning: !!floorChange, autoWalking: autoRoute.length > 0, position: position.toArray(), heading: yaw,
+      fast, transitioning: !!floorChange, autoWalking: autoRoute.length > 0, jumping, position: position.toArray(), heading: yaw,
+      nearbyEntrance: near ? { id: near.hall.id, label: near.hall.level ? 'Convention Centre' : near.hall.label } : undefined,
       entrance: destination?.position.toArray(),
       hint: floorChange ? 'Changing floor…' : autoRoute.length ? `Moving to ${destination?.hall.label}. Use Stop or movement controls to take over.` : actionHint || (hall ? 'Explore inside. Walk back through the entrance to return to campus.'
-        : near ? `Walk through the doors to enter ${near.hall.level ? 'the Convention Centre' : near.hall.label}.`
-        : 'Follow the entrance signs. W A S D to walk; drag to look around.') };
+        : near ? ''
+        : 'W A S D to walk, Space to jump; drag to look around.') };
   }
   function publish(force = false) {
     const state = packet(), key = JSON.stringify(state);
@@ -79,7 +92,7 @@ export function createVenueVisitor(options: {
     autoRoute = []; waypoint = 0; actionHint = message; publish(); invalidate();
   }
   function goToDestination() {
-    if (!active || floorChange) return;
+    if (!active || floorChange || jumping) return;
     cancelAutoWalk(''); clearInput();
     const destination = nav.portals.find(p => p.hall.id === targetId);
     if (!destination) return;
@@ -92,6 +105,41 @@ export function createVenueVisitor(options: {
       else { autoRoute = path; waypoint = 1; autoSpeed = 0; actionHint = ''; }
     }
     publish(); canvas.focus({ preventScroll: true }); invalidate();
+  }
+  function enterNearby() {
+    const door = nearbyEntrance();
+    if (!door || jumping || autoRoute.length) return;
+    const goal = door.position.clone().addScaledVector(door.outward, -4.5);
+    const clear = (p: T.Vector3) => campusWalkable(nav, p) ||
+      visitorHallWalkable(nav, door.hall, options.obstacles.get(door.hall.id) ?? [], p);
+    const path = findVisitorPath(position, goal, nav.bounds, clear, 1);
+    if (!path) actionHint = 'The entrance is blocked. Move to a clear spot beside the doorway and try again.';
+    else {
+      clearInput(); targetId = door.hall.id; autoRoute = path; waypoint = 1; autoSpeed = 0; actionHint = '';
+    }
+    publish(); canvas.focus({ preventScroll: true }); invalidate();
+  }
+  function jump() {
+    if (!active || floorChange || jumping) return;
+    cancelAutoWalk(''); jumping = true; jumpVelocity = 9; actionHint = '';
+    publish(); canvas.focus({ preventScroll: true }); invalidate();
+  }
+  function resetJump() { jumpOffset = 0; jumpVelocity = 0; jumping = false; }
+  function updateJump(dt: number) {
+    if (!jumping || dt <= 0) return;
+    const next = Math.max(0, jumpOffset + jumpVelocity * dt - jumpGravity * dt * dt / 2);
+    jumpVelocity -= jumpGravity * dt;
+    const start = jumpOffset, steps = Math.max(1, Math.ceil(Math.abs(next - start) / .06));
+    const ground = visitorGroundHeight(nav, position, hall), trial = position.clone();
+    // Sweep the actual body, so a fast frame cannot put the head through a lintel.
+    for (let i = 1; i <= steps; i++) {
+      const height = T.MathUtils.lerp(start, next, i / steps);
+      trial.y = ground + height;
+      if (nav.geometry?.blocked(trial)) { jumpVelocity = Math.min(0, jumpVelocity); break; }
+      jumpOffset = height;
+    }
+    position.y = ground + jumpOffset;
+    if (jumpOffset <= .00001 && jumpVelocity <= 0) { resetJump(); publish(); }
   }
   function advanceAutoWalk(dt: number) {
     const goal = autoRoute[autoRoute.length - 1];
@@ -128,6 +176,9 @@ export function createVenueVisitor(options: {
     actionHint = ''; publish();
   }
   function allowed(p: T.Vector3) {
+    // Keep ground-route restrictions while airborne, and also check the raised
+    // body. Jumping never bypasses walls, guard bodies or a low doorway ceiling.
+    if (jumpOffset > 0 && nav.geometry?.blocked(new T.Vector3(p.x, visitorGroundHeight(nav, p, hall) + jumpOffset, p.z))) return false;
     if (!hall) return campusWalkable(nav, p);
     // Only the ground-floor entrance connects to the outdoor campus.
     if ((!hall.level || hall.level === 1) && portal && inDoorway(portal, p, -VISITOR_RADIUS)) {
@@ -149,7 +200,7 @@ export function createVenueVisitor(options: {
       const p = portalCoordinates(portal, position);
       if (p.along > 1 && Math.abs(p.across) < portal.width / 2) setHall();
     }
-    position.y = visitorGroundHeight(nav, position, hall);
+    position.y = visitorGroundHeight(nav, position, hall) + jumpOffset;
   }
   function updateCamera(dt: number, immediate = false) {
     target.copy(position).y += 1.25;
@@ -169,9 +220,10 @@ export function createVenueVisitor(options: {
     camera.lookAt(target);
   }
   function start() {
+    avatar.load();
     if (active) return;
     savedCamera = { position: camera.position.clone(), quaternion: camera.quaternion.clone(), fov: camera.fov, near: camera.near };
-    active = true; hall = undefined; portal = undefined; floorChange = undefined; autoRoute = []; actionHint = '';
+    active = true; hall = undefined; portal = undefined; floorChange = undefined; autoRoute = []; actionHint = ''; resetJump();
     position.copy(nav.spawn); yaw = nav.heading; avatarYaw = yaw; fast = false; pitch = .17;
     camera.near = .08; camera.fov = 58; camera.updateProjectionMatrix();
     avatar.root.visible = true; avatar.root.position.copy(position); avatar.root.rotation.y = avatarYaw;
@@ -180,7 +232,7 @@ export function createVenueVisitor(options: {
   }
   function stop() {
     if (!active) return;
-    active = false; floorChange = undefined; autoRoute = []; setHall(); clearInput(); doors.setEnabled(false);
+    active = false; floorChange = undefined; autoRoute = []; resetJump(); setHall(); clearInput(); doors.setEnabled(false);
     avatar.root.visible = false;
     if (savedCamera) {
       camera.position.copy(savedCamera.position); camera.quaternion.copy(savedCamera.quaternion);
@@ -196,6 +248,11 @@ export function createVenueVisitor(options: {
     if (el instanceof HTMLElement && el.closest('dialog[open]')) return;
     if (down && key === 'escape') { e.preventDefault(); options.exit(); return; }
     if (el instanceof HTMLElement && el.closest('button,input,select,textarea,[contenteditable="true"]')) return;
+    if (key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      if (down && !e.repeat && !keys.has(' ')) { keys.add(' '); jump(); }
+      return;
+    }
     if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(key)) {
       e.preventDefault(); if (down) { if (key !== 'shift') cancelAutoWalk(); keys.add(key); } invalidate();
     }
@@ -222,9 +279,9 @@ export function createVenueVisitor(options: {
     if (!active) return; e.preventDefault(); distance = T.MathUtils.clamp(distance + e.deltaY * .006, 2.5, 8); invalidate();
   }, { signal, passive: false });
   canvas.tabIndex = 0;
-  canvas.setAttribute('aria-label', '3D Bharat Mandapam. In visitor mode, W A S D to walk, arrow keys to turn, drag to look, Shift to walk faster, Escape to exit.');
+  canvas.setAttribute('aria-label', '3D Bharat Mandapam. In visitor mode, W A S D to walk, arrow keys to turn, drag to look, Space to jump, Shift to walk faster, Escape to exit.');
   return {
-    start, stop, goToDestination,
+    start, stop, goToDestination, enterNearby, jump,
     stopAutoWalk() { cancelAutoWalk(); canvas.focus({ preventScroll: true }); },
     get active() { return active; },
     get position() { return position; },
@@ -247,11 +304,11 @@ export function createVenueVisitor(options: {
     },
     restart() {
       if (!active) return;
-      clearInput(); autoRoute = []; floorChange = undefined; setHall(); position.copy(nav.spawn); yaw = avatarYaw = nav.heading;
+      clearInput(); autoRoute = []; floorChange = undefined; resetJump(); setHall(); position.copy(nav.spawn); yaw = avatarYaw = nav.heading;
       actionHint = ''; updateCamera(0, true); publish(); canvas.focus({ preventScroll: true }); invalidate();
     },
     floor(level: number) {
-      if (!active || !hall?.level || floorChange) return;
+      if (!active || !hall?.level || floorChange || jumping) return;
       const next = options.halls.find(h => h.level === level); if (!next || next === hall) return;
       const clear = (p: [number, number]) => visitorHallWalkable(nav, next, options.obstacles.get(next.id) ?? [], hallToWorld(next, p[0], 0, p[1]));
       let p = next.entrance;
@@ -285,8 +342,9 @@ export function createVenueVisitor(options: {
         if (wasAutoWalking && !pointer) yaw += Math.atan2(Math.sin(aim - yaw), Math.cos(aim - yaw)) * (1 - Math.exp(-8 * dt));
       }
       updateLocation();
+      updateJump(dt);
       avatar.root.position.copy(position); avatar.root.rotation.y = avatarYaw;
-      avatar.update(dt, dt ? Math.min(5.5, travelled / dt) : 0, options.reducedMotion());
+      avatar.update(dt, dt ? Math.min(5.5, travelled / dt) : 0, options.reducedMotion(), jumpOffset);
       doors.update(position, dt, dt ? travelled / dt : 0, options.reducedMotion()); updateCamera(dt);
       if (now - lastState > 180) { publish(); lastState = now; }
       // Follow-camera and sliding-door settling are bounded to active visitor mode.

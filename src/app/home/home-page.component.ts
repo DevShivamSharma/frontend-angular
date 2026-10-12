@@ -63,6 +63,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly exportingHall = signal(false);
   readonly visitor = signal<VisitorState>({ ...INITIAL_VISITOR_STATE });
   readonly visitorReady = signal(false);
+  readonly visitorRouteExpanded = signal(false);
   readonly visitorDestinations = signal<{id:string;label:string}[]>([]);
   private readonly visitButton = viewChild<ElementRef<HTMLButtonElement>>('visitButton');
   ngAfterViewInit(): void {
@@ -82,7 +83,9 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
           visitorReady:destinations=>this.zone.run(()=>{this.visitorDestinations.set(destinations);this.visitorReady.set(true);}),
           visitorState:state=>this.zone.run(()=>{
             if(this.destroyed)return;
-            const wasActive=this.visitor().active;this.visitor.set(state);
+            const wasActive=this.visitor().active;
+            if(this.visitor().nearbyEntrance?.id!==state.nearbyEntrance?.id)this.visitorRouteExpanded.set(false);
+            this.visitor.set(state);
             if(wasActive&&!state.active){this.activeView.set('overview');this.activeLevel.set(0);this.group.set(null);afterNextRender(()=>this.visitButton()?.nativeElement.focus({preventScroll:true}),{injector:this.injector});}
           }),
           interiorState:state=>this.zone.run(()=>{
@@ -157,6 +160,8 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   visitorRelease(input:VisitorInput):void {this.zone.runOutsideAngular(()=>this.viewer?.visitorInput(input,false));}
   visitorClick(input:VisitorInput,event:MouseEvent):void {if(event.detail===0)this.zone.runOutsideAngular(()=>this.viewer?.visitorStep(input));}
   visitorDestination(id:string):void {this.zone.runOutsideAngular(()=>this.viewer?.visitorDestination(id));}
+  visitorEnter():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorEnter());}
+  visitorJump():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorJump());}
   visitorGo():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorGo());}
   visitorStopAutoWalk():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorStopAutoWalk());}
   visitorFaster():void {this.zone.runOutsideAngular(()=>this.viewer?.visitorFaster());}

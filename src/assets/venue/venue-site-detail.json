@@ -1,0 +1,2281 @@
+{
+  "source": "User supplied 1918 \u00d7 820 aerial view with red property outline, 2026-10-12",
+  "status": "Visual reconstruction; not a measured survey. Heights, concealed surfaces and individual planting are approximate.",
+  "sourceModelSha256": "e998ea8716b8ff7a233f49aed65992bdf9d071e93697948badbef09df15e02ac",
+  "affine": {
+    "x": [
+      0.7754266403231816,
+      0.443910291653813,
+      -930.0847676671463
+    ],
+    "z": [
+      -0.4092653600359101,
+      0.8276333136625315,
+      155.96958796885067
+    ]
+  },
+  "anchorResidualsMetres": {
+    "cc": 2.39,
+    "hall14": 2.963,
+    "hall1": 0.271,
+    "hall6": 0.844
+  },
+  "propertyBoundary": [
+    [
+      550,
+      0
+    ],
+    [
+      547,
+      24
+    ],
+    [
+      566,
+      58
+    ],
+    [
+      590,
+      80
+    ],
+    [
+      600,
+      117
+    ],
+    [
+      574,
+      140
+    ],
+    [
+      517,
+      159
+    ],
+    [
+      441,
+      184
+    ],
+    [
+      418,
+      224
+    ],
+    [
+      373,
+      246
+    ],
+    [
+      326,
+      258
+    ],
+    [
+      267,
+      261
+    ],
+    [
+      242,
+      297
+    ],
+    [
+      230,
+      330
+    ],
+    [
+      232,
+      365
+    ],
+    [
+      264,
+      370
+    ],
+    [
+      307,
+      404
+    ],
+    [
+      353,
+      439
+    ],
+    [
+      394,
+      458
+    ],
+    [
+      446,
+      477
+    ],
+    [
+      491,
+      489
+    ],
+    [
+      521,
+      510
+    ],
+    [
+      566,
+      529
+    ],
+    [
+      620,
+      551
+    ],
+    [
+      670,
+      572
+    ],
+    [
+      708,
+      606
+    ],
+    [
+      750,
+      630
+    ],
+    [
+      801,
+      646
+    ],
+    [
+      842,
+      672
+    ],
+    [
+      887,
+      709
+    ],
+    [
+      932,
+      734
+    ],
+    [
+      977,
+      765
+    ],
+    [
+      1030,
+      794
+    ],
+    [
+      1072,
+      814
+    ],
+    [
+      1160,
+      820
+    ],
+    [
+      1367,
+      820
+    ],
+    [
+      1387,
+      785
+    ],
+    [
+      1395,
+      731
+    ],
+    [
+      1420,
+      679
+    ],
+    [
+      1456,
+      648
+    ],
+    [
+      1474,
+      606
+    ],
+    [
+      1517,
+      559
+    ],
+    [
+      1544,
+      510
+    ],
+    [
+      1584,
+      469
+    ],
+    [
+      1618,
+      413
+    ],
+    [
+      1643,
+      371
+    ],
+    [
+      1671,
+      328
+    ],
+    [
+      1709,
+      285
+    ],
+    [
+      1710,
+      241
+    ],
+    [
+      1694,
+      210
+    ],
+    [
+      1654,
+      183
+    ],
+    [
+      1603,
+      148
+    ],
+    [
+      1568,
+      125
+    ],
+    [
+      1528,
+      94
+    ],
+    [
+      1514,
+      65
+    ],
+    [
+      1488,
+      48
+    ],
+    [
+      1431,
+      48
+    ],
+    [
+      1402,
+      57
+    ],
+    [
+      1350,
+      67
+    ],
+    [
+      1279,
+      66
+    ],
+    [
+      1209,
+      57
+    ],
+    [
+      1157,
+      46
+    ],
+    [
+      1102,
+      45
+    ],
+    [
+      1067,
+      30
+    ],
+    [
+      1019,
+      25
+    ],
+    [
+      959,
+      26
+    ],
+    [
+      912,
+      26
+    ],
+    [
+      857,
+      19
+    ],
+    [
+      817,
+      15
+    ],
+    [
+      791,
+      0
+    ]
+  ],
+  "referenceExtent": [
+    1918,
+    820
+  ],
+  "mapMask": {
+    "polygons": [
+      [
+        [
+          0,
+          0
+        ],
+        [
+          390,
+          0
+        ],
+        [
+          338,
+          31
+        ],
+        [
+          181,
+          59
+        ],
+        [
+          57,
+          116
+        ],
+        [
+          0,
+          130
+        ]
+      ],
+      [
+        [
+          17,
+          181
+        ],
+        [
+          117,
+          124
+        ],
+        [
+          161,
+          151
+        ],
+        [
+          137,
+          245
+        ],
+        [
+          209,
+          283
+        ],
+        [
+          170,
+          314
+        ],
+        [
+          91,
+          285
+        ]
+      ],
+      [
+        [
+          371,
+          9
+        ],
+        [
+          415,
+          0
+        ],
+        [
+          556,
+          0
+        ],
+        [
+          548,
+          26
+        ],
+        [
+          489,
+          33
+        ],
+        [
+          413,
+          35
+        ]
+      ],
+      [
+        [
+          209,
+          258
+        ],
+        [
+          291,
+          236
+        ],
+        [
+          358,
+          207
+        ],
+        [
+          407,
+          180
+        ],
+        [
+          418,
+          210
+        ],
+        [
+          373,
+          234
+        ],
+        [
+          303,
+          258
+        ],
+        [
+          266,
+          274
+        ]
+      ],
+      [
+        [
+          327,
+          667
+        ],
+        [
+          391,
+          590
+        ],
+        [
+          432,
+          573
+        ],
+        [
+          482,
+          598
+        ],
+        [
+          643,
+          668
+        ],
+        [
+          813,
+          747
+        ],
+        [
+          817,
+          820
+        ],
+        [
+          317,
+          820
+        ]
+      ],
+      [
+        [
+          18,
+          460
+        ],
+        [
+          91,
+          441
+        ],
+        [
+          112,
+          479
+        ],
+        [
+          137,
+          552
+        ],
+        [
+          187,
+          584
+        ],
+        [
+          166,
+          648
+        ],
+        [
+          85,
+          584
+        ]
+      ],
+      [
+        [
+          1397,
+          773
+        ],
+        [
+          1444,
+          699
+        ],
+        [
+          1620,
+          667
+        ],
+        [
+          1746,
+          604
+        ],
+        [
+          1853,
+          568
+        ],
+        [
+          1918,
+          546
+        ],
+        [
+          1918,
+          820
+        ],
+        [
+          1406,
+          820
+        ]
+      ],
+      [
+        [
+          1821,
+          55
+        ],
+        [
+          1887,
+          58
+        ],
+        [
+          1918,
+          91
+        ],
+        [
+          1918,
+          185
+        ],
+        [
+          1835,
+          177
+        ],
+        [
+          1797,
+          204
+        ]
+      ],
+      [
+        [
+          1717,
+          464
+        ],
+        [
+          1741,
+          393
+        ],
+        [
+          1770,
+          295
+        ],
+        [
+          1810,
+          221
+        ],
+        [
+          1843,
+          246
+        ],
+        [
+          1809,
+          346
+        ],
+        [
+          1794,
+          435
+        ],
+        [
+          1853,
+          478
+        ],
+        [
+          1837,
+          523
+        ]
+      ],
+      [
+        [
+          1217,
+          76
+        ],
+        [
+          1276,
+          78
+        ],
+        [
+          1356,
+          84
+        ],
+        [
+          1402,
+          58
+        ],
+        [
+          1491,
+          57
+        ],
+        [
+          1519,
+          94
+        ],
+        [
+          1541,
+          114
+        ],
+        [
+          1524,
+          135
+        ],
+        [
+          1458,
+          85
+        ],
+        [
+          1385,
+          110
+        ],
+        [
+          1320,
+          104
+        ]
+      ],
+      [
+        [
+          162,
+          183
+        ],
+        [
+          194,
+          139
+        ],
+        [
+          230,
+          160
+        ],
+        [
+          218,
+          191
+        ],
+        [
+          207,
+          216
+        ],
+        [
+          217,
+          239
+        ],
+        [
+          205,
+          259
+        ],
+        [
+          179,
+          241
+        ],
+        [
+          169,
+          215
+        ]
+      ],
+      [
+        [
+          202,
+          128
+        ],
+        [
+          292,
+          91
+        ],
+        [
+          334,
+          100
+        ],
+        [
+          359,
+          151
+        ],
+        [
+          341,
+          179
+        ],
+        [
+          307,
+          194
+        ],
+        [
+          298,
+          175
+        ],
+        [
+          273,
+          185
+        ],
+        [
+          240,
+          174
+        ],
+        [
+          226,
+          147
+        ]
+      ],
+      [
+        [
+          219,
+          200
+        ],
+        [
+          310,
+          173
+        ],
+        [
+          329,
+          199
+        ],
+        [
+          310,
+          220
+        ],
+        [
+          236,
+          247
+        ],
+        [
+          210,
+          240
+        ]
+      ],
+      [
+        [
+          395,
+          53
+        ],
+        [
+          460,
+          36
+        ],
+        [
+          499,
+          47
+        ],
+        [
+          539,
+          85
+        ],
+        [
+          534,
+          112
+        ],
+        [
+          502,
+          132
+        ],
+        [
+          447,
+          124
+        ],
+        [
+          418,
+          103
+        ]
+      ],
+      [
+        [
+          18,
+          367
+        ],
+        [
+          39,
+          351
+        ],
+        [
+          65,
+          350
+        ],
+        [
+          91,
+          363
+        ],
+        [
+          112,
+          386
+        ],
+        [
+          124,
+          411
+        ],
+        [
+          139,
+          420
+        ],
+        [
+          122,
+          439
+        ],
+        [
+          94,
+          425
+        ],
+        [
+          80,
+          399
+        ],
+        [
+          60,
+          383
+        ],
+        [
+          46,
+          385
+        ],
+        [
+          33,
+          403
+        ],
+        [
+          30,
+          419
+        ],
+        [
+          17,
+          416
+        ],
+        [
+          11,
+          392
+        ]
+      ],
+      [
+        [
+          127,
+          424
+        ],
+        [
+          156,
+          415
+        ],
+        [
+          181,
+          427
+        ],
+        [
+          211,
+          451
+        ],
+        [
+          247,
+          470
+        ],
+        [
+          280,
+          486
+        ],
+        [
+          299,
+          510
+        ],
+        [
+          283,
+          528
+        ],
+        [
+          265,
+          511
+        ],
+        [
+          243,
+          501
+        ],
+        [
+          226,
+          489
+        ],
+        [
+          199,
+          476
+        ],
+        [
+          170,
+          453
+        ],
+        [
+          139,
+          448
+        ]
+      ],
+      [
+        [
+          112,
+          472
+        ],
+        [
+          139,
+          478
+        ],
+        [
+          161,
+          517
+        ],
+        [
+          185,
+          536
+        ],
+        [
+          213,
+          551
+        ],
+        [
+          202,
+          575
+        ],
+        [
+          172,
+          556
+        ],
+        [
+          149,
+          543
+        ],
+        [
+          133,
+          520
+        ]
+      ],
+      [
+        [
+          295,
+          465
+        ],
+        [
+          323,
+          465
+        ],
+        [
+          349,
+          477
+        ],
+        [
+          376,
+          484
+        ],
+        [
+          399,
+          512
+        ],
+        [
+          384,
+          535
+        ],
+        [
+          358,
+          521
+        ],
+        [
+          349,
+          508
+        ],
+        [
+          322,
+          498
+        ],
+        [
+          303,
+          488
+        ]
+      ],
+      [
+        [
+          213,
+          614
+        ],
+        [
+          246,
+          590
+        ],
+        [
+          274,
+          614
+        ],
+        [
+          295,
+          653
+        ],
+        [
+          277,
+          682
+        ],
+        [
+          249,
+          665
+        ],
+        [
+          234,
+          640
+        ]
+      ],
+      [
+        [
+          1574,
+          102
+        ],
+        [
+          1667,
+          99
+        ],
+        [
+          1673,
+          129
+        ],
+        [
+          1650,
+          151
+        ],
+        [
+          1589,
+          143
+        ]
+      ],
+      [
+        [
+          347,
+          637
+        ],
+        [
+          371,
+          620
+        ],
+        [
+          383,
+          638
+        ],
+        [
+          357,
+          653
+        ]
+      ],
+      [
+        [
+          391,
+          625
+        ],
+        [
+          413,
+          611
+        ],
+        [
+          429,
+          630
+        ],
+        [
+          402,
+          647
+        ]
+      ],
+      [
+        [
+          443,
+          637
+        ],
+        [
+          469,
+          618
+        ],
+        [
+          486,
+          639
+        ],
+        [
+          458,
+          655
+        ]
+      ],
+      [
+        [
+          490,
+          646
+        ],
+        [
+          516,
+          634
+        ],
+        [
+          527,
+          655
+        ],
+        [
+          501,
+          668
+        ]
+      ],
+      [
+        [
+          537,
+          666
+        ],
+        [
+          568,
+          658
+        ],
+        [
+          581,
+          678
+        ],
+        [
+          550,
+          687
+        ]
+      ],
+      [
+        [
+          581,
+          687
+        ],
+        [
+          613,
+          677
+        ],
+        [
+          626,
+          699
+        ],
+        [
+          594,
+          708
+        ]
+      ],
+      [
+        [
+          633,
+          706
+        ],
+        [
+          660,
+          700
+        ],
+        [
+          669,
+          723
+        ],
+        [
+          641,
+          731
+        ]
+      ],
+      [
+        [
+          693,
+          721
+        ],
+        [
+          726,
+          713
+        ],
+        [
+          734,
+          735
+        ],
+        [
+          702,
+          743
+        ]
+      ],
+      [
+        [
+          751,
+          750
+        ],
+        [
+          780,
+          740
+        ],
+        [
+          787,
+          764
+        ],
+        [
+          760,
+          774
+        ]
+      ],
+      [
+        [
+          326,
+          713
+        ],
+        [
+          350,
+          687
+        ],
+        [
+          363,
+          708
+        ],
+        [
+          340,
+          729
+        ]
+      ],
+      [
+        [
+          381,
+          706
+        ],
+        [
+          405,
+          694
+        ],
+        [
+          417,
+          719
+        ],
+        [
+          393,
+          731
+        ]
+      ],
+      [
+        [
+          435,
+          729
+        ],
+        [
+          461,
+          720
+        ],
+        [
+          470,
+          743
+        ],
+        [
+          445,
+          751
+        ]
+      ],
+      [
+        [
+          491,
+          748
+        ],
+        [
+          519,
+          740
+        ],
+        [
+          529,
+          764
+        ],
+        [
+          500,
+          773
+        ]
+      ],
+      [
+        [
+          554,
+          759
+        ],
+        [
+          581,
+          750
+        ],
+        [
+          590,
+          775
+        ],
+        [
+          564,
+          783
+        ]
+      ],
+      [
+        [
+          615,
+          779
+        ],
+        [
+          645,
+          771
+        ],
+        [
+          652,
+          794
+        ],
+        [
+          622,
+          804
+        ]
+      ],
+      [
+        [
+          690,
+          788
+        ],
+        [
+          719,
+          782
+        ],
+        [
+          727,
+          807
+        ],
+        [
+          697,
+          815
+        ]
+      ],
+      [
+        [
+          372,
+          785
+        ],
+        [
+          398,
+          765
+        ],
+        [
+          409,
+          787
+        ],
+        [
+          385,
+          805
+        ]
+      ],
+      [
+        [
+          443,
+          794
+        ],
+        [
+          472,
+          785
+        ],
+        [
+          481,
+          813
+        ],
+        [
+          451,
+          820
+        ]
+      ],
+      [
+        [
+          1805,
+          224
+        ],
+        [
+          1918,
+          232
+        ],
+        [
+          1918,
+          452
+        ],
+        [
+          1815,
+          464
+        ],
+        [
+          1787,
+          428
+        ],
+        [
+          1791,
+          351
+        ]
+      ]
+    ],
+    "roads": [
+      {
+        "id": "southern-frontage",
+        "width": 25,
+        "median": 3,
+        "points": [
+          [
+            -122.78968589108122,
+            183.64318263560554
+          ],
+          [
+            -83.4370494200211,
+            193.2527927158177
+          ],
+          [
+            -49.99999999999999,
+            221
+          ],
+          [
+            100.00000000000006,
+            314
+          ],
+          [
+            242.00000000000003,
+            396.00000000000006
+          ],
+          [
+            398.9999999999999,
+            480
+          ],
+          [
+            557,
+            555
+          ],
+          [
+            714.9999999999999,
+            632
+          ],
+          [
+            836.9999999999999,
+            704
+          ],
+          [
+            965,
+            787
+          ],
+          [
+            1095.0000000000002,
+            857
+          ],
+          [
+            1186.4979484588187,
+            884.3085126071214
+          ],
+          [
+            1277.6804014095253,
+            896.7290048905194
+          ],
+          [
+            1363,
+            856.0000000000001
+          ]
+        ]
+      },
+      {
+        "id": "eastern-frontage",
+        "width": 25,
+        "median": 3,
+        "points": [
+          [
+            1363,
+            856.0000000000001
+          ],
+          [
+            1398.0000000000002,
+            737.0000000000002
+          ],
+          [
+            1465.9999999999998,
+            630.9999999999999
+          ],
+          [
+            1545.0000000000002,
+            523.0000000000001
+          ],
+          [
+            1610.0000000000002,
+            419
+          ],
+          [
+            1674,
+            316.00000000000006
+          ],
+          [
+            1735.9999999999998,
+            215.00000000000003
+          ],
+          [
+            1776,
+            136.9999999999999
+          ],
+          [
+            1801,
+            53.999999999999844
+          ],
+          [
+            1801,
+            -35.00000000000004
+          ]
+        ]
+      },
+      {
+        "id": "northern-road",
+        "width": 21,
+        "median": 2,
+        "points": [
+          [
+            -122.78968589108122,
+            183.64318263560554
+          ],
+          [
+            -17.58222383591878,
+            135.87101619324426
+          ],
+          [
+            73.33894197018508,
+            89.9117012846251
+          ],
+          [
+            205.34720701793563,
+            41.86792788749732
+          ],
+          [
+            326.68740829757087,
+            5.60875871067907
+          ],
+          [
+            464.16034880167837,
+            -19.137413200595375
+          ],
+          [
+            596.3552475241448,
+            -25.48132431771161
+          ],
+          [
+            671.4049612503786,
+            -24.573829299857334
+          ],
+          [
+            736,
+            -18.999999999999943
+          ],
+          [
+            956,
+            -5.999999999999967
+          ],
+          [
+            1172,
+            9.000000000000089
+          ],
+          [
+            1401.9999999999998,
+            24.000000000000007
+          ],
+          [
+            1634,
+            31.999999999999986
+          ],
+          [
+            1835,
+            36.999999999999986
+          ],
+          [
+            1960,
+            35.00000000000004
+          ],
+          [
+            2220.9840871231863,
+            69.81492513387109
+          ],
+          [
+            2569.6931399063683,
+            133.00381436992504
+          ],
+          [
+            2925.638657651438,
+            216.1362089791144
+          ],
+          [
+            3403.2976440255766,
+            346.40915897151024
+          ]
+        ]
+      },
+      {
+        "id": "southwest-link",
+        "width": 16,
+        "median": 1.5,
+        "points": [
+          [
+            -21.000000000000057,
+            451.00000000000006
+          ],
+          [
+            33.99999999999993,
+            526.0000000000001
+          ],
+          [
+            80.99999999999994,
+            598
+          ],
+          [
+            137.00000000000009,
+            686
+          ],
+          [
+            210.99999999999997,
+            798.0000000000001
+          ],
+          [
+            242.00000000000009,
+            850
+          ],
+          [
+            296.9427148615615,
+            945.0336927325844
+          ],
+          [
+            394.11241755783055,
+            1097.511400885868
+          ],
+          [
+            468.06222300751307,
+            1251.8924962244837
+          ],
+          [
+            547.4020504436669,
+            1412.891248136948
+          ]
+        ]
+      },
+      {
+        "id": "western-local-street",
+        "width": 8,
+        "median": 0,
+        "points": [
+          [
+            -4.999999999999927,
+            249
+          ],
+          [
+            21.999999999999996,
+            290
+          ],
+          [
+            39.99999999999993,
+            338.99999999999994
+          ],
+          [
+            121.99999999999999,
+            463
+          ],
+          [
+            210.00000000000006,
+            505.99999999999994
+          ],
+          [
+            287,
+            547
+          ],
+          [
+            364,
+            568.0000000000001
+          ],
+          [
+            435.00000000000006,
+            546.0000000000001
+          ]
+        ]
+      },
+      {
+        "id": "residential-access",
+        "width": 7,
+        "median": 0,
+        "points": [
+          [
+            210.99999999999997,
+            798.0000000000001
+          ],
+          [
+            314.00000000000006,
+            678
+          ],
+          [
+            377.0000000000001,
+            611
+          ],
+          [
+            435.00000000000006,
+            546.0000000000001
+          ]
+        ]
+      },
+      {
+        "id": "southeastern-park-road",
+        "width": 9,
+        "median": 0,
+        "points": [
+          [
+            1433.944347355254,
+            680.9691055932805
+          ],
+          [
+            1538.0000000000002,
+            650.0000000000001
+          ],
+          [
+            1665.9999999999998,
+            626
+          ],
+          [
+            1781,
+            563.0000000000001
+          ],
+          [
+            1930.0000000000002,
+            513
+          ]
+        ]
+      },
+      {
+        "id": "western-cross-connector",
+        "width": 16,
+        "median": 1.5,
+        "points": [
+          [
+            -49.99999999999999,
+            221
+          ],
+          [
+            -68.70283235164526,
+            291.51961065410353
+          ],
+          [
+            -55.85238499362724,
+            368.12060733710115
+          ],
+          [
+            -21.000000000000057,
+            451.00000000000006
+          ]
+        ]
+      },
+      {
+        "id": "residential-frontage-connector",
+        "width": 8,
+        "median": 0,
+        "points": [
+          [
+            435.00000000000006,
+            546.0000000000001
+          ],
+          [
+            446,
+            528
+          ],
+          [
+            462.0000000038639,
+            509.9050632929734
+          ]
+        ]
+      },
+      {
+        "id": "northwest-city-approach",
+        "width": 21,
+        "median": 2,
+        "points": [
+          [
+            -691.5365779742947,
+            461.30245927264997
+          ],
+          [
+            -497.254393088443,
+            354.2451291223842
+          ],
+          [
+            -304.70667097317613,
+            258.8818675408386
+          ],
+          [
+            -122.78968589108122,
+            183.64318263560554
+          ]
+        ]
+      },
+      {
+        "id": "metro-local-approach",
+        "width": 10,
+        "median": 0,
+        "points": [
+          [
+            -4.999999999999927,
+            249
+          ],
+          [
+            -25.999999999999968,
+            208.00000000000003
+          ],
+          [
+            -13.000000000000036,
+            168.99999999999994
+          ],
+          [
+            135.00000000000003,
+            102.00000000000001
+          ],
+          [
+            326.00000000000006,
+            24.000000000000007
+          ],
+          [
+            498,
+            -45
+          ]
+        ]
+      }
+    ],
+    "bounds": [
+      -771.5365779742947,
+      -125,
+      3483.2976440255766,
+      1492.891248136948
+    ]
+  },
+  "roadNetwork": {
+    "source": "Previous user aerial for visible roads; bundled Esri satellite-inner.jpg for continuation beyond its cropped edges.",
+    "status": "Visual road alignment, not a surveyed road or traffic model. Widths and junction details estimated; grade separation is not established.",
+    "topology": {
+      "components": 1,
+      "junctions": 9,
+      "segments": 84,
+      "openEnds": [
+        {
+          "p": [
+            1801,
+            -35.00000000000004
+          ],
+          "road": [
+            "eastern-frontage"
+          ]
+        },
+        {
+          "p": [
+            3403.2976440255766,
+            346.40915897151024
+          ],
+          "road": [
+            "northern-road"
+          ]
+        },
+        {
+          "p": [
+            547.4020504436669,
+            1412.891248136948
+          ],
+          "road": [
+            "southwest-link"
+          ]
+        },
+        {
+          "p": [
+            1930.0000000000002,
+            513
+          ],
+          "road": [
+            "southeastern-park-road"
+          ]
+        },
+        {
+          "p": [
+            -691.5365779742947,
+            461.30245927264997
+          ],
+          "road": [
+            "northwest-city-approach"
+          ]
+        },
+        {
+          "p": [
+            498,
+            -45
+          ],
+          "road": [
+            "metro-local-approach"
+          ]
+        }
+      ]
+    },
+    "fadeEnds": [
+      [
+        450.9217513470205,
+        -610.0844914340121
+      ],
+      [
+        1862.697481250001,
+        -950.1824874999998
+      ],
+      [
+        121.5823312499997,
+        1101.2927562500001
+      ],
+      [
+        794.2146277750005,
+        -209.33666699157723
+      ],
+      [
+        -1261.5437437500002,
+        820.7808374999997
+      ],
+      [
+        -563.8982639106234,
+        -85.08806044384644
+      ]
+    ]
+  },
+  "trees": {
+    "nearby": 1388,
+    "property": 7
+  },
+  "bushes": {
+    "nearby": 0,
+    "property": 330
+  },
+  "features": [
+    {
+      "id": "southern-frontage",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 25,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "eastern-frontage",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 25,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "northern-road",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 21,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "southwest-link",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 16,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "western-local-street",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 8,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "residential-access",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 7,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "southeastern-park-road",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 9,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "western-cross-connector",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 16,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "residential-frontage-connector",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 8,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "northwest-city-approach",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 21,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "metro-local-approach",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 10,
+      "status": "Connected aerial/satellite trace; widths, junction detail and road levels estimated"
+    },
+    {
+      "id": "northwest-office-west-wing",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 16,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "northwest-office-courtyard-wing",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 19,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "northwest-office-link",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 13,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "northwest-office-east-wing",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 15,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "southwest-institution-curved-wing",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 11,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "southwest-institution-main-wing",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 13,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "southwest-institution-south-wing",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 10,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "southwest-institution-east-wing",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 13,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "southwest-institution-corner",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 9,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "north-edge-service-block",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-01",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-02",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-03",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 8,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-04",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-05",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 8,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-06",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-07",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 8,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-08",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-09",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-10",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 8,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-11",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-12",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 8,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-13",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-14",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-15",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 8,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-16",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-17",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 7,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "residential-18",
+      "phase": 1,
+      "type": "building",
+      "heightMetres": 8,
+      "status": "Visible footprint traced; height and fa\u00e7ade estimated"
+    },
+    {
+      "id": "supreme-court-metro",
+      "phase": 1,
+      "type": "metro",
+      "status": "Aerial roof and rail alignment; structure heights and access details estimated"
+    },
+    {
+      "id": "property-planting-01",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-02",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-03",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-04",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-05",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-06",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-07",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-08",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-09",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-10",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-11",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-planting-12",
+      "phase": 2,
+      "type": "planting",
+      "status": "Visible planting belt constrained to existing lawn mesh; individual bushes inferred"
+    },
+    {
+      "id": "property-lawn-edge-shrubs",
+      "phase": 2,
+      "type": "planting",
+      "count": 281,
+      "status": "Inferred low planting on existing grass boundaries; individual bushes not surveyed"
+    }
+  ],
+  "protectedSourceUnchanged": true,
+  "runtimeReplaces": [
+    "SUPREME_COURT_METRO_STN",
+    "PHOTO_ADMIN*"
+  ],
+  "blenderFile": "work/venue-surroundings/bharat-mandapam-surroundings.blend"
+}

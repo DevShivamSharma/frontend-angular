@@ -14,11 +14,11 @@ export function batchVenue(root: T.Group, classify: (object: T.Object3D) => stri
         if (!(object instanceof T.Mesh) || object instanceof T.SkinnedMesh || object instanceof T.InstancedMesh || object.children.length ||
             Array.isArray(object.material) || object.material.transparent || object.morphTargetInfluences) return;
         for (let node: T.Object3D | null = object; node; node = node.parent)
-            if (node.userData['cc_level'] || node.userData['interiorRoof'] || /^(OUTER_GROUND|CONTEXT_GROUND)$/.test(node.name)) return;
+            if (node.userData['cc_level'] || node.userData['interiorRoof'] || node.userData['dynamicGate9'] || /^(OUTER_GROUND|CONTEXT_GROUND)$/.test(node.name)) return;
         const geometry = object.geometry;
         const attributes = Object.entries(geometry.attributes as Record<string, T.BufferAttribute>).map(([key, a]) =>
             `${key}:${a.itemSize}:${a.normalized}:${a.array.constructor.name}`).sort().join(',');
-        const key = [object.material.uuid, classify(object), semantics(object), attributes, !!geometry.index].join('|');
+        const key = [object.material.uuid, classify(object), semantics(object), object.visible, attributes, !!geometry.index].join('|');
         const bin = bins.get(key) ?? [];
         bin.push(object); bins.set(key, bin);
     });
@@ -32,6 +32,7 @@ export function batchVenue(root: T.Group, classify: (object: T.Object3D) => stri
         if (!geometry) continue;
         geometry.computeBoundingBox(); geometry.computeBoundingSphere();
         const first = meshes[0], batch = new T.Mesh(geometry, first.material);
+        batch.visible = first.visible;
         batch.name = first.name;
         batch.userData = { ...first.userData, destinationId: classify(first),
             batchSources: meshes.map(mesh => mesh.name) };

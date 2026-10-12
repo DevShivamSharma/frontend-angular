@@ -1,0 +1,88 @@
+{
+  "status": "Photo-informed reconstruction; unsurveyed dimensions and camera registration. Photo 3 provenance unconfirmed; not used for unique geometry.",
+  "sourceSha256": "e998ea8716b8ff7a233f49aed65992bdf9d071e93697948badbef09df15e02ac",
+  "gateCenter": [
+    -585.9860229492188,
+    0.23999999463558197,
+    288.3275451660156
+  ],
+  "slideDirection": [
+    0.998203456401825,
+    0.0,
+    0.05991525948047638
+  ],
+  "slideDistance": 7.25,
+  "clearOpeningMetres": 14,
+  "views": {
+    "gate9-approach": {
+      "position": [
+        -588.10888671875,
+        1.899999976158142,
+        318.6344909667969
+      ],
+      "target": [
+        -585.0992431640625,
+        2.5,
+        283.4216613769531
+      ],
+      "label": "Gate 9 \u00b7 Approach"
+    },
+    "gate9-close": {
+      "position": [
+        -582.349365234375,
+        1.899999976158142,
+        294.5586853027344
+      ],
+      "target": [
+        -585.9860229492188,
+        2.299999952316284,
+        288.3275451660156
+      ],
+      "label": "Gate 9 \u00b7 Metal gate"
+    },
+    "gate9-inside": {
+      "position": [
+        -582.2139892578125,
+        1.899999976158142,
+        220.4242401123047
+      ],
+      "target": [
+        -551.2139892578125,
+        2.799999952316284,
+        166.7306671142578
+      ],
+      "label": "Gate 9 \u00b7 Inside the venue"
+    },
+    "gate9-canopy": {
+      "position": [
+        -555.2139892578125,
+        1.899999976158142,
+        173.65887451171875
+      ],
+      "target": [
+        -586.0441284179688,
+        2.5,
+        217.05821228027344
+      ],
+      "label": "Gate 9 \u00b7 Canopy lane"
+    }
+  },
+  "approachConnectionLocal": [
+    -627.798,
+    -321.451
+  ],
+  "photoSequence": [
+    5,
+    2,
+    6,
+    1,
+    4
+  ],
+  "assumptions": [
+    "14 m gate opening and 4.4 m gate height are estimates.",
+    "Gate bearing is aligned to the connected outside road; exact surveyed bearing is unavailable.",
+    "Small unreadable sign text, concealed rooms and transient traffic are omitted.",
+    "Canopy footprints, spacing, road widths and planting positions are inferred from overlapping views.",
+    "Office building footprint retained from the existing venue."
+  ]
+}

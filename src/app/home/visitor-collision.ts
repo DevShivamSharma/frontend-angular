@@ -95,6 +95,9 @@ export function createVisitorCollisionWorld(root: T.Object3D, portals: VisitorPo
       if (!(o instanceof T.Mesh)) return;
       let name = o.name;
       for (let p = o.parent; p && p !== object; p = p.parent) name += ' ' + p.name;
+      // Gate 9 opens before a visitor reaches it. Its stationary piers, fence,
+      // cabins and lane barriers still participate in the triangle collider.
+      if (/GATE9_moving_leaf_/.test(name)) return;
       // These are explicitly non-solid render layers. Gate 6's panels are hidden
       // by visitor-portals during the visit; its piers and surrounding fence remain solid.
       if (/source.floor.plan|floor.plate|adapted.floor.deck|SITE_GROUND|CONTEXT_GROUND|OUTER_GROUND|LAWNS|asphalt|paving|lane.marking|edge.inlay|leaf.canop|falling.water|water.body|cascade.water|spray|jets|nozzle|PHOTO_GATE_6.*(?:fence.panels|pickets.and.rails)/i.test(name)) return;

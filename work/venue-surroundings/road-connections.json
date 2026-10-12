@@ -1,0 +1,22 @@
+{
+  "source": "Previous user aerial for visible roads; bundled Esri satellite-inner.jpg for continuation beyond its cropped edges.",
+  "satelliteCoordinateSize": 1600,
+  "status": "Visual road alignment, not a surveyed road or traffic model. Widths and junction details estimated; grade separation is not established.",
+  "satelliteJunction": [835, 574],
+  "photoEdits": {
+    "western-local-street": {"prepend": [[-5,249],[22,290]]},
+    "residential-access": {"first": [211,798]},
+    "southeastern-park-road": {"first": [1434,681]}
+  },
+  "satelliteExtensions": {
+    "southern-frontage": {"prepend": [[835,574],[837,584]], "append": [[810,952],[817,974]], "joinRoadEnd": "eastern-frontage"},
+    "northern-road": {"prepend": [[835,574],[858,592],[879,607],[905,631],[927,654],[948,682],[964,711],[972,728]], "append": [[1119,1088],[1142,1174],[1161,1264],[1182,1387]]},
+    "southwest-link": {"append": [[698,759],[672,799],[643,834],[613,871]]}
+  },
+  "additionalRoads": [
+    {"id":"western-cross-connector","width":16,"median":1.5,"startPhoto":[-50,221],"satellite":[[815,599],[798,611]],"endPhoto":[-21,451]},
+    {"id":"residential-frontage-connector","width":8,"median":0,"photo":[[435,546],[446,528],[462,509.9050633]]},
+    {"id":"northwest-city-approach","width":21,"median":2,"satellite":[[706,479],[753,510],[797,542],[835,574]]},
+    {"id":"metro-local-approach","width":10,"median":0,"photo":[[-5,249],[-26,208],[-13,169],[135,102],[326,24],[498,-45]]}
+  ]
+}

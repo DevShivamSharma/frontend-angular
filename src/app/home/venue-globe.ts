@@ -7,6 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { VenueAppearance, VenueScenery } from './venue-appearance';
 import { createVenueSatellite } from './venue-satellite';
+import type { SiteRegistration } from './venue-site-detail';
 
 
 type Mode = 'venue' | 'globe';
@@ -62,6 +63,42 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   // A quiet, flat map keeps the authored campus as the only detailed 3D subject.
   // Unlit colours stay legible in both lighting modes and need no shadow passes.
   const mapGround = new T.Color('#858b80');
+  const siteDetail = { value: 0 };
+  const pixelU = { value: new T.Vector3() }, pixelV = { value: new T.Vector3() };
+  const referenceExtent = { value: new T.Vector2() };
+  const siteMaskBounds = { value: new T.Vector4() };
+  const roadEndCount = { value: 0 }, roadEnds = { value: Array.from({ length: 16 }, () => new T.Vector2()) };
+  const siteMask = { value: new T.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1) as T.Texture };
+  siteMask.value.needsUpdate = true;
+  signal.addEventListener('abort', () => siteMask.value.dispose(), { once: true });
+  function setSiteDetail(registration: SiteRegistration) {
+    const { x, z } = registration.affine, determinant = x[0] * z[1] - x[1] * z[0];
+    pixelU.value.set(z[1] / determinant, -x[1] / determinant, (x[1] * z[2] - z[1] * x[2]) / determinant);
+    pixelV.value.set(-z[0] / determinant, x[0] / determinant, (z[0] * x[2] - x[0] * z[2]) / determinant);
+    referenceExtent.value.fromArray(registration.referenceExtent);
+    const bounds = registration.mapMask.bounds ?? [0, 0, ...registration.referenceExtent];
+    siteMaskBounds.value.fromArray(bounds);
+    roadEndCount.value = Math.min(16, registration.roadNetwork?.fadeEnds.length ?? 0);
+    for (let i = 0; i < roadEndCount.value; i++) roadEnds.value[i].fromArray(registration.roadNetwork!.fadeEnds[i]);
+    const canvas = document.createElement('canvas'); canvas.width = 4096; canvas.height = 2048;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(canvas.width / (bounds[2] - bounds[0]), canvas.height / (bounds[3] - bounds[1]));
+    ctx.translate(-bounds[0], -bounds[1]);
+    // Red follows the image crop; green roads retain continuity beyond it.
+    ctx.fillStyle = '#f00'; ctx.strokeStyle = '#0f0'; ctx.lineCap = ctx.lineJoin = 'round';
+    for (const ring of registration.mapMask.polygons) {
+      ctx.beginPath(); ring.forEach(([a, b], i) => i ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.closePath(); ctx.fill();
+    }
+    const metresPerPixel = Math.sqrt(Math.abs(determinant));
+    for (const road of registration.mapMask.roads) {
+      ctx.lineWidth = (road.width + 6) / metresPerPixel;
+      ctx.beginPath(); road.points.forEach(([a, b], i) => i ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.stroke();
+    }
+    siteMask.value.dispose(); siteMask.value = new T.CanvasTexture(canvas);
+    siteDetail.value = 1;
+    onInvalidate();
+  }
   const groundMaterial = new T.MeshBasicMaterial({color:mapGround,transparent:true,toneMapped:false});
   const ground=new T.Mesh(new T.CircleGeometry(14000,128),groundMaterial);ground.rotation.x=-Math.PI/2;ground.position.y=-7;groundGroup.add(ground);
   ground.renderOrder = -3;
@@ -69,11 +106,25 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     const material = new T.MeshBasicMaterial({color,transparent:true,toneMapped:false});
     material.onBeforeCompile = shader => {
       shader.uniforms['mapGround'] = { value: mapGround };
+      Object.assign(shader.uniforms, { siteDetail, pixelU, pixelV, referenceExtent, siteMask, siteMaskBounds, roadEndCount, roadEnds });
       shader.vertexShader = 'varying vec2 vMapPosition;\n' + shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         vMapPosition = (modelMatrix * vec4(transformed, 1.0)).xz;`);
-      shader.fragmentShader = 'varying vec2 vMapPosition;\nuniform vec3 mapGround;\n' + shader.fragmentShader;
+      shader.fragmentShader = 'varying vec2 vMapPosition;\nuniform vec3 mapGround;\nuniform float siteDetail;\nuniform vec3 pixelU;\nuniform vec3 pixelV;\nuniform vec2 referenceExtent;\nuniform sampler2D siteMask;\n' + shader.fragmentShader;
+      shader.fragmentShader = 'uniform vec4 siteMaskBounds; uniform int roadEndCount; uniform vec2 roadEnds[16];\n' + shader.fragmentShader;
       shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+        vec3 mapPoint = vec3(vMapPosition, 1.0);
+        vec2 referencePixel = vec2(dot(pixelU, mapPoint), dot(pixelV, mapPoint));
+        if (siteDetail > 0.5 && all(greaterThanEqual(referencePixel, siteMaskBounds.xy)) && all(lessThanEqual(referencePixel, siteMaskBounds.zw))) {
+          vec2 siteUV = (referencePixel - siteMaskBounds.xy) / (siteMaskBounds.zw - siteMaskBounds.xy);
+          float edge = min(min(referencePixel.x, referenceExtent.x - referencePixel.x), min(referencePixel.y, referenceExtent.y - referencePixel.y));
+          vec2 mask = texture2D(siteMask, vec2(siteUV.x, 1.0 - siteUV.y)).rg;
+          float roadCoverage = 1.0;
+          for (int i = 0; i < 16; i++) { if (i >= roadEndCount) break; roadCoverage = min(roadCoverage, smoothstep(0.0, 65.0, distance(vMapPosition, roadEnds[i]))); }
+          float coverage = max(mask.r * smoothstep(-25.0, 65.0, edge), mask.g * roadCoverage);
+          diffuseColor.a *= 1.0 - coverage;
+          if (diffuseColor.a < 0.005) discard;
+        }
         diffuseColor.rgb = mix(diffuseColor.rgb, mapGround, smoothstep(1800.0, 3500.0, length(vMapPosition)));`);
     };
     return material;
@@ -221,5 +272,5 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       else if(mode==='globe'&&distance<R*1.19&&camera.position.clone().sub(center).normalize().y>.72)goVenue();
     }
   }
-  return{update,goGlobe,goVenue,setAppearance,setScenery,get isGlobe(){return mode==='globe'},get transitioning(){return!!transition},get mode(){return mode},group,center,radius:R,attribution:'Earth: NASA Earth Observatory · © OpenStreetMap contributors'};
+  return{update,goGlobe,goVenue,setAppearance,setScenery,setSiteDetail,get isGlobe(){return mode==='globe'},get transitioning(){return!!transition},get mode(){return mode},group,center,radius:R,attribution:'Earth: NASA Earth Observatory · © OpenStreetMap contributors'};
 }

@@ -21,10 +21,12 @@ import { createVenueInteriors, InteriorState } from './venue-interiors';
 import { createVisitorNavigation } from './visitor-navigation';
 import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor';
 import { createVenueSecurityGuards } from './venue-security-guards';
+import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration } from './venue-site-detail';
+import { prepareGate9 } from './venue-gate9';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; }
-export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; startVisitor:()=>void; stopVisitor:()=>void; visitorInput:(input:VisitorInput,down:boolean)=>void; visitorStep:(input:VisitorInput)=>void; visitorDestination:(id:string)=>void; visitorGo:()=>void; visitorStopAutoWalk:()=>void; visitorFaster:()=>void; visitorRestart:()=>void; visitorFloor:(level:number)=>void; readonly isGlobe:boolean; dispose:()=>void; }
+export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; startVisitor:()=>void; stopVisitor:()=>void; visitorInput:(input:VisitorInput,down:boolean)=>void; visitorStep:(input:VisitorInput)=>void; visitorDestination:(id:string)=>void; visitorGo:()=>void; visitorEnter:()=>void; visitorJump:()=>void; visitorStopAutoWalk:()=>void; visitorFaster:()=>void; visitorRestart:()=>void; visitorFloor:(level:number)=>void; readonly isGlobe:boolean; dispose:()=>void; }
 /** Render camera motion and visible fountain water with consistent scene shading. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement): VenueViewer {
     const lifetime = new AbortController();
@@ -41,7 +43,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
     let startVisitorCommand=()=>{},stopVisitorCommand=()=>{};
     let exportCommand=async(_id:string):Promise<ArrayBuffer>=>{throw new Error('Interiors are still loading');};
     const ready = initializeVenue();
-    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), enterHall:(id,guided)=>enterCommand(id,guided),pauseTour:()=>pauseCommand(),leaveInterior:()=>leaveCommand(),walk:(f,t)=>walkCommand(f,t),exportHall:id=>exportCommand(id),visitRoom:(id,room)=>roomCommand(id,room),startVisitor:()=>startVisitorCommand(),stopVisitor:()=>stopVisitorCommand(),visitorInput:(i,d)=>visitor?.input(i,d),visitorStep:i=>visitor?.step(i),visitorDestination:id=>visitor?.destination(id),visitorGo:()=>visitor?.goToDestination(),visitorStopAutoWalk:()=>visitor?.stopAutoWalk(),visitorFaster:()=>visitor?.faster(),visitorRestart:()=>visitor?.restart(),visitorFloor:n=>visitor?.floor(n),get isGlobe(){return isGlobe();}, dispose };
+    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), enterHall:(id,guided)=>enterCommand(id,guided),pauseTour:()=>pauseCommand(),leaveInterior:()=>leaveCommand(),walk:(f,t)=>walkCommand(f,t),exportHall:id=>exportCommand(id),visitRoom:(id,room)=>roomCommand(id,room),startVisitor:()=>startVisitorCommand(),stopVisitor:()=>stopVisitorCommand(),visitorInput:(i,d)=>visitor?.input(i,d),visitorStep:i=>visitor?.step(i),visitorDestination:id=>visitor?.destination(id),visitorGo:()=>visitor?.goToDestination(),visitorEnter:()=>visitor?.enterNearby(),visitorJump:()=>visitor?.jump(),visitorStopAutoWalk:()=>visitor?.stopAutoWalk(),visitorFaster:()=>visitor?.faster(),visitorRestart:()=>visitor?.restart(),visitorFloor:n=>visitor?.floor(n),get isGlobe(){return isGlobe();}, dispose };
     function dispose() {
         if (signal.aborted) return;
         lifetime.abort();
@@ -121,6 +123,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
         let prepared = false, localMapReady = false;
+        let siteRegistration: SiteRegistration | undefined;
+        let gate9: Awaited<ReturnType<typeof prepareGate9>> | undefined;
         let pendingInterior: (()=>void) | undefined;
         let interiors:Awaited<ReturnType<typeof createVenueInteriors>>|undefined,daylight=true;
         let water: ReturnType<typeof createVenueWater> | undefined;
@@ -231,7 +235,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         for (const d of destinations.filter(d => d.gate && d.camera))
             views[d.id] = { p: d.camera!, t: d.target ?? d.center, radius: d.radius };
         // Include the adjoining checkpoint when selecting Gate 9 from the menu.
-        views['gate9'] = { p: [-571, -401, 22], t: [-536, -369, 2.5], radius: 22 };
+        views['gate9'] = { p: [-574, -349, 18], t: [-540, -365, 2.2], radius: 18 };
         levelCommand=n=>{view('cc');level=n;};
         globeCommand=()=>{pendingInterior=undefined;visitor?.stop();interiors?.leave();controls.enabled=true;resetLevel();tween=null;globe?.goGlobe();};
         isGlobe=()=>!!globe?.isGlobe;
@@ -285,6 +289,19 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         prepareReferenceCanopies(root);
         prepareVenueFountainJets(root);
         try {
+            siteRegistration = await prepareVenueSiteDetail(root, asset, signal);
+            globe?.setSiteDetail(siteRegistration);
+        } catch (error) {
+            signal.throwIfAborted();
+            console.warn('Venue surroundings could not load; retaining the existing context.', error);
+        }
+        try {
+            gate9 = await prepareGate9(root, asset, signal);
+        } catch (error) {
+            signal.throwIfAborted();
+            console.warn('Gate 9 detail could not load; retaining the existing entrance.', error);
+        }
+        try {
             interiors=await createVenueInteriors({root,scene,camera,canvas,asset,signal,invalidate,shadowsChanged:()=>renderer.shadowMap.needsUpdate=true,exit:()=>leaveCommand(),daylight:()=>daylight,state:state=>{
                 controls.enabled=!state.walking&&!visitor?.active;
                 if(!state.walking){controls.target.copy(camera.position).add(new T.Vector3(0,0,-1).applyQuaternion(camera.quaternion).multiplyScalar(32));}
@@ -324,7 +341,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i),
             ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/),
             /label|sign|glass|glazing|light|spray/i.test(o.name),
-            isLegacyContextRoad(o)
+            isLegacyContextRoad(o),
+            !!o.userData['supersededBySiteReference']
         ].join(':'));
         if (localMapReady) revealMappedRoads(root);
         scene.add(root);
@@ -350,6 +368,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             m.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); }); originals.set(o, mats.map((m: T.MeshStandardMaterial) => ({ color: m.color.clone(), emissive: m.emissive?.clone() || new T.Color(0), emissiveIntensity: m.emissiveIntensity }))); if (o.userData['cc_level'])
             o.visible = false; });
         replacedMaterials.forEach(material => material.dispose());
+        if (siteRegistration) prepareSiteDetailRendering(root, siteRegistration);
         const appearance = createVenueAppearance(root, renderer, asset, signal);
         cleanups.push(() => appearance.dispose());
         water = createVenueWater(root);
@@ -367,7 +386,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             interiorLayer:interiors?.layer,
             halls:interiors?.halls??[],obstacles:interiors?.obstacles??new Map(),signal,invalidate,
             reducedMotion:()=>reducedMotion.matches,showInterior:id=>interiors?.setVisitorHall(id),
-            changed:state=>{events.visitorState?.(state);if(state.active)events.status(`Visiting · ${state.location}`);},
+            changed:state=>{gate9?.visitorChanged(state);events.visitorState?.(state);if(state.active)events.status(`Visiting · ${state.location}`);},
             exit:()=>stopVisitorCommand()});
         cleanups.push(()=>visitor?.dispose());
         events.visitorReady?.(visitorNavigation.portals.map(p=>({id:p.hall.id,label:p.hall.level?'Convention Centre':p.hall.label})));
@@ -402,6 +421,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const fitDetailWidth = (aspect: number) =>
             ['itpo-office', 'gate9', 'gate6-road', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
         const waterViews: Record<string, { position: Triple; target: Triple; label: string }> = {
+            ...gate9?.views,
             'hall14-front': { position: [-67.7, 40, 94.9], target: [-223.6, 12, 4.9], label: 'Hall 14 · Frontage' },
             'concourse': { position: [52.423, 1.9, 149.201], target: [95.724, 1.7, 174.201], label: 'Covered Concourse' },
             'hall-spine': { position: [115.786, 1.9, 153.452], target: [143.286, 1.7, 105.821], label: 'Hall 1–6 · Covered Walk' },
@@ -411,7 +431,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         };
         if (detailView && waterViews[detailView]) {
             const waterView = waterViews[detailView];
-            if (detailView === 'concourse' || detailView === 'hall-spine') controls.maxPolarAngle = Math.PI * .4998;
+            if (detailView === 'concourse' || detailView === 'hall-spine' || detailView.startsWith('gate9-')) controls.maxPolarAngle = Math.PI * .4998;
+            if (detailView.startsWith('gate9-')) { controls.minDistance = 2; camera.near = .12; camera.updateProjectionMatrix(); }
             camera.position.set(...waterView.position);
             controls.target.set(...waterView.target);
             controls.update();
@@ -438,10 +459,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             controls.update();
             events.status('ITPO Office · Garden Walk');
         } else if (new URLSearchParams(location.search).get('view') === 'gate9') {
-            camera.position.copy(W(-571, -401, 22));
-            controls.target.copy(W(-536, -369, 2.5));
+            camera.position.copy(W(-574, -349, 18));
+            controls.target.copy(W(-540, -365, 2.2));
             controls.update();
-            events.status('Gate 9 · Security Check');
+            events.status('Gate 9 · Entrance');
         } else if (new URLSearchParams(location.search).get('view') === 'itpo-walkway') {
             // Eye level on the office's east walk, looking along it as in the site photo.
             controls.maxPolarAngle = Math.PI * .4998;
@@ -503,12 +524,14 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 tween = null;
         }
             const visiting = visitor?.update(performance.now());
+            const gateMoving = gate9?.update(performance.now(), reducedMotion.matches);
+            if (gateMoving) renderer.shadowMap.needsUpdate = true;
             const changed = !visitor?.active && !interiors?.active && !globe?.transitioning && controls.update();
             if(!visitor?.active&&!interiors?.active)globe?.update();
             const walking=interiors?.update(performance.now());
             const flowing = water?.update(performance.now(), camera,
                 !reducedMotion.matches && !globe?.isGlobe && camera.position.distanceTo(controls.target) < 3000, innerHeight);
-            return Boolean(changed || walking || visiting || tween || pendingInterior || globe?.transitioning || flowing);
+            return Boolean(changed || walking || visiting || gateMoving || tween || pendingInterior || globe?.transitioning || flowing);
         }
         function renderFrame() {
             if (securityGuards?.update(camera, innerHeight, !globe?.isGlobe || globe.transitioning))
