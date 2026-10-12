@@ -6,6 +6,8 @@ import { API_BASE_URL } from '../api/api-base.token';
 import { quiet } from '../api/error-toast.interceptor';
 import type {
   BookingView,
+  CheckoutView,
+  PaymentResultView,
   PortalHoldInput,
   PortalHoldView,
   PortalView,
@@ -50,5 +52,33 @@ export class PortalApi {
   /** Only the exhibitor's own held booking; a confirmed one is cancelled by the organiser. */
   cancel(slug: string, id: string, reason: string | null): Observable<BookingView> {
     return this.http.post<BookingView>(`${this.base(slug)}/bookings/${id}/cancel`, { reason });
+  }
+
+  /**
+   * A fresh order to pay for an own held booking; null when there is nothing to pay (a free
+   * stall). Checkout's success handler gives `verify` its body.
+   */
+  pay(slug: string, id: string): Observable<CheckoutView | null> {
+    return this.http.post<CheckoutView | null>(`${this.base(slug)}/bookings/${id}/payment`, {});
+  }
+
+  /** Checks what Checkout returned; the server confirms the booking when the money is in. */
+  verify(
+    slug: string,
+    id: string,
+    body: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string },
+  ): Observable<PaymentResultView> {
+    return this.http.post<PaymentResultView>(
+      `${this.base(slug)}/bookings/${id}/payment/verify`,
+      body,
+    );
+  }
+
+  /** The log transport's stand-in for Checkout; the server answers 404 under any other. */
+  devPay(orderId: string): Observable<{ outcome: string }> {
+    return this.http.post<{ outcome: string }>(
+      `${this.api}/dev/payments/${encodeURIComponent(orderId)}/pay`,
+      {},
+    );
   }
 }

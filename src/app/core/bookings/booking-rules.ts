@@ -1,6 +1,12 @@
 import type { EventStatus } from '../events/events.models';
 import { rupees } from '../plans/stall-price';
-import type { BookingStatus, BookingView, MapStallView, StallState } from './bookings.models';
+import type {
+  BookingStatus,
+  BookingView,
+  MapStallView,
+  PaymentStatus,
+  StallState,
+} from './bookings.models';
 
 /**
  * What the booking pages show and offer, from the server's own rules (the server decides; these
@@ -13,6 +19,15 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   confirmed: 'Confirmed',
   cancelled: 'Cancelled',
   expired: 'Expired',
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  created: 'Awaiting payment',
+  paid: 'Paid',
+  failed: 'Payment failed',
+  expired: 'Order expired',
+  refunded: 'Refunded',
+  partially_refunded: 'Partly refunded',
 };
 
 export const STALL_STATE_LABELS: Record<StallState, string> = {
@@ -57,6 +72,36 @@ export function canCancel(b: BookingView): boolean {
 /** An exhibitor lets go of a hold while the event is a draft or scheduled. */
 export function canLetGo(b: BookingView): boolean {
   return b.status === 'held' && (b.event.status === 'draft' || b.event.status === 'scheduled');
+}
+
+/** Money has arrived for the booking (and maybe partly or wholly gone back). */
+export function isPaid(b: BookingView): boolean {
+  const s = b.payment?.status;
+  return s === 'paid' || s === 'refunded' || s === 'partially_refunded';
+}
+
+/** What is left to refund, in paise: the amount less refunds that went through or are on the way. */
+export function refundable(b: BookingView): number {
+  const p = b.payment;
+  return p ? Math.max(0, p.amountPaise - p.refundedPaise - p.refundPendingPaise) : 0;
+}
+
+export function canRefund(b: BookingView): boolean {
+  const s = b.payment?.status;
+  return refundable(b) > 0 && (s === 'paid' || s === 'partially_refunded');
+}
+
+/** The payment in a few words, for the bookings tables. */
+export function paymentLabel(b: BookingView): string {
+  const p = b.payment;
+  if (!p) return '—';
+  if (p.status !== 'paid' && p.status !== 'partially_refunded' && p.status !== 'refunded') {
+    return PAYMENT_STATUS_LABELS[p.status];
+  }
+  const parts = p.status === 'refunded' ? [] : [`Paid ${paise(p.amountPaise)}`];
+  if (p.refundedPaise > 0) parts.push(`${paise(p.refundedPaise)} refunded`);
+  if (p.refundPendingPaise > 0) parts.push(`refund ${paise(p.refundPendingPaise)} on the way`);
+  return parts.length ? parts.join(' · ') : `Paid ${paise(p.amountPaise)}`;
 }
 
 /** When a hold runs out, as HH:mm. */

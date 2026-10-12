@@ -4,12 +4,7 @@ import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
 import { quiet } from '../api/error-toast.interceptor';
-import type {
-  BookingStatus,
-  BookingView,
-  NewBookingInput,
-  StallMapView,
-} from './bookings.models';
+import type { BookingStatus, BookingView, NewBookingInput, StallMapView } from './bookings.models';
 
 /** Bookings as staff work them: an event's bookings and stall maps, and changes to bookings. */
 @Injectable({ providedIn: 'root' })
@@ -43,6 +38,15 @@ export class BookingsApi {
 
   cancel(slug: string, id: string, reason: string): Observable<BookingView> {
     return this.http.post<BookingView>(`${this.org(slug)}/bookings/${id}/cancel`, { reason });
+  }
+
+  /** Refunds all that is left of the payment, or `amountPaise` of it; a full refund cancels. */
+  refund(
+    slug: string,
+    id: string,
+    input: { amountPaise?: number; reason: string },
+  ): Observable<BookingView> {
+    return this.http.post<BookingView>(`${this.org(slug)}/bookings/${id}/refund`, input);
   }
 
   move(slug: string, id: string, hallId: string, stallId: string): Observable<BookingView> {

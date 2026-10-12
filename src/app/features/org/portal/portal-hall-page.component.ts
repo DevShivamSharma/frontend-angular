@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -30,6 +31,7 @@ import type {
 } from '../../../core/bookings/bookings.models';
 import type { PlanContent } from '../../../core/plans/plans.models';
 import { PortalApi } from '../../../core/bookings/portal-api.service';
+import { PortalPayment } from '../../../core/bookings/portal-payment.service';
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { ConfirmService } from '../../../core/ui/confirm.service';
 import { Notifier } from '../../../core/ui/notifier.service';
@@ -45,7 +47,8 @@ const EMPTY_PLAN: PlanContent = { zones: [], seats: [], objects: [], stalls: [] 
 /**
  * One hall of an event for an exhibitor: the published plan on the planner canvas (2D or 3D),
  * every stall coloured by availability and the exhibitor's own in blue. Picking a stall reads it
- * in the side panel, where a free one is held for an hour. Nothing on the plan can be changed.
+ * in the side panel, where a free one is held for an hour and paid for. Nothing on the plan can
+ * be changed.
  */
 @Component({
   selector: 'app-portal-hall-page',
@@ -166,8 +169,12 @@ const EMPTY_PLAN: PlanContent = { zones: [], seats: [], objects: [], stalls: [] 
                   </p>
                 } @else if (s.state === 'free') {
                   @if (m.bookable) {
-                    <button pButton (click)="hold(m, s.id, s.label)" [disabled]="busy()">
-                      <app-icon name="lock_clock" />Hold this stall
+                    <button
+                      pButton
+                      (click)="hold(m, s.id, s.label, s.price?.amountPaise ?? 0)"
+                      [disabled]="busy()"
+                    >
+                      <app-icon name="lock_clock" />{{ holdLabel(s.price?.amountPaise ?? 0) }}
                     </button>
                     <p class="muted small">Held for 60 minutes while you pay.</p>
                   } @else {
@@ -269,7 +276,9 @@ export class PortalHallPageComponent {
   private readonly api = inject(PortalApi);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(Notifier);
+  private readonly payment = inject(PortalPayment);
   private readonly context = inject(OrgContextStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly slug = this.context.slug;
   protected readonly money = paise;
@@ -294,6 +303,8 @@ export class PortalHallPageComponent {
   protected readonly lastHold = signal<PortalHoldView | null>(null);
   /** The latest request; an older answer arriving late is dropped. */
   private token = 0;
+  /** Reloads once more when a payment is still being confirmed with Razorpay. */
+  private pendingReload: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly plan = computed(() => {
     const m = this.map();
@@ -304,6 +315,9 @@ export class PortalHallPageComponent {
   );
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.pendingReload) clearTimeout(this.pendingReload);
+    });
     // Only the route inputs restart the load: the requests themselves read the session signal.
     effect(() => {
       this.eventId();
@@ -348,11 +362,24 @@ export class PortalHallPageComponent {
     return b ? `Held for you until ${holdUntil(b)}` : 'Held for you';
   }
 
-  protected async hold(map: StallMapView, stallId: string, label: string): Promise<void> {
+  /** The hold button: with a price, holding goes straight on to paying. */
+  protected holdLabel(amountPaise: number): string {
+    return amountPaise ? `Hold and pay ${paise(amountPaise)} (excl. GST)` : 'Hold this stall';
+  }
+
+  protected async hold(
+    map: StallMapView,
+    stallId: string,
+    label: string,
+    amountPaise: number,
+  ): Promise<void> {
+    const price = amountPaise ? `${paise(amountPaise)} (excl. GST)` : null;
     const ok = await this.confirm.confirm({
       title: `Hold stall ${label} for 60 minutes?`,
-      message: 'The stall is yours while the hold lasts. Let go of it any time from My bookings.',
-      confirmLabel: 'Hold stall',
+      message: price
+        ? `The stall is yours while the hold lasts; pay ${price} next to keep it. Let go of it any time from My bookings.`
+        : 'The stall is yours while the hold lasts. Let go of it any time from My bookings.',
+      confirmLabel: price ? 'Hold and pay' : 'Hold stall',
     });
     if (!ok) return;
     this.busy.set(true);
@@ -366,12 +393,26 @@ export class PortalHallPageComponent {
         }),
       );
       this.lastHold.set(held);
-      this.notifier.success(`Stall ${label} is held until ${holdUntil(held.booking)}.`);
+      if (held.paymentError) {
+        this.notifier.warn(
+          `Stall ${label} is held until ${holdUntil(held.booking)}. ${held.paymentError} Pay for it from My bookings.`,
+        );
+      } else {
+        // Reload first, so the map shows the hold while Checkout is open.
+        await this.load(false);
+        const result = await this.payment.pay(this.slug(), held.booking, held.checkout);
+        if (result?.outcome === 'pending') this.reloadSoon();
+      }
     } catch {
       // The error interceptor has shown it; the map below shows the stall as it is now.
     } finally {
       this.busy.set(false);
     }
     await this.load(false);
+  }
+
+  /** A payment awaiting Razorpay's webhook: look again in a few seconds, once. */
+  private reloadSoon(): void {
+    this.pendingReload = setTimeout(() => void this.load(false), 5000);
   }
 }

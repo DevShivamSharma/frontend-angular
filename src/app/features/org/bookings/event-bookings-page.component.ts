@@ -23,7 +23,9 @@ import {
   canCancel,
   canConfirm,
   canMove,
+  canRefund,
   paise,
+  paymentLabel,
   STALL_STATE_LABELS,
 } from '../../../core/bookings/booking-rules';
 import { BookingsApi } from '../../../core/bookings/bookings-api.service';
@@ -44,6 +46,7 @@ import { IconComponent } from '../../../shared/icon.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { MoveBookingDialogComponent, MoveBookingDialogData } from './move-booking-dialog.component';
 import { NewBookingDialogComponent, NewBookingDialogData } from './new-booking-dialog.component';
+import { RefundDialogComponent, RefundDialogData } from './refund-dialog.component';
 import { StallMapComponent } from './stall-map.component';
 
 /**
@@ -198,6 +201,7 @@ import { StallMapComponent } from './stall-map.component';
                     <th>Exhibitor</th>
                     <th>Status</th>
                     <th>Amount</th>
+                    <th>Payment</th>
                     <th>Made</th>
                     <th><span class="visually-hidden">Actions</span></th>
                   </tr>
@@ -226,8 +230,20 @@ import { StallMapComponent } from './stall-map.component';
                       }
                     </td>
                     <td class="nums">{{ money(b.amountPaise) }}</td>
+                    <td>{{ paymentText(b) }}</td>
                     <td class="muted">{{ b.createdAt | date: 'd MMM y' }}</td>
                     <td class="actions">
+                      @if (canRefundAny() && allowed.refund(b)) {
+                        <button
+                          pButton
+                          [text]="true"
+                          severity="danger"
+                          (click)="refund(b)"
+                          [disabled]="busy()"
+                        >
+                          Refund
+                        </button>
+                      }
                       @if (canManage()) {
                         @if (allowed.confirm(b)) {
                           <button
@@ -323,11 +339,19 @@ export class EventBookingsPageComponent {
 
   protected readonly slug = this.context.slug;
   protected readonly canManage = computed(() => this.context.can('bookings.manage'));
+  /** Refunds are their own permission, apart from managing bookings. */
+  protected readonly canRefundAny = computed(() => this.context.can('payments.manage'));
   protected readonly money = paise;
+  protected readonly paymentText = paymentLabel;
   protected readonly stateLabels = STALL_STATE_LABELS;
   /** Indexed by the table row's status, which the template types as any. */
   protected readonly statusLabels: Record<string, string> = BOOKING_STATUS_LABELS;
-  protected readonly allowed = { confirm: canConfirm, move: canMove, cancel: canCancel };
+  protected readonly allowed = {
+    confirm: canConfirm,
+    move: canMove,
+    cancel: canCancel,
+    refund: canRefund,
+  };
 
   protected readonly event = signal<EventDetailView | null>(null);
   protected readonly bookings = signal<BookingView[]>([]);
@@ -457,7 +481,11 @@ export class EventBookingsPageComponent {
   protected async cancel(b: BookingView): Promise<void> {
     const reason = await this.confirm.askReason({
       title: `Cancel the booking of stall ${b.stall.label}?`,
-      message: `${b.exhibitor.name} loses the stall, and it is free to book again. This cannot be undone.`,
+      message: `${b.exhibitor.name} loses the stall, and it is free to book again. This cannot be undone.${
+        b.payment?.status === 'paid' || b.payment?.status === 'partially_refunded'
+          ? ' Cancelling does not refund; use Refund for that.'
+          : ''
+      }`,
       reasonLabel: 'Reason (kept with the booking)',
       confirmLabel: 'Cancel booking',
       // "Cancel" next to "Cancel booking" reads as the same thing.
@@ -479,6 +507,15 @@ export class EventBookingsPageComponent {
     this.dialog.open<BookingView>(MoveBookingDialogComponent, { data }).subscribe((moved) => {
       if (!moved) return;
       this.notifier.success(`${moved.exhibitor.name} moved to stall ${moved.stall.label}.`);
+      void this.refresh();
+    });
+  }
+
+  protected refund(b: BookingView): void {
+    const data: RefundDialogData = { slug: this.slug(), booking: b };
+    this.dialog.open<BookingView>(RefundDialogComponent, { data }).subscribe((done) => {
+      if (!done) return;
+      this.notifier.success(`Refund for stall ${done.stall.label} is on its way to the exhibitor.`);
       void this.refresh();
     });
   }

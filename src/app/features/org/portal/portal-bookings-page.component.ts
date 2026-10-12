@@ -1,5 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -11,18 +18,29 @@ import {
   BOOKING_STATUS_LABELS,
   canLetGo,
   holdUntil,
+  isPaid,
   paise,
+  paymentLabel,
 } from '../../../core/bookings/booking-rules';
 import type { BookingView } from '../../../core/bookings/bookings.models';
 import { PortalApi } from '../../../core/bookings/portal-api.service';
+import { PortalPayment } from '../../../core/bookings/portal-payment.service';
 import { OrgContextStore } from '../../../core/org/org.stores';
+import { AppDialog } from '../../../core/ui/app-dialog.service';
 import { ConfirmService } from '../../../core/ui/confirm.service';
 import { Notifier } from '../../../core/ui/notifier.service';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { IconComponent } from '../../../shared/icon.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
+import {
+  PortalReceiptDialogComponent,
+  PortalReceiptDialogData,
+} from './portal-receipt-dialog.component';
 
-/** The exhibitor's own bookings, newest first; a hold can be let go of while the event is open. */
+/**
+ * The exhibitor's own bookings, newest first: a hold is paid for or let go of while the event is
+ * open, and a paid stall has its receipt.
+ */
 @Component({
   selector: 'app-portal-bookings-page',
   imports: [
@@ -89,6 +107,9 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
                     @if (b.status === 'held' && b.holdExpiresAt) {
                       <br /><span class="muted small">until {{ until(b) }}</span>
                     }
+                    @if (b.payment) {
+                      <br /><span class="muted small">{{ paymentText(b) }}</span>
+                    }
                     @if (b.cancelReason) {
                       <br /><span class="muted small">{{ b.cancelReason }}</span>
                     }
@@ -99,6 +120,14 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
                   </td>
                   <td class="muted">{{ b.createdAt | date: 'd MMM y' }}</td>
                   <td class="actions">
+                    @if (b.status === 'held' && !paid(b)) {
+                      <button pButton [text]="true" (click)="pay(b)" [disabled]="busy()">
+                        Pay
+                      </button>
+                    }
+                    @if (paid(b)) {
+                      <button pButton [text]="true" (click)="receipt(b)">Receipt</button>
+                    }
                     @if (allowed(b)) {
                       <button
                         pButton
@@ -136,12 +165,17 @@ export class PortalBookingsPageComponent implements OnInit {
   private readonly api = inject(PortalApi);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(Notifier);
+  private readonly payment = inject(PortalPayment);
+  private readonly dialog = inject(AppDialog);
   private readonly context = inject(OrgContextStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly slug = this.context.slug;
   protected readonly money = paise;
   protected readonly until = holdUntil;
   protected readonly allowed = canLetGo;
+  protected readonly paid = isPaid;
+  protected readonly paymentText = paymentLabel;
   /** Indexed by the table row's status, which the template types as any. */
   protected readonly statusLabels: Record<string, string> = BOOKING_STATUS_LABELS;
 
@@ -149,8 +183,13 @@ export class PortalBookingsPageComponent implements OnInit {
   protected readonly loading = signal(false);
   protected readonly loadError = signal<string | null>(null);
   protected readonly busy = signal(false);
+  /** Reloads once more when a payment is still being confirmed with Razorpay. */
+  private pendingReload: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => {
+      if (this.pendingReload) clearTimeout(this.pendingReload);
+    });
     void this.load();
   }
 
@@ -164,6 +203,25 @@ export class PortalBookingsPageComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  protected async pay(b: BookingView): Promise<void> {
+    this.busy.set(true);
+    try {
+      const result = await this.payment.pay(this.slug(), b, null);
+      if (result?.outcome === 'pending') {
+        // Razorpay's webhook finishes it; look again in a few seconds, once.
+        this.pendingReload = setTimeout(() => void this.load(), 5000);
+      }
+    } finally {
+      this.busy.set(false);
+    }
+    await this.load();
+  }
+
+  protected receipt(b: BookingView): void {
+    const data: PortalReceiptDialogData = { booking: b };
+    this.dialog.open(PortalReceiptDialogComponent, { data });
   }
 
   protected async letGo(b: BookingView): Promise<void> {

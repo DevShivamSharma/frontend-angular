@@ -8,6 +8,25 @@ import type { StallScheme, StallSide } from '../plans/plans.models';
 export type BookingChannel = 'internal' | 'external';
 export type BookingStatus = 'held' | 'confirmed' | 'cancelled' | 'expired';
 
+/** `created` until paid (`failed` can be paid again); `expired`: nobody paid; then the refund states. */
+export type PaymentStatus =
+  'created' | 'paid' | 'failed' | 'expired' | 'refunded' | 'partially_refunded';
+
+/** What a booking's payment shows: the paid one, else the newest order. */
+export interface BookingPaymentView {
+  status: PaymentStatus;
+  provider: 'razorpay' | 'log';
+  orderId: string;
+  paymentId: string | null;
+  method: string | null;
+  amountPaise: number;
+  paidAt: string | null;
+  /** Refunds that went through, in paise. */
+  refundedPaise: number;
+  /** Refunds asked for or being sent, not through yet, in paise. */
+  refundPendingPaise: number;
+}
+
 export interface BookingView {
   id: string;
   event: { id: string; name: string; status: EventStatus };
@@ -25,6 +44,8 @@ export interface BookingView {
   priceReckoning: string;
   note: string | null;
   cancelReason: string | null;
+  /** Null while no order was made (a stall priced 0, or a booking made by staff). */
+  payment: BookingPaymentView | null;
   createdAt: string;
   confirmedAt: string | null;
   cancelledAt: string | null;
