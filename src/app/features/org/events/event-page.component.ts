@@ -15,7 +15,7 @@ import { IconComponent } from '../../../shared/icon.component';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TooltipModule } from 'primeng/tooltip';
 import { Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
 
 import type { AssignableRoleView } from '../../../core/api/api.models';
 import { EventsApi } from '../../../core/events/events-api.service';
@@ -23,6 +23,7 @@ import type {
   EventDetailView,
   EventHallView,
   EventPeople,
+  EventStatus,
   EventView,
 } from '../../../core/events/events.models';
 import { OrgApi } from '../../../core/org/org-api.service';
@@ -80,11 +81,41 @@ import { SelectModule } from 'primeng/select';
               >{{ e.kind === 'internal' ? 'Internal' : 'External' }}</span
             >
             <span class="status-chip is-neutral">{{ e.audience }}</span>
+            <span
+              class="status-chip"
+              [class.is-positive]="e.status === 'scheduled'"
+              [class.is-neutral]="e.status === 'draft' || e.status === 'completed'"
+              [class.is-danger]="e.status === 'cancelled'"
+              [pTooltip]="e.status === 'cancelled' ? (e.cancelReason ?? 'Cancelled') : ''"
+              >{{ statusLabel(e.status) }}</span
+            >
           </span>
+          @if (canManage() && !eventScoped()) {
+            @switch (e.status) {
+              @case ('draft') {
+                <button pButton (click)="schedule(e)" [disabled]="busy()">
+                  <app-icon name="event_available" />Schedule
+                </button>
+              }
+              @case ('scheduled') {
+                <button pButton [outlined]="true" (click)="complete(e)" [disabled]="busy()">
+                  <app-icon name="task_alt" />Complete
+                </button>
+                <button pButton [text]="true" (click)="reopen(e)" [disabled]="busy()">
+                  <app-icon name="undo" />Back to draft
+                </button>
+              }
+            }
+          }
           @if (canManage()) {
             <button pButton [outlined]="true" (click)="edit(e)">
               <app-icon name="edit" />Edit
             </button>
+            @if (!eventScoped() && (e.status === 'draft' || e.status === 'scheduled')) {
+              <button pButton [text]="true" severity="danger" (click)="cancel(e)" [disabled]="busy()">
+                <app-icon name="event_busy" />Cancel event
+              </button>
+            }
             <button pButton [text]="true" severity="danger" (click)="remove(e)">
               <app-icon name="delete" />Delete
             </button>
@@ -508,6 +539,68 @@ export class EventPageComponent {
       await this.load(event.id);
     } catch {
       // The error interceptor has shown it.
+    }
+  }
+
+  protected statusLabel(status: EventStatus): string {
+    return { draft: 'Draft', scheduled: 'Scheduled', completed: 'Completed', cancelled: 'Cancelled' }[
+      status
+    ];
+  }
+
+  protected async schedule(event: EventView): Promise<void> {
+    const ok = await this.confirm.confirm({
+      title: `Schedule ${event.name}?`,
+      message: 'The event is on. Its published stall plans can go on sale.',
+      confirmLabel: 'Schedule',
+    });
+    if (ok) await this.step(() => this.api.schedule(this.slug(), event.id), 'Event scheduled.');
+  }
+
+  protected async complete(event: EventView): Promise<void> {
+    const ok = await this.confirm.confirm({
+      title: `Complete ${event.name}?`,
+      message: 'The event is over. This cannot be undone.',
+      confirmLabel: 'Complete',
+    });
+    if (ok) await this.step(() => this.api.complete(this.slug(), event.id), 'Event completed.');
+  }
+
+  protected async reopen(event: EventView): Promise<void> {
+    const ok = await this.confirm.confirm({
+      title: `Take ${event.name} back to draft?`,
+      message: 'It is off sale until it is scheduled again.',
+      confirmLabel: 'Back to draft',
+    });
+    if (ok) await this.step(() => this.api.reopen(this.slug(), event.id), 'Event back in draft.');
+  }
+
+  protected async cancel(event: EventView): Promise<void> {
+    const reason = await this.confirm.askReason({
+      title: `Cancel ${event.name}?`,
+      message: 'The event will not take place. Its halls and plans stay for the record.',
+      reasonLabel: 'Why (optional)',
+      confirmLabel: 'Cancel event',
+      destructive: true,
+      optional: true,
+    });
+    if (reason === null) return;
+    await this.step(
+      () => this.api.cancel(this.slug(), event.id, reason || null),
+      'Event cancelled.',
+    );
+  }
+
+  private async step(call: () => Observable<EventView>, done: string): Promise<void> {
+    this.busy.set(true);
+    try {
+      await firstValueFrom(call());
+      this.notifier.success(done);
+      await this.load(this.eventId());
+    } catch {
+      // The error interceptor has shown it.
+    } finally {
+      this.busy.set(false);
     }
   }
 

@@ -85,7 +85,7 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
           <li>
             <a
               class="event-card"
-              [class]="'phase-' + phase"
+              [class]="'phase-' + phase + ' status-' + e.status"
               [routerLink]="['/', slug(), 'events', e.id]"
             >
               <span class="top">
@@ -191,6 +191,11 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
     .phase-live {
       --accent: #16a34a;
       --accent-soft: #dcfce7;
+    }
+    .event-card.status-cancelled,
+    .event-card.status-completed {
+      --accent: var(--app-outline);
+      opacity: 0.75;
     }
     .top {
       display: flex;
@@ -350,6 +355,10 @@ export class EventsPageComponent {
   }
 
   protected phaseLabel(e: EventView, phase: EventPhase): string {
+    // A status the venue set says more than the calendar does.
+    if (e.status === 'cancelled') return 'Cancelled';
+    if (e.status === 'completed') return 'Completed';
+    if (e.status === 'draft') return 'Draft';
     if (phase !== 'upcoming') {
       return { 'build-up': 'Build-up', live: 'Live', dismantling: 'Dismantling', ended: 'Ended' }[
         phase

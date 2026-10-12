@@ -4,10 +4,12 @@ import type { CategoryRef } from '../categories/categories.models';
 import type { EventType, RuleId, RuleValues } from '../rules/rules.models';
 
 export type EventKind = 'internal' | 'external';
+export type EventStatus = 'draft' | 'scheduled' | 'completed' | 'cancelled';
 
 export interface EventView {
   id: string;
   kind: EventKind;
+  status: EventStatus;
   name: string;
   venueEventId: string | null;
   organiserName: string | null;
@@ -17,6 +19,9 @@ export interface EventView {
   endsOn: string;
   buildUpOn: string | null;
   dismantleOn: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
   hallCount: number;
   updatedAt: string;
 }
@@ -71,6 +76,7 @@ export interface EventHallDetailView {
     id: string;
     name: string;
     kind: EventKind;
+    status: EventStatus;
     audience: EventType;
     /** The company that booked the halls; external events only. */
     organiserName: string | null;

@@ -30,6 +30,10 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   'event.person_removed': { label: 'Removed organiser from event', icon: 'person_remove' },
   'event.invitation_revoked': { label: 'Cancelled organiser invitation', icon: 'cancel' },
   'event.hall_categories_changed': { label: 'Changed categories of event hall', icon: 'category' },
+  'event.scheduled': { label: 'Scheduled event', icon: 'event_available' },
+  'event.completed': { label: 'Completed event', icon: 'task_alt' },
+  'event.cancelled': { label: 'Cancelled event', icon: 'event_busy' },
+  'event.reopened': { label: 'Took event back to draft', icon: 'undo' },
   'category.created': { label: 'Added stall category', icon: 'category' },
   'category.updated': { label: 'Changed stall category', icon: 'category' },
   'category.deleted': { label: 'Deleted stall category', icon: 'delete' },
@@ -53,5 +57,6 @@ export function auditIsWarning(action: string): boolean {
     'organisation.suspended',
     'role.deleted',
     'membership.removed',
+    'event.cancelled',
   ].includes(action);
 }

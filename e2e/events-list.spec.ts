@@ -6,6 +6,7 @@ test('lists events as cards with their phase', async ({ page }) => {
   const event = (over: Record<string, unknown>) => ({
     id: 'e',
     kind: 'external',
+    status: 'scheduled',
     name: 'test',
     venueEventId: null,
     organiserName: 'adidada',
@@ -14,6 +15,9 @@ test('lists events as cards with their phase', async ({ page }) => {
     endsOn: '2026-10-17',
     buildUpOn: null,
     dismantleOn: null,
+    completedAt: null,
+    cancelledAt: null,
+    cancelReason: null,
     hallCount: 1,
     updatedAt: '2026-10-01T00:00:00Z',
     ...over,
@@ -82,19 +86,28 @@ test('lists events as cards with their phase', async ({ page }) => {
             hallCount: 0,
           }),
           event({ id: 'd', name: 'Auto Show', startsOn: '2026-09-01', endsOn: '2026-09-05' }),
+          event({
+            id: 'e',
+            name: 'Craft Week',
+            status: 'cancelled',
+            cancelledAt: '2026-10-08T09:00:00Z',
+            cancelReason: 'Venue flooded',
+          }),
         ],
       });
     return route.fulfill({ status: 404, json: { message: 'Not mocked ' + path } });
   });
   await page.goto('/venue/events');
   const cards = page.locator('.event-card');
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(5);
   await expect(cards.nth(0)).toContainText('Live');
   await expect(cards.nth(0)).toContainText('12312312');
   await expect(cards.nth(1)).toContainText('In 42 days');
   await expect(cards.nth(2)).toContainText('Dismantling');
   await expect(cards.nth(2)).toContainText('No halls yet');
   await expect(cards.nth(3)).toContainText('Ended');
+  // Its dates say live, but the venue called it off, and that wins.
+  await expect(cards.filter({ hasText: 'Cancelled' })).toHaveCount(1);
   const shots = process.env['PW_SHOTS'];
   if (shots) await page.screenshot({ path: `${shots}/events-list.png` });
 });

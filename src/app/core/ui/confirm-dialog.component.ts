@@ -16,6 +16,8 @@ export interface ConfirmDialogData {
   destructive?: boolean;
   /** Asks for a reason, which becomes the dialog's result. */
   reasonLabel?: string;
+  /** With a reason asked for: lets it be left empty, which confirms with `''`. */
+  optional?: boolean;
 }
 
 /** Closes with `true` (or the reason, when one is asked for), or `undefined` when cancelled. */
@@ -70,7 +72,10 @@ export class ConfirmDialogComponent {
   protected readonly ref = inject(DialogRef);
   protected readonly reason = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.minLength(3)],
+    // An optional reason may be empty, but a few stray characters are still not a reason.
+    validators: this.data.optional
+      ? [Validators.minLength(3)]
+      : [Validators.required, Validators.minLength(3)],
   });
 
   protected confirm(): void {

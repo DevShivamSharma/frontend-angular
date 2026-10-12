@@ -45,6 +45,23 @@ export class EventsApi {
     return this.http.delete<void>(`${this.base(slug)}/${id}`);
   }
 
+  schedule(slug: string, id: string): Observable<EventView> {
+    return this.http.post<EventView>(`${this.base(slug)}/${id}/schedule`, {});
+  }
+
+  complete(slug: string, id: string): Observable<EventView> {
+    return this.http.post<EventView>(`${this.base(slug)}/${id}/complete`, {});
+  }
+
+  cancel(slug: string, id: string, reason: string | null): Observable<EventView> {
+    return this.http.post<EventView>(`${this.base(slug)}/${id}/cancel`, { reason });
+  }
+
+  /** Scheduled back to draft. */
+  reopen(slug: string, id: string): Observable<EventView> {
+    return this.http.post<EventView>(`${this.base(slug)}/${id}/reopen`, {});
+  }
+
   addHalls(slug: string, id: string, hallIds: string[]): Observable<EventDetailView> {
     return this.http.post<EventDetailView>(`${this.base(slug)}/${id}/halls`, { hallIds });
   }
