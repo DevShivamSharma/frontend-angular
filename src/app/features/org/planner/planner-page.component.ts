@@ -32,6 +32,7 @@ import {
   stallLabel,
   StallSide,
 } from '../../../core/plans/plans.models';
+import { rupees } from '../../../core/plans/stall-price';
 import type { Point } from '../../../core/venues/floor-plan.models';
 import { AppDialog } from '../../../core/ui/app-dialog.service';
 import { ConfirmService } from '../../../core/ui/confirm.service';
@@ -84,6 +85,12 @@ import {
 import { PlannerPropertiesComponent, StallPatch } from './planner-properties.component';
 import { PlannerStore } from './planner.store';
 import { PlanReviewComponent } from './plan-review.component';
+import {
+  PricingDialogComponent,
+  PricingDialogData,
+  PricingDialogResult,
+} from './pricing-dialog.component';
+import { StallPriceCardComponent } from './stall-price-card.component';
 import { PlannerTourCtx, plannerTour } from './planner-tour';
 import { TourOverlayComponent } from '../../../shared/tour/tour-overlay.component';
 import { TourService } from '../../../shared/tour/tour.service';
@@ -152,6 +159,7 @@ const OBJECT_COLOR = '#334155';
     TourOverlayComponent,
     PlannerAssistantComponent,
     PlanReviewComponent,
+    StallPriceCardComponent,
   ],
   providers: [PlannerStore, TourService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -184,6 +192,25 @@ const OBJECT_COLOR = '#334155';
                 hidden
                 (change)="importPlan($event)"
               />
+              @if (store.pricing()) {
+                <button
+                  type="button"
+                  class="tool"
+                  (click)="openPricing()"
+                  [disabled]="store.busy()"
+                  [pTooltip]="
+                    store.unpriced().length
+                      ? 'Pricing: ' + store.unpriced().length + ' stalls for sale have no price'
+                      : 'Pricing: the rate card and the price of each stall'
+                  "
+                  tooltipPosition="bottom"
+                >
+                  <app-icon name="sell" /><span>Pricing</span>
+                  @if (store.unpriced().length) {
+                    <i class="dot" aria-hidden="true"></i>
+                  }
+                </button>
+              }
             </div>
           </div>
           <div class="group">
@@ -669,7 +696,13 @@ const OBJECT_COLOR = '#334155';
                 type="button"
                 class="publish"
                 (click)="submitPlan()"
-                [disabled]="store.busy() || store.dirty() || !store.revision() || store.upToDate()"
+                [disabled]="
+                  store.busy() ||
+                  store.dirty() ||
+                  !store.revision() ||
+                  store.upToDate() ||
+                  store.unpriced().length > 0
+                "
                 [pTooltip]="submitTip()"
                 tooltipPosition="bottom"
               >
@@ -1040,6 +1073,7 @@ const OBJECT_COLOR = '#334155';
                     (remove)="removeSelection()"
                   />
                 </section>
+                <app-stall-price-card />
                 <section class="card">
                   <h3 class="card-title">Hall Statistics</h3>
                   <dl class="stats">
@@ -1066,6 +1100,14 @@ const OBJECT_COLOR = '#334155';
                   <dl class="stats total">
                     <dt>Total Saleable Area</dt>
                     <dd>{{ stats().saleable | number: '1.0-0' }} m²</dd>
+                    @if (store.pricing()) {
+                      <dt>Value (excl. GST)</dt>
+                      <dd>{{ rupees(store.planValue()) }}</dd>
+                      <dt>Without a price</dt>
+                      <dd [class.bad]="store.unpriced().length > 0">
+                        {{ store.unpriced().length | number }}
+                      </dd>
+                    }
                   </dl>
                 </section>
               </div>
@@ -1136,6 +1178,19 @@ const OBJECT_COLOR = '#334155';
       background: none;
       color: var(--app-on-surface);
       cursor: pointer;
+    }
+    .tool {
+      position: relative;
+    }
+    /* Something waits there: stalls for sale without a price. */
+    .tool .dot {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--app-error);
     }
     .tool app-icon,
     .mini app-icon {
@@ -1631,6 +1686,7 @@ const OBJECT_COLOR = '#334155';
   `,
 })
 export class PlannerPageComponent {
+  protected readonly rupees = rupees;
   /** From the route. */
   readonly eventId = input.required<string>();
   readonly hallId = input.required<string>();
@@ -2630,11 +2686,31 @@ export class PlannerPageComponent {
     if (ok) await this.store.publish();
   }
 
+  /** The hall's rate card and stall prices; can pick the stalls without a price on the plan. */
+  protected openPricing(): void {
+    this.dialog
+      .open<PricingDialogResult>(PricingDialogComponent, {
+        data: { store: this.store } satisfies PricingDialogData,
+        width: 'min(980px, 96vw)',
+      })
+      .subscribe((result) => {
+        if (result !== 'select-unpriced') return;
+        const ids = this.store.unpriced().map((s) => s.id);
+        this.tool.set('select');
+        this.store.select(ids.length ? { kind: 'stall', ids } : null);
+        this.rightOpen.set(true);
+      });
+  }
+
   protected readonly submitTip = computed(() => {
     const venue = this.context.context()?.organisation.name ?? 'the venue';
     if (this.store.dirty()) return 'Save your changes first: the saved plan is what is sent';
     if (!this.store.revision()) return 'Save the plan first';
     if (this.store.upToDate()) return `Version ${this.store.revision()} is approved and published`;
+    const unpriced = this.store.unpriced().length;
+    if (unpriced) {
+      return `Price every stall for sale first: ${unpriced} ${unpriced === 1 ? 'has' : 'have'} no price (Pricing in the toolbar)`;
+    }
     return `Send version ${this.store.revision()} to ${venue} for approval; approving publishes it`;
   });
 

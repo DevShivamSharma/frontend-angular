@@ -4,7 +4,14 @@ import { map, Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
 import type { DrawingImportResult } from './drawing-import.models';
-import type { PlanContent, PlanFinding, PlannerView, StallPlanView } from './plans.models';
+import type {
+  PlanContent,
+  PlanFinding,
+  PlannerView,
+  PlanPricing,
+  StallPlanView,
+} from './plans.models';
+import type { PriceCard } from './stall-price';
 
 /** The stall plan of a hall of an event. */
 @Injectable({ providedIn: 'root' })
@@ -129,6 +136,28 @@ export class PlansApi {
     return this.http.post<StallPlanView>(`${this.base(slug, eventId, hallId)}/reject`, {
       revision,
       note,
+    });
+  }
+
+  /** Sets the hall's rate card: General, and Premium and Marquee when priced apart. */
+  setPriceCard(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    card: PriceCard,
+  ): Observable<PlanPricing> {
+    return this.http.put<PlanPricing>(`${this.base(slug, eventId, hallId)}/pricing/card`, card);
+  }
+
+  /** Sets prices on stalls, or (price null) takes them off; other stalls keep theirs. */
+  setStallPrices(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    prices: Array<{ stallId: string; price: number | null; note?: string | null }>,
+  ): Observable<PlanPricing> {
+    return this.http.put<PlanPricing>(`${this.base(slug, eventId, hallId)}/pricing/stalls`, {
+      prices,
     });
   }
 }

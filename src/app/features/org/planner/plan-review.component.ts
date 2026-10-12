@@ -14,6 +14,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { stallLabel } from '../../../core/plans/plans.models';
+import { forSale, rupees } from '../../../core/plans/stall-price';
 import { ConfirmService } from '../../../core/ui/confirm.service';
 import { IconComponent } from '../../../shared/icon.component';
 import { PlannerCanvasComponent, PlannerTool } from './planner-canvas.component';
@@ -254,6 +255,12 @@ const TOOLS: Array<{ id: PlannerTool; label: string; icon: string }> = [
                     <dt>Seats</dt>
                     <dd>{{ summary().seats | number }}</dd>
                   }
+                  @if (store.pricing()) {
+                    <dt>Value (excl. GST)</dt>
+                    <dd>{{ rupees(store.planValue()) }}</dd>
+                    <dt>Without a price</dt>
+                    <dd>{{ store.unpriced().length | number }}</dd>
+                  }
                 </dl>
               </section>
 
@@ -277,6 +284,10 @@ const TOOLS: Array<{ id: PlannerTool; label: string; icon: string }> = [
                     @if (s.flags) {
                       <dt>Marked</dt>
                       <dd>{{ s.flags }}</dd>
+                    }
+                    @if (store.pricing()) {
+                      <dt>Price</dt>
+                      <dd [title]="s.reckoning">{{ s.price }}</dd>
                     }
                   </dl>
                 } @else {
@@ -529,6 +540,7 @@ const TOOLS: Array<{ id: PlannerTool; label: string; icon: string }> = [
   `,
 })
 export class PlanReviewComponent {
+  protected readonly rupees = rupees;
   protected readonly store = inject(PlannerStore);
   private readonly context = inject(OrgContextStore);
   private readonly confirm = inject(ConfirmService);
@@ -590,6 +602,7 @@ export class PlanReviewComponent {
     const s = this.store.selectedStalls()[0];
     if (!s) return null;
     const names = this.store.categoryName();
+    const price = this.store.prices().get(s.id) ?? null;
     const flags = [
       s.isPremium && 'premium',
       s.isBlocked && 'blocked',
@@ -600,6 +613,12 @@ export class PlanReviewComponent {
     ].filter(Boolean);
     return {
       label: stallLabel(s),
+      price: price
+        ? `₹${price.price.toLocaleString('en-IN')}`
+        : forSale(s)
+          ? 'none'
+          : 'not for sale',
+      reckoning: price?.reckoning ?? '',
       width: s.width,
       depth: s.depth,
       sides: s.openSides.length ? s.openSides.join(', ') : 'none',

@@ -1,6 +1,7 @@
 /** Mirrors the backend's stall plans (Module E). Floor metres, origin top-left, y down. */
 import type { Point } from '../venues/floor-plan.models';
 import type { EventHallDetailView } from '../events/events.models';
+import type { PriceCard } from './stall-price';
 
 export type StallSide = 'top' | 'bottom' | 'left' | 'right';
 export const STALL_SIDES: readonly StallSide[] = ['top', 'right', 'bottom', 'left'];
@@ -82,6 +83,16 @@ export interface StallPlanView extends PlanContent {
   review: PlanReview | null;
 }
 
+/** The pricing of an event hall's stalls. */
+export interface PlanPricing {
+  /** Null until the rate card is set. */
+  card: PriceCard | null;
+  /** Prices set on single stalls; the rate card prices the rest. */
+  prices: Array<{ stallId: string; price: number; note: string | null }>;
+  canManage: boolean;
+  readOnlyReason: string | null;
+}
+
 export interface PlanReview {
   status: 'submitted' | 'approved' | 'rejected';
   /** The saved revision that was sent. */
@@ -99,6 +110,8 @@ export interface PlannerView {
   plan: StallPlanView;
   /** For the venue reviewing an external event's plan: the rules the saved plan breaks now. */
   findings: PlanFinding[] | null;
+  /** The stalls' prices; null for members who may not see prices. */
+  pricing: PlanPricing | null;
   canEdit: boolean;
   readOnlyReason: string | null;
   /** Internal events: this member publishes the saved plan. */

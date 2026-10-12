@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
 
 import type { CategoryRef } from '../../../core/categories/categories.models';
 import { PlansApi } from '../../../core/plans/plans-api.service';
@@ -8,11 +8,13 @@ import type {
   PlanFinding,
   PlannerView,
   PlanObject,
+  PlanPricing,
   PlanSeat,
   PlanStall,
   PlanZone,
   StallPlanView,
 } from '../../../core/plans/plans.models';
+import { forSale, PriceCard, stallPrice, StallPrice } from '../../../core/plans/stall-price';
 import { Notifier } from '../../../core/ui/notifier.service';
 import { plannerFloor, PlannerFloor } from './planner-geometry';
 
@@ -63,6 +65,26 @@ export class PlannerStore {
   readonly canRedo = computed(() => this.redoStack().length > 0);
 
   readonly canEdit = computed(() => this.view()?.canEdit ?? false);
+
+  /** The stalls' prices as saved; null when this member may not see prices. */
+  readonly pricing = signal<PlanPricing | null>(null);
+  /** Each stall's price as the plan is now, unsaved changes too; null: none. */
+  readonly prices = computed(() => {
+    const pricing = this.pricing();
+    const out = new Map<string, StallPrice | null>();
+    if (!pricing) return out;
+    const own = new Map(pricing.prices.map((p) => [p.stallId, p] as const));
+    for (const s of this.plan().stalls) out.set(s.id, stallPrice(s, pricing.card, own.get(s.id)));
+    return out;
+  });
+  /** Stalls for sale with no price yet. */
+  readonly unpriced = computed(() =>
+    this.pricing() ? this.plan().stalls.filter((s) => forSale(s) && !this.prices().get(s.id)) : [],
+  );
+  /** ₹ of every priced stall, before GST. */
+  readonly planValue = computed(() =>
+    [...this.prices().values()].reduce((sum, p) => sum + (p?.price ?? 0), 0),
+  );
   readonly floor = computed<PlannerFloor | null>(() => {
     const v = this.view();
     return v ? plannerFloor(v.hall.floor) : null;
@@ -82,6 +104,7 @@ export class PlannerStore {
     this.target = { slug, eventId, hallId };
     this.view.set(view);
     this.published.set(view.plan.published);
+    this.pricing.set(view.pricing ?? null);
     const { zones, stalls, seats, revision } = view.plan;
     // A plan saved before drawings existed has none.
     const objects = view.plan.objects ?? [];
@@ -223,6 +246,48 @@ export class PlannerStore {
       this.revision.set(saved.revision);
       this.dirty.set(false);
       this.notifier.success('Stall plan saved.');
+      return true;
+    } catch {
+      // The error interceptor has shown it.
+      return false;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Sets the hall's rate card; it is saved at once, apart from the plan. */
+  async setPriceCard(card: PriceCard): Promise<boolean> {
+    const { slug, eventId, hallId } = this.target;
+    return this.pricingCall(
+      this.api.setPriceCard(slug, eventId, hallId, card),
+      'Rate card saved. Stall prices follow it.',
+    );
+  }
+
+  /**
+   * Sets prices on stalls, or (price null) takes them off so the rate card prices them; saved at
+   * once, apart from the plan.
+   */
+  async setStallPrices(
+    prices: Array<{ stallId: string; price: number | null; note?: string | null }>,
+  ): Promise<boolean> {
+    if (!prices.length) return true;
+    const { slug, eventId, hallId } = this.target;
+    const n = prices.length;
+    const cleared = prices.every((p) => p.price === null);
+    return this.pricingCall(
+      this.api.setStallPrices(slug, eventId, hallId, prices),
+      cleared
+        ? `${n === 1 ? 'The stall goes' : `${n} stalls go`} by the rate card again.`
+        : `Price set on ${n === 1 ? '1 stall' : `${n} stalls`}.`,
+    );
+  }
+
+  private async pricingCall(call: Observable<PlanPricing>, done: string): Promise<boolean> {
+    this.busy.set(true);
+    try {
+      this.pricing.set(await firstValueFrom(call));
+      this.notifier.success(done);
       return true;
     } catch {
       // The error interceptor has shown it.
