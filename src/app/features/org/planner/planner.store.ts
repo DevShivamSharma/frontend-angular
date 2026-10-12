@@ -232,6 +232,39 @@ export class PlannerStore {
     }
   }
 
+  /**
+   * External events: sends the plan for approval, takes it back, or (the venue) approves it or
+   * sends it back. Who may edit changes with each, so the planner opens again afterwards.
+   */
+  async review(step: 'submit' | 'withdraw' | 'approve' | 'reject', note = ''): Promise<boolean> {
+    const { slug, eventId, hallId } = this.target;
+    const sent = this.view()?.plan.review?.revision ?? this.revision();
+    const calls = {
+      submit: () => this.api.submit(slug, eventId, hallId, this.revision()),
+      withdraw: () => this.api.withdraw(slug, eventId, hallId),
+      approve: () => this.api.approve(slug, eventId, hallId, sent),
+      reject: () => this.api.reject(slug, eventId, hallId, sent, note),
+    };
+    const done = {
+      submit: 'Sent for approval. You will get an email when it is answered.',
+      withdraw: 'Taken back. You can change the plan again.',
+      approve: 'Approved and published. The organiser gets an email.',
+      reject: 'Sent back. The organiser gets an email with your note.',
+    };
+    this.busy.set(true);
+    try {
+      await firstValueFrom(calls[step]());
+      this.load(slug, eventId, hallId, await firstValueFrom(this.api.get(slug, eventId, hallId)));
+      this.notifier.success(done[step]);
+      return true;
+    } catch {
+      // The error interceptor has shown it.
+      return false;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   /** Publishes the saved plan, after the server checks it against the rules again. */
   async publish(): Promise<boolean> {
     const { slug, eventId, hallId } = this.target;

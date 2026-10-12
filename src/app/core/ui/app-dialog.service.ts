@@ -19,6 +19,8 @@ export interface AppDialogOptions<D> {
 @Injectable({ providedIn: 'root' })
 export class AppDialog {
   private readonly dialogs = inject(DialogService);
+  /** Dialogs open now, so a page that goes can close the ones it opened. */
+  private readonly opened = new Set<DynamicDialogRef>();
 
   open<R = unknown, D = unknown>(
     component: Type<unknown>,
@@ -34,7 +36,7 @@ export class AppDialog {
     options: AppDialogOptions<D> = {},
   ): DynamicDialogRef | null {
     const dismissable = options.dismissable ?? true;
-    return this.dialogs.open(component, {
+    const ref = this.dialogs.open(component, {
       data: options.data,
       modal: true,
       showHeader: false,
@@ -47,6 +49,16 @@ export class AppDialog {
       style: { width: options.width ?? 'min(560px, 94vw)', maxHeight: '94dvh' },
       contentStyle: { padding: '0' },
     });
+    if (ref) {
+      this.opened.add(ref);
+      ref.onClose.pipe(take(1)).subscribe(() => this.opened.delete(ref));
+    }
+    return ref;
+  }
+
+  /** Closes every dialog open now, each as if dismissed: its caller gets undefined. */
+  closeAll(): void {
+    for (const ref of [...this.opened]) ref.close();
   }
 }
 

@@ -35,14 +35,18 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const COLLAPSED_KEY = 'app.nav.collapsed';
+/** v2: the rail starts collapsed; choices remembered before then are not carried over. */
+const COLLAPSED_KEY = 'app.nav.collapsed.v2';
 
-/** Remembered per browser; storage can be unavailable (private mode), so failures are ignored. */
+/**
+ * Collapsed until the person expands it; their choice is remembered per browser. Storage can be
+ * unavailable (private mode), so failures are ignored.
+ */
 function readCollapsed(): boolean {
   try {
-    return localStorage.getItem(COLLAPSED_KEY) === '1';
+    return localStorage.getItem(COLLAPSED_KEY) !== '0';
   } catch {
-    return false;
+    return true;
   }
 }
 

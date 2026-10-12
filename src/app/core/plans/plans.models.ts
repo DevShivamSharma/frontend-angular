@@ -78,14 +78,36 @@ export interface StallPlanView extends PlanContent {
   updatedAt: string | null;
   /** The published revision; it may be older than the saved one. */
   published: { revision: number; at: string } | null;
+  /** The venue's approval of an external event's plan; null while it was never sent. */
+  review: PlanReview | null;
+}
+
+export interface PlanReview {
+  status: 'submitted' | 'approved' | 'rejected';
+  /** The saved revision that was sent. */
+  revision: number;
+  submittedAt: string;
+  submittedBy: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  /** Why the venue sent it back. */
+  note: string | null;
 }
 
 export interface PlannerView {
   hall: EventHallDetailView;
   plan: StallPlanView;
+  /** For the venue reviewing an external event's plan: the rules the saved plan breaks now. */
+  findings: PlanFinding[] | null;
   canEdit: boolean;
   readOnlyReason: string | null;
+  /** Internal events: this member publishes the saved plan. */
   canPublish: boolean;
+  /** External events: the organiser's plan is published by the venue's approval. */
+  needsApproval: boolean;
+  canSubmit: boolean;
+  canWithdraw: boolean;
+  canApprove: boolean;
 }
 
 /** A broken rule, and the zones, stalls or seats it is about (none: the whole plan). */

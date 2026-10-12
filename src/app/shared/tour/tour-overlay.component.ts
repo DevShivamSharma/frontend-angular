@@ -31,8 +31,8 @@ const TARGET_WAIT_MS = 3000;
 
 /**
  * Draws the guided tour: a dimmed page with a rounded hole over the target (one element with a
- * huge spread shadow), a popover beside it, and click blockers: an info step blocks the whole
- * page, an action step everything but the target. Placed fixed over the page that owns it.
+ * huge spread shadow), a popover beside it, and a click blocker over the whole page, since the
+ * tour does its steps itself. Placed fixed over the page that owns it.
  */
 @Component({
   selector: 'app-tour-overlay',
@@ -52,36 +52,9 @@ const TARGET_WAIT_MS = 3000;
             [style.width.px]="h.width"
             [style.height.px]="h.height"
           ></div>
+          <!-- The tour does the steps itself: nothing on the page takes clicks meanwhile. -->
+          <div class="block all"></div>
           @if (step.action) {
-            <!-- Only the target takes clicks. -->
-            <div
-              class="block"
-              [style.top.px]="0"
-              [style.left.px]="0"
-              [style.right.px]="0"
-              [style.height.px]="h.top"
-            ></div>
-            <div
-              class="block"
-              [style.top.px]="h.top + h.height"
-              [style.left.px]="0"
-              [style.right.px]="0"
-              [style.bottom.px]="0"
-            ></div>
-            <div
-              class="block"
-              [style.top.px]="h.top"
-              [style.left.px]="0"
-              [style.width.px]="h.left"
-              [style.height.px]="h.height"
-            ></div>
-            <div
-              class="block"
-              [style.top.px]="h.top"
-              [style.left.px]="h.left + h.width"
-              [style.right.px]="0"
-              [style.height.px]="h.height"
-            ></div>
             <div
               class="pulse"
               [style.top.px]="h.top"
@@ -89,8 +62,6 @@ const TARGET_WAIT_MS = 3000;
               [style.width.px]="h.width"
               [style.height.px]="h.height"
             ></div>
-          } @else {
-            <div class="block all"></div>
           }
         }
 
@@ -130,13 +101,12 @@ const TARGET_WAIT_MS = 3000;
           @if (step.action) {
             @if (tour.status() === 'done') {
               <p class="callout done">
-                <i class="pi pi-check-circle" aria-hidden="true"></i>Well done — on to the next
-                step…
+                <i class="pi pi-check-circle" aria-hidden="true"></i>Done — on to the next step…
               </p>
             } @else {
               <p class="callout">
-                <i class="pi pi-arrow-circle-right"></i
-                ><span><b>Your turn:</b> {{ step.action.prompt }}</span>
+                <i class="pi pi-arrow-circle-right" aria-hidden="true"></i
+                ><span><b>Watch:</b> {{ step.action.prompt }}</span>
               </p>
             }
           }
@@ -154,24 +124,12 @@ const TARGET_WAIT_MS = 3000;
               <button type="button" class="link" (click)="tour.end('skip')">Skip the tour</button>
             }
             <div class="buttons">
-              @if (!tour.isFirst()) {
-                <button type="button" class="plain" (click)="tour.back()">
-                  <i class="pi pi-arrow-left" aria-hidden="true"></i>Back
-                </button>
-              }
-              @if (step.action && tour.status() === 'pending') {
-                <button type="button" class="plain skip" (click)="tour.skipStep()">
-                  Next<i class="pi pi-arrow-right" aria-hidden="true"></i>
+              @if (tour.isLast()) {
+                <button type="button" class="primary" data-primary (click)="tour.next()">
+                  <i class="pi pi-check" aria-hidden="true"></i>Finish
                 </button>
               } @else {
-                <button type="button" class="primary" data-primary (click)="tour.next()">
-                  @if (tour.isLast()) {
-                    <i class="pi pi-check" aria-hidden="true"></i>Finish
-                  } @else {
-                    {{ tour.isFirst() ? 'Start' : 'Next'
-                    }}<i class="pi pi-arrow-right" aria-hidden="true"></i>
-                  }
-                </button>
+                <span class="playing">Plays by itself</span>
               }
             </div>
           </div>
@@ -369,25 +327,13 @@ const TARGET_WAIT_MS = 3000;
     .link:hover {
       color: #1f2937;
     }
-    .plain,
+    .playing {
+      color: #6b7280;
+      font-size: 12px;
+    }
     .primary {
-      padding: 6px 12px;
       border-radius: 8px;
       font-size: 14px !important;
-    }
-    .plain {
-      border: 1px solid #d1d5db;
-      background: #fff;
-      color: #374151;
-      font-weight: 500 !important;
-    }
-    .plain.skip {
-      color: #4b5563;
-    }
-    .plain:hover {
-      background: #f9fafb;
-    }
-    .primary {
       padding: 6px 14px;
       border: 0;
       background: var(--app-primary);
@@ -467,7 +413,7 @@ export class TourOverlayComponent {
     } else if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) {
       const primary =
         this.dialog()?.nativeElement.querySelector<HTMLButtonElement>('[data-primary]');
-      if (primary && !this.tour.step()?.action) {
+      if (primary) {
         e.preventDefault();
         primary.click();
       }

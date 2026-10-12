@@ -706,7 +706,7 @@ export class PlannerCanvasComponent {
         // Drawing happens on the plan from above.
         if (this.is3d() && !TOOLS_3D.has(tool)) this.leave3d();
         this.setControlButtons();
-        this.hint.set(this.is3d() ? this.hint3d() : HINTS[tool]);
+        this.hint.set(this.is3d() ? this.hint3d() : this.hint2d(tool));
       });
     });
     effect(() => {
@@ -956,7 +956,7 @@ export class PlannerCanvasComponent {
     this.draftRect = null;
     dispose(this.draft3);
     this.face.set('top');
-    this.hint.set(HINTS[this.tool()]);
+    this.hint.set(this.hint2d(this.tool()));
     this.applySpin();
   }
 
@@ -1686,7 +1686,11 @@ export class PlannerCanvasComponent {
     const click = Math.hypot(e.clientX - d.px, e.clientY - d.py) < CLICK_PX;
     const world = this.world(e);
     const tool = this.tool();
-    if (d.mode === 'draw' && tool === 'zoom-window') {
+    if (d.mode === 'pan' && click && this.readonly() && tool === 'select') {
+      // A read-only plan pans, and a click still picks what it lands on, to read it.
+      const hit = this.hit(world);
+      this.pick.emit(hit ? { kind: hit.kind, ids: [hit.id], additive: false } : null);
+    } else if (d.mode === 'draw' && tool === 'zoom-window') {
       if (this.draftRect) this.zoomTo(this.draftRect);
     } else if (d.mode === 'draw' && tool === 'circle') {
       const c = this.draftCircle;
@@ -1822,6 +1826,11 @@ export class PlannerCanvasComponent {
   }
 
   /** What is under a point: a seat, then a stall, then a zone. */
+  /** What the 2D plan does with the tool; a read-only plan is looked at, not changed. */
+  private hint2d(tool: PlannerTool): string {
+    return this.readonly() && tool === 'select' ? READONLY_HINT : HINTS[tool];
+  }
+
   private hit(p: Point): { kind: SelectionKind; id: string } | null {
     const plan = this.plan();
     const at = (r: Rect) =>
@@ -1892,6 +1901,8 @@ export class PlannerCanvasComponent {
       .map((z) => z.polygon);
   }
 }
+
+const READONLY_HINT = 'Click a stall to read it · Drag to pan · Scroll to zoom';
 
 const HINTS: Record<PlannerTool, string> = {
   select: 'Click to select · Shift-click to add · Drag to move · Drag on the floor to box-select',

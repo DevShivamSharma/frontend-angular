@@ -67,7 +67,14 @@ export interface EventHallRules {
 }
 
 export interface EventHallDetailView {
-  event: { id: string; name: string; kind: EventKind; audience: EventType };
+  event: {
+    id: string;
+    name: string;
+    kind: EventKind;
+    audience: EventType;
+    /** The company that booked the halls; external events only. */
+    organiserName: string | null;
+  };
   hall: EventHallView;
   floor: HallFloor;
   rules: EventHallRules;

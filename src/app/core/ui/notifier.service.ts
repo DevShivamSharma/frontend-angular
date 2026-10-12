@@ -17,6 +17,11 @@ export class Notifier {
     this.messages.add({ severity: 'warn', summary: message, life: 8000 });
   }
 
+  /** Takes every toast away, e.g. when the page they were about is left. */
+  clear(): void {
+    this.messages.clear();
+  }
+
   error(error: unknown, fallback?: string): void {
     this.messages.add({ severity: 'error', summary: errorMessage(error, fallback), life: 8000 });
   }

@@ -114,7 +114,9 @@ export function planSetting(
 ): { setting: PlanSetting; replacing: Set<string> } {
   const replacing = new Set(
     afresh
-      ? plan.stalls.filter((s) => pointInRing(centre({ ...s, height: s.depth }), region)).map((s) => s.id)
+      ? plan.stalls
+          .filter((s) => pointInRing(centre({ ...s, height: s.depth }), region))
+          .map((s) => s.id)
       : [],
   );
   const { switches, values } = view.hall.rules;
@@ -167,7 +169,12 @@ export function planOptions(brief: PlanBrief, setting: PlanSetting): PlanOption[
   const { width, depth } = brief;
   if (!(width > 0 && depth > 0)) return [];
   const sizes: Array<[number, number]> =
-    width === depth ? [[width, depth]] : [[width, depth], [depth, width]];
+    width === depth
+      ? [[width, depth]]
+      : [
+          [width, depth],
+          [depth, width],
+        ];
   const walls = brief.wallLines === 'auto' ? [false, true] : [brief.wallLines === 'yes'];
   const rules = setting.rules;
   const margin = Math.max(GRID, rules.on('peripheralClearance') ? rules.wallClearance : 0);
@@ -196,7 +203,10 @@ export function planOptions(brief: PlanBrief, setting: PlanSetting): PlanOption[
             depth: d,
             aisle: brief.aisle,
             margin,
-            crossEvery: Math.max(1, Math.min(CROSS_AISLE_BOOTHS, Math.floor(CROSS_AISLE_METRES / w))),
+            crossEvery: Math.max(
+              1,
+              Math.min(CROSS_AISLE_BOOTHS, Math.floor(CROSS_AISLE_METRES / w)),
+            ),
             count: brief.count,
             pillarClearance: 0.5,
             shiftForPillars: true,
@@ -339,7 +349,10 @@ export function numberPlaces(
     .map((p, i) => ({ p, i }))
     .sort(
       (a, b) =>
-        islandOf(a.p) - islandOf(b.p) || lineOf(a.p) - lineOf(b.p) || a.p.x - b.p.x || a.p.y - b.p.y,
+        islandOf(a.p) - islandOf(b.p) ||
+        lineOf(a.p) - lineOf(b.p) ||
+        a.p.x - b.p.x ||
+        a.p.y - b.p.y,
     );
   const seen = new Map<number, number>();
   const out: Array<{ island: string | null; stall: string }> = new Array(places.length);

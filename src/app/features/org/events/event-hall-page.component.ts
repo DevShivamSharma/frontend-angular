@@ -84,11 +84,16 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
             {{ d.hall.floorArea | number: '1.0-0' }} m² · {{ d.event.audience }} event
           </span>
           @if (canPlan()) {
-            <a pButton [routerLink]="['planner']"
-              ><app-icon name="architecture" />{{
-                d.plan.revision ? 'Open stall planner' : 'Plan stalls'
-              }}</a
-            >
+            @if (reviews()) {
+              <!-- The organiser draws an external event's plan; the venue reviews it. -->
+              <a pButton [routerLink]="['planner']"><app-icon name="task_alt" />Review</a>
+            } @else {
+              <a pButton [routerLink]="['planner']"
+                ><app-icon name="architecture" />{{
+                  d.plan.revision ? 'Open stall planner' : 'Plan stalls'
+                }}</a
+              >
+            }
           }
         </app-page-header>
 
@@ -288,6 +293,10 @@ export class EventHallPageComponent {
   protected readonly groups = GROUPS;
   protected readonly canManage = computed(() => this.context.can('events.manage'));
   protected readonly canPlan = computed(() => this.context.can('layouts.view'));
+  /** The venue's team on an external event: they review the organiser's plan, not draw it. */
+  protected readonly reviews = computed(
+    () => this.detail()?.event.kind === 'external' && !this.context.eventScoped(),
+  );
   /** The organisation's categories: active ones, and inactive ones the hall already sells. */
   private readonly allCategories = signal<CategoryRef[]>([]);
   protected readonly selectedCategories = signal<string[]>([]);

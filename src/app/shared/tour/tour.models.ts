@@ -1,6 +1,7 @@
 /**
- * A guided tour: one thing lit up at a time. An info step explains and waits for Next; an
- * action step ("Your turn") waits for the user to do something, and moves on by itself.
+ * A guided tour that plays itself: one thing lit up at a time. An info step shows long enough
+ * to read, then the next follows; an action step does its action itself (`play`), so the person
+ * sees it done. Only the last step waits, for Finish; the tour can be skipped at any time.
  */
 export interface TourStep<C> {
   id: string;
@@ -17,12 +18,11 @@ export interface TourStep<C> {
 }
 
 export interface TourAction<C> {
-  /** What to do, after "Your turn:". */
+  /** What the tour does now, in words. */
   prompt: string;
-  /**
-   * Whether it is done. Read from signals, so the tour notices the moment it happens, whether
-   * by a click, a drag or a keyboard shortcut.
-   */
+  /** Does it, as the person would. */
+  play: (ctx: C) => void | Promise<unknown>;
+  /** Whether it is done. Read from signals, so the tour notices the moment it happens. */
   done: (ctx: C) => boolean;
 }
 

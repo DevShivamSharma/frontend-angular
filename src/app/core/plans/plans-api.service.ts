@@ -88,4 +88,47 @@ export class PlansApi {
       revision,
     });
   }
+
+  /** External events: sends the saved plan to the venue for approval. */
+  submit(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    revision: number,
+  ): Observable<StallPlanView> {
+    return this.http.post<StallPlanView>(`${this.base(slug, eventId, hallId)}/submit`, {
+      revision,
+    });
+  }
+
+  /** Takes back a plan that waits for approval. */
+  withdraw(slug: string, eventId: string, hallId: string): Observable<StallPlanView> {
+    return this.http.post<StallPlanView>(`${this.base(slug, eventId, hallId)}/withdraw`, {});
+  }
+
+  /** The venue approves the plan that waits, which publishes it. */
+  approve(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    revision: number,
+  ): Observable<StallPlanView> {
+    return this.http.post<StallPlanView>(`${this.base(slug, eventId, hallId)}/approve`, {
+      revision,
+    });
+  }
+
+  /** The venue sends the plan that waits back, saying what to change. */
+  reject(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    revision: number,
+    note: string,
+  ): Observable<StallPlanView> {
+    return this.http.post<StallPlanView>(`${this.base(slug, eventId, hallId)}/reject`, {
+      revision,
+      note,
+    });
+  }
 }

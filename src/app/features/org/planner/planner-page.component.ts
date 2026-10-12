@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   HostListener,
@@ -82,6 +83,7 @@ import {
 } from './planner-geometry';
 import { PlannerPropertiesComponent, StallPatch } from './planner-properties.component';
 import { PlannerStore } from './planner.store';
+import { PlanReviewComponent } from './plan-review.component';
 import { PlannerTourCtx, plannerTour } from './planner-tour';
 import { TourOverlayComponent } from '../../../shared/tour/tour-overlay.component';
 import { TourService } from '../../../shared/tour/tour.service';
@@ -149,11 +151,15 @@ const OBJECT_COLOR = '#334155';
     PlannerPropertiesComponent,
     TourOverlayComponent,
     PlannerAssistantComponent,
+    PlanReviewComponent,
   ],
   providers: [PlannerStore, TourService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (store.view(); as v) {
+    @if (reviewMode()) {
+      <!-- The venue reviews an external event's plan: no drawing tools, no tour. -->
+      <app-plan-review [categoryColors]="categoryColors()" />
+    } @else if (store.view(); as v) {
       @let ro = !canEdit();
       @let noStalls = !store.selectedStalls().length || ro || store.busy();
       <div class="planner">
@@ -167,6 +173,7 @@ const OBJECT_COLOR = '#334155';
                 (click)="importFile.click()"
                 [disabled]="ro || store.busy()"
                 pTooltip="Import this hall's stalls from a CAD plan exported as PDF"
+                tooltipPosition="bottom"
               >
                 <app-icon name="upload_file" /><span>Import</span>
               </button>
@@ -178,7 +185,6 @@ const OBJECT_COLOR = '#334155';
                 (change)="importPlan($event)"
               />
             </div>
-            <span class="group-label"></span>
           </div>
           <div class="group">
             <div class="tools">
@@ -191,11 +197,11 @@ const OBJECT_COLOR = '#334155';
                 [attr.aria-pressed]="tool() === 'zone-rect'"
                 [disabled]="ro"
                 pTooltip="Zone (Z)"
+                tooltipPosition="bottom"
               >
                 <app-icon name="grid_view" /><span>Zone</span>
               </button>
             </div>
-            <span class="group-label"></span>
           </div>
           <div class="group" data-tour="fill-group">
             <div class="tools">
@@ -208,6 +214,7 @@ const OBJECT_COLOR = '#334155';
                 [attr.aria-pressed]="tool() === 'booth'"
                 [disabled]="ro"
                 pTooltip="Booth (B)"
+                tooltipPosition="bottom"
               >
                 <app-icon name="storefront" /><span>Booth</span>
               </button>
@@ -216,6 +223,8 @@ const OBJECT_COLOR = '#334155';
                 class="tool auto"
                 (click)="autoBooths()"
                 [disabled]="ro || store.busy()"
+                pTooltip="Auto-booths: fill the selected zone with booths"
+                tooltipPosition="bottom"
               >
                 <app-icon name="auto_awesome" /><span>Auto-booths</span>
               </button>
@@ -225,6 +234,7 @@ const OBJECT_COLOR = '#334155';
                 (click)="planHall()"
                 [disabled]="ro || store.busy()"
                 pTooltip="Lay out the whole hall or a zone: pick one of a few complete layouts"
+                tooltipPosition="bottom"
               >
                 <app-icon name="dashboard" /><span>Plan hall</span>
               </button>
@@ -234,10 +244,18 @@ const OBJECT_COLOR = '#334155';
                 (click)="toBooth()"
                 [disabled]="ro || store.busy() || !canMakeBooth()"
                 pTooltip="Make a booth of the selected zone or rectangle"
+                tooltipPosition="bottom"
               >
-                <app-icon name="crop_square" /><span>To booth</span>
+                <app-icon name="crop_free" /><span>To booth</span>
               </button>
-              <button type="button" class="tool" (click)="seats()" [disabled]="ro || store.busy()">
+              <button
+                type="button"
+                class="tool"
+                (click)="seats()"
+                [disabled]="ro || store.busy()"
+                pTooltip="Seats"
+                tooltipPosition="bottom"
+              >
                 <app-icon name="event_seat" /><span>Seats</span>
               </button>
               <button
@@ -245,11 +263,12 @@ const OBJECT_COLOR = '#334155';
                 class="tool auto seat"
                 (click)="autoSeats()"
                 [disabled]="ro || store.busy()"
+                pTooltip="Auto-seats: fill the selected zone with seats"
+                tooltipPosition="bottom"
               >
                 <app-icon name="auto_awesome" /><span>Auto-seats</span>
               </button>
             </div>
-            <span class="group-label"></span>
           </div>
           <div class="group">
             <div class="tools">
@@ -261,6 +280,7 @@ const OBJECT_COLOR = '#334155';
                 (click)="setTool('select')"
                 [attr.aria-pressed]="tool() === 'select'"
                 pTooltip="Select (V)"
+                tooltipPosition="bottom"
               >
                 <app-icon name="near_me" /><span>Select</span>
               </button>
@@ -272,6 +292,7 @@ const OBJECT_COLOR = '#334155';
                 [attr.aria-pressed]="tool() === 'zone-poly'"
                 [disabled]="ro"
                 pTooltip="Polygon zone (P)"
+                tooltipPosition="bottom"
               >
                 <app-icon name="hexagon" /><span>Polygon</span>
               </button>
@@ -283,6 +304,7 @@ const OBJECT_COLOR = '#334155';
                 [attr.aria-pressed]="tool() === 'text'"
                 [disabled]="ro"
                 pTooltip="Text on the plan (T)"
+                tooltipPosition="bottom"
               >
                 <app-icon name="object" /><span>Object</span>
               </button>
@@ -297,6 +319,7 @@ const OBJECT_COLOR = '#334155';
                       [attr.aria-pressed]="tool() === t.id"
                       [disabled]="ro"
                       [pTooltip]="t.tip"
+                      tooltipPosition="bottom"
                     >
                       <app-icon [name]="t.icon" /><span>{{ t.label }}</span>
                     </button>
@@ -304,7 +327,6 @@ const OBJECT_COLOR = '#334155';
                 </div>
               }
             </div>
-            <span class="group-label">Draw</span>
           </div>
           <div class="group" data-tour="modify-group">
             <div class="tools">
@@ -315,6 +337,7 @@ const OBJECT_COLOR = '#334155';
                 (click)="setTool('pan')"
                 [attr.aria-pressed]="tool() === 'pan'"
                 pTooltip="Pan (H)"
+                tooltipPosition="bottom"
               >
                 <app-icon name="move" /><span>Pan</span>
               </button>
@@ -326,6 +349,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="copySelection()"
                   [disabled]="noStalls"
                   pTooltip="Copy the selected booths"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="content_copy" /><span>Copy</span>
                 </button>
@@ -335,6 +359,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="splitSelection()"
                   [disabled]="noStalls || store.selectedStalls().length !== 1"
                   pTooltip="Split the selected booth in two along its longer side"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="call_split" /><span>Split</span>
                 </button>
@@ -344,6 +369,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="removeSelection()"
                   [disabled]="!store.selection() || ro || store.busy()"
                   pTooltip="Delete (Del)"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="delete" /><span>Delete</span>
                 </button>
@@ -355,6 +381,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="mergeSelection()"
                   [disabled]="noStalls || store.selectedStalls().length < 2"
                   pTooltip="Join the selected booths into one; together they must make a rectangle"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="call_merge" /><span>Merge</span>
                 </button>
@@ -364,6 +391,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="rotateSelection()"
                   [disabled]="noStalls"
                   pTooltip="Turn the selected booths a quarter"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="rotate" /><span>Rotate</span>
                 </button>
@@ -373,6 +401,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="rowOfBooths()"
                   [disabled]="ro || store.busy()"
                   pTooltip="Add booths side by side in a row"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="rows" /><span>Row</span>
                 </button>
@@ -384,8 +413,9 @@ const OBJECT_COLOR = '#334155';
                   (click)="mirrorSelection('y')"
                   [disabled]="noStalls"
                   pTooltip="Mirror the selected booths top to bottom"
+                  tooltipPosition="bottom"
                 >
-                  <app-icon name="height" /><span>Mirror</span>
+                  <app-icon name="flip" class="turn" /><span>Mirror</span>
                 </button>
                 <button
                   type="button"
@@ -395,6 +425,7 @@ const OBJECT_COLOR = '#334155';
                   [attr.aria-pressed]="tool() === 'mirror-line'"
                   [disabled]="noStalls"
                   pTooltip="Draw a line to mirror copies of the selected booths across"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="line" /><span>Mirror line</span>
                 </button>
@@ -404,6 +435,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="scaleSelection()"
                   [disabled]="noStalls"
                   pTooltip="Make the selected booths bigger or smaller"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="scale" /><span>Scale</span>
                 </button>
@@ -415,6 +447,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="numberSelection()"
                   [disabled]="noStalls"
                   pTooltip="Number the selected booths from 1, row by row"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="numbers" /><span>Number</span>
                 </button>
@@ -424,6 +457,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="mirrorSelection('x')"
                   [disabled]="noStalls"
                   pTooltip="Mirror the selected booths left to right"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="flip" /><span>Mirror X</span>
                 </button>
@@ -436,6 +470,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="store.undo()"
                   [disabled]="!store.canUndo() || ro || store.busy()"
                   pTooltip="Undo (Ctrl+Z)"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="undo" /><span>Undo</span>
                 </button>
@@ -445,12 +480,12 @@ const OBJECT_COLOR = '#334155';
                   (click)="store.redo()"
                   [disabled]="!store.canRedo() || ro || store.busy()"
                   pTooltip="Redo (Ctrl+Y)"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="redo" /><span>Redo</span>
                 </button>
               </div>
             </div>
-            <span class="group-label">Modify</span>
           </div>
           <div class="group" data-tour="measure-group">
             <div class="tools">
@@ -461,6 +496,8 @@ const OBJECT_COLOR = '#334155';
                   [class.on]="tool() === 'measure-distance'"
                   (click)="setTool('measure-distance')"
                   [attr.aria-pressed]="tool() === 'measure-distance'"
+                  pTooltip="Measure distance"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="measure" /><span>Distance</span>
                 </button>
@@ -470,6 +507,8 @@ const OBJECT_COLOR = '#334155';
                   [class.on]="tool() === 'measure-area'"
                   (click)="setTool('measure-area')"
                   [attr.aria-pressed]="tool() === 'measure-area'"
+                  pTooltip="Measure area"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="area" /><span>Area</span>
                 </button>
@@ -481,6 +520,8 @@ const OBJECT_COLOR = '#334155';
                   [class.on]="tool() === 'measure-angle'"
                   (click)="setTool('measure-angle')"
                   [attr.aria-pressed]="tool() === 'measure-angle'"
+                  pTooltip="Measure angle"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="angle" /><span>Angle</span>
                 </button>
@@ -490,20 +531,33 @@ const OBJECT_COLOR = '#334155';
                   [class.on]="tool() === 'measure-height'"
                   (click)="setTool('measure-height')"
                   [attr.aria-pressed]="tool() === 'measure-height'"
+                  pTooltip="Measure height"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="height" /><span>Height</span>
                 </button>
               </div>
             </div>
-            <span class="group-label">Measure</span>
           </div>
           <div class="group">
             <div class="tools">
               <div class="col dense">
-                <button type="button" class="mini" (click)="zoom(1.25)">
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="zoom(1.25)"
+                  pTooltip="Zoom in"
+                  tooltipPosition="bottom"
+                >
                   <app-icon name="zoom_in" /><span>Zoom in</span>
                 </button>
-                <button type="button" class="mini" (click)="zoom(0.8)">
+                <button
+                  type="button"
+                  class="mini"
+                  (click)="zoom(0.8)"
+                  pTooltip="Zoom out"
+                  tooltipPosition="bottom"
+                >
                   <app-icon name="zoom_out" /><span>Zoom out</span>
                 </button>
                 <button
@@ -513,6 +567,7 @@ const OBJECT_COLOR = '#334155';
                   (click)="splitView.set(!splitView())"
                   [attr.aria-pressed]="splitView()"
                   pTooltip="A second view of the plan beside this one, to zoom on its own"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="split_view" /><span>Split view</span>
                 </button>
@@ -522,6 +577,8 @@ const OBJECT_COLOR = '#334155';
                   [class.on]="tool() === 'zoom-window'"
                   (click)="setTool('zoom-window')"
                   [attr.aria-pressed]="tool() === 'zoom-window'"
+                  pTooltip="Zoom to a window you drag"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="zoom_window" /><span>Zoom window</span>
                 </button>
@@ -533,6 +590,8 @@ const OBJECT_COLOR = '#334155';
                   [class.on]="showGrid()"
                   (click)="showGrid.set(!showGrid())"
                   [attr.aria-pressed]="showGrid()"
+                  pTooltip="Show the grid"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="grid_on" /><span>Grid</span>
                 </button>
@@ -542,12 +601,13 @@ const OBJECT_COLOR = '#334155';
                   [class.on]="showLabels()"
                   (click)="showLabels.set(!showLabels())"
                   [attr.aria-pressed]="showLabels()"
+                  pTooltip="Show booth labels"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="label" /><span>Labels</span>
                 </button>
               </div>
             </div>
-            <span class="group-label">View</span>
           </div>
           <div class="group">
             <div class="tools">
@@ -556,7 +616,8 @@ const OBJECT_COLOR = '#334155';
                   type="button"
                   class="mini"
                   (click)="help()"
-                  [pTooltip]="tourFor() ? 'Help & guided tour' : 'Help'"
+                  pTooltip="Help & guided tour"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="help" /><span>Help</span>
                 </button>
@@ -566,12 +627,13 @@ const OBJECT_COLOR = '#334155';
                   [class.on]="fullscreen()"
                   (click)="toggleFullscreen()"
                   [attr.aria-pressed]="fullscreen()"
+                  pTooltip="Full screen"
+                  tooltipPosition="bottom"
                 >
                   <app-icon name="fullscreen" /><span>Full</span>
                 </button>
               </div>
             </div>
-            <span class="group-label">Window</span>
           </div>
           <span class="spacer"></span>
           <div class="actions" data-tour="save-publish">
@@ -583,6 +645,7 @@ const OBJECT_COLOR = '#334155';
                 (click)="save()"
                 [disabled]="store.busy() || !store.dirty()"
                 pTooltip="Save (Ctrl+S)"
+                tooltipPosition="bottom"
               >
                 <app-icon [name]="store.dirty() ? 'save' : 'lock'" />{{
                   store.dirty() ? 'Save' : 'Saved'
@@ -597,13 +660,38 @@ const OBJECT_COLOR = '#334155';
                 (click)="publish()"
                 [disabled]="store.busy() || store.dirty() || !store.revision() || store.upToDate()"
                 [pTooltip]="publishTip()"
+                tooltipPosition="bottom"
               >
                 <app-icon name="check_circle" />{{ store.upToDate() ? 'Published' : 'Publish' }}
               </button>
-            } @else if (store.published(); as p) {
+            } @else if (v.canSubmit) {
+              <button
+                type="button"
+                class="publish"
+                (click)="submitPlan()"
+                [disabled]="store.busy() || store.dirty() || !store.revision() || store.upToDate()"
+                [pTooltip]="submitTip()"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="send" />Send for approval
+              </button>
+            } @else if (v.canWithdraw) {
+              <button
+                type="button"
+                class="publish quiet"
+                (click)="withdrawPlan()"
+                [disabled]="store.busy()"
+                pTooltip="Take the plan back to change it; it is no longer waiting for approval"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="undo" />Withdraw
+              </button>
+            }
+            @if (!v.canPublish && store.published(); as p) {
               <span
                 class="published-note"
                 [pTooltip]="'Published ' + (p.at | date: 'd MMM y, HH:mm')"
+                tooltipPosition="bottom"
               >
                 <app-icon name="check_circle" />Published v{{ p.revision }}
               </span>
@@ -615,6 +703,26 @@ const OBJECT_COLOR = '#334155';
             <app-icon name="visibility" /> {{ v.readOnlyReason }} You are seeing the plan as it was
             last saved.
           </p>
+        }
+        @if (v.needsApproval && v.plan.review; as r) {
+          @if (r.status !== 'submitted') {
+            <p class="review" [class]="r.status" role="status">
+              @switch (r.status) {
+                @case ('approved') {
+                  <app-icon name="check_circle" />
+                  {{ r.reviewedBy ?? 'The venue' }} approved version {{ r.revision }} on
+                  {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}; it is published.
+                }
+                @case ('rejected') {
+                  <app-icon name="warning" />
+                  <span>
+                    {{ r.reviewedBy ?? 'The venue' }} sent version {{ r.revision }} back on
+                    {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}: <b>{{ r.note }}</b>
+                  </span>
+                }
+              }
+            </p>
+          }
         }
         @if (store.busy()) {
           <p-progressbar mode="indeterminate" class="busy" />
@@ -876,23 +984,15 @@ const OBJECT_COLOR = '#334155';
                 <app-icon name="expand_more" class="chev" [class.open]="tourOpen()" />
               </button>
               @if (tourOpen()) {
-                @if (tourFor()) {
-                  <p class="small">
-                    New here, or showing someone round? The guided tour takes you step by step: it
-                    lights up one thing, you do it, and it moves on by itself.
-                  </p>
-                  <div class="tour-actions">
-                    <button pButton type="button" (click)="startTour()">
-                      <app-icon name="play" />Start the guided tour
-                    </button>
-                  </div>
-                } @else {
-                  <p class="small">
-                    Mark areas with <b>Zone</b> or <b>Polygon</b>, place stalls with <b>Booth</b> or
-                    <b>Auto-booths</b>, then <b>Save</b>. Every change is checked against this
-                    hall's rules.
-                  </p>
-                }
+                <p class="small">
+                  New here, or showing someone round? The guided tour takes you step by step: it
+                  lights up one thing, you do it, and it moves on by itself.
+                </p>
+                <div class="tour-actions">
+                  <button pButton type="button" (click)="startTour()">
+                    <app-icon name="play" />Start the guided tour
+                  </button>
+                </div>
               }
             </section>
             @if (assistantOpen()) {
@@ -994,74 +1094,65 @@ const OBJECT_COLOR = '#334155';
     }
     .ribbon {
       display: flex;
-      align-items: stretch;
+      align-items: center;
       gap: 0;
-      padding: 4px 8px 0;
+      min-height: 40px;
+      padding: 4px 8px;
       border-bottom: 1px solid var(--app-outline-variant);
       background: var(--app-surface-container-lowest);
       overflow-x: auto;
     }
     .group {
-      display: grid;
-      grid-template-rows: 1fr auto;
-      justify-items: center;
-      padding: 0 8px;
-      border-right: 1px solid var(--app-outline-variant);
+      display: flex;
+      align-items: center;
+    }
+    /* A short divider between groups, as a toolbar has. */
+    .group + .group::before {
+      content: '';
+      align-self: center;
+      width: 1px;
+      height: 20px;
+      margin: 0 6px;
+      background: var(--app-outline-variant);
     }
     .tools {
       display: flex;
       align-items: center;
-      gap: 2px;
+      gap: 1px;
     }
     .col {
-      display: grid;
-      align-content: center;
-      gap: 2px;
-      padding: 0 2px;
+      display: contents;
     }
-    .col.dense {
-      gap: 0;
-    }
-    .group-label {
-      min-height: 18px;
-      padding: 2px 0 4px;
-      font: var(--app-label-small);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--app-on-surface-variant);
-    }
-    .tool {
-      display: grid;
-      justify-items: center;
-      gap: 4px;
-      min-width: 56px;
-      padding: 8px 6px 6px;
-      border: 0;
-      border-radius: 8px;
-      background: none;
-      color: var(--app-on-surface);
-      font: var(--app-label-small);
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .tool app-icon {
-      font-size: 1.15rem;
-    }
+    .tool,
     .mini {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 8px;
+      display: inline-grid;
+      place-items: center;
+      flex: none;
+      width: 32px;
+      height: 32px;
+      padding: 0;
       border: 0;
-      border-radius: 6px;
+      border-radius: 4px;
       background: none;
       color: var(--app-on-surface);
-      font: var(--app-label-small);
       cursor: pointer;
-      white-space: nowrap;
     }
+    .tool app-icon,
     .mini app-icon {
-      font-size: 0.8rem;
+      font-size: 1.1rem;
+    }
+    .turn {
+      rotate: 90deg;
+    }
+    /* The name stays for screen readers and tests; the tip shows it. */
+    .tool > span,
+    .mini > span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
     }
     .tool:hover:not(:disabled):not(.soon),
     .tool:focus-visible,
@@ -1107,6 +1198,14 @@ const OBJECT_COLOR = '#334155';
       background: var(--app-surface-container-lowest);
       box-shadow: -12px 0 12px -8px rgb(0 0 0 / 0.12);
     }
+    /* Save and Publish sit on the toolbar line, as tall as its buttons. */
+    .actions .save,
+    .publish {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 4px;
+      font: var(--app-label-medium);
+    }
     .save {
       --p-button-primary-background: #16a34a;
       --p-button-primary-border-color: #16a34a;
@@ -1139,9 +1238,7 @@ const OBJECT_COLOR = '#334155';
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 14px;
       border: 0;
-      border-radius: 8px;
       background: #0f2a4a;
       color: #fff;
       font: var(--app-label-large);
@@ -1155,6 +1252,28 @@ const OBJECT_COLOR = '#334155';
       background: #fef9c3;
       color: #713f12;
       font: var(--app-body-medium);
+    }
+    .review {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin: 0;
+      padding: 10px 16px;
+      font: var(--app-body-medium);
+      background: light-dark(#e0f2fe, #0c4a6e);
+      color: light-dark(#0c4a6e, #e0f2fe);
+    }
+    .review.approved {
+      background: light-dark(#dcfce7, #14532d);
+      color: light-dark(#14532d, #dcfce7);
+    }
+    .review.rejected {
+      background: light-dark(#fee2e2, #7f1d1d);
+      color: light-dark(#7f1d1d, #fee2e2);
+    }
+    .publish.quiet {
+      background: var(--app-surface-container);
+      color: var(--app-on-surface);
     }
     .busy {
       position: absolute;
@@ -1529,12 +1648,16 @@ export class PlannerPageComponent {
   protected readonly slug = this.context.slug;
   private readonly auth = inject(AuthService);
   protected readonly tour = inject<TourService<PlannerTourCtx>>(TourService);
-  /** The guided tour is for the organiser's admin and architect. */
-  protected readonly tourFor = computed(() => this.context.eventScoped());
+  /** The tour opens by itself for organisers; anyone can start it from Help. */
+  private readonly tourFor = computed(() => this.context.eventScoped());
   private readonly canvas = viewChild<PlannerCanvasComponent>('canvas');
 
   protected readonly tool = signal<PlannerTool>('select');
   protected readonly canEdit = this.store.canEdit;
+  /** The venue's team on an external event: they review the organiser's plan. */
+  protected readonly reviewMode = computed(
+    () => !!this.store.view()?.needsApproval && !this.context.eventScoped(),
+  );
 
   protected readonly showGrid = signal(true);
   protected readonly showLabels = signal(true);
@@ -1609,6 +1732,11 @@ export class PlannerPageComponent {
   });
 
   constructor() {
+    // Leaving the planner closes what it opened: its dialogs, confirms and toasts.
+    inject(DestroyRef).onDestroy(() => {
+      this.dialog.closeAll();
+      this.notifier.clear();
+    });
     effect(() => {
       const [eventId, hallId] = [this.eventId(), this.hallId()];
       untracked(() => void this.load(eventId, hallId));
@@ -1619,6 +1747,7 @@ export class PlannerPageComponent {
     try {
       const view = await firstValueFrom(this.api.get(this.slug(), eventId, hallId));
       this.store.load(this.slug(), eventId, hallId, view);
+      if (this.reviewMode()) return;
       // The hall's rules come first, before any drawing; the first-visit tour after them.
       await this.showRules();
       this.autoTour();
@@ -1667,8 +1796,8 @@ export class PlannerPageComponent {
   protected key(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
     if (target?.closest('input, textarea, select, [contenteditable], .p-dialog')) return;
-    // The tour has the keyboard on its info steps; on "Your turn" steps shortcuts work.
-    if (this.tour.active() && !this.tour.step()?.action) return;
+    // The tour plays itself: shortcuts wait until it is over.
+    if (this.tour.active()) return;
     if (!this.canEdit()) return;
     const ctrl = e.ctrlKey || e.metaKey;
     const canvas = this.canvas();
@@ -2501,12 +2630,40 @@ export class PlannerPageComponent {
     if (ok) await this.store.publish();
   }
 
+  protected readonly submitTip = computed(() => {
+    const venue = this.context.context()?.organisation.name ?? 'the venue';
+    if (this.store.dirty()) return 'Save your changes first: the saved plan is what is sent';
+    if (!this.store.revision()) return 'Save the plan first';
+    if (this.store.upToDate()) return `Version ${this.store.revision()} is approved and published`;
+    return `Send version ${this.store.revision()} to ${venue} for approval; approving publishes it`;
+  });
+
+  /** External events: the organiser sends the saved plan to the venue for approval. */
+  protected async submitPlan(): Promise<void> {
+    const venue = this.context.context()?.organisation.name ?? 'the venue';
+    const ok = await this.confirm.confirm({
+      title: 'Send the plan for approval?',
+      message: `Version ${this.store.revision()} goes to ${venue}, who get an email. Until they answer, the plan cannot be changed; you can take it back. Approving it publishes it.`,
+      confirmLabel: 'Send for approval',
+    });
+    if (ok) await this.store.review('submit');
+  }
+
+  protected async withdrawPlan(): Promise<void> {
+    const ok = await this.confirm.confirm({
+      title: 'Take the plan back?',
+      message:
+        'It is no longer waiting for approval, and you can change it. Send it again when it is ready.',
+      confirmLabel: 'Withdraw',
+    });
+    if (ok) await this.store.review('withdraw');
+  }
+
   // ---- guided tour --------------------------------------------------------------------------
 
-  /** Help: the tour for organisers; for the venue's team, the help card. */
+  /** Help: the guided tour. */
   protected help(): void {
-    if (this.tourFor()) this.startTour();
-    else this.tourOpen.set(!this.tourOpen());
+    this.startTour();
   }
 
   /**
@@ -2530,6 +2687,10 @@ export class PlannerPageComponent {
       leave3d: () => this.canvas()?.leave3d(),
       openPlanPanel: () => this.leftOpen.set(true),
       openProperties: () => this.rightOpen.set(true),
+      addZone: (polygon) => this.addZone(polygon),
+      addBooth: (r) => this.addBooth(r),
+      patchStalls: (patch) => this.patchStalls(patch),
+      copySelection: () => this.copySelection(),
       madeStalls: () => fresh(this.store.plan().stalls),
       madeZones: () => fresh(this.store.plan().zones),
       memo: {},
@@ -2540,6 +2701,7 @@ export class PlannerPageComponent {
       canEdit: this.canEdit(),
       canPublish: view?.canPublish ?? false,
       hasCategories: this.store.categories().some((c) => c.status === 'active'),
+      hasRules: this.rulesOn() > 0,
     });
     this.tour.start(steps, ctx, {
       onEnd: (reason) => {

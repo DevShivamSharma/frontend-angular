@@ -2,13 +2,27 @@ import { computed, DOCUMENT, effect, inject, Injectable, signal, untracked } fro
 
 import { TourEnd, TourOptions, TourStep } from './tour.models';
 
-/** How long the "Well done" shows before the next step. */
-const ADVANCE_MS = 800;
+/** How long "Done" shows before the next step. */
+const ADVANCE_MS = 600;
+/** Time to read a step: per word, within these bounds. */
+const READ_MS_PER_WORD = 150;
+const READ_MIN_MS = 2500;
+const READ_MAX_MS = 6500;
+/** An action step is done this long after it shows: time to read what it does. */
+const ACT_AFTER_MS = 1500;
+/** An action step that did not get done in this time moves on anyway. */
+const PLAY_TIMEOUT_MS = 4000;
+
+/** How long a step shows before it moves on (info) or acts (action). */
+export function readingTime(step: Pick<TourStep<unknown>, 'title' | 'body'>): number {
+  const words = [step.title, ...step.body].join(' ').split(/\s+/).length;
+  return Math.min(READ_MAX_MS, Math.max(READ_MIN_MS, words * READ_MS_PER_WORD));
+}
 
 /**
- * Runs a guided tour: which step is shown, whether its action is done, and moving between
- * steps. The overlay draws it; the page that provides this service supplies the steps and the
- * context they act on.
+ * Runs a guided tour that plays itself: which step is shown, its action done by the tour, and
+ * moving on when the step has been read. The overlay draws it; the page that provides this
+ * service supplies the steps and the context they act on.
  */
 @Injectable()
 export class TourService<C = unknown> {
@@ -22,6 +36,8 @@ export class TourService<C = unknown> {
   private ctx!: C;
   private options: TourOptions = {};
   private timer?: ReturnType<typeof setTimeout>;
+  /** Goes up with every step shown, so what an earlier step scheduled does nothing. */
+  private shown = 0;
 
   readonly total = computed(() => this.steps().length);
   readonly step = computed<TourStep<C> | null>(() =>
@@ -60,17 +76,9 @@ export class TourService<C = unknown> {
     else void this.go(this.index() + 1, 1);
   }
 
-  back(): void {
-    if (!this.isFirst()) void this.go(this.index() - 1, -1);
-  }
-
-  /** Moves on without doing the step. */
-  skipStep(): void {
-    this.next();
-  }
-
   end(reason: TourEnd): void {
     if (!this.active()) return;
+    this.shown++;
     clearTimeout(this.timer);
     this.active.set(false);
     this.options.onEnd?.(reason);
@@ -89,6 +97,7 @@ export class TourService<C = unknown> {
    * screen hides) is passed over, the way the person was going.
    */
   private async go(i: number, direction: 1 | -1 = 1): Promise<void> {
+    const shown = ++this.shown;
     clearTimeout(this.timer);
     this.index.set(i);
     this.status.set('pending');
@@ -107,17 +116,49 @@ export class TourService<C = unknown> {
     } finally {
       if (this.index() === i) this.preparing.set(false);
     }
-    if (this.index() !== i || !step.target || this.shown(step.target)) return;
+    if (this.index() !== i) return;
+    if (!step.target || this.visible(step.target)) {
+      void this.play(step, shown);
+      return;
+    }
     const next = i + direction;
     if (next < 0) return;
     if (next >= this.total()) this.end('finish');
     else void this.go(next, direction);
   }
 
-  private shown(selector: string): boolean {
+  /**
+   * After the step has been read, an action step does its action and the effect above moves on
+   * once it is done; an info step moves on. The last step waits for Finish.
+   */
+  private async play(step: TourStep<C>, shown: number): Promise<void> {
+    const current = () => this.active() && this.shown === shown;
+    if (this.isLast()) return;
+    const read = readingTime(step);
+    if (!step.action) {
+      this.timer = setTimeout(() => current() && this.next(), read);
+      return;
+    }
+    await wait(ACT_AFTER_MS);
+    if (!current() || this.status() === 'done') return;
+    try {
+      await step.action.play(this.ctx);
+    } catch {
+      // It could not be done here (a full hall, a rule): the tour goes on.
+    }
+    // Done or not, it does not wait for the person.
+    await wait(PLAY_TIMEOUT_MS);
+    if (current() && this.status() === 'pending') this.next();
+  }
+
+  private visible(selector: string): boolean {
     const el = this.document.querySelector<HTMLElement>(selector);
     if (!el) return false;
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
   }
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
