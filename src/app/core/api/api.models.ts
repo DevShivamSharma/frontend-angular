@@ -173,6 +173,8 @@ export interface PermissionGroup {
 export interface MembershipScope {
   eventIds?: string[];
   hallIds?: string[];
+  /** The exhibitor a member who books stalls acts for. */
+  exhibitorId?: string;
 }
 
 export interface MemberView {

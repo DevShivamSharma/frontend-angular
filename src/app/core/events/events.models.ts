@@ -5,11 +5,14 @@ import type { EventType, RuleId, RuleValues } from '../rules/rules.models';
 
 export type EventKind = 'internal' | 'external';
 export type EventStatus = 'draft' | 'scheduled' | 'completed' | 'cancelled';
+/** Where the event's stalls are sold; every event sells on the platform until M1. */
+export type EventBookingChannel = 'venue_system' | 'platform_portal';
 
 export interface EventView {
   id: string;
   kind: EventKind;
   status: EventStatus;
+  bookingChannel: EventBookingChannel;
   name: string;
   venueEventId: string | null;
   organiserName: string | null;
@@ -99,4 +102,39 @@ export interface EventInviteResult {
   /** Already organising other events here: this one was added to their access. */
   added: boolean;
   invitation: CreatedInvitation | null;
+}
+
+/** A company that takes stalls (backend `ExhibitorView`). */
+export interface ExhibitorView {
+  id: string;
+  name: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  gstin: string | null;
+  address: string | null;
+  /** The events it is registered for, among those this member sees. */
+  eventIds: string[];
+  createdAt: string;
+}
+
+export interface ExhibitorInput {
+  name?: string;
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  gstin?: string | null;
+  address?: string | null;
+}
+
+export interface NewExhibitorInput extends ExhibitorInput {
+  name: string;
+  /** Registers it for this event at once; organisers must give one. */
+  eventId?: string;
+}
+
+/** The people who book stalls for an exhibitor, and the open invitations to do so. */
+export interface ExhibitorPeople {
+  members: MemberView[];
+  invitations: InvitationView[];
 }

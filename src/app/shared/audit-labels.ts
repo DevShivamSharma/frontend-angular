@@ -40,6 +40,16 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   'category.imported': { label: 'Imported stall categories', icon: 'upload_file' },
   'plan.saved': { label: 'Saved stall plan', icon: 'save' },
   'plan.published': { label: 'Published stall plan', icon: 'check_circle' },
+  'exhibitor.created': { label: 'Added exhibitor', icon: 'storefront' },
+  'exhibitor.updated': { label: 'Changed exhibitor', icon: 'storefront' },
+  'exhibitor.deleted': { label: 'Deleted exhibitor', icon: 'delete' },
+  'exhibitor.registered': { label: 'Registered exhibitor for event', icon: 'how_to_reg' },
+  'exhibitor.unregistered': { label: 'Took exhibitor off event', icon: 'person_remove' },
+  'booking.held': { label: 'Held stall', icon: 'hourglass_empty' },
+  'booking.confirmed': { label: 'Confirmed booking', icon: 'check_circle' },
+  'booking.moved': { label: 'Moved booking', icon: 'swap_horiz' },
+  'booking.cancelled': { label: 'Cancelled booking', icon: 'cancel' },
+  'booking.expired': { label: 'Hold ran out', icon: 'hourglass_empty' },
 };
 
 export function auditLabel(action: string): string {
@@ -58,5 +68,6 @@ export function auditIsWarning(action: string): boolean {
     'role.deleted',
     'membership.removed',
     'event.cancelled',
+    'booking.cancelled',
   ].includes(action);
 }
