@@ -25,6 +25,11 @@ export interface BookingPaymentView {
   refundedPaise: number;
   /** Refunds asked for or being sent, not through yet, in paise. */
   refundPendingPaise: number;
+  /**
+   * What a staff refund can still take, in paise, from the payment the server would refund (the
+   * latest paid one with something left), which need not be the one shown here.
+   */
+  refundablePaise: number;
 }
 
 export interface BookingView {

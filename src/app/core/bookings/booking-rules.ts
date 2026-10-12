@@ -80,15 +80,18 @@ export function isPaid(b: BookingView): boolean {
   return s === 'paid' || s === 'refunded' || s === 'partially_refunded';
 }
 
-/** What is left to refund, in paise: the amount less refunds that went through or are on the way. */
+/**
+ * What is left to refund, in paise, as the server works it out. The server refunds from the
+ * latest paid payment with something left, which need not be the payment the booking shows, so
+ * the amount is never worked out here.
+ */
 export function refundable(b: BookingView): number {
-  const p = b.payment;
-  return p ? Math.max(0, p.amountPaise - p.refundedPaise - p.refundPendingPaise) : 0;
+  return b.payment?.refundablePaise ?? 0;
 }
 
+/** The server counts only paid and partly refunded payments, so anything left can be refunded. */
 export function canRefund(b: BookingView): boolean {
-  const s = b.payment?.status;
-  return refundable(b) > 0 && (s === 'paid' || s === 'partially_refunded');
+  return refundable(b) > 0;
 }
 
 /** The payment in a few words, for the bookings tables. */
@@ -114,9 +117,16 @@ export function holdUntil(b: BookingView): string {
   });
 }
 
-/** Paise as whole rupees, grouped as India writes them: ₹1,00,000. */
+/**
+ * Paise as rupees, grouped as India writes them: ₹1,00,000 for whole rupees, ₹10.50 otherwise.
+ * Refunds can be part of a rupee, and rounding them would show a sum that was never paid back.
+ */
 export function paise(amount: number): string {
-  return rupees(amount / 100);
+  if (amount % 100 === 0) return rupees(amount / 100);
+  return `₹${(amount / 100).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 /** The stall in words, for its accessible name and tooltip on the map. */

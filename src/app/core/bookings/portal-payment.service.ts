@@ -114,18 +114,13 @@ export class PortalPayment {
     return PLATFORM_PRIMARY;
   }
 
-  /** What happened, in a toast; a paid stall also opens its receipt. */
+  /**
+   * What happened, in a toast. Only a booking the server shows confirmed is a success with a
+   * receipt: a payment that was settled earlier may since have gone back.
+   */
   private show(result: PaymentResultView): void {
     const label = result.booking.stall.label;
     switch (result.outcome) {
-      case 'confirmed':
-      case 'revived':
-      case 'already_paid': {
-        this.notifier.success(`Paid. Stall ${label} is yours.`);
-        const data: PortalReceiptDialogData = { booking: result.booking };
-        this.dialog.open(PortalReceiptDialogComponent, { data });
-        return;
-      }
       case 'pending':
         this.notifier.success(
           'Payment received; we are confirming it with Razorpay. This page updates in a moment.',
@@ -134,9 +129,23 @@ export class PortalPayment {
       case 'refunding':
         this.notifier.error(
           null,
-          'The stall could not be confirmed, so your payment is being refunded in full.',
+          'Your payment is being refunded: the stall was no longer available.',
         );
         return;
+      case 'confirmed':
+      case 'revived':
+      case 'already_paid': {
+        if (result.booking.status !== 'confirmed') {
+          this.notifier.warn(
+            `Payment received, but stall ${label} is not confirmed yet. Check your bookings in a moment, or contact the organiser.`,
+          );
+          return;
+        }
+        this.notifier.success(`Paid. Stall ${label} is yours.`);
+        const data: PortalReceiptDialogData = { booking: result.booking };
+        this.dialog.open(PortalReceiptDialogComponent, { data });
+        return;
+      }
     }
   }
 }
