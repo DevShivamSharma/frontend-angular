@@ -82,7 +82,7 @@ const TOOLS: Array<{ id: PlannerTool; label: string; icon: string }> = [
                 [pTooltip]="
                   breaks().length
                     ? 'The plan breaks a rule of the hall: send it back'
-                    : 'Approve the plan, which publishes it; the organiser gets an email'
+                    : 'Approve the plan; the organiser then publishes it and gets an email'
                 "
                 tooltipPosition="bottom"
               >
@@ -645,7 +645,7 @@ export class PlanReviewComponent {
     const r = this.store.view()?.plan.review;
     const ok = await this.confirm.confirm({
       title: 'Approve the stall plan?',
-      message: `Version ${r?.revision} becomes the published plan of this hall. ${r?.submittedBy ?? 'The organiser'} gets an email.`,
+      message: `Version ${r?.revision} is approved. ${r?.submittedBy ?? 'The organiser'} gets an email and publishes it from the planner.`,
       confirmLabel: 'Approve',
     });
     if (ok) await this.store.review('approve');

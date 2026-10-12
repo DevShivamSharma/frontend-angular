@@ -114,9 +114,9 @@ export interface PlannerView {
   pricing: PlanPricing | null;
   canEdit: boolean;
   readOnlyReason: string | null;
-  /** Internal events: this member publishes the saved plan. */
+  /** Internal: this member publishes the saved plan. External: the organiser, once approved. */
   canPublish: boolean;
-  /** External events: the organiser's plan is published by the venue's approval. */
+  /** External events: the venue approves the organiser's plan before it can be published. */
   needsApproval: boolean;
   canSubmit: boolean;
   canWithdraw: boolean;

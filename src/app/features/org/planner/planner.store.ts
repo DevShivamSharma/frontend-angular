@@ -313,7 +313,7 @@ export class PlannerStore {
     const done = {
       submit: 'Sent for approval. You will get an email when it is answered.',
       withdraw: 'Taken back. You can change the plan again.',
-      approve: 'Approved and published. The organiser gets an email.',
+      approve: 'Approved. The organiser gets an email and can publish it.',
       reject: 'Sent back. The organiser gets an email with your note.',
     };
     this.busy.set(true);

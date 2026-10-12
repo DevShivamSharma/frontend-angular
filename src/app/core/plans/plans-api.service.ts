@@ -113,7 +113,7 @@ export class PlansApi {
     return this.http.post<StallPlanView>(`${this.base(slug, eventId, hallId)}/withdraw`, {});
   }
 
-  /** The venue approves the plan that waits, which publishes it. */
+  /** The venue approves the plan that waits; the organiser then publishes it. */
   approve(
     slug: string,
     eventId: string,

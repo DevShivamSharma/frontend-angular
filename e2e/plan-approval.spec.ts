@@ -5,7 +5,8 @@ import { expect, Page, test } from '@playwright/test';
 
 /**
  * An external event's plan goes to the venue for approval: the organiser sends the saved plan,
- * can take it back, and the venue approves it (which publishes it) or sends it back with a note.
+ * can take it back, and the venue approves it or sends it back with a note; once approved, the
+ * organiser publishes it.
  * The mocked server keeps the review as the real one does; each step is emailed there.
  */
 const planner = JSON.parse(
@@ -73,6 +74,10 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
   });
   const view = () => {
     const waiting = server.review?.status === 'submitted';
+    const approved =
+      server.review?.status === 'approved' &&
+      server.review.revision === server.revision &&
+      server.published?.revision !== server.revision;
     return {
       ...planner,
       hall: {
@@ -98,9 +103,9 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
           ? 'The plan was sent to ITPO for approval. It can change again once they answer, or after you withdraw it.'
           : null
         : 'Expo Co plans the stalls of this external event.',
-      canPublish: false,
+      canPublish: organiser && approved,
       needsApproval: true,
-      canSubmit: organiser && !waiting,
+      canSubmit: organiser && !waiting && !approved,
       canWithdraw: organiser && waiting,
       canApprove: !organiser && waiting,
     };
@@ -149,7 +154,7 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
             : ['events.view', 'layouts.view', 'layouts.approve'],
         },
       });
-    const step = path.match(/\/plan\/(submit|withdraw|approve|reject)$/)?.[1];
+    const step = path.match(/\/plan\/(submit|withdraw|approve|reject|publish)$/)?.[1];
     if (step && req.method() === 'POST') {
       const body = req.postDataJSON();
       server.calls.push({ step, body });
@@ -173,8 +178,8 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
           reviewedBy: 'Ops',
           note: body.note ?? null,
         };
-        if (step === 'approve') server.published = { revision: body.revision, at: now };
       }
+      if (step === 'publish') server.published = { revision: body.revision, at: now };
       return route.fulfill({ json: view().plan });
     }
     if (path.endsWith('/plan/check')) return route.fulfill({ json: { findings: [] } });
@@ -205,7 +210,7 @@ test('the organiser sends the plan for approval, and can take it back', async ({
   await page.goto('/itpo/events/ev/halls/h11/planner');
   await page.getByRole('button', { name: 'Start planning' }).click();
 
-  // No Publish on an external event: the venue's approval publishes it.
+  // No Publish before the venue has approved: the plan must be approved first.
   await expect(actions(page).getByRole('button', { name: 'Publish' })).toHaveCount(0);
   await actions(page).getByRole('button', { name: 'Send for approval' }).click();
   const dialog = page.getByRole('dialog');
@@ -280,19 +285,50 @@ test('the venue reviews the plan on its own screen, sends it back with a note, t
   );
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/review-2d.png` });
 
-  // Fixed, then approved: it is published.
+  // Fixed, then approved: the organiser can publish it.
   server.findings = [];
   await page.reload();
   await review.getByRole('button', { name: 'Approve' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
   await expect(
-    page.getByText('Approved and published. The organiser gets an email.'),
+    page.getByText('Approved. The organiser gets an email and can publish it.'),
   ).toBeVisible();
   await expect(review.locator('.status')).toHaveText(/Approved · v1/);
   expect(server.calls).toEqual([
     { step: 'reject', body: { revision: 1, note: 'Leave 3 m in front of the fire exit.' } },
     { step: 'approve', body: { revision: 1 } },
   ]);
+});
+
+test('the organiser publishes the approved plan', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 960 });
+  const server = await mockApproval(page, 'organiser');
+  server.review = {
+    status: 'approved',
+    revision: 1,
+    submittedAt: '2026-10-12T10:00:00Z',
+    submittedBy: 'Expo Lead',
+    reviewedAt: '2026-10-12T11:00:00Z',
+    reviewedBy: 'Ops',
+    note: null,
+  };
+  await page.goto('/itpo/events/ev/halls/h11/planner');
+  await page.getByRole('button', { name: 'Start planning' }).click();
+
+  // The banner shows the reviewer's time in the browser's zone, so the hour is not pinned.
+  await expect(page.locator('.review.approved')).toContainText(
+    /Ops approved version 1 on .*\. Publish it when you are ready\./,
+  );
+  await expect(actions(page).getByRole('button', { name: 'Send for approval' })).toHaveCount(0);
+  const publish = actions(page).getByRole('button', { name: 'Publish' });
+  await expect(publish).toBeEnabled();
+  await publish.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Version 1 becomes the published plan of this hall.');
+  await dialog.getByRole('button', { name: 'Publish' }).click();
+  await expect(page.getByText('Stall plan published (version 1).')).toBeVisible();
+  expect(server.calls).toEqual([{ step: 'publish', body: { revision: 1 } }]);
+  await expect(actions(page).getByRole('button', { name: 'Published' })).toBeDisabled();
 });
 
 test('the hall page offers the venue Review, not the planner, on an external event', async ({

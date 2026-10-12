@@ -743,8 +743,17 @@ const OBJECT_COLOR = '#334155';
               @switch (r.status) {
                 @case ('approved') {
                   <app-icon name="check_circle" />
-                  {{ r.reviewedBy ?? 'The venue' }} approved version {{ r.revision }} on
-                  {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}; it is published.
+                  @if (store.published()?.revision === r.revision) {
+                    {{ r.reviewedBy ?? 'The venue' }} approved version {{ r.revision }} on
+                    {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}; it is published.
+                  } @else if (store.revision() === r.revision) {
+                    {{ r.reviewedBy ?? 'The venue' }} approved version {{ r.revision }} on
+                    {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}. Publish it when you are ready.
+                  } @else {
+                    {{ r.reviewedBy ?? 'The venue' }} approved version {{ r.revision }} on
+                    {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}; you saved again since, so send
+                    version {{ store.revision() }} for approval.
+                  }
                 }
                 @case ('rejected') {
                   <app-icon name="warning" />
@@ -2711,7 +2720,7 @@ export class PlannerPageComponent {
     if (unpriced) {
       return `Price every stall for sale first: ${unpriced} ${unpriced === 1 ? 'has' : 'have'} no price (Pricing in the toolbar)`;
     }
-    return `Send version ${this.store.revision()} to ${venue} for approval; approving publishes it`;
+    return `Send version ${this.store.revision()} to ${venue} for approval; once approved, you publish it`;
   });
 
   /** External events: the organiser sends the saved plan to the venue for approval. */
@@ -2719,7 +2728,7 @@ export class PlannerPageComponent {
     const venue = this.context.context()?.organisation.name ?? 'the venue';
     const ok = await this.confirm.confirm({
       title: 'Send the plan for approval?',
-      message: `Version ${this.store.revision()} goes to ${venue}, who get an email. Until they answer, the plan cannot be changed; you can take it back. Approving it publishes it.`,
+      message: `Version ${this.store.revision()} goes to ${venue}, who get an email. Until they answer, the plan cannot be changed; you can take it back. Once they approve it, you publish it.`,
       confirmLabel: 'Send for approval',
     });
     if (ok) await this.store.review('submit');
