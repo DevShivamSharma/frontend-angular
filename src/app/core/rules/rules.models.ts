@@ -63,7 +63,7 @@ export interface RuleValues {
   curtainClearance: number;
   facilityClearance: number;
   partitionClearance: number;
-  /** Kept free around pillars; absent from rules saved before the Pillars rule. */
+  /** Kept free around pillars (0: only the pillar); absent from rules saved before it. */
   pillarClearance?: number;
   emergencyExitClearance: number;
   sizeStep: number;

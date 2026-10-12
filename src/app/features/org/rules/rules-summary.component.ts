@@ -27,7 +27,10 @@ export const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
   SMOKE_CURTAIN: (v) => `${m(v.curtainClearance)} from a fire curtain`,
   FACILITY_ACCESS: (v) => `${m(v.facilityClearance)} from a facility`,
   PARTITION: (v) => `${m(v.partitionClearance)} from a partition`,
-  PILLAR: (v) => `${m(v.pillarClearance ?? 1)} from a pillar`,
+  PILLAR: (v) =>
+    v.pillarClearance
+      ? `${m(v.pillarClearance)} from a pillar`
+      : 'Not on a pillar; next to one is fine',
   EMERGENCY_EXIT_ACCESS: (v) => `${m(v.emergencyExitClearance)} clear in front`,
   sizeStep: (v) => `Sizes in steps of ${m(v.sizeStep)}`,
   maxUtilization: (v) => `At most ${Math.round(v.maxUtilization * 100)}% of the floor`,

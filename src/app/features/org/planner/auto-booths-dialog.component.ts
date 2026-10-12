@@ -291,7 +291,11 @@ const CHECK_DELAY = 450;
           </label>
           @if (pillarRule !== null) {
             <p class="muted small">
-              This hall's Pillars rule keeps booths {{ pillarRule }} m clear of every pillar.
+              @if (pillarRule) {
+                This hall's Pillars rule keeps booths {{ pillarRule }} m clear of every pillar.
+              } @else {
+                This hall's Pillars rule keeps booths off every pillar; next to one is fine.
+              }
             </p>
           }
           <p class="muted small">
@@ -908,5 +912,5 @@ export class AutoBoothsDialogComponent {
 function pillarRuleOf(store: PlannerStore): number | null {
   const rules = store.view()?.hall.rules;
   if (!rules || (rules.switches as Record<string, boolean>)['PILLAR'] === false) return null;
-  return rules.values.pillarClearance ?? 1;
+  return rules.values.pillarClearance ?? 0;
 }

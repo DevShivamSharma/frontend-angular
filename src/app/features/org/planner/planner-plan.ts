@@ -141,7 +141,7 @@ export function planSetting(
         emergencyExitClearance: values.emergencyExitClearance ?? 3,
         curtainClearance: values.curtainClearance ?? 1,
         facilityClearance: values.facilityClearance ?? 1,
-        pillarClearance: on('PILLAR') ? Math.max(0.5, values.pillarClearance ?? 1) : 0.5,
+        pillarClearance: Math.max(0.5, on('PILLAR') ? (values.pillarClearance ?? 0) : 0),
         maxUtilization: values.maxUtilization ?? 0.7,
       },
     },
