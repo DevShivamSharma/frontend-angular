@@ -3,7 +3,7 @@ from mathutils import Vector, Matrix
 from pathlib import Path
 root=Path(__file__).resolve().parent
 bpy.ops.wm.open_mainfile(filepath=str(root/'gate9-reconstruction.blend'))
-collections=[c for c in bpy.data.collections if c.name[:2] in ['01','02','03','04','05','06']]
+collections=[c for c in bpy.data.collections if c.name[:2] in ['01','02','03','04','05','06','08']]
 for c in collections:
     bins={}
     for o in list(c.objects):

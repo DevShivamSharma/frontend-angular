@@ -43,7 +43,9 @@ export async function prepareGate9(root: T.Group, asset: (path: string) => strin
   // Hide descendants too: static batching lifts meshes into the root.
   const replaced = new Set<T.Material>();
   root.traverse(object => {
-    if (/^(PHOTO_GATE_9[ _]|GATE_9_SIGN_)/.test(object.name) || object.name === 'SITE_DETAIL_itpo_exterior') {
+    // The two inferred context masses are retained in the Blender layer with
+    // just their canopy-court overlap removed and the resulting cut closed.
+    if (/^(PHOTO_GATE_9[ _]|GATE_9_SIGN_|SITE_northwest-office-(courtyard-wing|link)_)/.test(object.name) || object.name === 'SITE_DETAIL_itpo_exterior') {
       object.traverse(child => {
         child.visible = false;
         child.userData['supersededBySiteReference'] = true;

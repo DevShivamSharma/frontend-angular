@@ -3,7 +3,7 @@
 The supplied venue is imported only as a locked reference; only Gate 9 detail
 is exported. Dimensions are editable estimates, recorded in reference.json.
 """
-import bpy, math, json, random, hashlib
+import bpy, math, json, random, hashlib, runpy
 from pathlib import Path
 from mathutils import Vector, Matrix
 import numpy as np
@@ -32,7 +32,7 @@ for o in list(bpy.context.scene.objects):
         o.hide_set(True)
 
 collections = {}
-for name in ['01 Approach road', '02 Gate and security', '03 Interior lanes', '04 Canopies', '05 Planting', '06 Street furniture', '07 Photo cameras']:
+for name in ['01 Approach road', '02 Gate and security', '03 Interior lanes', '04 Canopies', '05 Planting', '06 Street furniture', '07 Photo cameras', '08 Local context reconciliation']:
     c = bpy.data.collections.new(name)
     bpy.context.scene.collection.children.link(c)
     collections[name[:2]] = c
@@ -384,6 +384,10 @@ for o in context.objects:
             copy.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=(.28,.105,.072,1)
             o.data.materials[i]=copy
 
+# Retain the surrounding masses, with the photographed low canopy court clear.
+reconcile = runpy.run_path(str(ROOT/'scripts/gate9-context.py'))['reconcile_context']
+created.extend(reconcile(ASSETS/'venue-site-detail.glb', collections['08']))
+
 # Match photo viewpoints approximately; no fabricated camera calibration.
 def world(p):
     v=V(*p);return [v.x,v.z,-v.y]
@@ -451,7 +455,8 @@ manifest={'status':'Photo-informed reconstruction; unsurveyed dimensions and cam
               'Gate bearing is aligned to the connected outside road; exact surveyed bearing is unavailable.',
               'Small unreadable sign text, concealed rooms and transient traffic are omitted.',
               'Canopy footprints, spacing, road widths and planting positions are inferred from overlapping views.',
-              'Office building footprint retained from the existing venue.']}
+              'Office building footprint retained from the existing venue.',
+              'Two inferred northwest context masses are cut back locally at t=-444 m to clear the photographed canopy court; this setback is not surveyed.']}
 (ASSETS/'gate9-detail.json').write_text(json.dumps(manifest,indent=2))
 (WORK/'reference.json').write_text(json.dumps(manifest,indent=2))
 print('GATE9_EXPORT',json.dumps({'bytes':(ASSETS/'gate9-detail.glb').stat().st_size,'sourceUnchanged':hashlib.sha256(source.read_bytes()).hexdigest()==source_hash}))

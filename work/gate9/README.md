@@ -18,15 +18,19 @@ Working sequence: **5 → 2 → 6 → 1 → 4**. These are approximate spatial r
 
 ## Editable source and integration
 
-- `gate9-reconstruction.blend`: organized approach, security, interior lanes, canopies, planting, furniture and camera collections. Existing venue is a locked reference collection.
+- `gate9-reconstruction.blend` (35,808,534 bytes): organized approach, security, interior lanes, canopies, planting, furniture and camera collections, plus `08 Local context reconciliation`. Existing venue is a locked reference collection.
 - `../../scripts/build-gate9.py`: deterministic asset builder; run with Blender in background mode. This is an asset-authoring script, not a test runner.
-- `../../src/assets/venue/gate9-detail.glb`: exported Gate 9 geometry only; existing halls/hangars are not exported or replaced.
+- `../../scripts/gate9-context.py`: prepares retained local context copies from the prior inferred site layer for the builder.
+- `../../src/assets/venue/gate9-detail.glb` (13,096,120 bytes): new Gate 9 geometry and the retained local context portions described below. Existing halls/hangars are not exported or replaced.
 - `reference.json`: registration, approximate camera positions, dimensions and assumptions.
 - The outside connector joins the existing southern frontage road at local coordinates `[-627.798, -321.451]`. Existing office structure and hall footprints stay fixed.
 - The loader replaces the previous sandstone gate and procedural ITPO entrance details only after the new asset loads successfully. Materials and geometry are owned by the normal viewer lifecycle.
 - Shared old boundary/vegetation meshes are clipped only within the entrance and office-lane footprint at load time. This local runtime correction is separate from the locked source-reference collection in the Blender file.
+- Collection `08 Local context reconciliation` copies only `SITE_northwest-office-courtyard-wing_*` and `SITE_northwest-office-link_*`. It clips the positive local `t` side at `-444 m`, caps the cuts and retains 580 mesh objects. Runtime substitutes these retained portions for the two old groups only after successful Gate 9 loading. The rest of the context and original sources remain unchanged. This removes the inferred multistory overlap beside the canopy while preserving the retained office/lane context.
 - Export meshes use local origins and 18-bit exponential filtering to preserve thin gate bars, lamp poles and kerbs at the venue's large world coordinates. Re-export with the supplied builder, rather than Blender's default 12-bit meshopt position filter.
 - Gate leaves open automatically before an active visitor approaches. Stationary piers, fences, cabins, kerbs and barriers enter the existing geometry collision system; the moving leaves are kept out of static collision/batching.
+
+The venue interface, avatar and existing controls are preserved. Local static previews use [approach](http://localhost:4205/?view=gate9-approach), [gate close-up](http://localhost:4205/?view=gate9-close), [interior lane](http://localhost:4205/?view=gate9-inside) and [canopy](http://localhost:4205/?view=gate9-canopy). See `verification.md` for the final captures and scoped review verdict.
 
 ## Information still needed
 
