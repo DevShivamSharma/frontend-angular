@@ -74,10 +74,10 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
   });
   const view = () => {
     const waiting = server.review?.status === 'submitted';
-    const approved =
-      server.review?.status === 'approved' &&
-      server.review.revision === server.revision &&
-      server.published?.revision !== server.revision;
+    // As the server has it: approval of this very revision, even once it is published.
+    const approvedNow =
+      server.review?.status === 'approved' && server.review.revision === server.revision;
+    const approved = approvedNow && server.published?.revision !== server.revision;
     return {
       ...planner,
       hall: {
@@ -105,7 +105,7 @@ async function mockApproval(page: Page, side: 'organiser' | 'venue') {
         : 'Expo Co plans the stalls of this external event.',
       canPublish: organiser && approved,
       needsApproval: true,
-      canSubmit: organiser && !waiting && !approved,
+      canSubmit: organiser && !waiting && !approvedNow,
       canWithdraw: organiser && waiting,
       canApprove: !organiser && waiting,
     };
@@ -328,7 +328,42 @@ test('the organiser publishes the approved plan', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Publish' }).click();
   await expect(page.getByText('Stall plan published (version 1).')).toBeVisible();
   expect(server.calls).toEqual([{ step: 'publish', body: { revision: 1 } }]);
-  await expect(actions(page).getByRole('button', { name: 'Published' })).toBeDisabled();
+  // Published and approved: the server offers neither Publish nor Send, so the note says it.
+  await expect(actions(page).getByRole('button', { name: 'Publish' })).toHaveCount(0);
+  await expect(actions(page).getByRole('button', { name: 'Send for approval' })).toHaveCount(0);
+  await expect(actions(page).locator('.published-note')).toContainText('Published v1');
+});
+
+test('a saved change to an approved plan takes Publish away and offers Send for approval', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 960 });
+  const server = await mockApproval(page, 'organiser');
+  server.review = {
+    status: 'approved',
+    revision: 1,
+    submittedAt: '2026-10-12T10:00:00Z',
+    submittedBy: 'Expo Lead',
+    reviewedAt: '2026-10-12T11:00:00Z',
+    reviewedBy: 'Ops',
+    note: null,
+  };
+  await page.goto('/itpo/events/ev/halls/h11/planner');
+  await page.getByRole('button', { name: 'Start planning' }).click();
+  await expect(actions(page).getByRole('button', { name: 'Publish' })).toBeEnabled();
+
+  // Version 2 is not the approved one: the planner learns it from the server, not from the
+  // flags it opened with.
+  await page.locator('nav.ribbon').getByRole('button', { name: 'Booth', exact: true }).click();
+  const box = (await page.locator('app-planner-canvas canvas').boundingBox())!;
+  await page.mouse.click(box.x + box.width * 0.45, box.y + box.height * 0.3);
+  await actions(page).getByRole('button', { name: 'Save' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Plan saved. Send it for approval?');
+  await dialog.getByRole('button', { name: 'Not now' }).click();
+  await expect(actions(page).getByRole('button', { name: 'Publish' })).toHaveCount(0);
+  await expect(actions(page).getByRole('button', { name: 'Send for approval' })).toBeEnabled();
+  expect(server.calls).toEqual([]);
 });
 
 test('the hall page offers the venue Review, not the planner, on an external event', async ({

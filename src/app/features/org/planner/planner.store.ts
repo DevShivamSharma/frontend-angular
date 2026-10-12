@@ -85,9 +85,11 @@ export class PlannerStore {
   readonly planValue = computed(() =>
     [...this.prices().values()].reduce((sum, p) => sum + (p?.price ?? 0), 0),
   );
+  /** Apart from `floor` so that a refresh of the view's flags does not rebuild the canvas. */
+  private readonly hallFloor = computed(() => this.view()?.hall.floor ?? null);
   readonly floor = computed<PlannerFloor | null>(() => {
-    const v = this.view();
-    return v ? plannerFloor(v.hall.floor) : null;
+    const floor = this.hallFloor();
+    return floor ? plannerFloor(floor) : null;
   });
   /** The categories this hall sells; inactive ones only where already used. */
   readonly categories = computed<CategoryRef[]>(() => this.view()?.hall.categories ?? []);
@@ -245,6 +247,7 @@ export class PlannerStore {
       );
       this.revision.set(saved.revision);
       this.dirty.set(false);
+      await this.refreshFlags();
       this.notifier.success('Stall plan saved.');
       return true;
     } catch {
@@ -337,6 +340,7 @@ export class PlannerStore {
     try {
       const done = await firstValueFrom(this.api.publish(slug, eventId, hallId, this.revision()));
       this.published.set(done.published);
+      await this.refreshFlags();
       this.notifier.success(`Stall plan published (version ${done.revision}).`);
       return true;
     } catch {
@@ -352,6 +356,37 @@ export class PlannerStore {
   }
 
   // ---- helpers ------------------------------------------------------------------------------
+
+  /**
+   * An external event's flags (publish, send for approval) follow the saved revision, which a
+   * save or a publish just changed. Only the flags and the plan's review are taken from the
+   * server: {@link PlannerStore.load} would also empty the undo history and the selection, and
+   * the hall is kept as it is so the canvas does not refit. Internal events' flags do not move.
+   */
+  private async refreshFlags(): Promise<void> {
+    if (!this.view()?.needsApproval) return;
+    const { slug, eventId, hallId } = this.target;
+    try {
+      const fresh = await firstValueFrom(this.api.get(slug, eventId, hallId));
+      this.view.update(
+        (v) =>
+          v && {
+            ...v,
+            readOnlyReason: fresh.readOnlyReason,
+            canEdit: fresh.canEdit,
+            canPublish: fresh.canPublish,
+            canSubmit: fresh.canSubmit,
+            canWithdraw: fresh.canWithdraw,
+            canApprove: fresh.canApprove,
+            plan: { ...v.plan, review: fresh.plan.review, published: fresh.plan.published },
+          },
+      );
+      this.published.set(fresh.plan.published);
+    } catch {
+      // The save or publish went through; the error interceptor has shown why the flags did not
+      // follow, and the page reload brings them right.
+    }
+  }
 
   private commit(next: PlanContent, select?: Selection | null): void {
     this.undoStack.update((u) => [...u.slice(-HISTORY + 1), this.plan()]);

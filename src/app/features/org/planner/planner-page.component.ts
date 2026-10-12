@@ -1307,16 +1307,7 @@ const OBJECT_COLOR = '#334155';
       color: #fff;
       font: var(--app-label-large);
     }
-    .readonly {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin: 0;
-      padding: 10px 16px;
-      background: #fef9c3;
-      color: #713f12;
-      font: var(--app-body-medium);
-    }
+    .readonly,
     .review {
       display: flex;
       gap: 8px;
@@ -1324,6 +1315,12 @@ const OBJECT_COLOR = '#334155';
       margin: 0;
       padding: 10px 16px;
       font: var(--app-body-medium);
+    }
+    .readonly {
+      background: #fef9c3;
+      color: #713f12;
+    }
+    .review {
       background: light-dark(#e0f2fe, #0c4a6e);
       color: light-dark(#0c4a6e, #e0f2fe);
     }
@@ -2785,6 +2782,7 @@ export class PlannerPageComponent {
     const steps = plannerTour({
       canEdit: this.canEdit(),
       canPublish: view?.canPublish ?? false,
+      needsApproval: view?.needsApproval ?? false,
       hasCategories: this.store.categories().some((c) => c.status === 'active'),
       hasRules: this.rulesOn() > 0,
     });

@@ -581,6 +581,8 @@ export class EventPageComponent {
       message: 'The event will not take place. Its halls and plans stay for the record.',
       reasonLabel: 'Why (optional)',
       confirmLabel: 'Cancel event',
+      // "Cancel" next to "Cancel event" reads as the same thing.
+      cancelLabel: 'Keep event',
       destructive: true,
       optional: true,
     });

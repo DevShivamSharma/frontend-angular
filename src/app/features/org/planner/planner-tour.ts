@@ -136,6 +136,8 @@ export interface PlannerTourOptions {
   canEdit: boolean;
   /** The organiser admin publishes; an architect draws and saves. */
   canPublish: boolean;
+  /** An external event: the venue approves the saved plan before the organiser publishes it. */
+  needsApproval: boolean;
   /** The hall sells categories a booth can be given. */
   hasCategories: boolean;
   /** Some rule of the hall is on, so the tour can show one refusing a booth. */
@@ -148,7 +150,7 @@ export interface PlannerTourOptions {
  * changes many at once, and saving. Read-only members get the info steps only.
  */
 export function plannerTour(options: PlannerTourOptions): TourStep<PlannerTourCtx>[] {
-  const { canEdit, canPublish, hasCategories, hasRules } = options;
+  const { canEdit, canPublish, needsApproval, hasCategories, hasRules } = options;
   const steps: TourStep<PlannerTourCtx>[] = [
     {
       id: 'welcome',
@@ -447,7 +449,9 @@ export function plannerTour(options: PlannerTourOptions): TourStep<PlannerTourCt
             'Not now — what you made in this tour is practice. Save when the plan is real.',
           ]
         : [
-            'Save keeps the plan (Ctrl + S). Your Organiser Admin publishes it: tell them when it is ready.',
+            needsApproval
+              ? 'Save keeps the plan (Ctrl + S). Then send it for approval; once the venue approves it, you publish it.'
+              : 'Save keeps the plan (Ctrl + S). Your Organiser Admin publishes it: tell them when it is ready.',
             'Not now — what you made in this tour is practice. Save when the plan is real.',
           ],
     },

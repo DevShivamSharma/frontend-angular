@@ -640,7 +640,14 @@ const TOOLS: Record<string, Tool> = {
     edits: true,
     run: async (ctx) => {
       const store = ctx.store;
-      if (!store.view()?.canPublish) return fail('You may not publish stall plans here.');
+      const view = store.view();
+      if (!view?.canPublish) {
+        return fail(
+          view?.needsApproval
+            ? 'The saved version must be approved by the venue first: send it for approval.'
+            : 'You may not publish stall plans here.',
+        );
+      }
       if (store.dirty() || !store.revision())
         return fail('Save the plan first: the saved plan is what is published.');
       if (store.upToDate()) return ok(`Version ${store.revision()} is already published`, {});
