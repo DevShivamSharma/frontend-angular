@@ -1,4 +1,5 @@
-import { DecimalPipe } from '@angular/common';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { DecimalPipe, DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -100,6 +101,16 @@ import { SelectModule } from 'primeng/select';
             <a pButton [outlined]="true" [routerLink]="['bookings']"
               ><app-icon name="confirmation_number" />Bookings</a
             >
+          }
+          @if (e.status === 'scheduled' || e.status === 'completed') {
+            <button
+              pButton
+              [outlined]="true"
+              (click)="copyPublicLink(e)"
+              pTooltip="Anyone with this link can see the halls and free stalls, without signing in."
+            >
+              <app-icon name="link" />Copy public link
+            </button>
           }
           @if (canManage() && !eventScoped()) {
             @switch (e.status) {
@@ -534,6 +545,8 @@ export class EventPageComponent {
   private readonly notifier = inject(Notifier);
   private readonly router = inject(Router);
   private readonly context = inject(OrgContextStore);
+  private readonly clipboard = inject(Clipboard);
+  private readonly document = inject(DOCUMENT);
 
   protected readonly slug = this.context.slug;
   protected readonly eventScoped = this.context.eventScoped;
@@ -627,6 +640,13 @@ export class EventPageComponent {
       'Also booked at overlapping dates: ' +
       h.overlaps.map((o) => `${o.name} (${formatDays(o.startsOn, o.endsOn)})`).join(', ')
     );
+  }
+
+  /** The link to the public view, absolute so it works pasted anywhere. */
+  protected copyPublicLink(event: EventView): void {
+    const url = `${this.document.location.origin}/${this.slug()}/e/${event.id}`;
+    if (this.clipboard.copy(url)) this.notifier.success('Public link copied.');
+    else this.notifier.warn(`Copy this link by hand: ${url}`);
   }
 
   protected edit(event: EventView): void {

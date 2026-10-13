@@ -33,6 +33,19 @@ export const ORG_ROUTES: Routes = [
     loadComponent: () => import('./no-access-page.component').then((m) => m.NoAccessPageComponent),
   },
   {
+    // Shared with exhibitors before they have an account: no sign-in, nothing personal.
+    path: 'e/:eventId',
+    title: 'Event',
+    loadComponent: () =>
+      import('./public-event/public-event-page.component').then((m) => m.PublicEventPageComponent),
+  },
+  {
+    path: 'e/:eventId/halls/:hallId',
+    title: 'Stall map',
+    loadComponent: () =>
+      import('./public-event/public-hall-page.component').then((m) => m.PublicHallPageComponent),
+  },
+  {
     path: '',
     canActivate: [organisationMemberGuard],
     loadComponent: () => import('./org-shell.component').then((m) => m.OrgShellComponent),

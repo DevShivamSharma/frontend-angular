@@ -1,5 +1,9 @@
 import { MINE_COLOR, STALL_STATE_COLORS } from '../../../core/bookings/booking-rules';
-import type { MapStallView, StallMapView } from '../../../core/bookings/bookings.models';
+import type {
+  MapStallView,
+  PublishedStallView,
+  StallMapView,
+} from '../../../core/bookings/bookings.models';
 import type { PlanContent, PlanStall } from '../../../core/plans/plans.models';
 
 /** The key `portalColors` colours a stall by: `mine` for the exhibitor's own, else its state. */
@@ -9,7 +13,8 @@ function colourKey(s: MapStallView): string {
   return s.booking ? MINE : s.state;
 }
 
-function toPlanStall(s: MapStallView): PlanStall {
+/** A published stall as the planner draws it, coloured by key (see portalColors). */
+export function toPlanStall(s: PublishedStallView, key: string): PlanStall {
   return {
     id: s.id,
     zoneId: null,
@@ -22,7 +27,7 @@ function toPlanStall(s: MapStallView): PlanStall {
     openSides: s.openSides,
     scheme: s.scheme,
     // The canvas colours a stall by the first category's colour, so availability rides on it.
-    categoryIds: [colourKey(s)],
+    categoryIds: [key],
     isPremium: s.isPremium,
     isBlocked: s.isBlocked,
     isFnb: false,
@@ -42,7 +47,12 @@ function toPlanStall(s: MapStallView): PlanStall {
  * held or booked.
  */
 export function portalPlan(map: StallMapView): PlanContent {
-  return { zones: [], seats: [], objects: [], stalls: map.stalls.map(toPlanStall) };
+  return {
+    zones: [],
+    seats: [],
+    objects: [],
+    stalls: map.stalls.map((s) => toPlanStall(s, colourKey(s))),
+  };
 }
 
 export function portalColors(): ReadonlyMap<string, string> {
