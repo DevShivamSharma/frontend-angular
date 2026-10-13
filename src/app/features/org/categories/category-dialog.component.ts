@@ -48,6 +48,19 @@ export const STATUS_OPTIONS = [
             ariaLabel="Status"
           />
         </app-field>
+        <app-field
+          label="SelfCare category id"
+          hint="T_CODE_MASTER id"
+          error="Digits only"
+          for="category-dialog-itpo-id"
+        >
+          <input
+            id="category-dialog-itpo-id"
+            pInputText
+            formControlName="itpoId"
+            maxlength="12"
+          />
+        </app-field>
       </div>
       <div class="dialog-actions">
         <button pButton [text]="true" type="button" (click)="ref.close()">Cancel</button>
@@ -74,6 +87,7 @@ export class CategoryDialogComponent {
   protected readonly form = inject(NonNullableFormBuilder).group({
     name: [this.data.category?.name ?? '', [Validators.required, Validators.maxLength(80)]],
     status: [(this.data.category?.status ?? 'active') as CategoryStatus],
+    itpoId: [this.data.category?.itpoId ?? '', Validators.pattern(/^\d{0,12}$/)],
   });
   protected readonly busy = signal(false);
 
@@ -85,7 +99,11 @@ export class CategoryDialogComponent {
       return;
     }
     this.busy.set(true);
-    const input = { name, status: this.form.controls.status.value };
+    const input = {
+      name,
+      status: this.form.controls.status.value,
+      itpoId: this.form.controls.itpoId.value.trim() || null,
+    };
     try {
       const saved = await firstValueFrom(
         this.data.category

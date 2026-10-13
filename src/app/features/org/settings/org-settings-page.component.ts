@@ -4,7 +4,12 @@ import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { firstValueFrom } from 'rxjs';
 
-import type { ConfigVersion, OrganisationConfig, OrgSettings } from '../../../core/api/api.models';
+import type {
+  ConfigVersion,
+  OrganisationConfig,
+  OrgSettings,
+  VenueIntegration,
+} from '../../../core/api/api.models';
 import { OrgApi } from '../../../core/org/org-api.service';
 import { OrgContextStore, PublicOrgStore } from '../../../core/org/org.stores';
 import { ThemeService } from '../../../core/theme/theme.service';
@@ -39,6 +44,30 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
           [saving]="busy()"
           (save)="save($event)"
         />
+        @if (integration(); as link) {
+          <div class="card">
+            <div class="card-body">
+              <h2 class="section-title">Venue system</h2>
+              @if (link.configured) {
+                <p class="muted">
+                  {{ link.callbackUrl }} · Secret ending …{{ link.secretHint }} ·
+                  {{ link.enabled ? 'On' : 'Off' }}
+                </p>
+                @if (link.lastDelivery; as last) {
+                  <p class="muted">
+                    Last delivery: {{ last.status }} · {{ last.event }} · {{ last.hall }} ·
+                    {{ last.at | date: 'd MMM y, HH:mm' }}
+                    @if (last.error) {
+                      · {{ last.error }}
+                    }
+                  </p>
+                }
+              } @else {
+                <p class="muted">Not linked. The platform's team links your venue system.</p>
+              }
+            </div>
+          </div>
+        }
         <div class="card">
           <div class="card-body">
             <h2 class="section-title">Versions</h2>
@@ -106,6 +135,7 @@ export class OrgSettingsPageComponent {
 
   protected readonly settings = signal<OrgSettings | null>(null);
   protected readonly versions = signal<ConfigVersion[]>([]);
+  protected readonly integration = signal<VenueIntegration | null>(null);
   protected readonly busy = signal(false);
   protected readonly canManage = computed(() => this.context.can('org.settings.manage'));
 
@@ -124,6 +154,11 @@ export class OrgSettingsPageComponent {
       this.versions.set(versions);
     } catch {
       // The error interceptor has shown it.
+    }
+    try {
+      this.integration.set(await firstValueFrom(this.api.integrationStatus(this.context.slug())));
+    } catch {
+      // Information, not a task: without it the card is simply left out.
     }
   }
 

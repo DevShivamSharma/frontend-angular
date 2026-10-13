@@ -40,6 +40,7 @@ export interface EventInput {
   endsOn?: string;
   buildUpOn?: string | null;
   dismantleOn?: string | null;
+  bookingChannel?: EventBookingChannel;
 }
 
 export interface EventHallOverlap {

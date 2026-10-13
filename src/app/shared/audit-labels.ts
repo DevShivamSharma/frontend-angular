@@ -38,6 +38,8 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   'category.updated': { label: 'Changed stall category', icon: 'category' },
   'category.deleted': { label: 'Deleted stall category', icon: 'delete' },
   'category.imported': { label: 'Imported stall categories', icon: 'upload_file' },
+  'integration.updated': { label: 'Changed the venue system link', icon: 'link' },
+  'plan.delivery_resent': { label: 'Sent a plan to the venue system again', icon: 'send' },
   'plan.saved': { label: 'Saved stall plan', icon: 'save' },
   'plan.published': { label: 'Published stall plan', icon: 'check_circle' },
   'exhibitor.created': { label: 'Added exhibitor', icon: 'storefront' },

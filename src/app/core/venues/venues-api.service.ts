@@ -98,7 +98,11 @@ export class VenuesApi {
     return this.http.get<HallDetailView>(`${this.org(slug)}/halls/${hallId}`);
   }
 
-  updateHall(slug: string, hallId: string, input: HallDetailsInput): Observable<HallView> {
+  updateHall(
+    slug: string,
+    hallId: string,
+    input: HallDetailsInput & { itpoId?: string | null },
+  ): Observable<HallView> {
     return this.http.patch<HallView>(`${this.org(slug)}/halls/${hallId}`, input);
   }
 

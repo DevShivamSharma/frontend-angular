@@ -7,6 +7,8 @@ export interface CategoryView {
   status: CategoryStatus;
   /** Event halls that sell it; such a category can be made inactive but not deleted. */
   eventHalls: number;
+  /** The venue system's id for it (T_CODE_MASTER). */
+  itpoId: string | null;
   updatedAt: string;
 }
 
@@ -20,6 +22,7 @@ export interface CategoryRef {
 export interface CategoryInput {
   name: string;
   status?: CategoryStatus;
+  itpoId?: string | null;
 }
 
 export interface CategoryImportResult {

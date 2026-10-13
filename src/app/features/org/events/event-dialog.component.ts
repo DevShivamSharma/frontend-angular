@@ -10,7 +10,7 @@ import { ButtonModule } from 'primeng/button';
 import { firstValueFrom } from 'rxjs';
 
 import { EventsApi } from '../../../core/events/events-api.service';
-import type { EventKind, EventView } from '../../../core/events/events.models';
+import type { EventBookingChannel, EventKind, EventView } from '../../../core/events/events.models';
 import { FieldComponent } from '../../../shared/field.component';
 import { InputTextModule } from 'primeng/inputtext';
 import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
@@ -70,6 +70,22 @@ function datesInOrder(group: AbstractControl): ValidationErrors | null {
               pInputText
               formControlName="organiserName"
               maxlength="160"
+            />
+          </app-field>
+        }
+        @if (data.kind === 'internal') {
+          <app-field
+            label="Stalls are sold in"
+            hint="SelfCare: published plans are sent there and sold there"
+            for="event-dialog-booking-channel"
+          >
+            <p-select
+              inputId="event-dialog-booking-channel"
+              formControlName="bookingChannel"
+              [options]="channels"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Organisation default"
             />
           </app-field>
         }
@@ -177,6 +193,7 @@ export class EventDialogComponent {
       ],
       venueEventId: [this.data.event?.venueEventId ?? ''],
       audience: [this.data.event?.audience ?? ('B2B' as const)],
+      bookingChannel: [this.data.event?.bookingChannel ?? (null as EventBookingChannel | null)],
       startsOn: [this.data.event?.startsOn ?? '', Validators.required],
       endsOn: [this.data.event?.endsOn ?? '', Validators.required],
       buildUpOn: [this.data.event?.buildUpOn ?? ''],
@@ -188,6 +205,10 @@ export class EventDialogComponent {
   protected readonly audiences = [
     { value: 'B2B', label: 'B2B (trade)' },
     { value: 'B2C', label: 'B2C (public)' },
+  ];
+  protected readonly channels = [
+    { value: 'venue_system', label: 'Venue system (SelfCare)' },
+    { value: 'platform_portal', label: 'This platform' },
   ];
 
   protected async submit(): Promise<void> {
@@ -206,6 +227,9 @@ export class EventDialogComponent {
       endsOn: v.endsOn,
       buildUpOn: v.buildUpOn || null,
       dismantleOn: v.dismantleOn || null,
+      ...(this.data.kind === 'internal' && v.bookingChannel
+        ? { bookingChannel: v.bookingChannel }
+        : {}),
     };
     try {
       const saved = await firstValueFrom(

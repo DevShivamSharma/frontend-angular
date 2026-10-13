@@ -105,6 +105,16 @@ const CUSTOM_SAMPLE: Point[] = [
             <input id="hall-dialog-level" pInputText formControlName="level" maxlength="40" />
           </app-field>
         </div>
+        @if (data.hall) {
+          <app-field
+            label="SelfCare hall id"
+            hint="T_HALLS id, e.g. 56. Needed to send plans to SelfCare."
+            error="Digits only"
+            for="hall-dialog-itpo-id"
+          >
+            <input id="hall-dialog-itpo-id" pInputText formControlName="itpoId" maxlength="12" />
+          </app-field>
+        }
         @if (!data.hall) {
           <div class="shapes" role="radiogroup" aria-label="Hall shape">
             @for (s of shapes; track s.id) {
@@ -465,6 +475,7 @@ export class HallDialogComponent {
     name: [this.data.hall?.name ?? '', Validators.required],
     code: [this.data.hall?.code ?? ''],
     level: [this.data.hall?.level ?? ''],
+    itpoId: [this.data.hall?.itpoId ?? '', Validators.pattern(/^\d{0,12}$/)],
     width: [60, this.side],
     depth: [40, this.side],
     uses: inject(NonNullableFormBuilder).group({
@@ -654,7 +665,10 @@ export class HallDialogComponent {
     try {
       const saved = await firstValueFrom(
         this.data.hall
-          ? this.api.updateHall(this.data.slug, this.data.hall.id, details)
+          ? this.api.updateHall(this.data.slug, this.data.hall.id, {
+              ...details,
+              itpoId: value.itpoId.trim() || null,
+            })
           : this.api.createHall(this.data.slug, this.data.venueId, {
               ...details,
               ...(this.shape() === 'rectangle'

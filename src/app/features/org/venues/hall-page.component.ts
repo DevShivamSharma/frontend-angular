@@ -78,6 +78,9 @@ const SOURCE_LABELS: Record<FloorVersionView['source'], string> = {
             @if (h.source) {
               <span class="status-chip">{{ h.source.system.toUpperCase() }} import</span>
             }
+            @if (h.itpoId) {
+              <span class="status-chip is-neutral">SelfCare {{ h.itpoId }}</span>
+            }
           </span>
           @if (canManage()) {
             <button pButton [outlined]="true" (click)="edit(h)">

@@ -92,6 +92,7 @@ import { CategoryImportDialogComponent } from './category-import-dialog.componen
               <tr>
                 <th>Name</th>
                 <th>Active</th>
+                <th>SelfCare id</th>
                 <th>Event halls</th>
                 <th>Changed</th>
                 <th><span class="visually-hidden">Actions</span></th>
@@ -110,6 +111,7 @@ import { CategoryImportDialogComponent } from './category-import-dialog.componen
                     [ariaLabel]="c.name + ' active'"
                   />
                 </td>
+                <td class="nums">{{ c.itpoId ?? '—' }}</td>
                 <td class="nums">{{ c.eventHalls }}</td>
                 <td class="muted">{{ c.updatedAt | date: 'd MMM y' }}</td>
                 <td class="actions">
@@ -140,7 +142,7 @@ import { CategoryImportDialogComponent } from './category-import-dialog.componen
             </ng-template>
             <ng-template #emptymessage>
               <tr>
-                <td colspan="5" class="muted">No category matches “{{ query() }}”.</td>
+                <td colspan="6" class="muted">No category matches “{{ query() }}”.</td>
               </tr>
             </ng-template>
           </p-table>

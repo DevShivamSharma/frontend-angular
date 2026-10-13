@@ -36,6 +36,7 @@ import { BrandMarkComponent } from '../../../shared/brand-mark.component';
 import { ConfigFormComponent } from '../../../shared/config-form/config-form.component';
 import { CopyLinkComponent } from '../../../shared/copy-link.component';
 import { planForm, PlanFieldsComponent, slugAvailable, SLUG_PATTERN } from './plan-fields';
+import { VenueSystemCardComponent } from './venue-system-card.component';
 import { FieldComponent } from '../../../shared/field.component';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputGroupModule } from 'primeng/inputgroup';
@@ -69,6 +70,7 @@ import { TabsModule } from 'primeng/tabs';
     SelectModule,
     TableModule,
     TabsModule,
+    VenueSystemCardComponent,
   ],
   templateUrl: './organisation-detail-page.component.html',
   styleUrl: './organisation-detail-page.component.scss',

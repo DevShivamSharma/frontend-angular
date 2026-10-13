@@ -17,6 +17,7 @@ import type {
   OrgSettings,
   Page,
   PublicConfig,
+  VenueIntegration,
 } from '../api/api.models';
 
 /** Calls about one organisation, as a member (or before signing in, for its public look). */
@@ -76,6 +77,11 @@ export class OrgApi {
 
   settings(slug: string): Observable<OrgSettings> {
     return this.http.get<OrgSettings>(`${this.org(slug)}/settings`);
+  }
+
+  /** What the link to the venue system looks like to members: read-only. */
+  integrationStatus(slug: string): Observable<VenueIntegration> {
+    return this.http.get<VenueIntegration>(`${this.org(slug)}/settings/integration`);
   }
 
   saveConfig(slug: string, config: OrganisationConfig): Observable<OrgSettings> {

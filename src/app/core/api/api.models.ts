@@ -361,6 +361,8 @@ export interface HallView {
   floorArea: number;
   currentVersion: number;
   source: { system: 'itpo' | 'json' | 'csv'; externalId: string } | null;
+  /** The venue system's id for this hall (T_HALLS), needed to send plans to it. */
+  itpoId: string | null;
   updatedAt: string;
 }
 
@@ -447,4 +449,28 @@ export interface JsonHallPreview {
   collectionPaths: string[];
   areaTypes: string[];
   previewToken: string;
+}
+
+/** An organisation's link to its venue system, as the backend shows it: never the secret. */
+export interface VenueIntegration {
+  configured: boolean;
+  callbackUrl: string | null;
+  secretHint: string | null;
+  enabled: boolean;
+  updatedAt: string | null;
+  /** The organisation's most recent push, for "is it working?". */
+  lastDelivery: {
+    status: 'pending' | 'sending' | 'delivered' | 'failed';
+    at: string;
+    event: string;
+    hall: string;
+    error: string | null;
+  } | null;
+}
+
+export interface VenueIntegrationInput {
+  callbackUrl: string;
+  /** Write-only; absent keeps the current secret. */
+  secret?: string;
+  enabled: boolean;
 }

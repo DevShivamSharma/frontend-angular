@@ -22,6 +22,8 @@ import type {
   PermissionGroup,
   RoleScopeKind,
   SlugCheck,
+  VenueIntegration,
+  VenueIntegrationInput,
 } from '../api/api.models';
 
 export interface NewOrganisation {
@@ -114,6 +116,14 @@ export class AdminApi {
 
   saveConfig(id: string, config: OrganisationConfig): Observable<OrganisationView> {
     return this.http.put<OrganisationView>(`${this.base}/organisations/${id}/config`, config);
+  }
+
+  integration(id: string): Observable<VenueIntegration> {
+    return this.http.get<VenueIntegration>(`${this.base}/organisations/${id}/integration`);
+  }
+
+  saveIntegration(id: string, input: VenueIntegrationInput): Observable<VenueIntegration> {
+    return this.http.put<VenueIntegration>(`${this.base}/organisations/${id}/integration`, input);
   }
 
   configVersions(id: string): Observable<ConfigVersion[]> {
