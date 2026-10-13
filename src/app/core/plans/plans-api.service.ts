@@ -7,6 +7,7 @@ import { quiet } from '../api/error-toast.interceptor';
 import type { DrawingImportResult } from './drawing-import.models';
 import type {
   PlanContent,
+  PlanDeliveriesView,
   PlanFinding,
   PlannerView,
   PlanPricing,
@@ -99,6 +100,24 @@ export class PlansApi {
       `${this.base(slug, eventId, hallId)}/publish`,
       { revision },
       quiet(409),
+    );
+  }
+
+  /** The pushes of the published plan to the venue system. */
+  deliveries(slug: string, eventId: string, hallId: string): Observable<PlanDeliveriesView> {
+    return this.http.get<PlanDeliveriesView>(`${this.base(slug, eventId, hallId)}/deliveries`);
+  }
+
+  /** Sends a failed push again, as a new delivery. */
+  resendDelivery(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    deliveryId: string,
+  ): Observable<PlanDeliveriesView> {
+    return this.http.post<PlanDeliveriesView>(
+      `${this.base(slug, eventId, hallId)}/deliveries/${deliveryId}/resend`,
+      {},
     );
   }
 

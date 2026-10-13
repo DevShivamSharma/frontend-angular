@@ -84,6 +84,7 @@ import {
 } from './planner-geometry';
 import { PlannerPropertiesComponent, StallPatch } from './planner-properties.component';
 import { PlannerStore } from './planner.store';
+import { PlanDeliveryStatusComponent } from './plan-delivery-status.component';
 import { PlanReviewComponent } from './plan-review.component';
 import {
   PricingDialogComponent,
@@ -159,6 +160,7 @@ const OBJECT_COLOR = '#334155';
     TourOverlayComponent,
     PlannerAssistantComponent,
     PlanReviewComponent,
+    PlanDeliveryStatusComponent,
     StallPriceCardComponent,
   ],
   providers: [PlannerStore, TourService],
@@ -728,6 +730,14 @@ const OBJECT_COLOR = '#334155';
               >
                 <app-icon name="check_circle" />Published v{{ p.revision }}
               </span>
+            }
+            @if (store.published(); as p) {
+              <app-plan-delivery-status
+                [slug]="slug()"
+                [eventId]="eventId()"
+                [hallId]="hallId()"
+                [revision]="p.revision"
+              />
             }
           </div>
         </nav>

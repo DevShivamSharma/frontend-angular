@@ -134,3 +134,32 @@ export interface PlanFinding {
 export function stallLabel(s: Pick<PlanStall, 'islandNumber' | 'stallNumber'>): string {
   return `${s.islandNumber ?? ''}${s.stallNumber}`;
 }
+
+export type PlanDeliveryStatus = 'pending' | 'sending' | 'delivered' | 'failed';
+
+/** One push of a hall's published plan to the venue system. */
+export interface PlanDeliveryView {
+  id: string;
+  revision: number;
+  status: PlanDeliveryStatus;
+  attempts: number;
+  /** Next try while pending; the lease end while sending. */
+  nextAttemptAt: string | null;
+  /** Null on a delivered row: the log transport sent nothing. */
+  lastStatusCode: number | null;
+  venueCode: string | null;
+  lastError: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  resentFromId: string | null;
+}
+
+/** The pushes of one event hall's plan, newest first. */
+export interface PlanDeliveriesView {
+  /** Internal event that sells through the venue system: its publishes are pushed. */
+  pushes: boolean;
+  /** Why nothing is pushed although `pushes`: no link, or the link is off. */
+  reason: string | null;
+  canResend: boolean;
+  deliveries: PlanDeliveryView[];
+}

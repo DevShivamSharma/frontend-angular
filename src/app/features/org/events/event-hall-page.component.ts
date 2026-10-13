@@ -31,6 +31,7 @@ import { Notifier } from '../../../core/ui/notifier.service';
 import { FloorViewComponent } from '../../../shared/floor/floor-view.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { RulesSummaryComponent } from '../rules/rules-summary.component';
+import { PlanDeliveryStatusComponent } from '../planner/plan-delivery-status.component';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { FormsModule } from '@angular/forms';
@@ -62,6 +63,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
     ToggleSwitchModule,
     MultiSelectModule,
     FormsModule,
+    PlanDeliveryStatusComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -83,6 +85,13 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
             {{ d.hall.width | number: '1.0-1' }} × {{ d.hall.depth | number: '1.0-1' }} m ·
             {{ d.hall.floorArea | number: '1.0-0' }} m² · {{ d.event.audience }} event
           </span>
+          @if (d.plan.revision) {
+            <app-plan-delivery-status
+              [slug]="slug()"
+              [eventId]="d.event.id"
+              [hallId]="hallId()"
+            />
+          }
           @if (canPlan()) {
             @if (reviews()) {
               <!-- The organiser draws an external event's plan; the venue reviews it. -->

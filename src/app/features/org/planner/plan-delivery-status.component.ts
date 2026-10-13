@@ -1,0 +1,190 @@
+import { DatePipe } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
+import { firstValueFrom } from 'rxjs';
+
+import { PlansApi } from '../../../core/plans/plans-api.service';
+import type { PlanDeliveriesView, PlanDeliveryView } from '../../../core/plans/plans.models';
+import { ConfirmService } from '../../../core/ui/confirm.service';
+import { Notifier } from '../../../core/ui/notifier.service';
+
+/** While a push is waiting or being sent, the status is fetched again this often. */
+const POLL_MS = 10_000;
+
+/**
+ * Whether a hall's published plan reached the venue system (SelfCare), with Resend for a failed
+ * push. Renders nothing for events whose publishes are not pushed.
+ */
+@Component({
+  selector: 'app-plan-delivery-status',
+  imports: [DatePipe, ButtonModule, TooltipModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    @if (view(); as v) {
+      @if (v.pushes) {
+        <span class="delivery">
+          @if (v.reason) {
+            <span class="status-chip is-neutral chip" [pTooltip]="v.reason" tooltipPosition="bottom"
+              >Not sent: {{ v.reason }}</span
+            >
+          } @else if (latest(); as d) {
+            @if (d.status === 'pending' || d.status === 'sending') {
+              <span class="status-chip chip" [pTooltip]="sendingTip(d)" tooltipPosition="bottom"
+                >Sending…</span
+              >
+            } @else if (d.status === 'delivered') {
+              @if (d.lastStatusCode !== null) {
+                <span
+                  class="status-chip is-positive chip"
+                  [pTooltip]="
+                    'Version ' + d.revision + ', ' + (d.deliveredAt | date: 'd MMM y, HH:mm')
+                  "
+                  tooltipPosition="bottom"
+                  >Sent to SelfCare</span
+                >
+              } @else {
+                <span
+                  class="status-chip is-neutral chip"
+                  pTooltip="The server's VENUE_CALLBACK_TRANSPORT is log."
+                  tooltipPosition="bottom"
+                  >Logged, not sent</span
+                >
+              }
+            } @else {
+              <span
+                class="status-chip is-warning chip"
+                [pTooltip]="d.lastError ?? 'The venue system did not accept the plan.'"
+                tooltipPosition="bottom"
+                >Not sent: {{ d.lastError ?? 'it failed' }}</span
+              >
+              @if (v.canResend) {
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  [text]="true"
+                  (click)="resend(d)"
+                  [disabled]="busy()"
+                >
+                  Resend
+                </button>
+              }
+            }
+          } @else {
+            <span
+              class="status-chip is-neutral chip"
+              pTooltip="Publish to send this hall to SelfCare."
+              tooltipPosition="bottom"
+              >Not sent yet</span
+            >
+          }
+        </span>
+      }
+    }
+  `,
+  styles: `
+    .delivery {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chip {
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  `,
+})
+export class PlanDeliveryStatusComponent {
+  readonly slug = input.required<string>();
+  readonly eventId = input.required<string>();
+  readonly hallId = input.required<string>();
+  /** The published revision; a change fetches the status again. */
+  readonly revision = input<number | null>(null);
+
+  private readonly api = inject(PlansApi);
+  private readonly confirm = inject(ConfirmService);
+  private readonly notifier = inject(Notifier);
+
+  protected readonly view = signal<PlanDeliveriesView | null>(null);
+  protected readonly busy = signal(false);
+  protected readonly latest = computed(() => this.view()?.deliveries[0] ?? null);
+
+  private timer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopTimer());
+    effect(() => {
+      // Reads all four inputs, so a change in any of them loads again.
+      this.revision();
+      void this.load(this.slug(), this.eventId(), this.hallId());
+    });
+  }
+
+  private stopTimer(): void {
+    if (this.timer !== null) clearTimeout(this.timer);
+    this.timer = null;
+  }
+
+  private async load(slug: string, eventId: string, hallId: string): Promise<void> {
+    this.stopTimer();
+    try {
+      this.view.set(await firstValueFrom(this.api.deliveries(slug, eventId, hallId)));
+    } catch {
+      // Secondary information; the error interceptor has shown it.
+      return;
+    }
+    this.pollWhileSending(slug, eventId, hallId);
+  }
+
+  /** A push that is waiting or being sent finishes by itself; look again soon. */
+  private pollWhileSending(slug: string, eventId: string, hallId: string): void {
+    const status = this.latest()?.status;
+    if (status === 'pending' || status === 'sending') {
+      this.timer = setTimeout(() => void this.load(slug, eventId, hallId), POLL_MS);
+    }
+  }
+
+  protected sendingTip(d: PlanDeliveryView): string {
+    const parts = [`Attempt ${d.attempts}`];
+    if (d.lastError) parts.push(`Last try: ${d.lastError}`);
+    if (d.status === 'pending' && d.nextAttemptAt) {
+      parts.push(`Next try ${new Date(d.nextAttemptAt).toLocaleTimeString()}`);
+    }
+    return parts.join('. ');
+  }
+
+  protected async resend(delivery: PlanDeliveryView): Promise<void> {
+    const confirmed = await this.confirm.confirm({
+      title: 'Send again?',
+      message: `Send version ${delivery.revision} to SelfCare again? It goes as a new delivery.`,
+      confirmLabel: 'Send again',
+    });
+    if (!confirmed) return;
+    this.busy.set(true);
+    try {
+      this.view.set(
+        await firstValueFrom(
+          this.api.resendDelivery(this.slug(), this.eventId(), this.hallId(), delivery.id),
+        ),
+      );
+      this.stopTimer();
+      this.pollWhileSending(this.slug(), this.eventId(), this.hallId());
+      this.notifier.success('Sent again; SelfCare answers within a minute.');
+    } catch {
+      // The error interceptor has shown it.
+    } finally {
+      this.busy.set(false);
+    }
+  }
+}
