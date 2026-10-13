@@ -114,8 +114,11 @@ export class PortalPayment {
         return null;
       }
     }
+    // In test mode a real phone number makes Razorpay offer that person's real saved cards and
+    // send an OTP to their phone; a dummy number keeps the test away from real accounts.
+    const checkout = method ? { ...order, prefill: { ...order.prefill, contact: '+919000090000' } } : order;
     const Razorpay = await loadCheckout(this.document);
-    const outcome = await openCheckout(Razorpay, order, this.color(), method);
+    const outcome = await openCheckout(Razorpay, checkout, this.color(), method);
     if (outcome.kind === 'closed') {
       this.notifier.warn(
         `${outcome.failure ?? 'Payment not completed.'} Your hold lasts until ${holdUntil(booking)}, try again.`,
