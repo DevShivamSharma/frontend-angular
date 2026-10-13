@@ -34,7 +34,8 @@ import { CopyLinkComponent } from '../../../shared/copy-link.component';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { AddHallsDialogComponent, AddHallsData } from './add-halls-dialog.component';
-import { formatDay, formatDays } from './event-dates';
+import { StatTileComponent } from '../../../shared/stat-tile.component';
+import { daysBetween, formatDay, formatDays } from './event-dates';
 import { EventExhibitorsComponent } from './event-exhibitors.component';
 import { EventDialogComponent, EventDialogData } from './event-dialog.component';
 import { EventSettlementComponent } from './event-settlement.component';
@@ -59,13 +60,14 @@ import { SelectModule } from 'primeng/select';
     EventExhibitorsComponent,
     EventSettlementComponent,
     PageHeaderComponent,
+    StatTileComponent,
     FieldComponent,
     InputTextModule,
     SelectModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="page page-narrow">
+    <div class="page">
       <a pButton [text]="true" class="back" [routerLink]="backLink()"
         ><app-icon name="arrow_back" />{{ backLabel() }}</a
       >
@@ -131,34 +133,42 @@ import { SelectModule } from 'primeng/select';
           }
         </app-page-header>
 
-        <section class="panel facts">
-          <div>
-            <span class="label">Event days</span>
-            <b>{{ days(e.startsOn, e.endsOn) }}</b>
-          </div>
-          @if (e.buildUpOn) {
-            <div>
-              <span class="label">Build-up from</span>
-              <b>{{ day(e.buildUpOn) }}</b>
-            </div>
-          }
-          @if (e.dismantleOn) {
-            <div>
-              <span class="label">Dismantling until</span>
-              <b>{{ day(e.dismantleOn) }}</b>
-            </div>
-          }
-          @if (e.venueEventId) {
-            <div>
-              <span class="label">Id in your system</span>
-              <b class="mono">{{ e.venueEventId }}</b>
-            </div>
-          }
-        </section>
+        <div class="stats">
+          <app-stat-tile
+            icon="event"
+            label="Event days"
+            [value]="dayCount(e) + (dayCount(e) === 1 ? ' day' : ' days')"
+            [caption]="days(e.startsOn, e.endsOn)"
+          />
+          <app-stat-tile
+            icon="construction"
+            tone="secondary"
+            label="On site, build-up to dismantling"
+            [value]="siteDays(e) + (siteDays(e) === 1 ? ' day' : ' days')"
+            [caption]="days(e.buildUpOn ?? e.startsOn, e.dismantleOn ?? e.endsOn)"
+          />
+          <app-stat-tile
+            icon="meeting_room"
+            tone="tertiary"
+            label="Halls"
+            [value]="e.halls.length"
+            [caption]="(totalArea() | number: '1.0-0') + ' m² of floor'"
+          />
+          <app-stat-tile
+            icon="confirmation_number"
+            label="Stalls are sold"
+            [value]="e.bookingChannel === 'platform_portal' ? 'Here' : 'Your system'"
+            [caption]="e.venueEventId ? 'Id in your system: ' + e.venueEventId : 'No id in your system'"
+          />
+        </div>
 
+        <div class="layout">
+        <div class="main">
         <section class="panel">
           <div class="row">
-            <h2 class="section-title grow">Halls</h2>
+            <h2 class="section-title grow">
+              Halls <span class="count">{{ e.halls.length }}</span>
+            </h2>
             @if (canManage()) {
               <button pButton (click)="addHalls(e)"><app-icon name="add" />Add halls</button>
             }
@@ -176,42 +186,53 @@ import { SelectModule } from 'primeng/select';
           }
           <ul class="halls">
             @for (h of e.halls; track h.hallId) {
-              <li>
+              <li class="hall-card">
                 <a class="hall" [routerLink]="['halls', h.hallId]">
-                  <span class="hall-name">
-                    <b>{{ h.name }}</b>
-                    <span class="muted small"
-                      >{{ h.venue.name }}{{ h.level ? ' · ' + h.level : '' }}</span
-                    >
-                  </span>
-                  <span class="muted small nums">
-                    {{ h.width | number: '1.0-1' }} × {{ h.depth | number: '1.0-1' }} m ·
-                    {{ h.floorArea | number: '1.0-0' }} m²
-                  </span>
-                  <span class="small">{{ h.rulesOn }} rules on</span>
-                  @if (h.overlaps.length) {
-                    <span class="status-chip is-warning" [pTooltip]="overlapText(h)">
-                      <app-icon name="warning" /> Also booked
+                  <span class="hall-top">
+                    <span class="hall-icon" aria-hidden="true"><app-icon name="meeting_room" /></span>
+                    <span class="hall-name">
+                      <b>{{ h.name }}</b>
+                      <span class="muted small"
+                        >{{ h.venue.name }}{{ h.level ? ' · ' + h.level : '' }}</span
+                      >
                     </span>
-                  }
-                  @if (h.latestFloorVersion !== h.floorVersion && !eventScoped()) {
+                  </span>
+                  <span class="hall-facts nums">
                     <span
-                      class="status-chip is-neutral"
-                      pTooltip="The hall's floor changed after it was added; this event keeps the floor it was added with."
+                      ><b>{{ h.floorArea | number: '1.0-0' }}</b> m²</span
                     >
-                      Floor v{{ h.floorVersion }}
-                    </span>
-                  }
-                  <app-icon class="chevron" name="chevron_right" />
+                    <span class="muted"
+                      >{{ h.width | number: '1.0-1' }} × {{ h.depth | number: '1.0-1' }} m</span
+                    >
+                  </span>
+                  <span class="hall-foot">
+                    <span class="status-chip is-neutral">{{ h.rulesOn }} rules on</span>
+                    @if (h.overlaps.length) {
+                      <span class="status-chip is-warning" [pTooltip]="overlapText(h)">
+                        <app-icon name="warning" /> Also booked
+                      </span>
+                    }
+                    @if (h.latestFloorVersion !== h.floorVersion && !eventScoped()) {
+                      <span
+                        class="status-chip is-neutral"
+                        pTooltip="The hall's floor changed after it was added; this event keeps the floor it was added with."
+                      >
+                        Floor v{{ h.floorVersion }}
+                      </span>
+                    }
+                    <span class="open">Open <app-icon name="chevron_right" /></span>
+                  </span>
                 </a>
                 @if (canManage()) {
                   <button
                     pButton
+                    class="remove"
                     [text]="true"
                     [rounded]="true"
                     severity="secondary"
                     (click)="removeHall(e, h)"
                     [attr.aria-label]="'Remove ' + h.name"
+                    pTooltip="Remove from this event"
                   >
                     <app-icon name="close" />
                   </button>
@@ -221,12 +242,14 @@ import { SelectModule } from 'primeng/select';
           </ul>
         </section>
 
-        @if (canSeeBookings()) {
-          <app-event-exhibitors [event]="e" />
-        }
-
         @if (canSeeSettlement() && e.bookingChannel === 'platform_portal' && e.status !== 'draft') {
           <app-event-settlement [event]="e" />
+        }
+        </div>
+
+        <aside class="side">
+        @if (canSeeBookings()) {
+          <app-event-exhibitors [event]="e" />
         }
 
         @if (e.kind === 'external' && canManage()) {
@@ -306,6 +329,8 @@ import { SelectModule } from 'primeng/select';
             }
           </section>
         }
+        </aside>
+        </div>
       }
     </div>
   `,
@@ -317,15 +342,6 @@ import { SelectModule } from 'primeng/select';
     .chips {
       display: inline-flex;
       gap: 6px;
-    }
-    .facts {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px 40px;
-    }
-    .facts div {
-      display: grid;
-      gap: 2px;
     }
     .label {
       font: var(--app-label-small);
@@ -348,14 +364,134 @@ import { SelectModule } from 'primeng/select';
     .nums {
       font-variant-numeric: tabular-nums;
     }
-    .halls,
+    /* Headline numbers, then halls beside the event's people: the page uses the full width. */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+      gap: 24px;
+      align-items: start;
+    }
+    .main,
+    .side {
+      display: grid;
+      gap: 24px;
+      min-width: 0;
+    }
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    h2.grow {
+      display: flex;
+      align-items: center;
+    }
+    .count {
+      margin-left: 8px;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font: var(--app-label-medium);
+      background: var(--app-surface-container);
+      color: var(--app-on-surface-variant);
+      vertical-align: middle;
+    }
+    .halls {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .hall-card {
+      position: relative;
+      display: flex;
+    }
+    .hall {
+      flex: 1;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      padding: 14px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 12px;
+      color: inherit;
+      text-decoration: none;
+      min-width: 0;
+      transition:
+        border-color 150ms ease,
+        box-shadow 150ms ease;
+    }
+    .hall:hover,
+    .hall:focus-visible {
+      border-color: var(--app-primary);
+      box-shadow: var(--app-level1);
+    }
+    .hall-top {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding-right: 28px;
+      min-width: 0;
+    }
+    .hall-icon {
+      display: grid;
+      place-items: center;
+      flex: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--app-primary-container);
+      color: var(--app-on-primary-container);
+    }
+    .hall-name {
+      display: grid;
+      min-width: 0;
+    }
+    .hall-name b {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hall-facts {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      font: var(--app-body-small);
+    }
+    .hall-facts b {
+      font: var(--app-title-medium);
+    }
+    .hall-foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .open {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      font: var(--app-label-medium);
+      color: var(--app-primary);
+    }
+    .remove {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+    }
     .people {
       list-style: none;
       margin: 0;
       padding: 0;
       display: grid;
     }
-    .halls li,
     .people li {
       display: flex;
       align-items: center;
@@ -363,33 +499,8 @@ import { SelectModule } from 'primeng/select';
       border-top: 1px solid var(--app-outline-variant);
       padding: 8px 0;
     }
-    .halls li:first-child,
     .people li:first-child {
       border-top: 0;
-    }
-    .hall {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px 16px;
-      color: inherit;
-      text-decoration: none;
-      min-width: 0;
-      border-radius: 8px;
-      padding: 4px;
-    }
-    .hall:hover,
-    .hall:focus-visible {
-      background: var(--app-surface-container);
-    }
-    .hall-name {
-      display: grid;
-      min-width: 160px;
-      flex: 1 1 200px;
-    }
-    .chevron {
-      color: var(--app-on-surface-variant);
     }
     .invite {
       display: flex;
@@ -495,6 +606,21 @@ export class EventPageComponent {
   protected day(d: string): string {
     return formatDay(d);
   }
+
+  /** Days the event is open, first and last included. */
+  protected dayCount(e: EventView): number {
+    return daysBetween(e.startsOn, e.endsOn) + 1;
+  }
+
+  /** Days the halls are taken, build-up to dismantling. */
+  protected siteDays(e: EventView): number {
+    return daysBetween(e.buildUpOn ?? e.startsOn, e.dismantleOn ?? e.endsOn) + 1;
+  }
+
+  /** Floor area of every hall the event uses, m². */
+  protected readonly totalArea = computed(() =>
+    (this.event()?.halls ?? []).reduce((sum, h) => sum + h.floorArea, 0),
+  );
 
   protected overlapText(h: EventHallView): string {
     return (
