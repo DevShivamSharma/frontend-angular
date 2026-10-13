@@ -402,7 +402,7 @@ import { SelectModule } from 'primeng/select';
     }
     .halls {
       list-style: none;
-      margin: 0;
+      margin: 16px 0 0;
       padding: 0;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
