@@ -1,3 +1,4 @@
+import { isDevMode } from '@angular/core';
 import { Routes } from '@angular/router';
 
 import { organisationGuard, platformThemeGuard } from './core/org/org.guards';
@@ -16,9 +17,16 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    title: 'Invalid link',
+    title: () => (isDevMode() ? 'Quick sign-in' : 'Invalid link'),
     canActivate: [platformThemeGuard],
-    loadComponent: invalidLink,
+    // A development build offers quick sign-in here (only if the server allows it); a
+    // production build never ships that page.
+    loadComponent: () =>
+      isDevMode()
+        ? import('./features/dev-login/dev-login-page.component').then(
+            (m) => m.DevLoginPageComponent,
+          )
+        : invalidLink(),
   },
   {
     path: 'invalid-link',

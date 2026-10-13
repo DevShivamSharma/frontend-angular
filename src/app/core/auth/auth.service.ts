@@ -50,6 +50,15 @@ export class AuthService {
     return session.user;
   }
 
+  /** Local development only: signs in as a quick-login account, without its password. */
+  async devLogin(email: string): Promise<UserView> {
+    const session = await firstValueFrom(
+      this.http.post<Session>(`${this.api}/auth/dev-login`, { email }),
+    );
+    await this.start(session);
+    return session.user;
+  }
+
   /** Accepts an invitation, signs in, and returns the slug of the organisation joined. */
   async acceptInvitation(
     token: string,
