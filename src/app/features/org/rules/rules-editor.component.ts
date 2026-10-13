@@ -55,9 +55,10 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="panel">
+    <section class="panel panel-wide">
       <h2 class="section-title">Drawing</h2>
       <app-field
+        class="profile-field"
         label="Drawing profile of the venue's system"
         for="rules-profile"
         [hint]="profileText()"
@@ -73,8 +74,22 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
     </section>
 
     @for (g of groups; track g.key) {
-      <section class="panel">
-        <h2 class="section-title">{{ g.label }}</h2>
+      <section class="panel rule-group">
+        <div class="group-header">
+          <h2 class="section-title">{{ g.label }}</h2>
+          @if (rulesOf(g.key).length) {
+            <div class="group-actions">
+              <button pButton [text]="true" size="small" (click)="toggleGroup(g.key, true)">Enable all</button>
+              <button
+                pButton
+                [text]="true"
+                size="small"
+                severity="secondary"
+                (click)="toggleGroup(g.key, false)"
+              >Disable all</button>
+            </div>
+          }
+        </div>
         <ul class="rules">
           @for (r of rulesOf(g.key); track r.id) {
             <li [class.waiting]="!r.available">
@@ -100,7 +115,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       </section>
     }
 
-    <section class="panel">
+    <section class="panel panel-wide">
       <h2 class="section-title">Values</h2>
       <div class="form-grid">
         @for (l of catalogue().limits; track l.key) {
@@ -135,7 +150,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       </span>
     </section>
 
-    <section class="panel">
+    <section class="panel panel-wide">
       <div class="row">
         <h2 class="section-title grow">Documents these rules follow</h2>
         <button pButton [text]="true" (click)="addReference()">
@@ -191,16 +206,49 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       }
     </section>
 
-    <div class="save row">
+    <div class="save row panel-wide">
       <span class="grow"></span>
       <button pButton [text]="true" (click)="reset()" [disabled]="busy()">Undo changes</button>
       <button pButton (click)="save()" [disabled]="busy()">Save</button>
     </div>
   `,
   styles: `
+    /* The four rule groups sit two by two, so the page uses its width instead of one
+       long, narrow column. */
     :host {
       display: grid;
       gap: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+    @media (max-width: 1000px) {
+      :host {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    .panel-wide {
+      grid-column: 1 / -1;
+    }
+    .profile-field {
+      max-width: 460px;
+    }
+    .rule-group {
+      display: grid;
+      gap: 12px;
+    }
+    .group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .group-header .section-title {
+      margin: 0;
+    }
+    .group-actions {
+      display: flex;
+      gap: 4px;
     }
     .small {
       font: var(--app-body-small);
@@ -305,6 +353,16 @@ export class RulesEditorComponent {
 
   protected toggle(id: RuleId, on: boolean): void {
     this.switches.update((s) => ({ ...s, [id]: on }));
+  }
+
+  protected toggleGroup(group: RuleGroup, on: boolean): void {
+    const ids = this.rulesOf(group).map((r) => r.id);
+    if (!ids.length) return;
+    this.switches.update((s) => {
+      const next = { ...s };
+      for (const id of ids) next[id] = on;
+      return next;
+    });
   }
 
   /** A value as shown: shares in percent. */

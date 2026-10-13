@@ -173,8 +173,33 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
               </div>
             </section>
             @for (g of groups; track g.key) {
-              <section class="panel">
-                <h2 class="section-title">{{ g.label }}</h2>
+              <section class="panel rule-group">
+                <div class="group-header">
+                  <h2 class="section-title">{{ g.label }}</h2>
+                  @if (rulesOf(c, g.key).length) {
+                    <div class="group-actions">
+                      <button
+                        pButton
+                        [text]="true"
+                        size="small"
+                        (click)="toggleGroup(g.key, true)"
+                        [disabled]="busy()"
+                      >
+                        Enable all
+                      </button>
+                      <button
+                        pButton
+                        [text]="true"
+                        size="small"
+                        severity="secondary"
+                        (click)="toggleGroup(g.key, false)"
+                        [disabled]="busy()"
+                      >
+                        Disable all
+                      </button>
+                    </div>
+                  }
+                </div>
                 <ul class="rules">
                   @for (r of rulesOf(c, g.key); track r.id) {
                     <li [class.waiting]="!r.available">
@@ -246,6 +271,24 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
     }
     .grow p {
       margin: 0;
+    }
+    .rule-group {
+      display: grid;
+      gap: 12px;
+    }
+    .group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .group-header .section-title {
+      margin: 0;
+    }
+    .group-actions {
+      display: flex;
+      gap: 4px;
     }
     .rules {
       list-style: none;
@@ -384,6 +427,34 @@ export class EventHallPageComponent {
   /** The hall's rules in the shape the read-only summary shows. */
   protected asRules(d: EventHallDetailView): RulesView {
     return { ...d.rules, references: [], updatedAt: '' };
+  }
+
+  /** Enable or disable every rule in one group. */
+  protected async toggleGroup(group: RuleGroup, on: boolean): Promise<void> {
+    const d = this.detail();
+    const c = this.catalogue();
+    if (!d || !c) return;
+    const ids = this.rulesOf(c, group).map((r) => r.id);
+    if (!ids.length) return;
+
+    const nextSwitches = { ...d.rules.switches };
+    for (const id of ids) {
+      nextSwitches[id] = on;
+    }
+
+    this.busy.set(true);
+    try {
+      this.detail.set(
+        await firstValueFrom(
+          this.api.setHallRules(this.slug(), d.event.id, d.hall.hallId, nextSwitches),
+        ),
+      );
+    } catch {
+      // The error interceptor has shown it; put the switches back.
+      this.detail.set({ ...d });
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   /** Each switch saves at once; the page shows what the server kept. */

@@ -90,7 +90,7 @@ import {
                   <th>Event</th>
                   <th>Hall</th>
                   <th>Status</th>
-                  <th>Amount</th>
+                  <th class="text-right">Amount</th>
                   <th>Made</th>
                   <th><span class="visually-hidden">Actions</span></th>
                 </tr>
@@ -98,41 +98,59 @@ import {
               <ng-template #body let-b>
                 <tr>
                   <td>
-                    <b>{{ b.stall.label }}</b>
+                    <span class="stall-label">{{ b.stall.label }}</span>
                   </td>
                   <td>{{ b.event.name }}</td>
                   <td>{{ b.hall.name }}</td>
                   <td>
-                    {{ statusLabels[b.status] }}
+                    <span class="status-chip" [class]="chipClass(b.status)">
+                      {{ statusLabels[b.status] }}
+                    </span>
                     @if (b.status === 'held' && b.holdExpiresAt) {
-                      <br /><span class="muted small">until {{ until(b) }}</span>
+                      <div class="sub-detail">
+                        <i class="pi pi-clock sub-icon"></i> until {{ until(b) }}
+                      </div>
                     }
                     @if (b.payment) {
-                      <br /><span class="muted small">{{ paymentText(b) }}</span>
+                      <div class="sub-detail">{{ paymentText(b) }}</div>
                     }
                     @if (b.cancelReason) {
-                      <br /><span class="muted small">{{ b.cancelReason }}</span>
+                      <div class="sub-detail">{{ b.cancelReason }}</div>
                     }
                   </td>
-                  <td class="nums">
-                    {{ money(b.amountPaise) }}
-                    <span class="muted small">excl. GST</span>
+                  <td class="nums text-right">
+                    <span class="amount-main">{{ money(b.amountPaise) }}</span>
+                    <span class="muted small"> excl. GST</span>
                   </td>
                   <td class="muted">{{ b.createdAt | date: 'd MMM y' }}</td>
                   <td class="actions">
                     @if (b.status === 'held' && !paid(b)) {
-                      <button pButton [text]="true" (click)="pay(b)" [disabled]="busy()">
+                      <button
+                        pButton
+                        [text]="true"
+                        icon="pi pi-wallet"
+                        (click)="pay(b)"
+                        [disabled]="busy()"
+                      >
                         Pay
                       </button>
                     }
                     @if (paid(b)) {
-                      <button pButton [text]="true" (click)="receipt(b)">Receipt</button>
+                      <button
+                        pButton
+                        [text]="true"
+                        icon="pi pi-receipt"
+                        (click)="receipt(b)"
+                      >
+                        Receipt
+                      </button>
                     }
                     @if (allowed(b)) {
                       <button
                         pButton
                         [text]="true"
                         severity="danger"
+                        icon="pi pi-times"
                         (click)="letGo(b)"
                         [disabled]="busy()"
                       >
@@ -155,9 +173,45 @@ import {
     .nums {
       font-variant-numeric: tabular-nums;
     }
+    .text-right {
+      text-align: right;
+    }
     .actions {
       text-align: right;
       white-space: nowrap;
+    }
+
+    /* Stall label pill */
+    .stall-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      padding: 2px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      font: var(--app-label-large);
+      background: color-mix(in srgb, var(--app-primary) 10%, transparent);
+      color: var(--app-primary);
+    }
+
+    /* Sub-details under the status chip */
+    .sub-detail {
+      font: var(--app-body-small);
+      color: var(--app-on-surface-variant);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sub-icon {
+      font-size: 0.7rem;
+    }
+
+    /* Amount main value */
+    .amount-main {
+      font-weight: 600;
     }
   `,
 })
@@ -178,6 +232,21 @@ export class PortalBookingsPageComponent implements OnInit {
   protected readonly paymentText = paymentLabel;
   /** Indexed by the table row's status, which the template types as any. */
   protected readonly statusLabels: Record<string, string> = BOOKING_STATUS_LABELS;
+
+  /** Maps a booking status to the appropriate status-chip CSS variant class. */
+  protected chipClass(status: string): string {
+    switch (status) {
+      case 'confirmed':
+        return 'is-positive';
+      case 'held':
+        return 'is-warning';
+      case 'expired':
+      case 'cancelled':
+        return 'is-neutral';
+      default:
+        return '';
+    }
+  }
 
   protected readonly bookings = signal<BookingView[]>([]);
   protected readonly loading = signal(false);

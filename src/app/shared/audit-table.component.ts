@@ -8,13 +8,26 @@ import type { AuditEntry } from '../core/api/api.models';
 import { auditIcon, auditIsWarning, auditLabel } from './audit-labels';
 import { TimeAgoPipe } from './time-ago.pipe';
 
+/** Detail keys a person should not have to read as code. */
+const KEY_LABELS: Record<string, string> = {
+  amountPaise: 'Amount',
+  orderId: 'Order id',
+  paymentId: 'Payment id',
+};
+
 /** The audit log as a table. */
 @Component({
   selector: 'app-audit-table',
   imports: [IconComponent, TableModule, TooltipModule, DatePipe, KeyValuePipe, TimeAgoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <p-table [value]="entries()" styleClass="audit" [tableStyle]="{ 'min-width': '720px' }">
+    <p-table
+      [value]="entries()"
+      styleClass="audit"
+      [tableStyle]="{ 'min-width': '720px' }"
+      [scrollable]="true"
+      scrollHeight="flex"
+    >
       <ng-template #header>
         <tr>
           <th>When</th>
@@ -52,7 +65,7 @@ import { TimeAgoPipe } from './time-ago.pipe';
           <td class="details">
             @for (item of e.metadata | keyvalue; track item.key) {
               <span
-                ><b>{{ item.key }}</b> {{ format(item.value) }}</span
+                ><b>{{ keyLabel(item.key) }}</b> {{ format(item.key, item.value) }}</span
               >
             }
           </td>
@@ -68,6 +81,17 @@ import { TimeAgoPipe } from './time-ago.pipe';
     </p-table>
   `,
   styles: `
+    /* Flex column so the table body can scroll on its own (scrollHeight="flex"):
+       the page's header and pager stay put, only the rows move. */
+    :host {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    p-table {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
     .when,
     .action-text {
       display: grid;
@@ -123,9 +147,20 @@ export class AuditTableComponent {
   protected readonly icon = auditIcon;
   protected readonly warning = auditIsWarning;
 
-  protected format(value: unknown): string {
+  protected keyLabel(key: unknown): string {
+    const name = String(key);
+    return KEY_LABELS[name] ?? name;
+  }
+
+  protected format(key: unknown, value: unknown): string {
     if (value === null || value === undefined) {
       return '—';
+    }
+    // Money is stored in paise; show it the way a person reads it.
+    if (key === 'amountPaise' && typeof value === 'number') {
+      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
+        value / 100,
+      );
     }
     if (Array.isArray(value)) {
       return value.join(', ');

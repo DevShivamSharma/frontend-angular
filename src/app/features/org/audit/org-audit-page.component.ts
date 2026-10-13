@@ -22,9 +22,10 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
       @if (loading()) {
         <p-progressbar mode="indeterminate" />
       }
-      <div class="panel panel-flush">
+      <div class="panel panel-flush table-panel">
         <app-audit-table [entries]="entries()" />
         <p-paginator
+          class="pager"
           [totalRecords]="total()"
           [first]="(page() - 1) * pageSize"
           [rows]="pageSize"
@@ -33,6 +34,34 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
         />
       </div>
     </div>
+  `,
+  styles: `
+    /* The page fills the shell's content area exactly: the heading and the pager stay
+       visible, and only the table's rows scroll. */
+    :host {
+      display: block;
+      height: 100%;
+    }
+    .page {
+      height: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    .table-panel {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .table-panel app-audit-table {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    .pager {
+      flex: none;
+      border-top: 1px solid var(--app-outline-variant);
+    }
   `,
 })
 export class OrgAuditPageComponent {

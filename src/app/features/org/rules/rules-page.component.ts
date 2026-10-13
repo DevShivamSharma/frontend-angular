@@ -30,7 +30,7 @@ import { TabsModule } from 'primeng/tabs';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="page page-narrow">
+    <div class="page">
       <app-page-header heading="Rules" [subheading]="subheading()">
         @if (rules(); as r) {
           <span meta class="muted small">Changed {{ r.updatedAt | date: 'd MMM y, HH:mm' }}</span>

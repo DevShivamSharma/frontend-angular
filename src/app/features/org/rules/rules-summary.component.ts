@@ -49,7 +49,7 @@ export const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let s = rules();
-    <section class="panel">
+    <section class="panel panel-wide">
       <h2 class="section-title">Drawing</h2>
       <p class="profile">
         <b>{{ profile()?.label ?? s.drawingProfile }}</b>
@@ -96,7 +96,7 @@ export const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
     }
 
     @if (s.references.length) {
-      <section class="panel">
+      <section class="panel panel-wide">
         <h2 class="section-title">Documents these rules follow</h2>
         <ul class="docs">
           @for (ref of s.references; track $index) {
@@ -115,9 +115,21 @@ export const VALUE_TEXT: Partial<Record<RuleId, (v: RuleValues) => string>> = {
     }
   `,
   styles: `
+    /* The four rule groups sit two by two, so the page uses its width instead of one
+       long, narrow column. */
     :host {
       display: grid;
       gap: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+    @media (max-width: 1000px) {
+      :host {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    .panel-wide {
+      grid-column: 1 / -1;
     }
     .small {
       font: var(--app-body-small);
