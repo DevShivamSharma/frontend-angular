@@ -490,6 +490,16 @@ const OBJECT_COLOR = '#334155';
                 >
                   <app-icon name="flip" /><span>Mirror X</span>
                 </button>
+                <button
+                  type="button"
+                  class="mini danger"
+                  (click)="removeAllStalls()"
+                  [disabled]="!store.plan().stalls.length || ro || store.busy()"
+                  pTooltip="Delete every booth on the plan"
+                  tooltipPosition="bottom"
+                >
+                  <app-icon name="delete" /><span>Delete all</span>
+                </button>
               </div>
               <div class="col">
                 <button
@@ -2543,6 +2553,20 @@ export class PlannerPageComponent {
       seats: sel.kind === 'seat' ? plan.seats.filter((s) => !ids.has(s.id)) : plan.seats,
       objects: sel.kind === 'object' ? plan.objects.filter((o) => !ids.has(o.id)) : plan.objects,
     });
+  }
+
+  /** Deletes every stall of the plan, once confirmed; Undo brings them back. */
+  protected async removeAllStalls(): Promise<void> {
+    const count = this.store.plan().stalls.length;
+    if (!count || !this.canEdit()) return;
+    const ok = await this.confirm.confirm({
+      title: `Delete all ${count.toLocaleString('en-IN')} booths?`,
+      message: 'Every booth on the plan is removed. Undo brings them back.',
+      confirmLabel: 'Delete all',
+      destructive: true,
+    });
+    if (!ok) return;
+    this.store.remove({ ...this.store.plan(), stalls: [] });
   }
 
   /** Deletes a zone; its stalls and seats stay, in no zone. */

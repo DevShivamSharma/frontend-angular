@@ -266,20 +266,24 @@ function searchAround(
 }
 
 /**
- * The best shift that keeps the drawing's grid inside the hall's extent: whole metres on a sample
- * of its cells first, then half metres around the best on all of them.
+ * The best shift that keeps the drawing's grid and the hall's extent within each other: whole
+ * metres on a sample of its cells first, then half metres around the best on all of them.
  */
 function searchWithin(
   box: Box,
   hall: Box,
   cells: DrawingPoint[],
   score: (d: DrawingPoint, sample?: DrawingPoint[]) => number,
-): { d: DrawingPoint; score: number } | null {
+): { d: DrawingPoint; score: number } {
   // The grid may reach a little past the hall's outline (over its walls); the score counts
-  // such cells against it.
-  const [x0, x1] = [hall.minX - box.minX - OVERHANG, hall.maxX - box.maxX + OVERHANG];
-  const [z0, z1] = [hall.minZ - box.minZ - OVERHANG, hall.maxZ - box.maxZ + OVERHANG];
-  if (x1 < x0 || z1 < z0) return null;
+  // such cells against it. A grid longer than the hall (it takes in a foyer the hall's floor
+  // leaves out) is searched with the hall inside it.
+  const span = (hMin: number, hMax: number, bMin: number, bMax: number): [number, number] => {
+    const [a, b] = [hMin - bMin, hMax - bMax];
+    return [Math.min(a, b) - OVERHANG, Math.max(a, b) + OVERHANG];
+  };
+  const [x0, x1] = span(hall.minX, hall.maxX, box.minX, box.maxX);
+  const [z0, z1] = span(hall.minZ, hall.maxZ, box.minZ, box.maxZ);
   const stride = Math.max(1, Math.ceil(cells.length / COARSE_CELLS));
   const sample = cells.filter((_, i) => i % stride === 0);
   let coarse = { d: { x: x0, z: z0 }, score: -Infinity };

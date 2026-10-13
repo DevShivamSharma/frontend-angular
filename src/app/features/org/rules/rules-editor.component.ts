@@ -309,6 +309,12 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       padding: 12px 0;
       background: var(--app-surface);
     }
+    /* Bulk Enable/Disable all par re-evaluation ki wajah se baki groups ke switches
+       slide na karein — sirf clicked group ki value badlegi, animation nahi hoga. */
+    ::ng-deep .p-toggleswitch-slider,
+    ::ng-deep .p-toggleswitch-handle {
+      transition: none !important;
+    }
   `,
 })
 export class RulesEditorComponent {
