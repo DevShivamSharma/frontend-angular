@@ -5,6 +5,11 @@ import {
   PortalReceiptDialogComponent,
   PortalReceiptDialogData,
 } from '../../features/org/portal/portal-receipt-dialog.component';
+import {
+  PortalTestPayDialogComponent,
+  PortalTestPayDialogData,
+  TestPayMethod,
+} from '../../features/org/portal/portal-test-pay-dialog.component';
 import { PublicOrgStore } from '../org/org.stores';
 import { PLATFORM_PRIMARY } from '../theme/app-preset';
 import { HEX_COLOR } from '../theme/brand-colors';
@@ -94,8 +99,23 @@ export class PortalPayment {
     booking: BookingView,
     order: CheckoutView,
   ): Promise<PaymentResultView | null> {
+    // With Razorpay's test keys, say so and offer its test values before Checkout opens.
+    let method: TestPayMethod | null = null;
+    if (order.keyId?.startsWith('rzp_test_')) {
+      const data: PortalTestPayDialogData = { amount: paise(order.amount) };
+      method =
+        (await firstValueFrom(
+          this.dialog.open<TestPayMethod, PortalTestPayDialogData>(PortalTestPayDialogComponent, {
+            data,
+          }),
+        )) ?? null;
+      if (!method) {
+        this.notifier.warn(`Payment not started. Your hold lasts until ${holdUntil(booking)}.`);
+        return null;
+      }
+    }
     const Razorpay = await loadCheckout(this.document);
-    const outcome = await openCheckout(Razorpay, order, this.color());
+    const outcome = await openCheckout(Razorpay, order, this.color(), method);
     if (outcome.kind === 'closed') {
       this.notifier.warn(
         `${outcome.failure ?? 'Payment not completed.'} Your hold lasts until ${holdUntil(booking)}, try again.`,

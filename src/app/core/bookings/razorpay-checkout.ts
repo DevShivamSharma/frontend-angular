@@ -56,6 +56,7 @@ export function openCheckout(
   Razorpay: RazorpayCtor,
   c: CheckoutView,
   color: string,
+  method: 'card' | 'netbanking' | null = null,
 ): Promise<CheckoutOutcome> {
   return new Promise<CheckoutOutcome>((resolve) => {
     let last: string | null = null;
@@ -66,7 +67,8 @@ export function openCheckout(
       currency: c.currency,
       name: c.name,
       description: c.description,
-      prefill: c.prefill,
+      // Razorpay opens on `method` only when email and contact are prefilled too, as they are.
+      prefill: method ? { ...c.prefill, method } : c.prefill,
       theme: { color },
       handler: (response: RazorpayResponse) => resolve({ kind: 'paid', response }),
       modal: { ondismiss: () => resolve({ kind: 'closed', failure: last }) },
