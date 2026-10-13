@@ -17,7 +17,9 @@ export type TestPayMethod = 'netbanking' | 'card';
  * (`rzp_test_…`). Checkout cannot be filled from this page — it runs in Razorpay's own frame and
  * only takes name, email, phone and the method in advance — so the card is offered for copying.
  */
-const TEST_CARD = { number: '5267 3181 8797 5449', expiry: '12/30', cvv: '123' };
+// Razorpay's domestic Visa test card; its international ones are refused when the account
+// does not accept international cards.
+const TEST_CARD = { number: '4100 2800 0000 1007', expiry: '12/30', cvv: '123' };
 
 @Component({
   selector: 'app-portal-test-pay-dialog',
@@ -51,7 +53,10 @@ const TEST_CARD = { number: '5267 3181 8797 5449', expiry: '12/30', cvv: '123' }
           <dt>CVV</dt>
           <dd><code>{{ card.cvv }}</code></dd>
         </dl>
-        <p class="muted small">Then press <b>Success</b> if Razorpay asks for an OTP.</p>
+        <p class="muted small">
+          On Razorpay's test bank page enter any OTP of 4 to 10 digits (e.g. <b>1234</b>) and
+          submit. Fewer than 4 digits fails on purpose.
+        </p>
         <button pButton type="button" [outlined]="true" (click)="ref.close('card')">
           Pay with test card
         </button>
