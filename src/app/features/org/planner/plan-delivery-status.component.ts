@@ -21,6 +21,12 @@ import { Notifier } from '../../../core/ui/notifier.service';
 /** While a push is waiting or being sent, the status is fetched again this often. */
 const POLL_MS = 10_000;
 
+/** What SelfCare's warning codes mean (receiver contract, success `warnings`). */
+const WARNINGS: Record<string, string> = {
+  HALL_HAS_NO_BASE_LAYOUT:
+    'the hall has no base layout in SelfCare, so the stalls may not draw there until ITPO adds one',
+};
+
 /**
  * Whether a hall's published plan reached the venue system (SelfCare), with Resend for a failed
  * push. Renders nothing for events whose publishes are not pushed.
@@ -43,7 +49,14 @@ const POLL_MS = 10_000;
                 >Sending…</span
               >
             } @else if (d.status === 'delivered') {
-              @if (d.lastStatusCode !== null) {
+              @if (d.lastStatusCode !== null && d.warnings.length) {
+                <span
+                  class="status-chip is-warning chip"
+                  [pTooltip]="warningsTip(d)"
+                  tooltipPosition="bottom"
+                  >Sent, with a warning: {{ warningText(d.warnings[0]) }}</span
+                >
+              } @else if (d.lastStatusCode !== null) {
                 <span
                   class="status-chip is-positive chip"
                   [pTooltip]="
@@ -162,6 +175,17 @@ export class PlanDeliveryStatusComponent {
       parts.push(`Next try ${new Date(d.nextAttemptAt).toLocaleTimeString()}`);
     }
     return parts.join('. ');
+  }
+
+  /** A SelfCare warning code in words; an unknown code is shown as it came. */
+  protected warningText(code: string): string {
+    return WARNINGS[code] ?? code;
+  }
+
+  protected warningsTip(d: PlanDeliveryView): string {
+    const when = d.deliveredAt ? new Date(d.deliveredAt).toLocaleString() : '';
+    const said = d.warnings.map((w) => this.warningText(w)).join('. ');
+    return `Version ${d.revision} reached SelfCare${when ? ` on ${when}` : ''}. ${said}.`;
   }
 
   protected async resend(delivery: PlanDeliveryView): Promise<void> {

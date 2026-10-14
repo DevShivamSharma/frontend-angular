@@ -149,6 +149,8 @@ export interface PlanDeliveryView {
   lastStatusCode: number | null;
   venueCode: string | null;
   lastError: string | null;
+  /** Codes SelfCare added to a successful answer, e.g. HALL_HAS_NO_BASE_LAYOUT. */
+  warnings: string[];
   deliveredAt: string | null;
   createdAt: string;
   resentFromId: string | null;

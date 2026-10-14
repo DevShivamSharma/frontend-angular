@@ -95,8 +95,32 @@ import { PlannerStore } from './planner.store';
     }
   `,
   styles: `
+    :host {
+      display: block;
+      min-width: 0;
+    }
+    /* Same card as the planner's side panel: its styles do not reach into this component. */
+    .card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 10px;
+      background: var(--app-surface-container-lowest);
+    }
+    .card-title {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin: 0 0 4px;
+      font: var(--app-title-small);
+      font-weight: 700;
+    }
     .card-title small {
       font: var(--app-label-small);
+      font-weight: 400;
       color: var(--app-on-surface-variant);
     }
     .price {

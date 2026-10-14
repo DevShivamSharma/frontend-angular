@@ -81,92 +81,113 @@ import {
           </app-empty-state>
         </div>
       } @else {
-        <section class="panel">
-          <div class="table-wrap">
-            <p-table [value]="bookings()" [paginator]="bookings().length > 25" [rows]="25">
-              <ng-template #header>
-                <tr>
-                  <th>Stall</th>
-                  <th>Event</th>
-                  <th>Hall</th>
-                  <th>Status</th>
-                  <th class="text-right">Amount</th>
-                  <th>Made</th>
-                  <th><span class="visually-hidden">Actions</span></th>
-                </tr>
-              </ng-template>
-              <ng-template #body let-b>
-                <tr>
-                  <td>
-                    <span class="stall-label">{{ b.stall.label }}</span>
-                  </td>
-                  <td>{{ b.event.name }}</td>
-                  <td>{{ b.hall.name }}</td>
-                  <td>
-                    <span class="status-chip" [class]="chipClass(b.status)">
-                      {{ statusLabels[b.status] }}
-                    </span>
-                    @if (b.status === 'held' && b.holdExpiresAt) {
-                      <div class="sub-detail">
-                        <i class="pi pi-clock sub-icon"></i> until {{ until(b) }}
-                      </div>
-                    }
-                    @if (b.payment) {
-                      <div class="sub-detail">{{ paymentText(b) }}</div>
-                    }
-                    @if (b.cancelReason) {
-                      <div class="sub-detail">{{ b.cancelReason }}</div>
-                    }
-                  </td>
-                  <td class="nums text-right">
-                    <span class="amount-main">{{ money(b.amountPaise) }}</span>
-                    <span class="muted small"> excl. GST</span>
-                  </td>
-                  <td class="muted">{{ b.createdAt | date: 'd MMM y' }}</td>
-                  <td class="actions">
-                    @if (b.status === 'held' && !paid(b)) {
-                      <button
-                        pButton
-                        [text]="true"
-                        icon="pi pi-wallet"
-                        (click)="pay(b)"
-                        [disabled]="busy()"
-                      >
-                        Pay
-                      </button>
-                    }
-                    @if (paid(b)) {
-                      <button
-                        pButton
-                        [text]="true"
-                        icon="pi pi-receipt"
-                        (click)="receipt(b)"
-                      >
-                        Receipt
-                      </button>
-                    }
-                    @if (allowed(b)) {
-                      <button
-                        pButton
-                        [text]="true"
-                        severity="danger"
-                        icon="pi pi-times"
-                        (click)="letGo(b)"
-                        [disabled]="busy()"
-                      >
-                        Let go
-                      </button>
-                    }
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </div>
+        <section class="panel table-panel">
+          <p-table
+            [value]="bookings()"
+            [paginator]="bookings().length > 25"
+            [rows]="25"
+            [scrollable]="true"
+            scrollHeight="flex"
+          >
+            <ng-template #header>
+              <tr>
+                <th>Stall</th>
+                <th>Event</th>
+                <th>Hall</th>
+                <th>Status</th>
+                <th class="text-right">Amount</th>
+                <th>Made</th>
+                <th><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-b>
+              <tr>
+                <td>
+                  <span class="stall-label">{{ b.stall.label }}</span>
+                </td>
+                <td>{{ b.event.name }}</td>
+                <td>{{ b.hall.name }}</td>
+                <td>
+                  <span class="status-chip" [class]="chipClass(b.status)">
+                    {{ statusLabels[b.status] }}
+                  </span>
+                  @if (b.status === 'held' && b.holdExpiresAt) {
+                    <div class="sub-detail">
+                      <i class="pi pi-clock sub-icon"></i> until {{ until(b) }}
+                    </div>
+                  }
+                  @if (b.payment) {
+                    <div class="sub-detail">{{ paymentText(b) }}</div>
+                  }
+                  @if (b.cancelReason) {
+                    <div class="sub-detail">{{ b.cancelReason }}</div>
+                  }
+                </td>
+                <td class="nums text-right">
+                  <span class="amount-main">{{ money(b.amountPaise) }}</span>
+                  <span class="muted small"> excl. GST</span>
+                </td>
+                <td class="muted">{{ b.createdAt | date: 'd MMM y' }}</td>
+                <td class="actions">
+                  @if (b.status === 'held' && !paid(b)) {
+                    <button
+                      pButton
+                      [text]="true"
+                      icon="pi pi-wallet"
+                      (click)="pay(b)"
+                      [disabled]="busy()"
+                    >
+                      Pay
+                    </button>
+                  }
+                  @if (paid(b)) {
+                    <button pButton [text]="true" icon="pi pi-receipt" (click)="receipt(b)">
+                      Receipt
+                    </button>
+                  }
+                  @if (allowed(b)) {
+                    <button
+                      pButton
+                      [text]="true"
+                      severity="danger"
+                      icon="pi pi-times"
+                      (click)="letGo(b)"
+                      [disabled]="busy()"
+                    >
+                      Let go
+                    </button>
+                  }
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
         </section>
       }
     </div>
   `,
   styles: `
+    /* The page fills the shell's content area exactly: the heading and the table's header
+       stay visible, and only the table's rows scroll. */
+    :host {
+      display: block;
+      height: 100%;
+    }
+    .page {
+      height: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    .table-panel {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .table-panel p-table {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
     .small {
       font: var(--app-body-small);
     }

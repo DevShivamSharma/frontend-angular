@@ -533,9 +533,12 @@ export function placeStalls(
       const outline = placeOutline(stall, alignment);
       const rect = rectOf(outline);
       const onFloor = cellCentres(outline).every((p) => mask.free(p));
+      const notStall = notAStall(stall);
       const skip = excluded.has(stall.key)
         ? 'Left out in the review'
-        : unnumbered(stall)
+        : notStall
+          ? notStall
+          : unnumbered(stall)
           ? 'No stall number in the drawing: not imported'
           : !rect
             ? `${stall.shape === 'L-shape' ? 'L-shaped' : 'Not a rectangle'}: draw it by hand`
@@ -544,6 +547,18 @@ export function placeStalls(
               : null;
       return { stall, outline, rect, onFloor, skip };
     });
+}
+
+/**
+ * Why an outline of the drawing is no stall, or null: a named area ("HALL MASTER") or a kiosk
+ * (an ATM) the server left out of the import.
+ */
+export function notAStall(stall: Pick<DrawingStall, 'include' | 'letter' | 'issues'>): string | null {
+  if (stall.include) return null;
+  const why = stall.issues.find(
+    (i) => i.code === 'KIOSK' || (i.code === 'NO_LABEL' && !stall.letter),
+  );
+  return why ? `Not a stall: ${why.message}` : null;
 }
 
 /**

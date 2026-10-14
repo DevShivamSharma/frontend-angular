@@ -1166,12 +1166,12 @@ const OBJECT_COLOR = '#334155';
     .ribbon {
       display: flex;
       align-items: center;
-      gap: 0;
+      flex-wrap: wrap;
+      gap: 2px 0;
       min-height: 40px;
       padding: 4px 8px;
       border-bottom: 1px solid var(--app-outline-variant);
       background: var(--app-surface-container-lowest);
-      overflow-x: auto;
     }
     .group {
       display: flex;
@@ -1208,7 +1208,10 @@ const OBJECT_COLOR = '#334155';
       color: var(--app-on-surface);
       cursor: pointer;
     }
-    .tool {
+    /* Holds the hidden name below: without it, that name escapes the toolbar's scroll and
+       widens the whole page. */
+    .tool,
+    .mini {
       position: relative;
     }
     /* Something waits there: stalls for sale without a price. */
@@ -1415,8 +1418,11 @@ const OBJECT_COLOR = '#334155';
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
+    /* minmax(0, 1fr): a card takes the panel's width, not its widest content's, so the
+       panel never scrolls sideways. */
     .side-body {
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 10px;
       align-content: start;
       padding: 10px;
@@ -1443,6 +1449,7 @@ const OBJECT_COLOR = '#334155';
     }
     .card {
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 8px;
       padding: 12px;
       border: 1px solid var(--app-outline-variant);

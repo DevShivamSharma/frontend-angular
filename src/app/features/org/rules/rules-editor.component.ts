@@ -219,7 +219,8 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
       display: grid;
       gap: 16px;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      align-items: start;
+      /* Side-by-side groups share one height, so the shorter one leaves no ragged gap. */
+      align-items: stretch;
     }
     @media (max-width: 1000px) {
       :host {
@@ -235,6 +236,7 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
     .rule-group {
       display: grid;
       gap: 12px;
+      align-content: start;
     }
     .group-header {
       display: flex;
