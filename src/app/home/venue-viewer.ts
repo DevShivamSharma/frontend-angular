@@ -8,6 +8,7 @@ import { createVenueWater, prepareVenueFountainJets } from './venue-water';
 import { createVenueAmbientOcclusion } from './venue-ambient-occlusion';
 import { createVenueSky, VENUE_SUN_DIRECTION, VENUE_MOON_DIRECTION } from './venue-sky';
 import { batchVenue } from './venue-batching';
+import { prepareItpoArrival } from './venue-itpo-arrival';
 import { prepareVenueSurfaceDetail } from './venue-surface-detail';
 import { prepareVenueArchitecturalDetail } from './venue-architectural-detail';
 import { prepareReferenceHall14 } from './venue-reference-hall14';
@@ -301,6 +302,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             signal.throwIfAborted();
             console.warn('Gate 9 detail could not load; retaining the existing entrance.', error);
         }
+        prepareItpoArrival(root);
         try {
             interiors=await createVenueInteriors({root,scene,camera,canvas,asset,signal,invalidate,shadowsChanged:()=>renderer.shadowMap.needsUpdate=true,exit:()=>leaveCommand(),daylight:()=>daylight,state:state=>{
                 controls.enabled=!state.walking&&!visitor?.active;
@@ -419,9 +421,13 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         lightCommand(true);
         const detailView = new URLSearchParams(location.search).get('view');
         const fitDetailWidth = (aspect: number) =>
-            ['itpo-office', 'gate9', 'gate6-road', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
+            ['itpo-arrival', 'itpo-office', 'gate9', 'gate6-road', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
         const waterViews: Record<string, { position: Triple; target: Triple; label: string }> = {
             ...gate9?.views,
+            'itpo-arrival': { position: W(-322, -302, 68).toArray() as Triple, target: W(-431, -357, 5).toArray() as Triple, label: 'ITPO · Arrival court' },
+            'itpo-parking': { position: W(-401, -344, 2.2).toArray() as Triple, target: W(-335, -332, 4).toArray() as Triple, label: 'ITPO · Covered parking approach' },
+            'itpo-side': { position: W(-411, -297, 2.2).toArray() as Triple, target: W(-360, -290, 11).toArray() as Triple, label: 'ITPO · Curved frontage' },
+            'itpo-back': { position: W(-433, -392, 2.2).toArray() as Triple, target: W(-435, -408, 2).toArray() as Triple, label: 'ITPO · Service garden' },
             'hall14-front': { position: [-67.7, 40, 94.9], target: [-223.6, 12, 4.9], label: 'Hall 14 · Frontage' },
             'concourse': { position: [52.423, 1.9, 149.201], target: [95.724, 1.7, 174.201], label: 'Covered Concourse' },
             'hall-spine': { position: [115.786, 1.9, 153.452], target: [143.286, 1.7, 105.821], label: 'Hall 1–6 · Covered Walk' },
@@ -431,8 +437,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         };
         if (detailView && waterViews[detailView]) {
             const waterView = waterViews[detailView];
-            if (detailView === 'concourse' || detailView === 'hall-spine' || detailView.startsWith('gate9-')) controls.maxPolarAngle = Math.PI * .4998;
-            if (detailView.startsWith('gate9-')) { controls.minDistance = 2; camera.near = .12; camera.updateProjectionMatrix(); }
+            if (detailView === 'concourse' || detailView === 'hall-spine' || detailView.startsWith('gate9-') || detailView.startsWith('itpo-')) controls.maxPolarAngle = Math.PI * .4998;
+            if (detailView.startsWith('gate9-') || detailView.startsWith('itpo-')) { controls.minDistance = 2; camera.near = .12; camera.updateProjectionMatrix(); }
             camera.position.set(...waterView.position);
             controls.target.set(...waterView.target);
             controls.update();

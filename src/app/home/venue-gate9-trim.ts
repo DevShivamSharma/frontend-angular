@@ -14,7 +14,10 @@ export function trimGate9Context(root: T.Group, added: T.Group): void {
     p => (p.x + 542.692) * .894427191 - (p.y + 363.315) * .447213596 + 95,
     p => 32 - (p.x + 542.692) * .894427191 + (p.y + 363.315) * .447213596,
   ];
-  const insideRegion: Plane[] = [p => p.x + 527, p => -363 - p.x, p => p.y + 428, p => -381 - p.y];
+  // Include the office frontage: the old shared canopy meshes otherwise grow
+  // through its entrance roof. The Gate 9 layer and new arrival planting retain
+  // ownership of this court; boundary walls still use only gateRegion.
+  const insideRegion: Plane[] = [p => p.x + 527, p => -363 - p.x, p => p.y + 428, p => -340 - p.y];
   function clip(poly: Vertex[], plane: Plane, sign: number): Vertex[] {
     const result: Vertex[] = [];
     for (let i = 0; i < poly.length; i++) {

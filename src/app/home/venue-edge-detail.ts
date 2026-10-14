@@ -10,8 +10,9 @@ export const FRONT_GARDEN_TREES = [-22, 12, 48, 82].flatMap(s => [331, 369].map(
 // bin and the clear walk were checked against the model's own ground triangles: all on
 // "PHOTO_ADMIN office ground court" / "pedestrian apron" paving, clear of lawns and roads.
 export const ITPO_WALKWAY_PLANTER_T = -344;
-export const ITPO_WALKWAY_RUNS: readonly (readonly [number, number])[] = [[-478, -453], [-450.5, -426], [-423.5, -400]];
-export const ITPO_WALKWAY_BINS: readonly number[] = [-480.5, -451.75, -424.75];
+// The middle run is open for the left-wall entrance porch.
+export const ITPO_WALKWAY_RUNS: readonly (readonly [number, number])[] = [[-478, -453], [-423.5, -400]];
+export const ITPO_WALKWAY_BINS: readonly number[] = [-480.5, -424.75];
 export const LEGACY_CONTEXT_ROADS = new Set([
     'PHOTO_ROADS_asphalt_network', 'PHOTO_ROADS_lane_markings', 'PHOTO_ROADS_perimeter_kerbs'
 ]);

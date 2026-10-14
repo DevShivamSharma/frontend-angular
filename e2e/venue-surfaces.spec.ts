@@ -5,6 +5,7 @@ import { batchVenue } from '../src/app/home/venue-batching';
 import { PLAZA_PLANTERS, prepareVenueSurfaceDetail } from '../src/app/home/venue-surface-detail';
 import { ITPO_WALKWAY_BINS, ITPO_WALKWAY_PLANTER_T, ITPO_WALKWAY_RUNS } from '../src/app/home/venue-edge-detail';
 import { addItpoExterior, GATE9_CHECK_ROOM } from '../src/app/home/venue-itpo-exterior';
+import { ITPO_PORCH, prepareItpoArrival } from '../src/app/home/venue-itpo-arrival';
 
 // Decode the supplied geometry without a browser or texture/network mocks.
 // This verifies placement against every actual visible obstacle, not a copied
@@ -50,6 +51,89 @@ function suppliedGeometry() {
     for (const node of data.scenes[data.scene ?? 0].nodes) visit(node, new T.Matrix4());
     return root;
 }
+
+test('ITPO arrival moves only the porch to the left wall, preserves buildings and clears the approach', () => {
+    const root = suppliedGeometry(), authored = [...root.children] as T.Mesh[];
+    for (const object of authored) if (object.name.startsWith('PHOTO_ADMIN')) {
+        object.visible = false; object.userData['supersededBySiteReference'] = true;
+    }
+    const geometry = authored.map(object => object.geometry);
+    for (const object of authored) if (/ITPO side (curved stone drum|ribbon windows)/.test(object.name))
+        (object.material as T.MeshStandardMaterial).side = T.FrontSide;
+    // Exercise the actual walkway together with the relocated porch.
+    prepareVenueSurfaceDetail(root);
+    prepareItpoArrival(root); prepareItpoArrival(root); root.updateMatrixWorld(true);
+    const additions = root.getObjectByName('SITE_DETAIL_itpo_arrival') as T.Group;
+    expect(root.children.filter(o => o.name === additions.name)).toHaveLength(1);
+    expect(root.getObjectByName('PHOTO_ADMIN office ground court')!.visible).toBe(true);
+    expect(root.getObjectByName('PHOTO_ADMIN Office to CC separating drive')!.visible).toBe(true);
+    expect(root.getObjectByName('PHOTO_ADMIN Office rear loop')!.visible).toBe(false);
+    let changedVertices = 0;
+    authored.forEach((object, i) => {
+        const before = geometry[i].getAttribute('position'), after = object.geometry.getAttribute('position');
+        expect(after.count).toBe(before.count);
+        for (let v = 0; v < before.count; v++) {
+            const p = new T.Vector3().fromBufferAttribute(before, v), q = new T.Vector3().fromBufferAttribute(after, v);
+            if (p.distanceTo(q) < .0001) continue;
+            changedVertices++;
+            const source = p.clone().applyAxisAngle(new T.Vector3(0, 1, 0), -Math.PI / 3);
+            expect(object.name).toMatch(/^PHOTO_ITPO office (sandstone structure|entrance planting)$/);
+            expect(source.x).toBeGreaterThan(-405.1);
+            expect(source.y).toBeLessThan(6.1);
+        }
+        expect(object.position.length(), object.name).toBe(0);
+    });
+    // Six porch solids (roof, two columns, three steps) and four planter solids.
+    expect(changedVertices).toBe(240);
+    const ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0);
+    const W = (s: number, t: number, y: number) => new T.Vector3(.5 * s + .8660254038 * t, y, -.8660254038 * s + .5 * t);
+    const office = authored.filter(o => /^PHOTO_ITPO office /.test(o.name));
+    ray.set(W(-395, -365.45, 12), down);
+    expect(ray.intersectObjects(office, false), 'old front porch is completely removed').toHaveLength(0);
+    ray.set(W(ITPO_PORCH.s, -344, 12), down);
+    const roof = ray.intersectObjects(office, false)[0];
+    expect(roof?.point.y, 'roof is now attached to the left wall').toBeCloseTo(6.18, 1);
+    const walkway = root.getObjectByName('SITE_EDGE_itpo_walkway')!;
+    for (let s = -444; s <= -432; s += 2) {
+        ray.set(W(s, -344, 2), down);
+        expect(ray.intersectObjects([walkway], true), 'no planter across entrance').toHaveLength(0);
+    }
+    const drive = authored.filter(o => /Office to CC separating drive$/.test(o.name));
+    for (let s = -449; s <= -427; s += 2) for (let t = -353; t <= -336; t += 2) {
+        ray.set(W(s, t, 2), down);
+        expect(ray.intersectObjects(drive, false), 'side landing clear of road').toHaveLength(0);
+    }
+    // Source triangles have mixed winding: no alternating holes may expose the
+    // unrelated shell or interior behind the photo-facing stone/window bands.
+    for (let t = -315; t <= -249; t += 2) {
+        ray.set(W(-410, t, 10), W(1, 0, 0).normalize());
+        const first = ray.intersectObjects(authored, false)[0];
+        expect(first?.object.name, `continuous facade at ${t}`).toMatch(/ITPO side (curved stone drum|ribbon windows)/);
+    }
+    for (const y of [13.3, 31.3]) {
+        ray.set(W(-410, -280, y), W(1, 0, 0).normalize());
+        const first = ray.intersectObjects(authored, false)[0];
+        expect((first.object as T.Mesh<T.BufferGeometry, T.Material>).material.name).toMatch(/ribbon glass/);
+    }
+    const meshes: T.Mesh[] = [];
+    additions.traverse(o => { if (o instanceof T.Mesh) meshes.push(o); });
+    // Every tree on the parking roof must actually be supported by the original
+    // podium, not by the bounding rectangle of its curved outline.
+    for (const tree of meshes.filter(o => o.name.endsWith('fig_trunk') && o.position.y > 7)) {
+        const p = tree.getWorldPosition(new T.Vector3()); p.y = 15; ray.set(p, down);
+        const hit = ray.intersectObjects(authored, false)[0];
+        expect(hit?.object.name, `podium tree ${tree.position.x},${tree.position.z}`).toBe('PHOTO_CC elevated podium deck');
+        expect(tree.position.y - tree.scale.y / 2 - hit.point.y).toBeCloseTo(.01, 2);
+    }
+    for (let s = -480; s <= -410; s += 2) for (const t of [-396, -394, -392, -349]) {
+        ray.set(W(s, t, 2), down);
+        expect(ray.intersectObjects(meshes.filter(o => !o.name.endsWith('side_entrance_landing')), false), `clear passage ${s},${t}`).toHaveLength(0);
+    }
+    const triangles = meshes.reduce((n, m) => n + (m.geometry.index?.count ?? m.geometry.attributes['position'].count) / 3, 0);
+    expect(triangles).toBeLessThan(150000);
+    batchVenue(additions, () => null, () => 'static');
+    expect(additions.children.length).toBeLessThan(20);
+});
 
 test('surface detailing: real model clearance, untouched buildings/roads, and bounded static geometry', () => {
     test.setTimeout(90_000);
@@ -107,13 +191,13 @@ test('ITPO office walkway: planters, bins and the clear walk all stand on the of
         for (const dt of [-.8, 0, .8]) groundAt(s, t + dt, `planter ${s},${t + dt}`);
     for (const s of ITPO_WALKWAY_BINS) groundAt(s, t - 2.2, `bin ${s}`);
     // The walk from 2 m off the office face (its roof cornice overhangs the first metre) to the planter.
-    for (let s = ITPO_WALKWAY_RUNS[0][0]; s <= ITPO_WALKWAY_RUNS[2][1]; s += 3)
+    for (let s = ITPO_WALKWAY_RUNS[0][0]; s <= ITPO_WALKWAY_RUNS.at(-1)![1]; s += 3)
         for (let walk = t - 7.5; walk <= t - 1.5; walk += 1.5) groundAt(s, walk, `walk ${s},${walk}`);
 
     prepareVenueSurfaceDetail(root);
     const walkway = root.getObjectByName('SITE_EDGE_itpo_walkway') as T.Group;
-    expect(walkway.children.filter(o => o.name === 'SITE_EDGE_itpo_lamp_pole')).toHaveLength(3);
-    expect(walkway.children.filter(o => o.name === 'SITE_EDGE_itpo_bin')).toHaveLength(3);
+    expect(walkway.children.filter(o => o.name === 'SITE_EDGE_itpo_lamp_pole')).toHaveLength(2);
+    expect(walkway.children.filter(o => o.name === 'SITE_EDGE_itpo_bin')).toHaveLength(2);
 });
 
 test('photo-guided ITPO court and Gate 9 checkpoint fit the real ground and preserve circulation', () => {
