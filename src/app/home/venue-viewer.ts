@@ -24,6 +24,7 @@ import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor'
 import { createVenueSecurityGuards } from './venue-security-guards';
 import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration } from './venue-site-detail';
 import { prepareGate9 } from './venue-gate9';
+import { prepareVenueRoadFinish } from './venue-road-finish';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; }
@@ -303,6 +304,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             console.warn('Gate 9 detail could not load; retaining the existing entrance.', error);
         }
         prepareItpoArrival(root);
+        prepareVenueRoadFinish(root);
         try {
             interiors=await createVenueInteriors({root,scene,camera,canvas,asset,signal,invalidate,shadowsChanged:()=>renderer.shadowMap.needsUpdate=true,exit:()=>leaveCommand(),daylight:()=>daylight,state:state=>{
                 controls.enabled=!state.walking&&!visitor?.active;
@@ -421,7 +423,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         lightCommand(true);
         const detailView = new URLSearchParams(location.search).get('view');
         const fitDetailWidth = (aspect: number) =>
-            ['itpo-arrival', 'itpo-office', 'gate9', 'gate6-road', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
+            ['itpo-arrival', 'itpo-office', 'gate9', 'gate9-checking-room', 'gate6-road', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;
         const waterViews: Record<string, { position: Triple; target: Triple; label: string }> = {
             ...gate9?.views,
             'itpo-arrival': { position: W(-322, -302, 68).toArray() as Triple, target: W(-431, -357, 5).toArray() as Triple, label: 'ITPO · Arrival court' },

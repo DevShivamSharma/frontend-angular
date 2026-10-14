@@ -65,12 +65,26 @@
         217.05821228027344
       ],
       "label": "Gate 9 \u00b7 Canopy lane"
+    },
+    "gate9-checking-room": {
+      "position": [
+        -579.7974243164062,
+        2.25,
+        298.7170104980469
+      ],
+      "target": [
+        -576.0039672851562,
+        1.9500000476837158,
+        288.92669677734375
+      ],
+      "label": "Gate 9 \u00b7 Checking room"
     }
   },
   "approachConnectionLocal": [
     -627.798,
     -321.451
   ],
+  "checkingRoomReference": "User-supplied checking-room photograph, 2026-10-14: ribbed brown cabin, shallow gable roof, ivory-framed grilled window and yellow barricade. Shifted to the right side of Gate 9 when approaching from outside, per annotated user correction. Footprint 3.4 x 3.2 m and concealed sides are estimated.",
   "photoSequence": [
     5,
     2,

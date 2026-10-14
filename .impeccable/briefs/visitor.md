@@ -8,9 +8,9 @@ OWN-WORLD: Inherit the venue's pale warm panels, charcoal green text, brown focu
 
 STORY: Normal overview → Visit as a Person → Gate 6 arrival → campus paths → signed doorway → furnished hall → walk back outside or Exit visit. Existing hall walkthroughs stay available in overview mode.
 
-FIRST VIEWPORT: The normal overview retains its scene and gains a clear Visit as a Person button. Entering the mode shows the supplied full-body woman outside the photographed Gate 6, a following camera, concise wayfinding, movement controls and a persistent exit.
+FIRST VIEWPORT: The normal overview retains its scene and gains a clear Visit as a Person button. Entering the mode shows the supplied Nathan character outside the photographed Gate 6, a following camera, concise wayfinding, movement controls and a persistent exit.
 
-FORM: Code-led, precisely specified local extension. No concept roll or comp applies. Existing 3D scene and controls are the visual authority. Use the supplied Meshy GLB as the playable character, geometry-derived entrance frames, automatic sliding doors and a following camera. The original procedural character remains a loading/failure fallback; the supplied character retains its embedded textures and static pose.
+FORM: Code-led, precisely specified local extension. No concept roll or comp applies. Existing 3D scene and controls are the visual authority. Use the supplied Nathan model as the playable character, geometry-derived entrance frames, automatic sliding doors and a following camera. The original procedural character remains a loading/failure fallback; Nathan retains his textures and captured walk animation.
 
 Scope: Hall 1–5, Hall 14 and the three existing Convention Centre floors reuse current furnished interiors. Other buildings remain exterior-only. Entrance routes, furnishing and the CC approach are illustrative, visibly disclosed; no claim of surveyed accuracy. No backend or saved-layout changes.
 
@@ -18,7 +18,7 @@ Checks: Gate-to-entrance reachability on the shipped mesh, collision substeps, d
 
 ## Implemented surface rules
 
-**Scene first.** The supplied woman avatar and third-person following camera operate outdoors and in the existing furnished interiors. The original procedural avatar appears only while loading or after a load failure. Stationary guards remain unchanged. Controls sit at the scene edges: launch above the overview, navigation at upper left, movement at lower left and Exit visit at upper right. Camera obstruction handling includes the interior mesh layer.
+**Scene first.** The supplied Nathan avatar and third-person following camera operate outdoors and in the existing furnished interiors. The original procedural avatar appears only while loading or after a load failure. Stationary guards remain unchanged. Controls sit at the scene edges: launch above the overview, navigation at upper left, movement at lower left and Exit visit at upper right. Camera obstruction handling includes the interior mesh layer.
 
 **Venue continuity.** Panels and movement buttons use warm pale `#f3f0ea`, with charcoal green text (`#29352f`, `#304036`), subdued green option fills (`#e1e5de`) and dark pressed states (`#353c36`, white text). Focus uses the existing brown accent (`#9a623f`). Squared controls and soft panel shadows preserve the venue's established overlays. These are local venue rules; root `DESIGN.md` and `.impeccable/design.json` continue to describe the planner.
 
@@ -70,8 +70,18 @@ Independent review gave a Ship disposition for `.impeccable/review/avatar-leg-fi
 
 Validation: `tsc --noEmit` and `npm run build` passed, with existing CSS-budget and CommonJS warnings. No tests were run, as instructed by the user.
 
-## Current Meshy avatar
+## Historical Meshy avatar
 
 Recorded 2026-10-12. The user replaced the Tripo avatar with `Meshy_AI_Woman_walking_1012063350_texture-compressed.glb`, copied unchanged to `src/assets/venue/characters/visitor-woman.glb` (1,365,796 bytes). This Draco-compressed mesh has embedded textures, 539,038 triangles, no skin/skeleton and no animation clips. `visitor-avatar-model.ts` preserves its supplied pose, normalizes height to 1.8 m and places its lowest point on the ground. The old Tripo skin, seam and pose corrections are not applied. Navigation, turning and jumping still move the avatar through the existing controller; there is no articulated walking animation in this source asset.
 
 `visitor-avatar.ts` uses a locally hosted Draco WASM decoder, limited to one worker and disposed after parsing. Loading/failure fallback and resource cleanup remain in place. No test cases or browser verification were run for this replacement, at the user's request; historical validation above does not cover this model.
+
+## Current Nathan avatar
+
+Recorded 2026-10-14. The user requested replacing the existing avatar after supplying Renderpeople Nathan's animated walking FBX. `scripts/prepare-nathan-avatar.py` prepares `visitor-nathan.glb` (1,916,228 bytes) with its 88-bone skeleton, captured walk, and embedded 2K diffuse/normal textures. Existing controls and venue appearance remain the visual authority.
+
+The runtime normalizes standing height to 1.8 m, derives a neutral standing pose from the walk cycle, blends between standing and walking, and suppresses root displacement so navigation owns the position. Cadence follows movement speed with a cap for fast travel. Reduced motion and airborne states blend to standing; jumping remains owned by the existing controller. Loading/failure fallback, retry, contact shadow and disposal remain supported. No new network dependency or runtime decoder is required.
+
+The source contains no authored idle, run or jump clip. Its averaged standing pose is an application adaptation. Renderpeople licensing applies; this local integration does not establish public deployment rights. Asset provenance is recorded beside the GLB.
+
+Validation: TypeScript and production build passed (existing planner CSS-budget/CommonJS warnings). Both targeted `e2e/visitor-avatar.spec.ts` checks passed: ten seconds of root-drift/grounding/pose/cleanup checks against the shipped GLB, plus real Chrome desktop/mobile loading, walking, jumping and exit. The primary agent inspected the desktop, walking and phone captures in `test-results/nathan-avatar-render`. The avatar-module design detector returned no findings. Software-rendered preview timed out; the successful browser run uses the project's existing Windows hardware-rendering convention.

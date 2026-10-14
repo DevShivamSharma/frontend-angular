@@ -1,0 +1,11 @@
+{
+  "model": "Renderpeople Nathan animated 003 walking",
+  "source": "User-supplied rp_nathan_animated_003_walking.fbx and tex folder",
+  "preparedBy": "scripts/prepare-nathan-avatar.py",
+  "asset": "visitor-nathan.glb",
+  "textureMaxDimension": 2048,
+  "textures": ["diffuse", "normal"],
+  "animation": "Walk; runtime removes root displacement and derives a neutral standing pose",
+  "license": "Renderpeople terms apply. Public visualization/SaaS use requires confirmation of applicable rights; user-supplied files do not establish deployment permission.",
+  "licenseUrl": "https://renderpeople.com/general-terms-and-conditions/"
+}

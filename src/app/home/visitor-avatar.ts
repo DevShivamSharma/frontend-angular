@@ -1,6 +1,5 @@
 import * as T from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { createFallbackVisitorAvatar } from './visitor-avatar-fallback';
 import { disposeVisitorModel } from './visitor-avatar-rig';
 import { createVisitorAvatarModel } from './visitor-avatar-model';
@@ -16,33 +15,30 @@ export function createVisitorAvatar(options: { invalidate?: () => void; failed?:
     if (disposed || avatar || loading) return;
     loading = (async () => {
       let model: T.Group | undefined;
-      const decoder = new DRACOLoader()
-        .setDecoderPath(new URL('assets/venue/decoders/draco/', document.baseURI).href)
-        .setDecoderConfig({ type: 'wasm' })
-        .setWorkerLimit(1);
       try {
-        const url = new URL('assets/venue/characters/visitor-woman.glb', document.baseURI);
+        const url = new URL('assets/venue/characters/visitor-nathan.glb', document.baseURI);
         const response = await fetch(url, { signal: lifetime.signal });
         if (!response.ok) throw new Error(`Visitor model could not load (${response.status})`);
         const bytes = await response.arrayBuffer();
         lifetime.signal.throwIfAborted();
-        model = (await new GLTFLoader().setDRACOLoader(decoder).parseAsync(bytes, '')).scene;
+        const gltf = await new GLTFLoader().parseAsync(bytes, '');
+        model = gltf.scene;
         if (disposed) { disposeVisitorModel(model); return; }
-        avatar = createVisitorAvatarModel(model);
+        avatar = createVisitorAvatarModel(model, gltf.animations);
         root.add(avatar.root); root.add(contactShadow);
         placeholder.visible = false;
         options.invalidate?.();
       } catch (error) {
         if (model) disposeVisitorModel(model);
         if (!disposed) { console.warn('Visitor avatar unavailable:', error); options.failed?.(); }
-      } finally { decoder.dispose(); loading = undefined; }
+      } finally { loading = undefined; }
     })();
   }
   return {
     root, load,
     update(dt: number, speed: number, reducedMotion: boolean, jumpHeight = 0) {
       const moving = fallback.update(dt, speed, reducedMotion, jumpHeight);
-      return moving;
+      return avatar ? avatar.update(dt, speed, reducedMotion, jumpHeight) : moving;
     },
     dispose() {
       if (disposed) return;

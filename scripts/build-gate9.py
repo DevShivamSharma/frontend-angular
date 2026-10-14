@@ -227,8 +227,63 @@ for side in [-1,1]:
         for x in np.arange(a,b,.2):beam('G9 fixed fence bar',gate(x,.45,.8),gate(x,.45,3.1),.045,M['dark'])
         for h in [1.1,2.85]:beam('G9 fixed fence rail',gate(a,.45,h),gate(b,.45,h),.065,M['dark'])
 
-# Side cabin, raised lookout and open boom arm, leaving both circulation lanes clear.
-for a,d,w,depth,height in [(-10,0,3,3.2,3.2),(-11,9,2.6,2.6,5.8)]:
+# Checking room: user-supplied Gate 9 crop (2026-10-14). Brown ribbed
+# cladding, shallow gable, ivory window trim and security grille are observed;
+# dimensions and the concealed rear are estimates. Keep it outside the lane.
+M['cabin'] = mat('checking room brown cladding', (.17,.065,.042), .88)
+M['rib'] = mat('checking room raised battens', (.235,.103,.069), .82)
+M['trim'] = mat('checking room ivory frames', (.64,.62,.49), .73)
+M['roof'] = mat('checking room charcoal roof', (.047,.045,.034), .83)
+# Positive gate axis is the right side when approaching from outside.
+a,d,w,depth = 10,0,3.4,3.2
+front = d-depth/2
+def cabin_box(name,x,y,z,size,material):
+    o=box('G9 checking room '+name,gate(a+x,d+y,z),size,material,ga)
+    o['evidence']='User checking-room photo, 2026-10-14; dimensions estimated'
+    return o
+cabin_box('concrete plinth',0,0,.32,(w+.22,depth+.22,.16),M['concrete'])
+cabin_box('brown walls',0,0,1.81,(w,depth,2.82),M['cabin'])
+# Shallow pitched roof, including solid gable ends and an overhang on all sides.
+profile=[(-w/2,3.22),(w/2,3.22),(0,3.77)]
+verts=[gate(a+x,y,z) for y in [-depth/2,depth/2] for x,z in profile]
+mesh('G9 checking room gable',verts,[(0,2,1),(3,4,5),(0,1,4,3),(1,2,5,4),(2,0,3,5)],M['cabin'])
+for side in [-1,1]:
+    x=side*(w/2+.25)
+    corners=[(0,-depth/2-.25,3.83),(x,-depth/2-.25,3.20),
+             (x,depth/2+.25,3.20),(0,depth/2+.25,3.83)]
+    verts=[gate(a+px,py,pz+offset) for offset in [-.09,0] for px,py,pz in corners]
+    mesh('G9 checking room pitched roof',verts,[(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)],M['roof'])
+    beam('G9 checking room front roof fascia',gate(a,front-.27,3.79),gate(a+x,front-.27,3.16),.10,M['roof'],.14)
+# Fine vertical battens continue onto the gable without filling the windows.
+for x in np.arange(-w/2+.08,w/2,.14):
+    top=3.77-abs(x)/(w/2)*.55
+    cabin_box('front rib',x,front-.018,(.42+top)/2,(.035,.035,top-.42),M['rib'])
+for side in [-1,1]:
+    for y in np.arange(-depth/2+.06,depth/2,.15):
+        cabin_box('side rib',side*(w/2+.018),y,1.81,(.035,.035,2.78),M['rib'])
+    cabin_box('corner trim',side*(w/2-.05),front-.055,1.81,(.075,.075,2.84),M['trim'])
+# Front service window, recessed dark glass with clearly spaced vertical bars.
+wx,wy,ww,wh=-.61,1.99,1.34,1.38
+cabin_box('window recess',wx,front-.05,wy,(ww+.16,.07,wh+.16),M['dark'])
+cabin_box('window glazing',wx,front-.10,wy,(ww,.035,wh),M['glass'])
+for x in [wx-ww/2-.025,wx+ww/2+.025]:
+    cabin_box('window jamb',x,front-.135,wy,(.075,.08,wh+.15),M['trim'])
+for z in [wy-wh/2-.035,wy+wh/2+.035]:
+    cabin_box('window lintel and sill',wx,front-.135,z,(ww+.18,.09,.075),M['trim'])
+for x in np.linspace(wx-ww/2+.10,wx+ww/2-.10,9):
+    cabin_box('window grille bar',x,front-.19,wy,(.022,.025,wh),M['steel'])
+for z in [wy-.42,wy+.42]:
+    cabin_box('window grille rail',wx,front-.195,z,(ww,.025,.025),M['steel'])
+# Narrow entrance to the right, with a glazed upper panel and metal handle.
+cabin_box('door surround',.91,front-.065,1.58,(.99,.09,2.40),M['trim'])
+cabin_box('door leaf',.91,front-.12,1.58,(.82,.055,2.24),M['dark'])
+cabin_box('door lower panel',.91,front-.155,.96,(.71,.025,.91),M['cabin'])
+cabin_box('door glazing',.91,front-.155,2.04,(.68,.025,1.12),M['glass'])
+cabin_box('door handle',1.20,front-.22,1.49,(.035,.07,.24),M['steel'])
+cabin_box('entry step',.91,front-.30,.31,(1.08,.60,.15),M['concrete'])
+
+# Retain the separate raised lookout and open boom arm.
+for a,d,w,depth,height in [(-11,9,2.6,2.6,5.8)]:
     p=gate(a,d,height/2+.24)
     box('G9 red security cabin',p,(w,depth,height),M['red'],ga)
     box('G9 cabin overhanging roof',gate(a,d,height+.32),(w+.55,depth+.55,.18),M['dark'],ga)
@@ -256,13 +311,13 @@ def cage(a,d):
     for x in [-1,1]:
         beam('G9 barricade foot',gate(a+x,d-.38,.35),gate(a+x,d+.38,.35),.05,M['yellow'])
         for off in [-.32,.32]:cylinder('G9 barricade wheel',gate(a+x,d+off,.3),.10,.1,M['dark'])
-cage(-6.7,-14);cage(-8.9,-3.5)
+cage(-6.7,-14);cage(9.45,-2.7)
 box('G9 pink plastic barrier',gate(-4.2,-15,.81),(2.1,.65,1.12),M['pink'],ga)
 for x in [-.65,.65]:box('G9 moulded barrier slot',gate(-4.2+x,-15-.331,1.14),(.32,.012,.15),M['dark'],ga)
 beam('G9 lane reader pole',gate(.8,-10,.3),gate(.8,-10,2.15),.075,M['dark'])
 box('G9 lane reader housing',gate(.8,-10,2.18),(.28,.22,.18),M['white'],ga)
-cylinder('G9 green litter bin',gate(8.2,-1,.79),.32,1.1,M['green'])
-box('G9 litter bin opening',gate(8.2,-1.3,1.04),(.3,.04,.17),M['dark'],ga)
+cylinder('G9 green litter bin',gate(12.3,-1,.79),.32,1.1,M['green'])
+box('G9 litter bin opening',gate(12.3,-1.3,1.04),(.3,.04,.17),M['dark'],ga)
 
 collection=collections['04']
 def canopy(s,t,length,width,bays,wall=True):
@@ -397,6 +452,10 @@ views={
     'gate9-inside':{'position':world((-482,-394,1.9)),'target':world((-420,-394,2.8)),'label':'Gate 9 · Inside the venue'},
     'gate9-canopy':{'position':world((-428,-394,1.9)),'target':world((-481,-399,2.5)),'label':'Gate 9 · Canopy lane'}
 }
+def gate_world(a,d,h):
+    v=gate(a,d,h);return [v.x,v.z,-v.y]
+views['gate9-checking-room']={'position':gate_world(6.8,-10,2.25),
+    'target':gate_world(10,0,1.95),'label':'Gate 9 · Checking room'}
 collection=collections['07']
 for name,view in views.items():
     cam=bpy.data.cameras.new(name);o=bpy.data.objects.new(name,cam);collection.objects.link(o)
@@ -450,6 +509,7 @@ manifest={'status':'Photo-informed reconstruction; unsurveyed dimensions and cam
           'sourceSha256':source_hash,'gateCenter':world((*GATE,.24)),
           'slideDirection':world((*R,0)), 'slideDistance':7.25,'clearOpeningMetres':14,
           'views':views,'approachConnectionLocal':[-627.798,-321.451],
+          'checkingRoomReference':'User-supplied checking-room photograph, 2026-10-14: ribbed brown cabin, shallow gable roof, ivory-framed grilled window and yellow barricade. Shifted to the right side of Gate 9 when approaching from outside, per annotated user correction. Footprint 3.4 x 3.2 m and concealed sides are estimated.',
           'photoSequence':[5,2,6,1,4],
           'assumptions':['14 m gate opening and 4.4 m gate height are estimates.',
               'Gate bearing is aligned to the connected outside road; exact surveyed bearing is unavailable.',

@@ -27,3 +27,27 @@ The finish reviewer initially found a multistory overlap at the canopy. After th
 This is a scoped static visual and integration record. It does not certify complete photographic accuracy, visitor traversal, gate-opening behavior in motion or runtime performance. No test cases were added or run.
 
 See `README.md` for missing dimensions, camera registration and photo-provenance questions.
+
+## Checking-room correction — 2026-10-14
+
+The photo-guided checking room now has a low brown ribbed cabin, pitched dark roof, ivory grilled window, right-side glazed door and yellow barricade at Gate 9. Its footprint is estimated at 3.4 × 3.2 m. The user reference is preserved unchanged at `references/checking-room.png`; these dimensions are inferred, not surveyed.
+
+- `scripts/build-gate9.py` regenerated the editable Blender source and GLB. The updated GLB is 13,130,588 bytes, superseding the earlier size above. The export report confirms the original venue source SHA is unchanged.
+- `src/app/home/venue-viewer.ts` fits the `?view=gate9-checking-room` inspection camera responsively. The final `npm run build` passed with the pre-existing CSS budget and CommonJS warnings.
+- Production-app static captures: [desktop, 1440 × 1000](../../.impeccable/review/gate9-checking-room/desktop.png) and [mobile, 390 × 844](../../.impeccable/review/gate9-checking-room/mobile.png). The accompanying [runtime record](../../.impeccable/review/gate9-checking-room/runtime.json) reports `errors=[]` and `overflow=false`.
+- The independent finish reviewer returned **SHIP**, with no blocking issue in the building addition. Desktop visibility was adequate; on mobile, the cabin appears smaller behind the existing foreground barriers.
+- The detector returned `[]` for the Python builder; this is not evidence of 3D fidelity. No visitor movement tests were run. This review covers the static correction and does not certify navigation or runtime performance.
+
+This asset-specific correction introduces no design-system changes. The existing README documents the correction; global design documentation is unaffected.
+
+## Checking-room relocation and shared road finish — 2026-10-14
+
+The low checking cabin moved to the right side of Gate 9, from gate-local `a=-10` to `a=+10`. Its barricade moved the same 20 m, and the bin shifted from `a=8.2` to `a=12.3`; the lookout stayed in place. The builder, editable Blender source, exported GLB and JSON close-up camera were updated. The current GLB is 13,130,444 bytes, superseding the earlier sizes above.
+
+- `src/app/home/venue-road-finish.ts` runs after `prepareItpoArrival` and before batching. It shares Gate 9's weathered asphalt texture, color and roughness across road-category/asphalt materials and the Gate 9 concrete driving lane, patches and joints. World-aligned UV1 coordinates use `(x/4, -z/4)`. Per-original-material variants share the texture, preserve `siteRoad`/`siteDetail` fades and use distinct names to retain the finish against the Color palette. Footpaths, markings and lawns are unchanged.
+- The final `npm run build` passed outside the sandbox after two opaque sandbox failures. Existing CSS budget and CommonJS warnings remain. Isolated Node checks passed for shared texture, mixed-material protection, original geometry and UV0 preservation, texture scale, layer metadata, idempotence, missing-Gate-9 fallback and palette identity.
+- Reviewed Natural-mode captures: [desktop, 1440 × 1000](../../.impeccable/review/gate9-road-finish/desktop.png), [mobile, 390 × 844](../../.impeccable/review/gate9-road-finish/mobile.png), [checking room](../../.impeccable/review/gate9-road-finish/gate9-checking-room.png), [Gate 6 road](../../.impeccable/review/gate9-road-finish/gate6-road.png) and [ITPO arrival](../../.impeccable/review/gate9-road-finish/itpo-arrival.png).
+- The independent finish reviewer returned **Ship at the scoped change**, with no blocking introduced defect. An existing garden-triangle intrusion was outside this change's scope. The detector returned `[]` on the changed TypeScript before the final metadata-guard refinement.
+- Color-mode runtime appearance remains unverified: the automated toggle wait failed after 90 seconds, the appearance status was blank and reported errors were `[]`; no Color-mode screenshot was captured. Palette identity was checked only in the isolated checks above. No movement tests were run, and this static review does not certify navigation or runtime performance.
+
+The README already records this continuation. No global design-system documentation was changed.

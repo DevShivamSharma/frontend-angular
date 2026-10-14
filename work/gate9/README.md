@@ -3,6 +3,36 @@
 Source: six user-supplied photographs, copied unchanged into `references/`.
 This is a photo-informed, editable reconstruction, not a measured survey.
 
+## Checking room correction — 14 October 2026
+
+The additional user-supplied crop is preserved unchanged at `references/checking-room.png`.
+The low cabin on the right of Gate 9 (approaching from outside) has brown vertical cladding, a shallow pitched
+charcoal roof, ivory window and door frames, a barred observation window and a
+yellow mesh barricade in front. The separate raised lookout is retained. The
+3.4 × 3.2 m footprint, hidden sides and roof pitch are estimated from the crop.
+The cabin stays outside the 14 m gate opening. No unreadable sign text is invented.
+
+The deterministic builder, editable Blender source, shipping GLB and registration
+JSON include this correction. Open `/?view=gate9-checking-room` for its close-up.
+The current GLB is 13,130,444 bytes; sizes in the original integration record below
+describe the preceding reconstruction. No app control or design-system change is
+part of this building correction.
+
+The follow-up placement arrow is preserved at `references/checking-room-placement.png`.
+The cabin and its front barricade moved together from gate-local x=-10 m to x=10 m;
+the bin moved clear of the cabin. The raised lookout remains on the left.
+The close-up camera follows the relocated room. `scripts/build-gate9.py` reproduces
+the corrected placement, also saved in the editable Blender source and shipping GLB.
+
+The user also selected this entrance's asphalt for every modeled road.
+`src/app/home/venue-road-finish.ts` reuses its embedded texture, color and roughness
+on campus drives, Gate 6, surrounding roads and the Gate 9 interior lane, with a
+four-metre world-aligned repeat. It runs after the optional site layers load and
+before batching/appearance capture. Road-edge fade metadata is retained, while
+footpaths, kerbs, planting and painted markings keep their materials. Concrete
+lane joints/patches receive the asphalt finish too. The shared texture is retained
+in both Natural and Color appearances; the satellite/map backdrop is not edited.
+
 ## Viewpoint interpretation
 
 | Photo | Interpretation | Shared evidence |
