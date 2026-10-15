@@ -42,6 +42,7 @@ import {
   stallRect,
   textBox,
 } from './planner-geometry';
+import { cellAt, isCut, keptCells, stallWalls } from '../../../core/plans/stall-cells';
 import { AREA_LABELS } from '../../../shared/floor/floor-view.component';
 import { buildScene3d } from './planner-scene-3d';
 import type { Selection, SelectionKind } from './planner.store';
@@ -112,6 +113,23 @@ export interface PickEvent {
   additive: boolean;
 }
 
+/** Cut a cell out of a stall, or put a cut cell back. */
+export interface CutCellEvent {
+  stallId: string;
+  /** [column, row] from the stall's top-left corner. */
+  cell: [number, number];
+  /** True: cut it out; false: put it back. */
+  cut: boolean;
+}
+
+/** A cell of the selected stall that was clicked, with what can be done to it. */
+interface CellPick {
+  stallId: string;
+  cell: [number, number];
+  /** True when the cell is still the stall's, so it can be cut; false when it is cut. */
+  cut: boolean;
+}
+
 export interface MoveEvent {
   kind: SelectionKind;
   ids: string[];
@@ -173,6 +191,22 @@ const LABELLED = 1500;
         }}</span>
       }
     </div>
+    @if (cellMenu(); as m) {
+      <div
+        class="cell-box"
+        aria-hidden="true"
+        [style.left.px]="m.box.x"
+        [style.top.px]="m.box.y"
+        [style.width.px]="m.box.width"
+        [style.height.px]="m.box.height"
+      ></div>
+      <div class="cell-menu" role="menu" [style.left.px]="m.x" [style.top.px]="m.y">
+        <button type="button" role="menuitem" class="cut" (click)="applyCellMenu()">
+          {{ m.cut ? 'Cut this cell' : 'Put cell back' }}
+        </button>
+        <button type="button" role="menuitem" (click)="closeCellMenu()">Cancel</button>
+      </div>
+    }
     @if (hint()) {
       <p class="hint">{{ hint() }}</p>
     }
@@ -323,6 +357,41 @@ const LABELLED = 1500;
       background: rgb(255 255 255 / 0.9);
       color: #1e293b;
       font-weight: 600;
+    }
+    .cell-box {
+      position: absolute;
+      border: 2px solid #0e7490;
+      background: rgb(14 116 144 / 0.18);
+      pointer-events: none;
+    }
+    .cell-menu {
+      position: absolute;
+      transform: translate(-50%, calc(-100% - 10px));
+      display: flex;
+      gap: 6px;
+      padding: 6px;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+    }
+    .cell-menu button {
+      padding: 5px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      background: #fff;
+      color: #1e293b;
+      font: 600 13px/1.3 var(--app-font-family, sans-serif);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .cell-menu button.cut {
+      border-color: #be123c;
+      background: #be123c;
+      color: #fff;
+    }
+    .cell-menu button:focus-visible {
+      outline: 2px solid #0e7490;
+      outline-offset: 2px;
     }
     .hint {
       position: absolute;
@@ -579,9 +648,20 @@ export class PlannerCanvasComponent {
   readonly placeAt = output<Point>();
   readonly pick = output<PickEvent | null>();
   readonly move = output<MoveEvent>();
+  readonly cutCell = output<CutCellEvent>();
 
   private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
   protected readonly chips = signal<Chip[]>([]);
+  /** The cell menu on screen: where it points, the cell's box, and what it offers. */
+  protected readonly cellMenu = signal<
+    | (CellPick & {
+        x: number;
+        y: number;
+        box: { x: number; y: number; width: number; height: number };
+      })
+    | null
+  >(null);
+  private cellPick: CellPick | null = null;
   protected readonly error = signal('');
   protected readonly hint = signal('');
   protected readonly north = signal(0);
@@ -657,6 +737,8 @@ export class PlannerCanvasComponent {
     cam: [number, number];
     mode: 'pan' | 'draw' | 'move' | 'marquee' | 'none';
     move?: { kind: SelectionKind; ids: string[] };
+    /** A click here opens the cell menu for this cell of the selected stall. */
+    cell?: CellPick;
   } | null = null;
   private pointer: Point | null = null;
   private polygon: Point[] = [];
@@ -690,6 +772,10 @@ export class PlannerCanvasComponent {
       this.categoryColors();
       this.showLabels();
       untracked(() => this.buildPlan());
+    });
+    effect(() => {
+      this.selection();
+      untracked(() => this.closeCellMenu());
     });
     effect(() => {
       this.gridGroup.visible = this.showGrid();
@@ -732,6 +818,7 @@ export class PlannerCanvasComponent {
 
   /** Drops a shape being drawn. */
   cancel(): void {
+    this.closeCellMenu();
     this.polygon = [];
     this.measure = [];
     this.measureDone = false;
@@ -1266,10 +1353,15 @@ export class PlannerCanvasComponent {
     for (const s of plan.stalls) {
       const r = stallRect(s);
       color.set(s.isBlocked ? STALL_BLOCKED : (colors.get(s.categoryIds[0] ?? '') ?? STALL_FILL));
-      pushRect(fills, r, 20);
-      for (let i = 0; i < 6; i++) fillColors.push(color.r, color.g, color.b);
-      for (const [side, a, b] of sides(r))
-        (s.openSides.includes(side) ? open : closed).push(a[0], -a[1], 21, b[0], -b[1], 21);
+      // A stall with cells cut away is drawn cell by cell, walled round the cuts.
+      const cut = s.cutCells?.length > 0;
+      const cells = cut ? keptCells(s) : [r];
+      for (const cell of cells) {
+        pushRect(fills, cell, 20);
+        for (let i = 0; i < 6; i++) fillColors.push(color.r, color.g, color.b);
+      }
+      for (const [side, a, b] of cut ? stallWalls(s) : sides(r))
+        (side && s.openSides.includes(side) ? open : closed).push(a[0], -a[1], 21, b[0], -b[1], 21);
       if (sel?.kind === 'stall' && selected.has(s.id)) {
         for (const [, a, b] of sides(grow(r, 0.08))) picked.push(a[0], -a[1], 22, b[0], -b[1], 22);
       }
@@ -1503,6 +1595,52 @@ export class PlannerCanvasComponent {
       }
     }
     this.chips.set(chips);
+    this.placeCellMenu();
+  }
+
+  /** Puts the cell menu over its cell, wherever the view has moved it; drops a stale one. */
+  private placeCellMenu(): void {
+    const pick = this.cellPick;
+    const s = pick && this.plan().stalls.find((x) => x.id === pick.stallId);
+    if (!pick || !s || this.is3d()) {
+      if (this.cellMenu()) this.cellMenu.set(null);
+      return;
+    }
+    const [c, r] = pick.cell;
+    const x = s.x + c;
+    const y = s.y + r;
+    const a = this.screen([x, y]);
+    const b = this.screen([Math.min(x + 1, s.x + s.width), Math.min(y + 1, s.y + s.depth)]);
+    this.cellMenu.set({
+      ...pick,
+      x: (a.x + b.x) / 2,
+      y: a.y,
+      box: { x: a.x, y: a.y, width: b.x - a.x, height: b.y - a.y },
+    });
+  }
+
+  /** The cell of the one selected stall under a point, and whether it can be cut or restored. */
+  private cellOfSelected(p: Point): CellPick | null {
+    const sel = this.selection();
+    if (sel?.kind !== 'stall' || sel.ids.length !== 1) return null;
+    const s = this.plan().stalls.find((x) => x.id === sel.ids[0]);
+    const cell = s && cellAt(s, p);
+    if (!s || !cell) return null;
+    const cut = !isCut(s, cell[0], cell[1]);
+    // A stall keeps at least one cell.
+    if (cut && keptCells(s).length <= 1) return null;
+    return { stallId: s.id, cell, cut };
+  }
+
+  protected applyCellMenu(): void {
+    const pick = this.cellPick;
+    this.closeCellMenu();
+    if (pick) this.cutCell.emit(pick);
+  }
+
+  protected closeCellMenu(): void {
+    this.cellPick = null;
+    if (this.cellMenu()) this.cellMenu.set(null);
   }
 
   private rectChips(r: Rect): Chip[] {
@@ -1615,7 +1753,14 @@ export class PlannerCanvasComponent {
       this.down = { ...base, mode: 'none' };
       return;
     }
-    // Select: on something, it moves (selected first); on nothing, a box selects.
+    // Select: on something, it moves (selected first); on nothing, a box selects. A click on a
+    // cell of the one selected stall offers to cut it out, or to put back a cell cut before.
+    this.closeCellMenu();
+    const cell = this.cellOfSelected(world);
+    if (cell && !cell.cut) {
+      this.down = { ...base, mode: 'none', cell };
+      return;
+    }
     const hit = this.hit(world);
     if (hit) {
       const sel = this.selection();
@@ -1625,7 +1770,8 @@ export class PlannerCanvasComponent {
         this.pick.emit({ kind: hit.kind, ids: [hit.id], additive });
       }
       const ids = inSelection && !additive ? sel!.ids : [hit.id];
-      this.down = { ...base, mode: 'move', move: { kind: hit.kind, ids } };
+      const again = cell?.stallId === hit.id && !additive ? cell : undefined;
+      this.down = { ...base, mode: 'move', move: { kind: hit.kind, ids }, cell: again };
       this.moveOffset = [0, 0];
     } else {
       this.down = { ...base, mode: 'marquee' };
@@ -1686,7 +1832,10 @@ export class PlannerCanvasComponent {
     const click = Math.hypot(e.clientX - d.px, e.clientY - d.py) < CLICK_PX;
     const world = this.world(e);
     const tool = this.tool();
-    if (d.mode === 'pan' && click && this.readonly() && tool === 'select') {
+    if (click && d.cell) {
+      this.cellPick = d.cell;
+      this.updateChips();
+    } else if (d.mode === 'pan' && click && this.readonly() && tool === 'select') {
       // A read-only plan pans, and a click still picks what it lands on, to read it.
       const hit = this.hit(world);
       this.pick.emit(hit ? { kind: hit.kind, ids: [hit.id], additive: false } : null);
@@ -1839,7 +1988,12 @@ export class PlannerCanvasComponent {
       if (at(stallRect(plan.seats[i]))) return { kind: 'seat', id: plan.seats[i].id };
     }
     for (let i = plan.stalls.length - 1; i >= 0; i--) {
-      if (at(stallRect(plan.stalls[i]))) return { kind: 'stall', id: plan.stalls[i].id };
+      const s = plan.stalls[i];
+      if (!at(stallRect(s))) continue;
+      // A cut cell is not the stall's: a click there falls through to what is under it.
+      const cell = cellAt(s, p);
+      if (cell && isCut(s, cell[0], cell[1])) continue;
+      return { kind: 'stall', id: s.id };
     }
     // Drawings are picked near their outline; text anywhere in its box.
     const near = HIT_PX * this.metresPerPixel();
@@ -1905,7 +2059,8 @@ export class PlannerCanvasComponent {
 const READONLY_HINT = 'Click a stall to read it · Drag to pan · Scroll to zoom';
 
 const HINTS: Record<PlannerTool, string> = {
-  select: 'Click to select · Shift-click to add · Drag to move · Drag on the floor to box-select',
+  select:
+    'Click to select · Shift-click to add · Drag to move · Drag on the floor to box-select · Click a cell of the one selected stall to cut it',
   pan: 'Drag to move the view · Scroll to zoom',
   'zone-rect': 'Drag on the floor to draw a zone · Esc to cancel',
   'zone-poly':

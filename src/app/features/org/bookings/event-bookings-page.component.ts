@@ -48,6 +48,7 @@ import { MoveBookingDialogComponent, MoveBookingDialogData } from './move-bookin
 import { NewBookingDialogComponent, NewBookingDialogData } from './new-booking-dialog.component';
 import { RefundDialogComponent, RefundDialogData } from './refund-dialog.component';
 import { StallMapComponent } from './stall-map.component';
+import { stallArea } from '../../../core/plans/stall-cells';
 
 /**
  * An event's bookings, as staff work them (ported from `@feature/rules`): each hall's published
@@ -129,7 +130,7 @@ import { StallMapComponent } from './stall-map.component';
                     @if (selected(); as s) {
                       <h2 class="section-title">Stall {{ s.label }}</h2>
                       <p class="muted small">
-                        {{ s.width * s.depth | number: '1.0-2' }} m² · {{ s.openSides.length }} open
+                        {{ stallArea(s) | number: '1.0-2' }} m² · {{ s.openSides.length }} open
                         {{ s.openSides.length === 1 ? 'side' : 'sides' }}
                       </p>
                       @if (s.price; as p) {
@@ -326,6 +327,7 @@ import { StallMapComponent } from './stall-map.component';
   `,
 })
 export class EventBookingsPageComponent {
+  protected readonly stallArea = stallArea;
   /** From the route. */
   readonly eventId = input.required<string>();
 

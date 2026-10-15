@@ -39,6 +39,7 @@ import {
 } from './planner-geometry';
 import { Numbering, numberPlaces } from './planner-plan';
 import type { PlannerStore } from './planner.store';
+import { stallArea } from '../../../core/plans/stall-cells';
 
 export interface FillRegion {
   /** 'hall' or a zone id. */
@@ -787,7 +788,7 @@ export class AutoBoothsDialogComponent {
     if (!floor || !this.ruleOn('maxUtilization')) return null;
     const area = standArea(floor);
     if (!area) return null;
-    const stalls = this.store.plan().stalls.reduce((sum, s) => sum + s.width * s.depth, 0);
+    const stalls = this.store.plan().stalls.reduce((sum, s) => sum + stallArea(s), 0);
     const added = this.chosen().reduce((sum, c) => sum + c.width * c.height, 0);
     const used = ((stalls + added) / area) * 100;
     const limit = Math.round(this.rules.values.maxUtilization * 100);
@@ -876,6 +877,7 @@ export class AutoBoothsDialogComponent {
         width: r.width,
         depth: r.height,
         openSides: facing(r),
+        cutCells: [],
         scheme: this.scheme(),
         categoryIds,
         isPremium: false,

@@ -24,6 +24,7 @@ import {
   standArea,
   zoneAt,
 } from './planner-geometry';
+import { stallArea } from '../../../core/plans/stall-cells';
 
 /**
  * Planning a hall in one go: a short brief (what booths, how numbered, which area) becomes a few
@@ -191,7 +192,7 @@ export function planOptions(brief: PlanBrief, setting: PlanSetting): PlanOption[
     rules.on,
   );
   const floorArea = standArea(setting.floor);
-  const stayArea = setting.stalls.reduce((sum, s) => sum + s.width * s.depth, 0);
+  const stayArea = setting.stalls.reduce((sum, s) => sum + stallArea(s), 0);
   const limit = rules.on('maxUtilization') ? rules.maxUtilization * 100 : Infinity;
 
   const options: PlanOption[] = [];
@@ -281,6 +282,7 @@ export function boothsOf(option: PlanOption, brief: PlanBrief, setting: PlanSett
       width: p.width,
       depth: p.height,
       openSides: [...p.openSides],
+      cutCells: [],
       scheme: 'shell',
       categoryIds,
       isPremium: false,

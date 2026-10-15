@@ -22,6 +22,7 @@ import {
 import { IconComponent } from '../../../shared/icon.component';
 import { pointInRing, polygonArea, ringBox } from './planner-geometry';
 import type { PlannerStore } from './planner.store';
+import { stallArea } from '../../../core/plans/stall-cells';
 
 export type StallPatch = Partial<Omit<PlanStall, 'id'>>;
 
@@ -159,7 +160,20 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
             />
           </label>
         </div>
-        <p class="muted small nums">{{ s.width * s.depth | number: '1.0-2' }} m²</p>
+        <p class="muted small nums">
+          {{ stallArea(s) | number: '1.0-2' }} m²
+          @if (s.cutCells.length) {
+            · {{ s.cutCells.length }} {{ s.cutCells.length === 1 ? 'cell' : 'cells' }} cut
+            @if (!ro) {
+              <button type="button" class="cut-reset" (click)="patch.emit({ cutCells: [] })">
+                Put all back
+              </button>
+            }
+          }
+        </p>
+        @if (!ro && !s.cutCells.length) {
+          <p class="muted small">Click a cell of the selected stall to cut it out.</p>
+        }
         <span class="lbl">Open sides</span>
         <div class="sides" role="group" aria-label="Open sides" data-tour="open-sides">
           @for (side of sideList; track side) {
@@ -343,6 +357,16 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
     }
   `,
   styles: `
+    .cut-reset {
+      margin-left: 4px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--p-primary-color, #0e7490);
+      font: inherit;
+      text-decoration: underline;
+      cursor: pointer;
+    }
     :host {
       display: grid;
       gap: 10px;
@@ -442,6 +466,7 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
   `,
 })
 export class PlannerPropertiesComponent {
+  protected readonly stallArea = stallArea;
   readonly store = input.required<PlannerStore>();
   readonly readonly = input(false);
 
@@ -478,7 +503,7 @@ export class PlannerPropertiesComponent {
   protected readonly zoneStalls = computed(() => this.inZone(this.store().plan().stalls));
   protected readonly zoneSeats = computed(() => this.inZone(this.store().plan().seats));
   protected readonly stallsArea = computed(() =>
-    this.stalls().reduce((sum, s) => sum + s.width * s.depth, 0),
+    this.stalls().reduce((sum, s) => sum + stallArea(s), 0),
   );
   protected readonly sharedCategories = computed(() => {
     const [first, ...rest] = this.stalls();

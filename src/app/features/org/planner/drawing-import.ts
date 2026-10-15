@@ -648,6 +648,7 @@ export function toPlanStall(
     width: r.width,
     depth: r.height,
     openSides: open.length ? open : ['bottom'],
+    cutCells: [],
     scheme: 'shell',
     categoryIds,
     isPremium: stall.category === 'premium',

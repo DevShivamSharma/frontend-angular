@@ -41,6 +41,7 @@ import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { PickEvent, PlannerCanvasComponent } from '../planner/planner-canvas.component';
 import { Selection } from '../planner/planner.store';
 import { portalColors, portalPlan } from './portal-plan';
+import { stallArea } from '../../../core/plans/stall-cells';
 
 const EMPTY_PLAN: PlanContent = { zones: [], seats: [], objects: [], stalls: [] };
 
@@ -152,7 +153,7 @@ const EMPTY_PLAN: PlanContent = { zones: [], seats: [], objects: [], stalls: [] 
                 <h2 class="section-title">Stall {{ s.label }}</h2>
                 <p class="muted small">
                   {{ s.width | number: '1.0-2' }} × {{ s.depth | number: '1.0-2' }} m ·
-                  {{ s.width * s.depth | number: '1.0-2' }} m² ·
+                  {{ stallArea(s) | number: '1.0-2' }} m² ·
                   {{ s.openSides.length ? s.openSides.join(', ') : 'no' }} open
                   {{ s.openSides.length === 1 ? 'side' : 'sides' }}
                 </p>
@@ -269,6 +270,7 @@ const EMPTY_PLAN: PlanContent = { zones: [], seats: [], objects: [], stalls: [] 
   `,
 })
 export class PortalHallPageComponent {
+  protected readonly stallArea = stallArea;
   /** From the route. */
   readonly eventId = input.required<string>();
   readonly hallId = input.required<string>();

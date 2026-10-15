@@ -59,6 +59,7 @@ import { AutoSeatsData, AutoSeatsDialogComponent } from './auto-seats-dialog.com
 import { PlannerAgentCtx } from './planner-agent';
 import { PlannerAssistantComponent } from './planner-assistant.component';
 import {
+  CutCellEvent,
   DrawObjectEvent,
   MoveEvent,
   PickEvent,
@@ -99,6 +100,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { RowData, RowDialogComponent } from './row-dialog.component';
 import { ScaleData, ScaleDialogComponent } from './scale-dialog.component';
 import { SeatsData, SeatsDialogComponent } from './seats-dialog.component';
+import { cellCounts, cleanCutCells, stallArea } from '../../../core/plans/stall-cells';
 
 /** Colours of categories on the plan, in the order the hall lists them. */
 const CATEGORY_COLORS = [
@@ -999,6 +1001,7 @@ const OBJECT_COLOR = '#334155';
               (placeAt)="placeBooth($event)"
               (pick)="picked($event)"
               (move)="moved($event)"
+              (cutCell)="cutCell($event)"
             />
             @if (splitView()) {
               <!-- The same plan again, to look at elsewhere: pan and zoom only. -->
@@ -1795,7 +1798,7 @@ export class PlannerPageComponent {
       total: stalls.length,
       blocked: stalls.length - open.length,
       available: open.filter((s) => s.isActive).length,
-      saleable: open.reduce((sum, s) => sum + s.width * s.depth, 0),
+      saleable: open.reduce((sum, s) => sum + stallArea(s), 0),
     };
   });
   protected readonly treeCount = computed(
@@ -2120,6 +2123,7 @@ export class PlannerPageComponent {
       width: rect.width,
       depth: rect.height,
       openSides: [...DEFAULT_OPEN],
+      cutCells: [],
       scheme: 'shell',
       categoryIds: [],
       isPremium: false,
@@ -2150,6 +2154,24 @@ export class PlannerPageComponent {
     } else {
       this.store.select({ kind: e.kind, ids: e.ids });
     }
+  }
+
+  /** Cuts a cell out of a stall, or puts a cut cell back, from the canvas's cell menu. */
+  protected async cutCell(e: CutCellEvent): Promise<void> {
+    if (!this.canEdit()) return;
+    const plan = this.store.plan();
+    const [c, r] = e.cell;
+    await this.store.change(
+      {
+        ...plan,
+        stalls: plan.stalls.map((s) => {
+          if (s.id !== e.stallId) return s;
+          const rest = s.cutCells.filter(([cc, rr]) => cc !== c || rr !== r);
+          return { ...s, cutCells: cleanCutCells(s, e.cut ? [...rest, e.cell] : rest) };
+        }),
+      },
+      [e.stallId],
+    );
   }
 
   protected async moved(e: MoveEvent): Promise<void> {
@@ -2239,6 +2261,8 @@ export class PlannerPageComponent {
           width: s.depth,
           depth: s.width,
           openSides: s.openSides.map((side) => ROTATED[side]),
+          // A quarter clockwise: the last row becomes the first column.
+          cutCells: s.cutCells.map(([c, r]) => [cellCounts(s).rows - 1 - r, c] as [number, number]),
         });
       }),
     };
@@ -2319,6 +2343,7 @@ export class PlannerPageComponent {
     const wide = s.width >= s.depth;
     const half = round((wide ? s.width : s.depth) / 2);
     const first: PlanStall = wide ? { ...s, width: half } : { ...s, depth: half };
+    first.cutCells = cleanCutCells(first, s.cutCells);
     const [number] = stallNumbers(plan.stalls, s.islandNumber, 'numbers', 1, '');
     const second: PlanStall = this.rezone(
       wide
@@ -2328,6 +2353,10 @@ export class PlannerPageComponent {
             stallNumber: number,
             x: round(s.x + half),
             width: round(s.width - half),
+            cutCells: cleanCutCells(
+              { width: round(s.width - half), depth: s.depth },
+              s.cutCells.map(([c, r]) => [c - half, r]),
+            ),
           }
         : {
             ...s,
@@ -2335,6 +2364,10 @@ export class PlannerPageComponent {
             stallNumber: number,
             y: round(s.y + half),
             depth: round(s.depth - half),
+            cutCells: cleanCutCells(
+              { width: s.width, depth: round(s.depth - half) },
+              s.cutCells.map(([c, r]) => [c, r - half]),
+            ),
           },
     );
     await this.store.change(
@@ -2355,7 +2388,7 @@ export class PlannerPageComponent {
     const selected = this.store.selectedStalls();
     if (selected.length < 2) return;
     const box = ringBox(selected.flatMap((s) => rectRing(stallRect(s))));
-    const area = selected.reduce((sum, s) => sum + s.width * s.depth, 0);
+    const area = selected.reduce((sum, s) => sum + stallArea(s), 0);
     if (Math.abs(area - box.width * box.height) > 0.01) {
       this.notifier.warn('Not merged: the booths must fill a rectangle together, with no gaps.');
       return;
@@ -2368,6 +2401,7 @@ export class PlannerPageComponent {
       y: round(box.y),
       width: round(box.width),
       depth: round(box.height),
+      cutCells: [],
     });
     const plan = this.store.plan();
     await this.store.change(
@@ -2517,6 +2551,10 @@ export class PlannerPageComponent {
       stalls: plan.stalls.map((s) => {
         if (!ids.has(s.id)) return s;
         const changed = { ...s, ...patch };
+        // A smaller stall drops the cuts that are now outside it.
+        if ('width' in patch || 'depth' in patch) {
+          changed.cutCells = cleanCutCells(changed, changed.cutCells);
+        }
         return 'x' in patch || 'y' in patch || 'width' in patch || 'depth' in patch
           ? this.rezone(changed)
           : changed;

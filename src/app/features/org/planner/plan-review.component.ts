@@ -19,6 +19,7 @@ import { ConfirmService } from '../../../core/ui/confirm.service';
 import { IconComponent } from '../../../shared/icon.component';
 import { PlannerCanvasComponent, PlannerTool } from './planner-canvas.component';
 import { PlannerStore } from './planner.store';
+import { stallArea } from '../../../core/plans/stall-cells';
 
 /** The tools a reviewer has: they look and measure, and change nothing. */
 const TOOLS: Array<{ id: PlannerTool; label: string; icon: string }> = [
@@ -273,7 +274,7 @@ const TOOLS: Array<{ id: PlannerTool; label: string; icon: string }> = [
                     <dt>Size</dt>
                     <dd>
                       {{ s.width | number: '1.0-2' }} × {{ s.depth | number: '1.0-2' }} m ({{
-                        s.width * s.depth | number: '1.0-1'
+                        s.area | number: '1.0-1'
                       }}
                       m²)
                     </dd>
@@ -540,6 +541,7 @@ const TOOLS: Array<{ id: PlannerTool; label: string; icon: string }> = [
   `,
 })
 export class PlanReviewComponent {
+  protected readonly stallArea = stallArea;
   protected readonly rupees = rupees;
   protected readonly store = inject(PlannerStore);
   private readonly context = inject(OrgContextStore);
@@ -588,7 +590,7 @@ export class PlanReviewComponent {
     return {
       stalls: p.stalls.length,
       forSale: open.filter((s) => s.isActive).length,
-      area: open.reduce((sum, s) => sum + s.width * s.depth, 0),
+      area: open.reduce((sum, s) => sum + stallArea(s), 0),
       premium: p.stalls.filter((s) => s.isPremium).length,
       corner: p.stalls.filter((s) => s.openSides.length >= 2).length,
       blocked: p.stalls.length - open.length,
@@ -621,6 +623,7 @@ export class PlanReviewComponent {
       reckoning: price?.reckoning ?? '',
       width: s.width,
       depth: s.depth,
+      area: stallArea(s),
       sides: s.openSides.length ? s.openSides.join(', ') : 'none',
       categories: s.categoryIds.map((id) => names.get(id) ?? '?').join(', '),
       flags: flags.join(', '),

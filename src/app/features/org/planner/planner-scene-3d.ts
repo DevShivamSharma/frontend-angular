@@ -10,6 +10,7 @@ import {
   labelSize,
 } from '../../../shared/floor/floor-annotations';
 import { objectOutline, Rect, rectRing, stallRect } from './planner-geometry';
+import { cellWalls, keptCells } from '../../../core/plans/stall-cells';
 import type { Selection } from './planner.store';
 
 /**
@@ -135,6 +136,22 @@ export function buildScene3d(g: T.Group, input: Scene3dInput, extent: Rect): voi
       : s.isBlocked
         ? STALL_BLOCKED
         : (input.categoryColors.get(s.categoryIds[0] ?? '') ?? STALL_FILL);
+    // A stall with cells cut away: a tile per kept cell, shell walls round the cuts too.
+    if (s.cutCells?.length) {
+      const material = new T.MeshLambertMaterial({ color });
+      for (const k of keptCells(s)) {
+        const tile = new T.Mesh(new T.BoxGeometry(k.width, 0.08, k.height), material);
+        tile.position.set(k.x + k.width / 2, 0.04, k.y + k.height / 2);
+        g.add(tile);
+      }
+      if (s.scheme === 'shell') {
+        for (const w of cellWalls(s)) {
+          if (!(w.outer && s.openSides.includes(w.side)))
+            g.add(panel(w.cell, w.side, panelMaterial));
+        }
+      }
+      continue;
+    }
     const tile = new T.Mesh(
       new T.BoxGeometry(s.width, 0.08, s.depth),
       new T.MeshLambertMaterial({ color }),
