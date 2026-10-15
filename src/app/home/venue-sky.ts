@@ -49,19 +49,23 @@ const bakeFragment = `
 precision highp float;
 varying vec2 skyUv;
 uniform float skyMode;
+uniform float overcast;
 uniform vec3 sunDirection;
 uniform vec3 moonDirection;
 const float PI = 3.141592653589793;
 ${directionNoise}
 // Two differently scaled static layers: broad cumulus and restrained high haze.
 // The low-elevation fade retains clouds in the narrow sky band above hall roofs.
+// overcast (rain) lowers the cover thresholds until the cumulus closes into a
+// grey rain sheet; the same noise keeps the panorama seamless.
 vec3 cloudLayers(vec3 direction, vec3 lightDirection) {
   vec3 p = direction * (3.15 / (max(direction.y, 0.0) + 0.55));
   p += vec3(11.8, 2.1, -4.7);
   float broad = fbm(p);
   float detail = fbm(p * 2.85 + vec3(8.3, -5.7, 2.9));
   float field = broad * 0.77 + detail * 0.23;
-  float density = smoothstep(0.43, 0.66, field);
+  float density = smoothstep(0.43 - overcast * 0.34, 0.66 - overcast * 0.30, field);
+  density = max(density, overcast * smoothstep(0.18, 0.46, broad));
   density *= smoothstep(0.005, 0.12, direction.y);
   float shadow = clamp((fbm(p + lightDirection * 0.52) - broad) * 3.5 + 0.34, 0.0, 1.0);
   float high = smoothstep(0.57, 0.77, fbm(direction * 13.0 + vec3(-7.0, 20.0, 3.0)));
@@ -98,21 +102,24 @@ vec3 daySky(vec3 direction) {
   float altitude = max(direction.y, 0.0);
   float height = pow(altitude, 0.42);
   vec3 color = mix(vec3(0.72, 0.81, 0.86), vec3(0.20, 0.43, 0.67), height);
+  color = mix(color, mix(vec3(0.60, 0.63, 0.66), vec3(0.42, 0.46, 0.51), height), overcast * 0.85);
   float sunAngle = acos(clamp(dot(direction, sunDirection), -1.0, 1.0));
   float haze = exp(-altitude * 12.0);
   color = mix(color, vec3(0.83, 0.84, 0.81), haze * 0.17);
-  color += vec3(0.12, 0.09, 0.045) * exp(-sunAngle * 4.0);
-  color += vec3(0.28, 0.23, 0.15) * exp(-sunAngle * 33.0);
+  float sunlight = 1.0 - overcast * 0.92;
+  color += vec3(0.12, 0.09, 0.045) * exp(-sunAngle * 4.0) * sunlight;
+  color += vec3(0.28, 0.23, 0.15) * exp(-sunAngle * 33.0) * sunlight;
   // A solar diameter near the real 0.53 degrees; its halo remains broader.
-  float solarDisc = 1.0 - smoothstep(0.0041, 0.0054, sunAngle);
+  float solarDisc = (1.0 - smoothstep(0.0041, 0.0054, sunAngle)) * (1.0 - overcast);
   color = mix(color, vec3(1.0, 0.985, 0.93), solarDisc);
   vec3 cloud = cloudLayers(direction, sunDirection);
   vec3 cloudColor = mix(vec3(0.94, 0.94, 0.91), vec3(0.58, 0.66, 0.72), cloud.y * 0.72);
-  cloudColor += vec3(0.075, 0.066, 0.048) * exp(-sunAngle * 9.0) * (1.0 - cloud.x);
+  cloudColor = mix(cloudColor, mix(vec3(0.52, 0.55, 0.59), vec3(0.33, 0.36, 0.40), cloud.y), overcast);
+  cloudColor += vec3(0.075, 0.066, 0.048) * exp(-sunAngle * 9.0) * (1.0 - cloud.x) * sunlight;
   color = mix(color, cloudColor, cloud.x * 0.93);
-  color = mix(color, vec3(0.89, 0.91, 0.92), cloud.z);
+  color = mix(color, mix(vec3(0.89, 0.91, 0.92), vec3(0.48, 0.51, 0.55), overcast), cloud.z);
   // Below-horizon haze avoids a black seam during elevated orbital views.
-  color = mix(vec3(0.64, 0.71, 0.74), color, smoothstep(-0.18, 0.015, direction.y));
+  color = mix(mix(vec3(0.64, 0.71, 0.74), vec3(0.50, 0.53, 0.56), overcast), color, smoothstep(-0.18, 0.015, direction.y));
   return color;
 }
 
@@ -132,7 +139,7 @@ vec4 nightSky(vec3 direction) {
   color = mix(color, moonCloud, cloud.x * 0.68);
   color = mix(color, vec3(0.13, 0.15, 0.185), cloud.z * 0.52);
   color = mix(vec3(0.067, 0.082, 0.109), color, smoothstep(-0.16, 0.015, direction.y));
-  float moonVisibility = (1.0 - cloud.x * 0.92) * (1.0 - cloud.z * 0.75);
+  float moonVisibility = (1.0 - cloud.x * 0.92) * (1.0 - cloud.z * 0.75) * (1.0 - overcast);
   return vec4(color, moonVisibility);
 }
 
@@ -207,11 +214,12 @@ void main() {
  * after WebGL context restoration because render-target pixels are GPU-owned.
  */
 export function createVenueSky(renderer: T.WebGLRenderer) {
-  const targets = new Map<SkyMode, T.WebGLRenderTarget>();
+  // One baked panorama per mode, and an overcast variant of day/night for rain.
+  const targets = new Map<string, T.WebGLRenderTarget>();
   const quad = new T.PlaneGeometry(2, 2);
   const bakeMaterial = new T.ShaderMaterial({ vertexShader: fullscreenVertex, fragmentShader: bakeFragment,
     depthTest: false, depthWrite: false, toneMapped: false,
-    uniforms: { skyMode: { value: 0 }, sunDirection: { value: VENUE_SUN_DIRECTION.clone() },
+    uniforms: { skyMode: { value: 0 }, overcast: { value: 0 }, sunDirection: { value: VENUE_SUN_DIRECTION.clone() },
       moonDirection: { value: VENUE_MOON_DIRECTION.clone() } } });
   const bakeScene = new T.Scene(), bakeCamera = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const bakeMesh = new T.Mesh(quad, bakeMaterial); bakeMesh.frustumCulled = false; bakeScene.add(bakeMesh);
@@ -234,10 +242,12 @@ export function createVenueSky(renderer: T.WebGLRenderer) {
     uniforms.cameraRotation.value.setFromMatrix4(camera.matrixWorld);
     uniforms.orthographic.value = (camera as T.OrthographicCamera).isOrthographicCamera === true;
   };
-  let daylight = true, disposed = false;
+  let daylight = true, disposed = false, raining = false;
 
   function texture(mode: SkyMode): T.Texture {
-    const existing = targets.get(mode); if (existing) return existing.texture;
+    const overcast = raining && mode !== 'space';
+    const key = overcast ? `${mode}-overcast` : mode;
+    const existing = targets.get(key); if (existing) return existing.texture;
     const target = new T.WebGLRenderTarget(WIDTH, HEIGHT, { format: T.RGBAFormat, type: T.UnsignedByteType,
       minFilter: T.LinearFilter, magFilter: T.LinearFilter, depthBuffer: false, stencilBuffer: false,
       generateMipmaps: false, colorSpace: T.NoColorSpace });
@@ -252,13 +262,14 @@ export function createVenueSky(renderer: T.WebGLRenderer) {
       renderer.xr.enabled = false; renderer.autoClear = false;
       renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = false;
       bakeMaterial.uniforms['skyMode'].value = mode === 'day' ? 0 : mode === 'night' ? 1 : 2;
+      bakeMaterial.uniforms['overcast'].value = overcast ? 1 : 0;
       // setRenderTarget installs this target's physical-pixel viewport/scissor.
       // setViewport would multiply by devicePixelRatio and crop a high-DPR bake.
       // Leave the renderer's logical viewport/scissor entirely untouched.
       renderer.setRenderTarget(target);
       renderer.setClearColor(0x000000, 1); renderer.clear(true, false, false);
       renderer.render(bakeScene, bakeCamera);
-      targets.set(mode, target); mesh.userData['bakedTextures'] = targets.size;
+      targets.set(key, target); mesh.userData['bakedTextures'] = targets.size;
       return target.texture;
     } catch (error) {
       target.dispose(); throw error;
@@ -289,6 +300,11 @@ export function createVenueSky(renderer: T.WebGLRenderer) {
       if (disposed) return;
       daylight = !!enabled; uniforms.daylight.value = daylight;
       mesh.userData['daylight'] = daylight; refresh();
+    },
+    /** Rain closes the cloud cover; the clear panoramas stay cached for the toggle back. */
+    setRain(enabled: boolean): void {
+      if (disposed || raining === !!enabled) return;
+      raining = !!enabled; mesh.userData['raining'] = raining; refresh();
     },
     setSpaceMix(amount: number): void {
       if (disposed) return;

@@ -3,6 +3,45 @@
 Source: six user-supplied photographs, copied unchanged into `references/`.
 This is a photo-informed, editable reconstruction, not a measured survey.
 
+## Inside the gate — 16 October 2026
+
+Ten more photographs and a 38 s walking video (frames every 2 s) are in
+`references/2026-10-15/` (photos downscaled to 1600 px). They cover the gate from
+outside, the direction kiosk just inside, the lane with its fenced parking shelters,
+the office-front drop-off with the ITPO barrier sign and ENTRY pavilion, and the
+same walk at dusk with the lamps on. `scripts/build-gate9.py` now also builds:
+
+- **Gate** — khaki barred leaves (five rails, close bars), a narrower closed left
+  gate, the checking cabin between them (photo `20261015_104444` is taken from
+  outside: cabin left of the vehicle gate, which supersedes the 14 October
+  "right side" placement), two striped boom barriers (`GATE9_barrier_arm_*`,
+  hinged objects the viewer raises), a floodlight mast and a wide asphalt forecourt.
+- **Kiosk island** — the lane widens round a red-sandstone kiosk with glazing, CCTV
+  and the blue direction board (text transcribed from `20261015_104147`); hydrant
+  cabinets; clipped hedges behind the strappy beds; a twin-arm lamp on the bend.
+- **Parking** — the red-pier fence continues along the lane; two rows of striped
+  barrel shelters behind it with low-poly parked cars (deterministic placement).
+- **Office frontage** — granite-sett drop-off, plumeria island with pots, white car,
+  cones and chain, blue board, the stainless ITPO barrier sign (nameplate + roundel
+  lettering only, no emblem), the ENTRY pavilion with its red wall sign, and the
+  arched walkway canopy running towards the gate.
+- **Lighting data** — every lamp, floodlight, canopy, kiosk and cabin light is listed
+  in `gate9-detail.json` (`lights`); `guards` places three staff; `barriers` records
+  the hinges. New camera views: `gate9-kiosk`, `gate9-dropoff`, `gate9-parking`,
+  `gate9-walkway`.
+
+Sign textures come from `scripts/gate9-signs.ps1` (Windows GDI+, Arial / Nirmala UI)
+into `signs/`. Joining shared leaf/crown meshes now copies the data per collection
+(the first export of this extension reached 284 MB because a joined crown mesh was
+reused by later joins); the shipping GLB is about 17.5 MB.
+
+Runtime (`src/app/home`): `venue-gate9.ts` opens the leaves and lifts the arms for the
+walking visitor *and* for a camera orbiting within 30 m; `venue-night-lights.ts`
+turns the diffusers emissive and adds up to 20 real lights at night (the home page
+follows New Delhi's clock, 06:30–18:30 IST, until the sun/moon button overrides it);
+`venue-rain.ts` plus the overcast sky variant in `venue-sky.ts` give the rain toggle.
+Dimensions, spacing and the exact kiosk/parking positions remain estimates.
+
 ## Checking room correction — 14 October 2026
 
 The additional user-supplied crop is preserved unchanged at `references/checking-room.png`.

@@ -12,4 +12,25 @@ Collection `08 Local context reconciliation` contains retained copies of only `S
 
 The registered office footprint stays fixed. Gate bearing, opening dimensions, canopy spacing and camera poses are estimates pending measured/photo evidence. See `work/gate9/README.md` and `reference.json`.
 
+## Extension — 2026-10-16 (inside the gate, night, rain)
+
+Ten new photographs and a walking video (`work/gate9/references/2026-10-15/`) set
+the look inside Gate 9. The same builder (`scripts/build-gate9.py`) now adds the
+khaki gates with two hinged boom barriers and the floodlight mast, the kiosk island
+with its transcribed direction board, hedges, the fenced parking shelters with cars,
+and the office-front drop-off (setts, plumeria island, ITPO barrier sign, ENTRY
+pavilion, arched walkway). The cabin moved left of the vehicle gate because the new
+gate photograph is taken from outside; see `work/gate9/README.md`.
+
+Runtime: the gate and barriers open for the walking visitor and for a camera within
+30 m (`venue-gate9.ts`); `venue-night-lights.ts` lights every diffuser material and up
+to 20 real lights from the asset's `lights` list, and the home page follows New
+Delhi's clock until the sun/moon button overrides it; `venue-rain.ts` adds a rain
+toggle (vertex-shader streaks round the camera, wet darker/polished ground, grey
+haze, an overcast bake of the day/night sky in `venue-sky.ts`). Three Gate 9 guards
+come from the asset's `guards` list through `venue-security-guards.ts`.
+
+Verification: `tsc` and browser captures of the approach, kiosk, drop-off, parking,
+walkway, night and rain views. No test cases, no survey accuracy claim.
+
 No test cases. Compile/build and static visual comparisons only. Final evidence covers desktop approach, gate close-up, interior lane and canopy, mobile, and the user's 676 px viewport. The finish reviewer accepted the bounded canopy-overlap correction: the cream shelter, fence and court read separately, with the office/lane intact. This verdict does not certify survey accuracy, navigation or performance. See `work/gate9/verification.md` for evidence and limits. Preserve root DESIGN.md: this is a local scene extension, not a UI redesign.

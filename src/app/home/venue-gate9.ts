@@ -4,13 +4,20 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import type { VisitorState } from './venue-visitor';
 import { trimGate9Context } from './venue-gate9-trim';
 
+export interface Gate9Light { kind: 'lamp' | 'flood' | 'canopy' | 'kiosk' | 'cabin'; position: [number, number, number]; aim?: [number, number, number]; }
+export interface Gate9Guard { id: string; position: [number, number, number]; facing: [number, number, number]; }
 interface Gate9Registration {
   status: string;
   gateCenter: [number, number, number];
   slideDirection: [number, number, number];
   slideDistance: number;
   views: Record<string, { position: [number, number, number]; target: [number, number, number]; label: string }>;
+  /** 2026-10-15 additions: lamp positions for night lighting, hinged boom arms and staff positions. */
+  lights?: Gate9Light[];
+  barriers?: { name: string; hinge: [number, number, number]; axis: [number, number, number]; length: number }[];
+  guards?: Gate9Guard[];
 }
+const BARRIER_LIFT = T.MathUtils.degToRad(82);
 
 /** Independent Blender layer. Existing halls and the source venue remain intact. */
 export async function prepareGate9(root: T.Group, asset: (path: string) => string, signal: AbortSignal) {
@@ -28,10 +35,24 @@ export async function prepareGate9(root: T.Group, asset: (path: string) => strin
   signal.throwIfAborted();
   trimGate9Context(root, scene);
   const leaves: { object: T.Object3D; origin: T.Vector3; sign: number }[] = [];
+  const arms: { object: T.Object3D; rest: T.Quaternion; raised: T.Quaternion }[] = [];
   scene.traverse(object => {
     if (object.name.startsWith('GATE9_moving_leaf_')) {
       object.userData['dynamicGate9'] = true;
       leaves.push({ object, origin: object.position.clone(), sign: object.name.endsWith('left') ? -1 : 1 });
+    }
+    const barrier = registration.barriers?.find(b => object.name === b.name || object.name.startsWith(b.name + '.'));
+    if (barrier) {
+      // The arm mesh sits at its hinge; it swings about the gate's inward axis.
+      // Pick the rotation sense that lifts the arm's tip rather than burying it.
+      object.userData['dynamicGate9'] = true;
+      const axis = new T.Vector3(...barrier.axis).normalize();
+      object.updateMatrixWorld(true);
+      const bounds = new T.Box3().setFromObject(object), tip = bounds.getCenter(new T.Vector3()).sub(object.getWorldPosition(new T.Vector3()));
+      const lifted = tip.clone().applyAxisAngle(axis, BARRIER_LIFT);
+      const sense = lifted.y >= tip.y ? 1 : -1;
+      const rest = object.quaternion.clone();
+      arms.push({ object, rest, raised: new T.Quaternion().setFromAxisAngle(axis, sense * BARRIER_LIFT).multiply(rest) });
     }
     if (object instanceof T.Mesh) {
       object.userData['destinationId'] = 'gate9';
@@ -77,24 +98,35 @@ export async function prepareGate9(root: T.Group, asset: (path: string) => strin
   replaced.forEach(material => material.dispose());
   const center = new T.Vector3(...registration.gateCenter);
   const direction = new T.Vector3(...registration.slideDirection).normalize();
+  // The arm meshes are not batched (dynamicGate9), so the hinge transform stays live.
   const arrival = new T.Vector3(...registration.views['gate9-approach'].position);
   arrival.y = center.y;
-  let target = 0, opening = 0, previous = 0;
+  let target = 0, opening = 0, previous = 0, visitorNear = false, visitorActive = false;
+  const near = (x: number, z: number, open: boolean, inside = 24, outside = 32) =>
+    Math.hypot(x - center.x, z - center.z) < (open ? outside : inside);
   return {
     views: registration.views,
+    lights: registration.lights ?? [],
+    guards: registration.guards ?? [],
     arrival: { position: arrival, heading: Math.atan2(center.x - arrival.x, center.z - arrival.z), label: 'Gate 9' },
     visitorChanged(state: VisitorState) {
       // Open well before even fast movement reaches the leaf; retain hysteresis.
-      const distance = Math.hypot(state.position[0] - center.x, state.position[2] - center.z);
-      target = state.active && distance < (target ? 32 : 24) ? 1 : 0;
+      visitorActive = state.active;
+      visitorNear = state.active && near(state.position[0], state.position[2], target === 1);
     },
-    update(now: number, reducedMotion: boolean) {
+    /** Camera-driven opening when no visitor walks: orbiting close to the gate opens it too. */
+    update(now: number, reducedMotion: boolean, camera?: T.Vector3) {
+      const cameraNear = !visitorActive && !!camera && camera.y < 40 && near(camera.x, camera.z, target === 1, 30, 38);
+      target = visitorNear || cameraNear ? 1 : 0;
       const dt = previous ? Math.min(.05, (now - previous) / 1000) : 0;
       previous = now;
       if (opening === target) return false;
       opening = reducedMotion ? target : T.MathUtils.clamp(opening + Math.sign(target - opening) * dt * 1.5, 0, 1);
       const eased = opening * opening * (3 - 2 * opening);
       for (const leaf of leaves) leaf.object.position.copy(leaf.origin).addScaledVector(direction, leaf.sign * eased * registration.slideDistance);
+      // Boom arms lead the leaves slightly, as staff raise them while the gate still slides.
+      const lift = T.MathUtils.clamp(opening * 1.3, 0, 1), armEased = lift * lift * (3 - 2 * lift);
+      for (const arm of arms) arm.object.quaternion.slerpQuaternions(arm.rest, arm.raised, armEased);
       return true;
     },
   };

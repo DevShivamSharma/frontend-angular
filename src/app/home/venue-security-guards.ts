@@ -15,8 +15,10 @@ export async function createVenueSecurityGuards(options: {
   navigation: VisitorNavigation;
   asset: (path: string) => string;
   signal: AbortSignal;
+  /** Photographed checkpoint staff (Gate 9 cabin, kiosk), placed by the asset's registration. */
+  extra?: { id: string; position: [number, number, number]; facing: [number, number, number] }[];
 }) {
-  const { renderer, navigation, asset, signal } = options;
+  const { renderer, navigation, asset, signal, extra = [] } = options;
   const response = await fetch(asset('characters/security-guard.glb'), { signal });
   if (!response.ok) throw new Error(`Security model could not load (${response.status})`);
   const bytes = await response.arrayBuffer();
@@ -66,6 +68,8 @@ export async function createVenueSecurityGuards(options: {
     placements = planEntranceGuards(navigation, { radius: SECURITY_GUARD_RADIUS, height: SECURITY_GUARD_HEIGHT });
     if (placements.length !== navigation.portals.length * 2)
       throw new Error('Security placement must keep two clear positions per entrance');
+    for (const guard of extra) placements.push({ id: guard.id, portalId: 'gate9', position: new T.Vector3(...guard.position),
+      heading: Math.atan2(guard.facing[0], guard.facing[2]), radius: SECURITY_GUARD_RADIUS, height: SECURITY_GUARD_HEIGHT });
     const transforms = placements.map(guard => new T.Matrix4().compose(guard.position,
       new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), guard.heading), new T.Vector3(1, 1, 1)));
     const detailBatches: T.InstancedMesh[][] = [[], []];

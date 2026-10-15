@@ -46,6 +46,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly selection = signal(0);
   readonly status = signal('Bharat Mandapam');
   readonly daylight = signal(true);
+  readonly raining = signal(false);
   readonly appearance = signal<VenueAppearance>('natural');
   readonly appearanceBusy = signal(false);
   readonly scenery = signal<VenueScenery>('satellite');
@@ -101,9 +102,23 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
           })
         }, this.globeMarker().nativeElement);
         const info = await this.viewer.ready;
-        if (!this.destroyed) this.zone.run(() => this.setInformation(info));
+        if (!this.destroyed) this.zone.run(() => { this.setInformation(info); this.followDelhiClock(); });
       });
     });
+  }
+  /** Evening lighting follows New Delhi's clock (IST, no daylight saving) until the sun/moon button overrides it. */
+  private lightOverride = false;
+  private clockTimer?: ReturnType<typeof setInterval>;
+  private followDelhiClock(): void {
+    const apply = () => {
+      if (this.destroyed || this.lightOverride) return;
+      const ist = new Date(Date.now() + (330 + new Date().getTimezoneOffset()) * 60_000);
+      const hour = ist.getHours() + ist.getMinutes() / 60;
+      const day = hour >= 6.5 && hour < 18.5;
+      if (day !== this.daylight()) { this.daylight.set(day); this.zone.runOutsideAngular(() => this.viewer?.setDaylight(day)); }
+    };
+    apply();
+    this.clockTimer = setInterval(() => this.zone.run(apply), 60_000);
   }
   private setInformation(info: VenueInformation): void {
     this.destinations.set(info.destinations.filter(d => d.hall).sort((a, b) => parseInt(a.hall!) - parseInt(b.hall!) || a.hall!.localeCompare(b.hall!)));
@@ -149,7 +164,8 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   }
   globe(): void { this.closeDetails(); this.activeLevel.set(0); this.zone.runOutsideAngular(() => this.viewer?.goGlobe()); }
   zoom(factor: number): void { this.zone.runOutsideAngular(() => this.viewer?.zoom(factor)); }
-  toggleLight(): void { this.daylight.update(value => !value); this.zone.runOutsideAngular(() => this.viewer?.setDaylight(this.daylight())); }
+  toggleRain(): void { this.raining.update(value => !value); this.zone.runOutsideAngular(() => this.viewer?.setRain(this.raining())); }
+  toggleLight(): void { this.lightOverride = true; this.daylight.update(value => !value); this.zone.runOutsideAngular(() => this.viewer?.setDaylight(this.daylight())); }
   startVisitor():void { this.closeDetails();this.group.set(null);this.zone.runOutsideAngular(()=>this.viewer?.startVisitor()); }
   stopVisitor():void { this.zone.runOutsideAngular(()=>this.viewer?.stopVisitor()); }
   visitorHold(input:VisitorInput,event:PointerEvent,down:boolean):void {
@@ -203,6 +219,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   @HostListener('window:keydown', ['$event']) keyDown(event: KeyboardEvent): void { if (event.key === 'Escape' && !this.plan().isOpen) this.closeDetails(); }
   ngOnDestroy(): void {
     this.destroyed = true; this.loading.destroy();
+    if (this.clockTimer) clearInterval(this.clockTimer);
     const viewer = this.viewer; this.viewer = undefined;
     this.zone.runOutsideAngular(() => viewer?.dispose());
   }
