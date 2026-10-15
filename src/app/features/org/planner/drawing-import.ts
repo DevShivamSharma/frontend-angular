@@ -6,6 +6,7 @@ import type {
 } from '../../../core/plans/drawing-import.models';
 import type { CategoryRef } from '../../../core/categories/categories.models';
 import type { PlanStall, PlanZone, StallSide } from '../../../core/plans/plans.models';
+import { cellCounts, cleanCutCells, stallArea } from '../../../core/plans/stall-cells';
 import type { Point } from '../../../core/venues/floor-plan.models';
 import {
   centre,
@@ -508,8 +509,13 @@ function searchShift(
 export interface PlacedStall {
   stall: DrawingStall;
   outline: DrawingPoint[];
-  /** The planner rectangle; null when the outline is not one (an L, a polygon, a slant). */
+  /**
+   * The planner rectangle: the outline's box, with `cutCells` for an L or other square-cornered
+   * shape; null when it cannot be made of cells (a slanted edge).
+   */
   rect: Rect | null;
+  /** Cells of the box outside the outline, [column, row] from its top-left. */
+  cutCells: Array<[number, number]>;
   /** Wholly on the open floor. */
   onFloor: boolean;
   /** Why it is not brought in, or null. */
@@ -523,6 +529,7 @@ export function placeStalls(
   alignment: Alignment,
   floor: PlannerFloor,
   excluded: ReadonlySet<string> = new Set(),
+  overrides: ReadonlyMap<string, StallOverride> = new Map(),
 ): PlacedStall[] {
   // Off the hall (a wall, a void, the outside) a stall cannot be; on a passage or a no-build
   // area the hall's rules decide, as for a stall drawn there.
@@ -530,40 +537,46 @@ export function placeStalls(
   return result.stalls
     .filter((s) => groups.includes(s.group))
     .map((stall) => {
-      const outline = placeOutline(stall, alignment);
-      const rect = rectOf(outline);
+      const outline = adjustOutline(placeOutline(stall, alignment), overrides.get(stall.key));
+      const shape = cellShapeOf(outline);
+      const rect = shape?.rect ?? null;
+      // The outline's own cells: an L is on the floor when its kept cells are, not its box.
       const onFloor = cellCentres(outline).every((p) => mask.free(p));
-      const notStall = notAStall(stall);
+      // An outline the server doubted (no letter in it) is a stall once the review says so.
+      const notStall = overrides.get(stall.key)?.isStall ? null : notAStall(stall);
       const skip = excluded.has(stall.key)
         ? 'Left out in the review'
         : notStall
           ? notStall
-          : unnumbered(stall)
-          ? 'No stall number in the drawing: not imported'
           : !rect
-            ? `${stall.shape === 'L-shape' ? 'L-shaped' : 'Not a rectangle'}: draw it by hand`
-            : !onFloor
-              ? 'Off the hall floor: on a wall or outside the hall'
-              : null;
-      return { stall, outline, rect, onFloor, skip };
+              ? 'Has a slanted edge: draw it by hand'
+              : !onFloor
+                ? 'Off the hall floor: on a wall or outside the hall'
+                : null;
+      return { stall, outline, rect, cutCells: shape?.cutCells ?? [], onFloor, skip };
     });
 }
 
 /**
  * Why an outline of the drawing is no stall, or null: a named area ("HALL MASTER") or a kiosk
- * (an ATM) the server left out of the import.
+ * (an ATM) the server left out of the import. A bare outline with no letter in it is a stall:
+ * it comes in numbered by `autoNumbers`.
  */
-export function notAStall(stall: Pick<DrawingStall, 'include' | 'letter' | 'issues'>): string | null {
+export function notAStall(
+  stall: Pick<DrawingStall, 'include' | 'letter' | 'issues'>,
+): string | null {
   if (stall.include) return null;
   const why = stall.issues.find(
-    (i) => i.code === 'KIOSK' || (i.code === 'NO_LABEL' && !stall.letter),
+    (i) =>
+      i.code === 'KIOSK' ||
+      (i.code === 'NO_LABEL' && !stall.letter && i.message.startsWith('Named area')),
   );
   return why ? `Not a stall: ${why.message}` : null;
 }
 
 /**
  * Whether the drawing gives the stall no number: no block was read for it, so the server named
- * it by its key ("Stall s116"). Such a stall is not brought in.
+ * it by its key ("Stall s116"). Such a stall comes in numbered by `autoNumbers`.
  */
 export function unnumbered(stall: Pick<DrawingStall, 'name' | 'key'>): boolean {
   return stall.name === `Stall ${stall.key}`;
@@ -584,19 +597,245 @@ export function rectOf(outline: DrawingPoint[]): Rect | null {
   return { x: clean(b.minX), y: clean(b.minZ), width, height };
 }
 
-/** The sides the drawing's fascia (open) edges are on, after placing. */
+/**
+ * The outline as whole 1 m cells: its box, and the cells of the box whose middle is outside it.
+ * Any outline with square corners (a rectangle, an L, a U, a notched box) is one; null when an
+ * edge is slanted, as no cells make that. A far-edge cell of a box off whole metres is a part
+ * cell, tested at its own middle.
+ */
+export function cellShapeOf(
+  outline: DrawingPoint[],
+): { rect: Rect; cutCells: Array<[number, number]> } | null {
+  const n = outline.length;
+  if (n < 4) return null;
+  for (let i = 0; i < n; i++) {
+    const a = outline[i];
+    const b = outline[(i + 1) % n];
+    if (a.x !== b.x && a.z !== b.z) return null;
+  }
+  const b = bounds(outline);
+  const rect = {
+    x: clean(b.minX),
+    y: clean(b.minZ),
+    width: clean(b.maxX - b.minX),
+    height: clean(b.maxZ - b.minZ),
+  };
+  if (rect.width <= 0 || rect.height <= 0) return null;
+  if (rectOf(outline)) return { rect, cutCells: [] };
+  const size = { width: rect.width, depth: rect.height };
+  const { cols, rows } = cellCounts(size);
+  const ring: Point[] = outline.map((p) => [p.x, p.z]);
+  const cut: Array<[number, number]> = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const mid: Point = [
+        rect.x + c + Math.min(1, rect.width - c) / 2,
+        rect.y + r + Math.min(1, rect.height - r) / 2,
+      ];
+      if (!pointInRing(mid, ring)) cut.push([c, r]);
+    }
+  }
+  return { rect, cutCells: cleanCutCells(size, cut) };
+}
+
+/**
+ * The sides the drawing's fascia (open) edges are on, after placing. Only an edge on a side of
+ * the box opens that side; an open edge round a notch is not one, and is counted by
+ * `notchOpenEdges` instead.
+ */
 export function openSidesOf(stall: DrawingStall, outline: DrawingPoint[]): StallSide[] {
+  const sides = new Set<StallSide>();
+  for (const side of edgeSides(stall, outline)) if (side) sides.add(side);
+  return (['top', 'right', 'bottom', 'left'] as StallSide[]).filter((s) => sides.has(s));
+}
+
+/** Open edges of the drawing round a notch, not on a side of the box: they are drawn closed. */
+export function notchOpenEdges(stall: DrawingStall, outline: DrawingPoint[]): number {
+  return edgeSides(stall, outline).filter((side) => side === null).length;
+}
+
+/** The side of the box each open edge lies on; null for one inside the box, round a notch. */
+function edgeSides(stall: DrawingStall, outline: DrawingPoint[]): Array<StallSide | null> {
   const b = bounds(outline);
   const n = outline.length;
-  const sides = new Set<StallSide>();
+  const on = (v: number, w: number) => Math.abs(v - w) < 1e-6;
+  const out: Array<StallSide | null> = [];
   for (const e of stall.openEdges) {
     const a = outline[e];
     const c = outline[(e + 1) % n];
     if (!a || !c) continue;
-    if (a.z === c.z) sides.add(Math.abs(a.z - b.minZ) < 1e-6 ? 'top' : 'bottom');
-    else if (a.x === c.x) sides.add(Math.abs(a.x - b.minX) < 1e-6 ? 'left' : 'right');
+    if (a.z === c.z) out.push(on(a.z, b.minZ) ? 'top' : on(a.z, b.maxZ) ? 'bottom' : null);
+    else if (a.x === c.x) out.push(on(a.x, b.minX) ? 'left' : on(a.x, b.maxX) ? 'right' : null);
   }
-  return (['top', 'right', 'bottom', 'left'] as StallSide[]).filter((s) => sides.has(s));
+  return out;
+}
+
+/**
+ * New numbers for stalls whose number the drawing repeats (2F-09 has "A1" twice), by drawing
+ * key: a plan cannot hold two stalls of one number, so the first in reading order (top to
+ * bottom, then left to right) keeps it and each other takes the next number free in the
+ * drawing, its last digits counted on ("A1" → "A2"). A number given by hand is left alone.
+ */
+export function twinNumbers(
+  placed: ReadonlyArray<PlacedStall>,
+  overrides: ReadonlyMap<string, StallOverride> = new Map(),
+): Map<string, string> {
+  const nameOf = (p: PlacedStall) => overrides.get(p.stall.key)?.name ?? p.stall.name;
+  const used = new Set(placed.map((p) => nameOf(p).toLowerCase()));
+  const top = (p: PlacedStall) => bounds(p.outline);
+  const order = [...placed].sort((a, b) => top(a).minZ - top(b).minZ || top(a).minX - top(b).minX);
+  const seen = new Set<string>();
+  const out = new Map<string, string>();
+  for (const p of order) {
+    const name = nameOf(p);
+    const key = name.toLowerCase();
+    if (!seen.has(key) || overrides.get(p.stall.key)?.name) {
+      seen.add(key);
+      continue;
+    }
+    const m = /^(.*?)(\d+)$/.exec(name);
+    const [stem, start] = m ? [m[1], Number(m[2])] : [name, 1];
+    let n = start + 1;
+    while (used.has(`${stem}${n}`.toLowerCase())) n++;
+    const next = `${stem}${n}`;
+    used.add(next.toLowerCase());
+    out.set(p.stall.key, next);
+  }
+  return out;
+}
+
+/**
+ * Numbers for the stalls the drawing gives none, by drawing key: S1, S2… in reading order (top
+ * to bottom, then left to right), past any number already used. A number given by hand wins.
+ */
+export function autoNumbers(
+  placed: ReadonlyArray<PlacedStall>,
+  overrides: ReadonlyMap<string, StallOverride> = new Map(),
+): Map<string, string> {
+  const nameOf = (p: PlacedStall) => overrides.get(p.stall.key)?.name ?? p.stall.name;
+  const used = new Set(placed.map((p) => nameOf(p).toLowerCase()));
+  const top = (p: PlacedStall) => bounds(p.outline);
+  const order = placed
+    .filter((p) => unnumbered(p.stall) && !overrides.get(p.stall.key)?.name)
+    .sort((a, b) => top(a).minZ - top(b).minZ || top(a).minX - top(b).minX);
+  const out = new Map<string, string>();
+  let n = 1;
+  for (const p of order) {
+    while (used.has(`s${n}`)) n++;
+    const next = `S${n}`;
+    used.add(next.toLowerCase());
+    out.set(p.stall.key, next);
+  }
+  return out;
+}
+
+/**
+ * What the review says about a stall as it is brought in: open edges drawn closed round its
+ * notch, an area off the drawing's label, and what was changed by hand.
+ */
+export function importNotes(
+  placed: PlacedStall,
+  stall: PlanStall,
+  override?: StallOverride,
+): string[] {
+  const name = placed.stall.name;
+  const notes: string[] = [];
+  const closed = notchOpenEdges(placed.stall, placed.outline);
+  if (closed) {
+    const what = closed === 1 ? 'an open side' : `${closed} open sides`;
+    notes.push(`${name}: ${what} round its notch drawn closed.`);
+  }
+  const drawn = placed.stall.labels.area;
+  const cells = stallArea(stall);
+  if (drawn !== null && Math.abs(drawn - cells) > 1) {
+    notes.push(`${name}: the drawing says ${fmtM(drawn)} m², the cells give ${fmtM(cells)} m².`);
+  }
+  const changed = override ? overrideText(override) : '';
+  if (changed) notes.push(`${name} ${changed} by hand.`);
+  return notes;
+}
+
+// --- one stall changed by hand -------------------------------------------------------------------
+
+/**
+ * A change to one stall made in the review, on top of where the alignment puts it: turned a
+ * quarter at a time, resized (a rectangle only), then moved. Relative, so a new alignment or
+ * fit keeps it.
+ */
+export interface StallOverride {
+  /** Moved, hall metres. */
+  dx: number;
+  dz: number;
+  /** Size after turning, whole metres; a rectangle only. */
+  width?: number;
+  depth?: number;
+  turn?: QuarterTurn;
+  /** A new number, as the drawing writes one ("2F-09 A3"): for a number the drawing repeats. */
+  name?: string;
+  /** Taken as a stall, though the server doubted it (no stall letter inside its outline). */
+  isStall?: boolean;
+}
+
+/** Whether an override changes nothing: what Reset leaves. */
+export function isNoOverride(o: StallOverride): boolean {
+  return (
+    !o.dx &&
+    !o.dz &&
+    o.width === undefined &&
+    o.depth === undefined &&
+    !o.turn &&
+    !o.name &&
+    !o.isStall
+  );
+}
+
+/**
+ * A placed outline with a stall's own change: turned about its box and set back on the box's
+ * top-left corner (so it stays on the grid), resized, then moved. The corners keep their order,
+ * so the drawing's open edges still name the same edges.
+ */
+export function adjustOutline(outline: DrawingPoint[], o?: StallOverride): DrawingPoint[] {
+  if (!o || isNoOverride(o)) return outline;
+  let pts = outline;
+  if (o.turn) {
+    const b = bounds(pts);
+    const turned = pts.map((p) => turn({ x: p.x - b.minX, z: p.z - b.minZ }, o.turn!));
+    const t = bounds(turned);
+    pts = turned.map((p) => ({
+      x: clean(p.x - t.minX + b.minX),
+      z: clean(p.z - t.minZ + b.minZ),
+    }));
+  }
+  if ((o.width !== undefined || o.depth !== undefined) && rectOf(pts)) {
+    const b = bounds(pts);
+    const w = o.width ?? b.maxX - b.minX;
+    const d = o.depth ?? b.maxZ - b.minZ;
+    pts = pts.map((p) => ({
+      x: p.x === b.minX ? p.x : clean(b.minX + w),
+      z: p.z === b.minZ ? p.z : clean(b.minZ + d),
+    }));
+  }
+  return pts.map((p) => ({ x: clean(p.x + o.dx), z: clean(p.z + o.dz) }));
+}
+
+/** A change in words, e.g. "moved 1 m left and 0.5 m down, turned a quarter". */
+export function overrideText(o: StallOverride): string {
+  const parts: string[] = [];
+  const moves = [
+    o.dx ? `${fmtM(Math.abs(o.dx))} m ${o.dx < 0 ? 'left' : 'right'}` : '',
+    o.dz ? `${fmtM(Math.abs(o.dz))} m ${o.dz < 0 ? 'up' : 'down'}` : '',
+  ].filter(Boolean);
+  if (moves.length) parts.push(`moved ${moves.join(' and ')}`);
+  if (o.turn === 90) parts.push('turned a quarter');
+  else if (o.turn === 180) parts.push('turned half round');
+  else if (o.turn === 270) parts.push('turned three quarters');
+  if (o.width !== undefined || o.depth !== undefined) {
+    const size = [o.width, o.depth].map((v) => (v === undefined ? 'as drawn' : `${fmtM(v)} m`));
+    parts.push(`resized to ${size.join(' × ')}`);
+  }
+  if (o.name) parts.push(`numbered ${o.name}`);
+  if (o.isStall) parts.push('taken as a stall');
+  return parts.join(', ');
 }
 
 /**
@@ -623,7 +862,10 @@ export function numberOf(
   return { islandNumber: text.slice(0, -20).slice(-40) || null, stallNumber: text.slice(-20) };
 }
 
-/** A placed rectangle as a planner stall; premium and marquee as the drawing marks them. */
+/**
+ * A placed stall as a planner stall, its cut cells and all; premium and marquee as the drawing
+ * marks them.
+ */
 export function toPlanStall(
   placed: PlacedStall,
   zones: PlanZone[],
@@ -642,13 +884,14 @@ export function toPlanStall(
   return {
     id: newId(),
     zoneId: zoneAt(centre(r), zones)?.id ?? null,
-    ...numberOf(stall, name),
+    // A new number splits like the drawn one: its last word is the stall, the rest the island.
+    ...numberOf(name ? { ...stall, letter: name.trim().split(/\s+/).pop() ?? null } : stall, name),
     x: r.x,
     y: r.y,
     width: r.width,
     depth: r.height,
     openSides: open.length ? open : ['bottom'],
-    cutCells: [],
+    cutCells: placed.cutCells,
     scheme: 'shell',
     categoryIds,
     isPremium: stall.category === 'premium',
@@ -700,6 +943,10 @@ function area(r: Box): number {
 
 function dist(a: DrawingPoint, b: DrawingPoint): number {
   return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+function fmtM(v: number): string {
+  return `${Math.round(v * 100) / 100}`;
 }
 
 function clean(v: number): number {

@@ -139,12 +139,15 @@ import { FormsModule } from '@angular/forms';
           <app-empty-state
             icon="grid_on"
             heading="No halls in this venue"
-            text="Draw a hall by its size or import halls from a venue CSV file."
+            text="Draw a hall by its size, read halls from a floor plan, or import them from a venue CSV file."
           >
             @if (canManage()) {
               <button pButton (click)="createHall()">Draw by size</button>
             }
             @if (canImport()) {
+              <a pButton [outlined]="true" [routerLink]="['import-floor-plan']"
+                >Import from floor plan</a
+              >
               <button pButton [outlined]="true" (click)="importCsv()">Import from CSV</button>
             }
           </app-empty-state>

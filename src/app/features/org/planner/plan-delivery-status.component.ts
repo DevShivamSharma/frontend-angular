@@ -76,7 +76,7 @@ const WARNINGS: Record<string, string> = {
             } @else {
               <span
                 class="status-chip is-warning chip"
-                [pTooltip]="d.lastError ?? 'The venue system did not accept the plan.'"
+                [pTooltip]="failedTip(d, v.canResend)"
                 tooltipPosition="bottom"
                 >Not sent: {{ d.lastError ?? 'it failed' }}</span
               >
@@ -186,6 +186,14 @@ export class PlanDeliveryStatusComponent {
     const when = d.deliveredAt ? new Date(d.deliveredAt).toLocaleString() : '';
     const said = d.warnings.map((w) => this.warningText(w)).join('. ');
     return `Version ${d.revision} reached SelfCare${when ? ` on ${when}` : ''}. ${said}.`;
+  }
+
+  /** What went wrong, and what to do: fix it, then Resend sends what is published now. */
+  protected failedTip(d: PlanDeliveryView, canResend: boolean): string {
+    const why = d.lastError ?? 'The venue system did not accept the plan.';
+    return canResend
+      ? `Version ${d.revision} did not reach SelfCare. ${why} A hall, event or category setting: fix it, then press Resend. A change to the stalls: make it in the plan and Publish, which sends it again.`
+      : `Version ${d.revision} did not reach SelfCare. ${why}`;
   }
 
   protected async resend(delivery: PlanDeliveryView): Promise<void> {

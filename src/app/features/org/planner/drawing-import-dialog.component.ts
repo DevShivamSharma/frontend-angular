@@ -16,18 +16,25 @@ import { firstValueFrom } from 'rxjs';
 
 import type { DrawingImportResult } from '../../../core/plans/drawing-import.models';
 import { PlansApi } from '../../../core/plans/plans-api.service';
-import type { PlanStall } from '../../../core/plans/plans.models';
+import { type PlanStall, stallLabel } from '../../../core/plans/plans.models';
 import { dialogData, DialogRef } from '../../../core/ui/app-dialog.service';
 import { IconComponent } from '../../../shared/icon.component';
 import {
   type Alignment,
   autoFit,
+  autoNumbers,
+  bounds,
   centredAlignment,
   type FitMethod,
+  importNotes,
+  isNoOverride,
+  notAStall,
   nudge,
   placeStalls,
   type QuarterTurn,
+  type StallOverride,
   toPlanStall,
+  twinNumbers,
   unnumbered,
 } from './drawing-import';
 import type { PlannerStore } from './planner.store';
@@ -48,12 +55,16 @@ export interface DrawingImportOutcome {
 
 /** Server checks of the placed stalls wait for nudging to pause this long. */
 const CHECK_DELAY = 500;
+/** Checks without the stalls found breaking a rule, at most: as many as the import makes. */
+const CHECK_ROUNDS = 4;
 
 /**
  * Brings in the stalls of a hall's CAD plan PDF: the server reads the drawing and keeps this
  * hall's stalls (a plan of several halls is cut down; a plan of other halls is refused); here
  * they are placed on the hall's floor, checked against its rules and reviewed before anything
- * changes. L-shaped stalls are listed to draw by hand: the plan's stalls are rectangles.
+ * changes. An L-shaped stall comes in as its box with the cells outside it cut; only a stall
+ * with a slanted edge is listed to draw by hand. One stall can be picked and moved, turned,
+ * resized or left out on its own, on top of where the whole drawing goes.
  */
 @Component({
   selector: 'app-drawing-import-dialog',
@@ -104,12 +115,20 @@ const CHECK_DELAY = 500;
             </p>
             <div class="grid">
               <div class="col">
+                <!-- A click on a stall picks it to change on its own; on the floor, lets it go. -->
                 <svg
                   class="preview"
                   [attr.viewBox]="viewBox()"
                   preserveAspectRatio="xMidYMid meet"
-                  role="img"
-                  [attr.aria-label]="'The drawing on ' + hallName()"
+                  role="group"
+                  tabindex="0"
+                  [attr.aria-label]="
+                    'The drawing on ' +
+                    hallName() +
+                    '. Pick a stall to move it on its own; arrow keys move it, Escape lets it go.'
+                  "
+                  (click)="pick(null)"
+                  (keydown)="key($event)"
                 >
                   @for (ring of floorRings(); track $index) {
                     <polygon class="floor" [attr.points]="ring" />
@@ -124,11 +143,212 @@ const CHECK_DELAY = 500;
                     />
                   }
                   @for (p of placed(); track p.stall.key) {
-                    <polygon [attr.points]="pointsOf(p.outline)" [class]="'stall ' + stateOf(p)">
-                      <title>{{ p.stall.name }}{{ p.skip ? ' — ' + p.skip : '' }}</title>
+                    <polygon
+                      [attr.points]="pointsOf(p.outline)"
+                      [class]="'stall ' + stateOf(p)"
+                      [class.picked]="picked() === p.stall.key"
+                      [class.changed]="overrides().has(p.stall.key)"
+                      role="button"
+                      tabindex="-1"
+                      [attr.aria-label]="p.stall.name"
+                      [attr.aria-pressed]="picked() === p.stall.key"
+                      (click)="pick(p.stall.key); $event.stopPropagation()"
+                    >
+                      <title>
+                        {{ p.stall.name }}{{ whyOf(p).length ? ' — ' + whyOf(p).join(' ') : '' }}
+                      </title>
                     </polygon>
                   }
+                  @if (pickedStall(); as p) {
+                    <text
+                      class="tag"
+                      [attr.x]="tagAt(p.outline).x"
+                      [attr.y]="tagAt(p.outline).z"
+                      [attr.font-size]="tagSize()"
+                    >
+                      {{ p.stall.name }}
+                    </text>
+                  }
                 </svg>
+                @if (pickedStall(); as p) {
+                  <section class="one" [attr.aria-label]="'Change ' + p.stall.name + ' on its own'">
+                    <header class="one-head">
+                      <strong>{{ p.stall.name }}</strong>
+                      <span class="muted small">
+                        @if (p.rect) {
+                          {{ p.rect.width | number: '1.0-2' }} ×
+                          {{ p.rect.height | number: '1.0-2' }} m
+                        }
+                      </span>
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        [text]="true"
+                        class="close"
+                        (click)="pick(null)"
+                        aria-label="Done with this stall"
+                      >
+                        <app-icon name="close" />
+                      </button>
+                    </header>
+                    <div class="controls">
+                      <span class="pad" role="group" aria-label="Move this stall a metre">
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          [text]="true"
+                          (click)="shift(0, -1)"
+                          aria-label="Move this stall up"
+                        >
+                          <app-icon name="arrow_upward" />
+                        </button>
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          [text]="true"
+                          (click)="shift(-1, 0)"
+                          aria-label="Move this stall left"
+                        >
+                          <app-icon name="arrow_back" />
+                        </button>
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          [text]="true"
+                          (click)="shift(1, 0)"
+                          aria-label="Move this stall right"
+                        >
+                          <app-icon name="arrow_forward" />
+                        </button>
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          [text]="true"
+                          (click)="shift(0, 1)"
+                          aria-label="Move this stall down"
+                        >
+                          <app-icon name="arrow_downward" />
+                        </button>
+                      </span>
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        [outlined]="true"
+                        (click)="turnOne()"
+                        aria-label="Turn this stall a quarter clockwise"
+                      >
+                        <app-icon name="rotate" />Turn
+                      </button>
+                      @if (excluded().has(p.stall.key)) {
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          [outlined]="true"
+                          (click)="leaveOut(false)"
+                        >
+                          Put it back
+                        </button>
+                      } @else {
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          [outlined]="true"
+                          severity="danger"
+                          (click)="leaveOut(true)"
+                        >
+                          Leave out
+                        </button>
+                      }
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        [text]="true"
+                        (click)="resetOne()"
+                        [disabled]="!overrides().has(p.stall.key)"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                    @if (p.rect && !p.cutCells.length) {
+                      <div class="size">
+                        <label>
+                          Width (m)
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            [ngModel]="p.rect.width"
+                            (change)="resize('width', $event)"
+                          />
+                        </label>
+                        <label>
+                          Depth (m)
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            [ngModel]="p.rect.height"
+                            (change)="resize('depth', $event)"
+                          />
+                        </label>
+                      </div>
+                    } @else if (p.rect) {
+                      <p class="muted small">
+                        An L-shaped stall keeps its drawn size; resize it in the planner.
+                      </p>
+                    }
+                    @if (whyOf(p).length) {
+                      <ul class="why small" aria-label="Why it is not imported">
+                        @for (w of whyOf(p); track $index) {
+                          <li>{{ w }}</li>
+                        }
+                      </ul>
+                    }
+                    @if (doubted(p)) {
+                      @if (overrides().get(p.stall.key)?.isStall) {
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          [outlined]="true"
+                          class="confirm"
+                          (click)="takeAsStall(false)"
+                        >
+                          Not a stall after all
+                        </button>
+                      } @else {
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          class="confirm"
+                          (click)="takeAsStall(true)"
+                        >
+                          <app-icon name="check" />It is a stall: import it
+                        </button>
+                      }
+                    }
+                    <label class="name">
+                      Number
+                      <input
+                        type="text"
+                        maxlength="60"
+                        [ngModel]="nameOf(p.stall.key, p.stall.name)"
+                        (change)="rename($event)"
+                      />
+                    </label>
+                    <p class="muted small">Arrow keys move it a metre, with Shift half a metre.</p>
+                  </section>
+                }
                 <div class="controls">
                   <button
                     pButton
@@ -208,9 +428,9 @@ const CHECK_DELAY = 500;
                     <dt>Rules</dt>
                     <dd class="muted">checking…</dd>
                   }
-                  <dt>L-shaped: draw by hand</dt>
+                  <dt>Slanted: draw by hand</dt>
                   <dd>{{ byHand().length }}</dd>
-                  <dt>No number in the drawing</dt>
+                  <dt>No number: numbered S1, S2…</dt>
                   <dd>{{ unnumbered().length }}</dd>
                   <dt>Off the hall floor</dt>
                   <dd [class.bad]="offFloor()">{{ offFloor() }}</dd>
@@ -386,6 +606,86 @@ const CHECK_DELAY = 500;
     .stall.out {
       fill: transparent;
       stroke: #94a3b8;
+      stroke-dasharray: 0.4 0.3;
+    }
+    .stall {
+      cursor: pointer;
+    }
+    .stall.changed {
+      stroke: #0e7490;
+    }
+    .stall.picked {
+      stroke: var(--app-primary);
+      stroke-width: 0.35;
+    }
+    .preview:focus-visible {
+      outline: 2px solid var(--app-primary);
+      outline-offset: 2px;
+    }
+    .tag {
+      fill: var(--app-on-surface);
+      font-weight: 700;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      paint-order: stroke;
+      stroke: light-dark(#fff, #0f172a);
+      stroke-width: 0.25;
+      pointer-events: none;
+    }
+    .one {
+      display: grid;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 10px;
+    }
+    .one-head {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .one-head .close {
+      margin-left: auto;
+    }
+    .size {
+      display: flex;
+      gap: 12px;
+    }
+    .confirm {
+      justify-self: start;
+    }
+    .why {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--app-error);
+    }
+    .name {
+      display: grid;
+      gap: 2px;
+      font: var(--app-body-small);
+    }
+    .name input {
+      max-width: 240px;
+      padding: 4px 8px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      font: var(--app-body-medium);
+    }
+    .size label {
+      display: grid;
+      gap: 2px;
+      font: var(--app-body-small);
+    }
+    .size input {
+      width: 90px;
+      padding: 4px 8px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      font: var(--app-body-medium);
     }
     .controls {
       display: flex;
@@ -486,8 +786,14 @@ export class DrawingImportDialogComponent {
   protected readonly method = signal<FitMethod>('fitted');
   protected readonly replace = signal(false);
   protected readonly downloading = signal(false);
+  /** Stalls changed on their own, by drawing key; kept through a new alignment or fit. */
+  protected readonly overrides = signal<ReadonlyMap<string, StallOverride>>(new Map());
+  /** Stalls left out in the review, by drawing key. */
+  protected readonly excluded = signal<ReadonlySet<string>>(new Set());
+  /** The stall picked in the preview, by drawing key. */
+  protected readonly picked = signal<string | null>(null);
   /** Stall keys the server says break a rule where they stand now; null while it checks. */
-  private readonly breaking = signal<Set<string> | null>(new Set());
+  private readonly breaking = signal<Map<string, string[]> | null>(new Map());
   protected readonly checking = computed(() => this.breaking() === null);
   protected readonly broken = computed(() => this.breaking()?.size ?? 0);
 
@@ -509,27 +815,54 @@ export class DrawingImportDialogComponent {
           r.groups.map((g) => g.group),
           a,
           floor,
+          this.excluded(),
+          this.overrides(),
         )
       : [];
   });
+  protected readonly pickedStall = computed(
+    () => this.placed().find((p) => p.stall.key === this.picked()) ?? null,
+  );
   /** The stalls that become planner stalls, and the booths they replace. */
   private readonly prepared = computed(() => {
     const view = this.store.view();
     const plan = this.store.plan();
+    const overrides = this.overrides();
     const keep = this.placed().filter((p) => !p.skip);
-    const stalls = keep.map((p) => ({
-      key: p.stall.key,
-      stall: toPlanStall(p, plan.zones, view?.hall.categories ?? []),
-    }));
+    // A number the drawing repeats would refuse both stalls: the repeats come in numbered on.
+    const twins = twinNumbers(keep, overrides);
+    // A stall the drawing gives no number comes in numbered S1, S2… in reading order.
+    const autos = autoNumbers(keep, overrides);
+    const stalls = keep.map((p) => {
+      const o = overrides.get(p.stall.key);
+      const twin = twins.get(p.stall.key);
+      const auto = autos.get(p.stall.key);
+      const stall = toPlanStall(
+        p,
+        plan.zones,
+        view?.hall.categories ?? [],
+        o?.name ?? auto ?? twin,
+      );
+      const notes = importNotes(p, stall, o);
+      if (auto) {
+        notes.unshift(`${p.stall.name} has no number in the drawing: it comes in as ${auto}.`);
+      }
+      if (twin) {
+        notes.unshift(
+          `${p.stall.name} is in the drawing twice: this one comes in as ${twin}. Check the number with the venue.`,
+        );
+      }
+      return { key: p.stall.key, stall, notes, twin };
+    });
     return { stalls, replacing: this.replace() ? plan.stalls.map((s) => s.id) : [] };
   });
   protected readonly importable = computed(() => this.prepared().stalls);
   protected readonly byHand = computed(() =>
     this.placed()
-      .filter((p) => !p.rect && !unnumbered(p.stall))
+      .filter((p) => !p.rect)
       .map((p) => p.stall.name),
   );
-  /** Stalls the drawing gives no number: left out. */
+  /** Stalls the drawing gives no number: numbered S1, S2… on import. */
   protected readonly unnumbered = computed(() =>
     this.placed()
       .filter((p) => unnumbered(p.stall))
@@ -553,7 +886,26 @@ export class DrawingImportDialogComponent {
       severity: 'warning',
       text: `${u.texts.join(' ')}: ${u.reason}`,
     }));
-    return [...general, ...perStall, ...labels];
+    // How the stalls come in: notches closed, areas off their labels, changes by hand.
+    const imported = this.prepared().stalls.flatMap((s) =>
+      s.notes.map((text) => ({ severity: 'warning', text })),
+    );
+    // A number the drawing gives twice: both are refused until one is numbered again.
+    const seen = new Map<string, number>();
+    for (const s of this.prepared().stalls) {
+      const n = stallLabel(s.stall);
+      seen.set(n, (seen.get(n) ?? 0) + 1);
+    }
+    const twice = [...seen]
+      .filter(([, n]) => n > 1)
+      .map(([n]) => ({
+        severity: 'error',
+        text: `${n} is numbered ${seen.get(n)} times: pick one and give it a new number.`,
+      }));
+    const left = this.placed()
+      .filter((p) => this.excluded().has(p.stall.key))
+      .map((p) => ({ severity: 'warning', text: `${p.stall.name} left out by hand.` }));
+    return [...twice, ...general, ...perStall, ...labels, ...imported, ...left];
   });
 
   protected readonly floorRings = computed(() =>
@@ -587,7 +939,7 @@ export class DrawingImportDialogComponent {
       untracked(() => {
         clearTimeout(timer);
         if (!prepared.stalls.length) {
-          this.breaking.set(new Set());
+          this.breaking.set(new Map());
           return;
         }
         this.breaking.set(null);
@@ -661,11 +1013,148 @@ export class DrawingImportDialogComponent {
     if (a) this.alignment.set(nudge(a, dx, dz));
   }
 
+  // ---- one stall on its own ---------------------------------------------------------------
+
+  protected pick(key: string | null): void {
+    this.picked.set(key);
+  }
+
+  /** Arrow keys move the picked stall a metre (Shift: half); Escape lets it go. */
+  protected key(e: KeyboardEvent): void {
+    if (!this.picked()) return;
+    const step = e.shiftKey ? 0.5 : 1;
+    const moves: Record<string, [number, number]> = {
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+    };
+    if (e.key === 'Escape') {
+      // Lets the stall go, not the dialog.
+      e.preventDefault();
+      e.stopPropagation();
+      this.pick(null);
+    } else if (moves[e.key]) {
+      e.preventDefault();
+      this.shift(...moves[e.key]);
+    }
+  }
+
+  protected shift(dx: number, dz: number): void {
+    this.change((o) => ({ ...o, dx: o.dx + dx, dz: o.dz + dz }));
+  }
+
+  protected turnOne(): void {
+    // A turn swaps width and depth, so a size set by hand turns with it.
+    this.change((o) => ({
+      ...o,
+      turn: (((o.turn ?? 0) + 90) % 360) as QuarterTurn,
+      width: o.depth,
+      depth: o.width,
+    }));
+  }
+
+  protected resize(side: 'width' | 'depth', e: Event): void {
+    const v = Math.round(Number((e.target as HTMLInputElement).value));
+    if (!(v >= 1)) return;
+    this.change((o) => ({ ...o, [side]: v }));
+  }
+
+  /** A new number for the picked stall; its drawn number, or nothing, puts the drawn one back. */
+  protected rename(e: Event): void {
+    const p = this.pickedStall();
+    if (!p) return;
+    const name = (e.target as HTMLInputElement).value.trim();
+    this.change((o) => ({ ...o, name: name && name !== p.stall.name ? name : undefined }));
+  }
+
+  /** The number a stall comes in with: given by hand, numbered on as a repeat, or as drawn. */
+  protected nameOf(key: string, drawn: string): string {
+    return (
+      this.overrides().get(key)?.name ??
+      this.prepared().stalls.find((s) => s.key === key)?.twin ??
+      drawn
+    );
+  }
+
+  /** Whether the server doubted the outline is a stall: the review may say it is. */
+  protected doubted(p: ReturnType<DrawingImportDialogComponent['placed']>[number]): boolean {
+    return notAStall(p.stall) !== null;
+  }
+
+  /**
+   * Takes a doubted outline as a stall, or not. Its name then loses the "(s34)" the server adds
+   * to an outline with no letter, so "2F-08 (s34)" comes in as 2F-08.
+   */
+  protected takeAsStall(yes: boolean): void {
+    const p = this.pickedStall();
+    if (!p) return;
+    const plain = p.stall.name.replace(/\s*\(s\d+\)$/, '').trim();
+    this.change((o) => ({
+      ...o,
+      isStall: yes || undefined,
+      name: yes && !o.name && plain && plain !== p.stall.name ? plain : yes ? o.name : undefined,
+    }));
+  }
+
+  protected leaveOut(out: boolean): void {
+    const key = this.picked();
+    if (!key) return;
+    const next = new Set(this.excluded());
+    if (out) next.add(key);
+    else next.delete(key);
+    this.excluded.set(next);
+  }
+
+  protected resetOne(): void {
+    const key = this.picked();
+    if (!key) return;
+    const next = new Map(this.overrides());
+    next.delete(key);
+    this.overrides.set(next);
+  }
+
+  /** Changes the picked stall's override; one that changes nothing is dropped. */
+  private change(fn: (o: StallOverride) => StallOverride): void {
+    const key = this.picked();
+    if (!key) return;
+    const next = new Map(this.overrides());
+    const o = fn(next.get(key) ?? { dx: 0, dz: 0 });
+    if (o.width === undefined) delete o.width;
+    if (o.depth === undefined) delete o.depth;
+    if (!o.name) delete o.name;
+    if (!o.isStall) delete o.isStall;
+    if (isNoOverride(o)) next.delete(key);
+    else next.set(key, o);
+    this.overrides.set(next);
+  }
+
+  /** Where the picked stall's number goes: the middle of its box. */
+  protected tagAt(outline: Array<{ x: number; z: number }>): { x: number; z: number } {
+    const b = bounds(outline);
+    return { x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2 };
+  }
+
+  /** The number's size in floor metres, readable whatever the hall's size. */
+  protected readonly tagSize = computed(() => {
+    const [, , w, h] = this.viewBox().split(' ').map(Number);
+    return Math.max(w, h) / 40;
+  });
+
   protected stateOf(p: ReturnType<DrawingImportDialogComponent['placed']>[number]): string {
+    if (this.excluded().has(p.stall.key)) return 'out';
     if (!p.rect) return 'hand';
     if (!p.onFloor) return 'bad';
+    // Not brought in for another reason (not a stall, no number): grey, never green.
+    if (p.skip) return 'hand';
     if (this.breaking()?.has(p.stall.key)) return 'bad';
     return 'ok';
+  }
+
+  /** Why a stall is red or left out, in words; empty for one that comes in. */
+  protected whyOf(p: ReturnType<DrawingImportDialogComponent['placed']>[number]): string[] {
+    const why = p.skip ? [p.skip] : [];
+    return [...why, ...(this.breaking()?.get(p.stall.key) ?? [])];
   }
 
   protected plural(n: number, word: string): string {
@@ -676,25 +1165,42 @@ export class DrawingImportDialogComponent {
     return outline.map((p) => `${p.x},${p.z}`).join(' ');
   }
 
-  /** Asks the server which placed stalls break a rule, with the booths that stay. */
+  /**
+   * Asks the server which placed stalls break a rule, with the booths that stay. Checked again
+   * without the ones that do, as the import leaves them out: a stall can pass only beside one
+   * that is left out (an open side facing it), and fail once it is gone. Rounds as many as the
+   * import's own (`PlannerStore.addPassing`), so what shows green is what comes in.
+   */
   private async check(prepared: {
     stalls: Array<{ key: string; stall: PlanStall }>;
     replacing: string[];
   }): Promise<void> {
     const plan = this.store.plan();
     const kept = plan.stalls.filter((s) => !prepared.replacing.includes(s.id));
-    const stalls = prepared.stalls.map((s) => s.stall);
-    const findings = await this.store.check(
-      { ...plan, stalls: [...kept, ...stalls] },
-      stalls.map((s) => s.id),
-    );
-    if (prepared !== this.prepared()) return;
     const keyOf = new Map(prepared.stalls.map((s) => [s.stall.id, s.key]));
-    const bad = new Set(
-      (findings ?? [])
-        .flatMap((f) => f.ids)
-        .flatMap((id) => (keyOf.has(id) ? [keyOf.get(id)!] : [])),
-    );
+    // Each stall's broken rules, in the server's words, to show why it is red.
+    const bad = new Map<string, string[]>();
+    let stalls = prepared.stalls.map((s) => s.stall);
+    for (let round = 0; round < CHECK_ROUNDS && stalls.length; round++) {
+      const findings = await this.store.check(
+        { ...plan, stalls: [...kept, ...stalls] },
+        stalls.map((s) => s.id),
+      );
+      if (prepared !== this.prepared()) return;
+      let found = false;
+      for (const f of findings ?? []) {
+        for (const id of f.ids) {
+          const key = keyOf.get(id);
+          if (!key) continue;
+          const why = bad.get(key) ?? [];
+          if (!why.includes(f.message)) why.push(f.message);
+          bad.set(key, why);
+          found = true;
+        }
+      }
+      if (!found) break;
+      stalls = stalls.filter((s) => !bad.has(keyOf.get(s.id)!));
+    }
     this.breaking.set(bad);
   }
 
@@ -718,7 +1224,7 @@ export class DrawingImportDialogComponent {
 
   protected use(): void {
     const prepared = this.prepared();
-    const bad = this.breaking() ?? new Set<string>();
+    const bad = this.breaking() ?? new Map<string, string[]>();
     const stalls = prepared.stalls.filter((s) => !bad.has(s.key)).map((s) => s.stall);
     if (!stalls.length) return;
     this.ref.close({ stalls, replacing: prepared.replacing } satisfies DrawingImportOutcome);

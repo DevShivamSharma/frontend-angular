@@ -282,6 +282,51 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
           />
         </label>
         @if (!ro) {
+          <div class="lbl">
+            Move all a metre
+            <span class="pad" role="group" aria-label="Move the stalls a metre">
+              <button
+                pButton
+                type="button"
+                size="small"
+                [text]="true"
+                (click)="nudge.emit({ dx: 0, dy: -1 })"
+                aria-label="Move the stalls up"
+              >
+                <app-icon name="arrow_upward" />
+              </button>
+              <button
+                pButton
+                type="button"
+                size="small"
+                [text]="true"
+                (click)="nudge.emit({ dx: -1, dy: 0 })"
+                aria-label="Move the stalls left"
+              >
+                <app-icon name="arrow_back" />
+              </button>
+              <button
+                pButton
+                type="button"
+                size="small"
+                [text]="true"
+                (click)="nudge.emit({ dx: 1, dy: 0 })"
+                aria-label="Move the stalls right"
+              >
+                <app-icon name="arrow_forward" />
+              </button>
+              <button
+                pButton
+                type="button"
+                size="small"
+                [text]="true"
+                (click)="nudge.emit({ dx: 0, dy: 1 })"
+                aria-label="Move the stalls down"
+              >
+                <app-icon name="arrow_downward" />
+              </button>
+            </span>
+          </div>
           <button pButton severity="danger" [outlined]="true" (click)="remove.emit()">
             <app-icon name="delete" />Delete {{ stalls().length }} stalls
           </button>
@@ -375,6 +420,10 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
     h3 {
       margin: 0;
       font: var(--app-title-small);
+    }
+    .pad {
+      display: flex;
+      gap: 4px;
     }
     label,
     .lbl {
@@ -477,6 +526,8 @@ export class PlannerPropertiesComponent {
   /** Changes to the selected drawings. */
   readonly objectPatch = output<Partial<Pick<PlanObject, 'text' | 'color'>>>();
   readonly remove = output<void>();
+  /** Moves the selected stalls, hall metres. */
+  readonly nudge = output<{ dx: number; dy: number }>();
 
   protected readonly objectNames: Record<PlanObjectKind, string> = {
     line: 'Line',

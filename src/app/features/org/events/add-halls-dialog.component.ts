@@ -46,6 +46,7 @@ export interface AddHallsData {
           optionLabel="name"
           optionValue="id"
           placeholder="Choose a venue"
+          appendTo="body"
           [ngModel]="venueId()"
           (ngModelChange)="pickVenue($event)"
         />

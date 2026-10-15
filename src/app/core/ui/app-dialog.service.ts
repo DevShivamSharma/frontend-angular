@@ -6,7 +6,7 @@ export interface AppDialogOptions<D> {
   data?: D;
   /** CSS width; dialogs stay within the screen on phones. */
   width?: string;
-  /** False: only the dialog's own buttons close it (no Escape, no click outside). */
+  /** False: a click outside does not close it (Escape still does). */
   dismissable?: boolean;
 }
 
@@ -40,7 +40,10 @@ export class AppDialog {
       data: options.data,
       modal: true,
       showHeader: false,
-      closeOnEscape: dismissable,
+      // PrimeNG binds Escape (and the mask click) only on a closable dialog; with no header
+      // no close icon is drawn. Escape closes every dialog.
+      closable: true,
+      closeOnEscape: true,
       dismissableMask: dismissable,
       focusOnShow: true,
       // A dialog may open over another of its kind (a tour inside an import, a confirm in a

@@ -1,13 +1,19 @@
 import type { DrawingImportResult, DrawingStall } from '../../../core/plans/drawing-import.models';
 import {
+  adjustOutline,
   autoFit,
+  cellShapeOf,
+  importNotes,
   matchGroups,
+  notchOpenEdges,
   numberOf,
   openSidesOf,
+  overrideText,
   placeStalls,
   rectOf,
   toPlanStall,
   turn,
+  twinNumbers,
 } from './drawing-import';
 import { plannerFloor } from './planner-geometry';
 
@@ -27,6 +33,16 @@ const rect = (x: number, z: number, w: number, d: number) => [
   { x: x + w, z },
   { x: x + w, z: z + d },
   { x, z: z + d },
+];
+
+/** A 6 × 6 box with its bottom-left 3 × 3 not the stall's: 27 m². */
+const L = [
+  { x: 0, z: 0 },
+  { x: 6, z: 0 },
+  { x: 6, z: 6 },
+  { x: 3, z: 6 },
+  { x: 3, z: 3 },
+  { x: 0, z: 3 },
 ];
 
 function stall(
@@ -95,29 +111,182 @@ describe('importing stalls from a CAD plan', () => {
     expect(turn({ x: 1, z: 2 }, 180)).toEqual({ x: -1, z: -2 });
   });
 
-  it('keeps rectangles, and leaves L-shapes and slanted outlines to draw by hand', () => {
+  it('keeps rectangles, brings L-shapes in as cut boxes, and leaves slants to draw by hand', () => {
     expect(rectOf(rect(2, 3, 3, 4))).toEqual({ x: 2, y: 3, width: 3, height: 4 });
-    expect(
-      rectOf([
-        { x: 0, z: 0 },
-        { x: 4, z: 1 },
-        { x: 4, z: 4 },
-        { x: 0, z: 4 },
-      ]),
-    ).toBeNull();
-    const l = stall('C', [
+    const slant = [
       { x: 0, z: 0 },
-      { x: 6, z: 0 },
-      { x: 6, z: 6 },
-      { x: 3, z: 6 },
-      { x: 3, z: 3 },
-      { x: 0, z: 3 },
+      { x: 4, z: 1 },
+      { x: 4, z: 4 },
+      { x: 0, z: 4 },
+    ];
+    expect(rectOf(slant)).toBeNull();
+    const result = drawing([
+      stall('A', rect(0, 0, 3, 3)),
+      stall('C', L),
+      stall(
+        'S',
+        slant.map((p) => ({ x: p.x + 10, z: p.z })),
+      ),
     ]);
-    const result = drawing([stall('A', rect(0, 0, 3, 3)), l]);
     const fit = autoFit(result, ['8'], floor);
     const placed = placeStalls(result, ['8'], fit.alignment, floor);
-    expect(placed.find((p) => p.stall.key === 'C')?.skip).toContain('L-shaped');
-    expect(placed.find((p) => p.stall.key === 'A')?.skip).toBeNull();
+    const by = (key: string) => placed.find((p) => p.stall.key === key)!;
+    expect(by('A').skip).toBeNull();
+    expect(by('C').skip).toBeNull();
+    expect(by('C').cutCells.length).toBe(9);
+    expect(by('S').skip).toBe('Has a slanted edge: draw it by hand');
+  });
+
+  describe('as whole cells', () => {
+    it('cuts the corner out of an L', () => {
+      const shape = cellShapeOf(L)!;
+      expect(shape.rect).toEqual({ x: 0, y: 0, width: 6, height: 6 });
+      // The bottom-left 3 × 3 is not the stall's.
+      const want: Array<[number, number]> = [];
+      for (let r = 3; r < 6; r++) for (let c = 0; c < 3; c++) want.push([c, r]);
+      expect(shape.cutCells).toEqual(want);
+    });
+
+    it('cuts the middle out of a U', () => {
+      const u = [
+        { x: 0, z: 0 },
+        { x: 1, z: 0 },
+        { x: 1, z: 2 },
+        { x: 2, z: 2 },
+        { x: 2, z: 0 },
+        { x: 3, z: 0 },
+        { x: 3, z: 3 },
+        { x: 0, z: 3 },
+      ];
+      expect(cellShapeOf(u)!.cutCells).toEqual([
+        [1, 0],
+        [1, 1],
+      ]);
+    });
+
+    it('cuts a notch out of a box, and none out of a rectangle', () => {
+      const notched = [
+        { x: 0, z: 0 },
+        { x: 4, z: 0 },
+        { x: 4, z: 2 },
+        { x: 3, z: 2 },
+        { x: 3, z: 3 },
+        { x: 0, z: 3 },
+      ];
+      expect(cellShapeOf(notched)!.cutCells).toEqual([[3, 2]]);
+      expect(cellShapeOf(rect(1, 1, 3, 2))!.cutCells).toEqual([]);
+    });
+
+    it('makes nothing of a slanted outline', () => {
+      expect(
+        cellShapeOf([
+          { x: 0, z: 0 },
+          { x: 3, z: 0 },
+          { x: 0, z: 3 },
+        ]),
+      ).toBeNull();
+      expect(
+        cellShapeOf([
+          { x: 0, z: 0 },
+          { x: 4, z: 0 },
+          { x: 4, z: 2 },
+          { x: 2, z: 4 },
+          { x: 0, z: 4 },
+        ]),
+      ).toBeNull();
+    });
+  });
+
+  it('opens a side of the box, and closes an open edge round the notch', () => {
+    // Edge 1 is the box's right side; edge 3 is a side of the notch, inside the box.
+    const s = stall('C', L, { openEdges: [1, 3] });
+    expect(openSidesOf(s, s.outline)).toEqual(['right']);
+    expect(notchOpenEdges(s, s.outline)).toBe(1);
+    const placed = placeStalls(
+      drawing([s]),
+      ['8'],
+      { rotation: 0, offsets: { '8': { x: 10, z: 10 } } },
+      floor,
+    )[0];
+    const made = toPlanStall(placed, [], []);
+    expect(made.cutCells.length).toBe(9);
+    expect(importNotes(placed, made)).toEqual([
+      '08-01 C: an open side round its notch drawn closed.',
+    ]);
+    const off = { ...placed, stall: { ...s, labels: { area: 30, dims: null, texts: [] } } };
+    expect(importNotes(off, made)[1]).toBe(
+      '08-01 C: the drawing says 30 m², the cells give 27 m².',
+    );
+  });
+
+  describe('one stall changed by hand', () => {
+    const at = { rotation: 0 as const, offsets: { '8': { x: 10, z: 10 } } };
+    const result = drawing([stall('A', rect(0, 0, 3, 2)), stall('B', rect(5, 0, 3, 3))]);
+
+    it('moves, turns and resizes it after the alignment, and leaves the others', () => {
+      const overrides = new Map([['A', { dx: 1, dz: -1, turn: 90 as const, width: 4 }]]);
+      const placed = placeStalls(result, ['8'], at, floor, new Set(), overrides);
+      // Turned about its box: 3 × 2 becomes 2 × 3, then 4 wide, then moved.
+      expect(placed[0].rect).toEqual({ x: 11, y: 9, width: 4, height: 3 });
+      expect(placed[1].rect).toEqual({ x: 15, y: 10, width: 3, height: 3 });
+    });
+
+    it('keeps the change through a new alignment, as it is relative', () => {
+      const overrides = new Map([['A', { dx: -1, dz: 0 }]]);
+      const moved = { rotation: 0 as const, offsets: { '8': { x: 20, z: 5 } } };
+      expect(placeStalls(result, ['8'], moved, floor, new Set(), overrides)[0].rect).toEqual({
+        x: 19,
+        y: 5,
+        width: 3,
+        height: 2,
+      });
+    });
+
+    it('says what was changed, and leaves out what is left out', () => {
+      expect(overrideText({ dx: -1, dz: 0.5 })).toBe('moved 1 m left and 0.5 m down');
+      expect(overrideText({ dx: 0, dz: 0, name: '08-01 A3' })).toBe('numbered 08-01 A3');
+      // A number the drawing repeats, given anew, splits like the drawn one.
+      const first = placeStalls(result, ['8'], at, floor)[0];
+      expect(toPlanStall(first, [], [], '08-01 A3')).toEqual(
+        jasmine.objectContaining({ islandNumber: '08-01', stallNumber: 'A3' }),
+      );
+      expect(adjustOutline(rect(0, 0, 3, 2), { dx: 0, dz: 0 })).toEqual(rect(0, 0, 3, 2));
+      const placed = placeStalls(result, ['8'], at, floor, new Set(['B']));
+      expect(placed[1].skip).toBe('Left out in the review');
+    });
+
+    it('numbers on a number the drawing repeats: the first in reading order keeps it', () => {
+      const twice = drawing([
+        stall('A', rect(0, 0, 3, 2), { name: '08-01 A1', letter: 'A1' }),
+        stall('B', rect(0, 5, 3, 2), { name: '08-01 A1', letter: 'A1' }),
+        stall('C', rect(5, 0, 3, 2), { name: '08-01 A2', letter: 'A2' }),
+      ]);
+      const placed = placeStalls(twice, ['8'], at, floor);
+      // A2 is taken, so the lower A1 becomes A3.
+      expect(twinNumbers(placed)).toEqual(new Map([['B', '08-01 A3']]));
+      // A number given by hand is the stall's own.
+      const own = new Map([['B', { dx: 0, dz: 0, name: '08-01 A9' }]]);
+      expect(twinNumbers(placed, own).size).toBe(0);
+    });
+
+    it('brings in an outline the server doubted, once the review takes it as a stall', () => {
+      const doubted = drawing([
+        stall('A', rect(0, 0, 3, 2), {
+          include: false,
+          letter: null,
+          issues: [
+            {
+              code: 'NO_LABEL',
+              severity: 'warning',
+              message: 'Named area "HALL MASTER", not a lettered stall; import it only if it should be bookable.',
+            },
+          ],
+        }),
+      ]);
+      expect(placeStalls(doubted, ['8'], at, floor)[0].skip).toContain('Not a stall');
+      const taken = new Map([['A', { dx: 0, dz: 0, isStall: true }]]);
+      expect(placeStalls(doubted, ['8'], at, floor, new Set(), taken)[0].skip).toBeNull();
+    });
   });
 
   it('fits the drawing on the open floor, off the passage', () => {

@@ -1103,6 +1103,7 @@ const OBJECT_COLOR = '#334155';
                     (seatCategory)="seatCategory($event)"
                     (objectPatch)="patchObjects($event)"
                     (remove)="removeSelection()"
+                    (nudge)="nudgeSelection($event.dx, $event.dy)"
                   />
                 </section>
                 <app-stall-price-card />
@@ -2172,6 +2173,12 @@ export class PlannerPageComponent {
       },
       [e.stallId],
     );
+  }
+
+  /** Moves the selection by the properties' arrows, as a drag would. */
+  protected nudgeSelection(dx: number, dy: number): Promise<void> {
+    const sel = this.store.selection();
+    return sel ? this.moved({ kind: sel.kind, ids: sel.ids, dx, dy }) : Promise.resolve();
   }
 
   protected async moved(e: MoveEvent): Promise<void> {
