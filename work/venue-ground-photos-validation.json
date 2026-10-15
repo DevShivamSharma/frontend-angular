@@ -1,0 +1,332 @@
+{
+  "updatedAt": "2026-10-15T05:06:06.136Z",
+  "scope": "Continuous covered-path flooring and distributed walking crowd",
+  "sourceFolder": "C:/Users/Shivam Sharma/Downloads/11-rp_nathan_animated_003_walking_c4d (1)",
+  "assetFinding": "One distinct Nathan walking asset; four C4D renderer variants of the same character. Existing visitor-woman has no skin/animation; visitor.glb has a rig but no animation clips.",
+  "crowd": {
+    "people": 360,
+    "routes": 32,
+    "areas": [
+      "Hall 1–6 covered promenade",
+      "Central promenade",
+      "Gate 6 garden cross promenade",
+      "Gate 3 hall promenade",
+      "Hall 6 north approach",
+      "Gate 4 approach",
+      "Hall 6 south / Gate 1 approach",
+      "Plaza north pedestrian link",
+      "Gate 10 north campus approach",
+      "CC to central garden",
+      "Hall 14 north halls approach"
+    ],
+    "nearTriangles": 5160,
+    "distantTriangles": 752,
+    "maxVisible": {
+      "desktop": 160,
+      "mobile": 96,
+      "pressureDesktop": 96,
+      "pressureMobile": 56
+    },
+    "adaptiveRenderScale": 0.8,
+    "drawCalls": 2
+  },
+  "validation": {
+    "productionBuild": "passed; existing CSS size and polygon-clipping CommonJS warnings",
+    "regressions": "8 passed before route expansion; final paved-path test and expanded crowd browser test passed",
+    "interruption": "One browser test timed out during an approximately eight-hour host clock/sleep interruption; isolated retry passed.",
+    "screenshots": [
+      "tmp/photo-review/crowd-concourse.png",
+      "tmp/photo-review/crowd-hall-spine.png",
+      "tmp/photo-review/crowd-mobile.png",
+      "tmp/photo-review/crowd-fountain.png"
+    ],
+    "measurementNote": "Headless Chrome, D3D11, 1440x900 desktop / 390x844 viewport. Mobile viewport is not physical-phone testing. Median sampled frame rates; no universal 60-FPS guarantee. Route metadata labels were corrected after capture; geometry and performance behavior are unchanged."
+  },
+  "measurements": {
+    "desktopConcourse": {
+      "off": {
+        "medianMs": 16.600000023841858,
+        "p95Ms": 26.19999998807907,
+        "pixelRatio": 1,
+        "stats": {
+          "frame": 961,
+          "calls": 205,
+          "triangles": 1759945,
+          "points": 0,
+          "lines": 0
+        },
+        "crowd": {
+          "pedestrianCount": 360,
+          "routeCount": 32,
+          "maxVisible": 160,
+          "routeZones": [
+            "IITF_2026_Layout",
+            "Covered concourse"
+          ],
+          "speedMetersPerSecond": [
+            0.55,
+            0.87
+          ],
+          "sharedGeometry": true,
+          "sharedTextures": true,
+          "gpuAnimation": true,
+          "maxDrawCalls": 2,
+          "animatedShadows": false,
+          "visibleCount": 0,
+          "nearCount": 4,
+          "renderScale": 1,
+          "lowTriangles": 752,
+          "highTriangles": 5160
+        }
+      },
+      "on": {
+        "medianMs": 18.30000001192093,
+        "p95Ms": 24.600000023841858,
+        "pixelRatio": 1,
+        "stats": {
+          "frame": 1561,
+          "calls": 207,
+          "triangles": 1784345,
+          "points": 0,
+          "lines": 0
+        },
+        "crowd": {
+          "pedestrianCount": 360,
+          "routeCount": 32,
+          "maxVisible": 160,
+          "routeZones": [
+            "IITF_2026_Layout",
+            "Covered concourse"
+          ],
+          "speedMetersPerSecond": [
+            0.55,
+            0.87
+          ],
+          "sharedGeometry": true,
+          "sharedTextures": true,
+          "gpuAnimation": true,
+          "maxDrawCalls": 2,
+          "animatedShadows": false,
+          "visibleCount": 9,
+          "nearCount": 4,
+          "renderScale": 1,
+          "lowTriangles": 752,
+          "highTriangles": 5160
+        }
+      }
+    },
+    "desktopHallSpine": {
+      "off": {
+        "medianMs": 16.600000023841858,
+        "p95Ms": 20.30000001192093,
+        "pixelRatio": 1,
+        "stats": {
+          "frame": 2164,
+          "calls": 353,
+          "triangles": 1768157,
+          "points": 0,
+          "lines": 0
+        },
+        "crowd": {
+          "pedestrianCount": 360,
+          "routeCount": 32,
+          "maxVisible": 160,
+          "routeZones": [
+            "IITF_2026_Layout",
+            "Covered concourse"
+          ],
+          "speedMetersPerSecond": [
+            0.55,
+            0.87
+          ],
+          "sharedGeometry": true,
+          "sharedTextures": true,
+          "gpuAnimation": true,
+          "maxDrawCalls": 2,
+          "animatedShadows": false,
+          "visibleCount": 0,
+          "nearCount": 4,
+          "renderScale": 1,
+          "lowTriangles": 752,
+          "highTriangles": 5160
+        }
+      },
+      "on": {
+        "medianMs": 23.30000001192093,
+        "p95Ms": 34.89999997615814,
+        "pixelRatio": 0.8,
+        "stats": {
+          "frame": 2767,
+          "calls": 355,
+          "triangles": 1849165,
+          "points": 0,
+          "lines": 0
+        },
+        "crowd": {
+          "pedestrianCount": 360,
+          "routeCount": 32,
+          "maxVisible": 96,
+          "routeZones": [
+            "IITF_2026_Layout",
+            "Covered concourse"
+          ],
+          "speedMetersPerSecond": [
+            0.55,
+            0.87
+          ],
+          "sharedGeometry": true,
+          "sharedTextures": true,
+          "gpuAnimation": true,
+          "maxDrawCalls": 2,
+          "animatedShadows": false,
+          "visibleCount": 96,
+          "nearCount": 2,
+          "renderScale": 0.8,
+          "lowTriangles": 752,
+          "highTriangles": 5160
+        }
+      }
+    },
+    "mobileViewport": {
+      "medianMs": 19.30000001192093,
+      "p95Ms": 24.200000047683716,
+      "pixelRatio": 0.8,
+      "stats": {
+        "frame": 3373,
+        "calls": 284,
+        "triangles": 1795109,
+        "points": 0,
+        "lines": 0
+      },
+      "crowd": {
+        "pedestrianCount": 360,
+        "routeCount": 32,
+        "maxVisible": 56,
+        "routeZones": [
+          "IITF_2026_Layout",
+          "Covered concourse"
+        ],
+        "speedMetersPerSecond": [
+          0.55,
+          0.87
+        ],
+        "sharedGeometry": true,
+        "sharedTextures": true,
+        "gpuAnimation": true,
+        "maxDrawCalls": 2,
+        "animatedShadows": false,
+        "visibleCount": 56,
+        "nearCount": 2,
+        "renderScale": 0.8,
+        "lowTriangles": 752,
+        "highTriangles": 5160
+      }
+    },
+    "fountain": {
+      "off": {
+        "medianMs": 16.700000047683716,
+        "p95Ms": 24.599999964237213,
+        "pixelRatio": 1,
+        "stats": {
+          "frame": 4029,
+          "calls": 368,
+          "triangles": 2505257,
+          "points": 0,
+          "lines": 0
+        },
+        "crowd": {
+          "pedestrianCount": 360,
+          "routeCount": 32,
+          "maxVisible": 56,
+          "routeZones": [
+            "IITF_2026_Layout",
+            "Covered concourse"
+          ],
+          "speedMetersPerSecond": [
+            0.55,
+            0.87
+          ],
+          "sharedGeometry": true,
+          "sharedTextures": true,
+          "gpuAnimation": true,
+          "maxDrawCalls": 2,
+          "animatedShadows": false,
+          "visibleCount": 0,
+          "nearCount": 0,
+          "renderScale": 0.8,
+          "lowTriangles": 752,
+          "highTriangles": 5160
+        }
+      },
+      "on": {
+        "medianMs": 18.19999998807907,
+        "p95Ms": 22.899999976158142,
+        "pixelRatio": 1,
+        "stats": {
+          "frame": 4629,
+          "calls": 369,
+          "triangles": 2575945,
+          "points": 0,
+          "lines": 0
+        },
+        "crowd": {
+          "pedestrianCount": 360,
+          "routeCount": 32,
+          "maxVisible": 160,
+          "routeZones": [
+            "IITF_2026_Layout",
+            "Covered concourse"
+          ],
+          "speedMetersPerSecond": [
+            0.55,
+            0.87
+          ],
+          "sharedGeometry": true,
+          "sharedTextures": true,
+          "gpuAnimation": true,
+          "maxDrawCalls": 2,
+          "animatedShadows": false,
+          "visibleCount": 94,
+          "nearCount": 0,
+          "renderScale": 1,
+          "lowTriangles": 752,
+          "highTriangles": 5160
+        }
+      }
+    },
+    "coverage": {
+      "floor": {
+        "roofQuads": 484,
+        "fountainTriangles": 1416,
+        "sharedTexture": true,
+        "groundHeight": 0.186
+      },
+      "ground": {
+        "strips": 1666,
+        "columnSleeves": 138,
+        "banners": 28,
+        "reference": "User ground photographs 2026-10-14",
+        "registration": "Existing paths and supports; detail sizes and banner spacing estimated from photos"
+      },
+      "canopy": {
+        "supportMeshes": 3,
+        "sourceRoofMeshes": 4,
+        "sourceFamilies": [
+          "CENTRAL_SPINE",
+          "GARDEN_TO_FOUNTAIN",
+          "HALLS"
+        ],
+        "infillQuads": 484,
+        "frameMembers": 2001,
+        "alphaTextureSize": 512,
+        "legacyOpaqueSheetsRemoved": 6,
+        "newGroundSupports": 0
+      },
+      "entrances": {
+        "count": 3,
+        "dimensions": "Estimated; anchored to existing visitor doors"
+      }
+    },
+    "errors": []
+  }
+}

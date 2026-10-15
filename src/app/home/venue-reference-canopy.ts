@@ -16,12 +16,16 @@ export function prepareReferenceCanopies(root: T.Group): void {
   if (root.userData[PREPARED]) return;
   root.updateMatrixWorld(true);
   const inverseRoot = root.matrixWorld.clone().invert();
-  const steel: T.Mesh[] = [], panels: T.Mesh[] = [];
+  const steel: T.Mesh[] = [], panels: T.Mesh[] = [], legacySheets: T.Mesh[] = [];
   root.traverse(object => {
     if (!(object instanceof T.Mesh) || object instanceof T.InstancedMesh || Array.isArray(object.material)) return;
     const names = [object.name, object.parent?.name ?? ''].map(name => name.replace(/ /g, '_'));
     if (names.some(name => STEEL.test(name))) steel.push(object);
     if (names.some(name => PANELS.has(name))) panels.push(object);
+    // These older video overlays otherwise cover the perforated replacement.
+    // Retain their dark steel fittings; only their opaque sheet primitives go.
+    if (names.some(name => /^PHOTO_VIDEO_(central_spine|Hall_6_connection|hall_frontage)_curved_roof$/.test(name)) &&
+      /^PM_Video (graphite canopy roof|pale canopy roof strips)$/.test(object.material.name)) legacySheets.push(object);
   });
   if (!steel.length && !panels.length) return;
 
@@ -63,8 +67,8 @@ export function prepareReferenceCanopies(root: T.Group): void {
   if (!quads.length) return;
 
   const perforation = perforationTexture();
-  const infill = new T.MeshStandardMaterial({ color: 0x898570, metalness: .32, roughness: .68,
-    side: T.DoubleSide, alphaMap: perforation, alphaTest: .22 });
+  const infill = new T.MeshStandardMaterial({ color: 0xb8b9a9, metalness: .25, roughness: .68,
+    side: T.DoubleSide, map: perforation, alphaMap: perforation, alphaTest: .22 });
   infill.name = 'REFERENCE perforated olive bronze canopy';
   infill.userData = { referenceMaterial: true, architecturalCategory: 'roof' };
   const frame = new T.MeshStandardMaterial({ color: 0x74725f, metalness: .4, roughness: .57 });
@@ -114,7 +118,7 @@ export function prepareReferenceCanopies(root: T.Group): void {
   const removedGeometries = new Set<T.BufferGeometry>(), removedMaterials = new Set<T.Material>();
   for (const mesh of steel) { removedMaterials.add(mesh.material as T.Material); mesh.material = frame; }
   // Only remove a source surface when its own geometry was successfully recovered.
-  for (const mesh of recoveredPanels) {
+  for (const mesh of [...recoveredPanels, ...legacySheets]) {
     removedGeometries.add(mesh.geometry); removedMaterials.add(mesh.material as T.Material); mesh.removeFromParent();
   }
   root.traverse(object => {
@@ -127,7 +131,8 @@ export function prepareReferenceCanopies(root: T.Group): void {
   root.userData['referenceCanopyCoverage'] = { supportMeshes: steel.length, sourceRoofMeshes: panels.length,
     sourceFamilies: [...new Set([...steel, ...panels].map(mesh =>
       /PHOTO_(CENTRAL_SPINE|GARDEN_TO_FOUNTAIN|HALLS)/.exec(mesh.name + mesh.parent?.name)?.[1]).filter(Boolean))],
-    infillQuads: quads.length, frameMembers: beamKeys.size, alphaTextureSize: 256, newGroundSupports: 0 };
+    infillQuads: quads.length, frameMembers: beamKeys.size, alphaTextureSize: 512,
+    legacyOpaqueSheetsRemoved: legacySheets.length, newGroundSupports: 0 };
   root.updateMatrixWorld(true);
 }
 
@@ -162,17 +167,23 @@ function topQuads(geometry: T.BufferGeometry, points: T.Vector3[]): Quad[] {
 /** A small reusable alpha tile gives genuine openings without thousands of
  * tiny holes/triangles. Mipmaps and a low threshold retain distant coverage. */
 function perforationTexture(): T.DataTexture {
-  const size = 256, data = new Uint8Array(size * size * 4);
+  const size = 512, data = new Uint8Array(size * size * 4);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const row = Math.floor(y / 16), px = ((x + (row % 2) * 8) % 16) - 8;
     const py = y % 16 - 8;
     const hexDistance = Math.max(Math.abs(px) * .866 + Math.abs(py) * .5, Math.abs(py));
-    const metal = hexDistance > 5.5;
+    // Ground photographs show outlined leaf motifs inside the hexagonal screen.
+    // Render these in the shared alpha tile, without adding hole geometry.
+    const lx = (x - size / 2) / 205, ly = (y - size / 2) / 110;
+    const leaf = Math.abs(ly) / Math.max(.001, 1 - lx * lx);
+    const outline = Math.abs(lx) < 1 && (Math.abs(leaf - 1) < .055 || Math.abs(leaf - .72) < .055);
+    const vein = Math.abs(lx) < .95 && Math.abs(ly - .09 * Math.sin(lx * 3)) < .035;
+    const metal = hexDistance > 6.1 || outline || vein;
     const offset = (y * size + x) * 4;
     data[offset] = data[offset + 1] = data[offset + 2] = metal ? 255 : 0; data[offset + 3] = 255;
   }
   const texture = new T.DataTexture(data, size, size, T.RGBAFormat);
-  texture.name = 'REFERENCE canopy hex perforation'; texture.wrapS = texture.wrapT = T.RepeatWrapping;
+  texture.name = 'PHOTO canopy hex perforation with leaf outlines'; texture.wrapS = texture.wrapT = T.RepeatWrapping;
   texture.magFilter = T.LinearFilter; texture.minFilter = T.LinearMipmapLinearFilter;
   texture.generateMipmaps = true; texture.needsUpdate = true;
   return texture;

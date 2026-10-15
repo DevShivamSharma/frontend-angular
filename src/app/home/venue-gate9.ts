@@ -77,13 +77,16 @@ export async function prepareGate9(root: T.Group, asset: (path: string) => strin
   replaced.forEach(material => material.dispose());
   const center = new T.Vector3(...registration.gateCenter);
   const direction = new T.Vector3(...registration.slideDirection).normalize();
+  const arrival = new T.Vector3(...registration.views['gate9-approach'].position);
+  arrival.y = center.y;
   let target = 0, opening = 0, previous = 0;
   return {
     views: registration.views,
+    arrival: { position: arrival, heading: Math.atan2(center.x - arrival.x, center.z - arrival.z), label: 'Gate 9' },
     visitorChanged(state: VisitorState) {
       // Open well before even fast movement reaches the leaf; retain hysteresis.
       const distance = Math.hypot(state.position[0] - center.x, state.position[2] - center.z);
-      target = state.active && distance < (target ? 48 : 40) ? 1 : 0;
+      target = state.active && distance < (target ? 32 : 24) ? 1 : 0;
     },
     update(now: number, reducedMotion: boolean) {
       const dt = previous ? Math.min(.05, (now - previous) / 1000) : 0;

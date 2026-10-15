@@ -24,7 +24,7 @@ export interface VisitorState {
   entrance?: [number, number, number];
 }
 export const INITIAL_VISITOR_STATE: VisitorState = {
-  active: false, location: 'Gate 6', hall: '', destination: '', distance: 0, bearing: 0,
+  active: false, location: 'Gate 9', hall: '', destination: '', distance: 0, bearing: 0,
   fast: false, transitioning: false, autoWalking: false, jumping: false, hint: '', position: [0, 0, 0], heading: 0,
 };
 export type VisitorInput = 'forward' | 'backward' | 'left' | 'right';
@@ -72,7 +72,7 @@ export function createVenueVisitor(options: {
     const near = nearbyEntrance();
     const heading = delta ? Math.atan2(delta.x, delta.z) : yaw;
     const atGate = position.distanceTo(nav.spawn) < 30;
-    return { active, location: hall?.label ?? (atGate ? 'Gate 6 · Arrival' : 'Campus'), hall: hall?.id ?? '',
+    return { active, location: hall?.label ?? (atGate ? `${nav.arrivalLabel ?? 'Gate 6'} · Arrival` : 'Campus'), hall: hall?.id ?? '',
       destination: targetId, distance: delta ? Math.round(Math.hypot(delta.x, delta.z)) : 0,
       bearing: Math.atan2(Math.sin(yaw - heading), Math.cos(yaw - heading)) * 180 / Math.PI,
       fast, transitioning: !!floorChange, autoWalking: autoRoute.length > 0, jumping, position: position.toArray(), heading: yaw,

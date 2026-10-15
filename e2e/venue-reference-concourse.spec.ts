@@ -39,7 +39,7 @@ test('reference concourse finishes preserve the real source topology, boundary a
   test.setTimeout(90_000);
   const root = sourceModel(), originals = buffers(root), count = originals.length;
   prepareReferenceConcourse(root);
-  expect(root.userData['referenceConcourse'].coverage).toEqual({ paving: 2, sandstone: 4 });
+  expect(root.userData['referenceConcourse'].coverage).toEqual({ paving: 6, sandstone: 4 });
   expect(buffers(root)).toHaveLength(count);
   const textures = new Set<T.Texture>();
   let protectedCount = 0;

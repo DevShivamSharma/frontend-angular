@@ -238,7 +238,7 @@ test.describe('visitor in the real viewer', () => {
     fs.mkdirSync('.impeccable/review', { recursive: true });
     await page.screenshot({ path: '.impeccable/review/visitor-overview.png' });
     await launch.click();
-    await expect(page.getByRole('region', { name: 'Visitor navigation' })).toContainText('Gate 6');
+    await expect(page.getByRole('region', { name: 'Visitor navigation' })).toContainText('Gate 9');
     await expect(page.locator('#navigation')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Switch to evening' })).toBeVisible();
     fs.mkdirSync('.impeccable/review', { recursive: true });
@@ -276,7 +276,7 @@ test.describe('visitor in the real viewer', () => {
     await page.getByRole('button', { name: 'Walk faster', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Walk faster', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await page.getByRole('button', { name: 'Restart at gate' }).click();
-    await expect(page.locator('.visitor-heading')).toContainText('Gate 6');
+    await expect(page.locator('.visitor-heading')).toContainText('Gate 9');
     await expect(page.locator('.visitor-distance')).toHaveText(before!);
     expect(stopped).toBeTruthy();
     await page.screenshot({ path: '.impeccable/review/mobile.png' });

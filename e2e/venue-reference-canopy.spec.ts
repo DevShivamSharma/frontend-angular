@@ -17,6 +17,8 @@ test('reference canopy replaces actual opaque roofs with open infill while prese
   const supports = originals.filter(({ mesh }) => /PHOTO_(CENTRAL_SPINE|GARDEN_TO_FOUNTAIN|HALLS).*columns_trusses/.test(mesh.parent!.name));
   const roofs = originals.filter(({ mesh }) => /^(PHOTO_GARDEN_TO_FOUNTAIN_cross_canopy|PHOTO_HALLS_corrected_covered_approach)_roof_panels$/.test(mesh.parent!.name));
   expect(supports).toHaveLength(3); expect(roofs).toHaveLength(4);
+  const legacySheets = originals.filter(({ mesh }) => /^PHOTO_VIDEO_(central_spine|Hall_6_connection|hall_frontage)_curved_roof$/.test(mesh.parent!.name) &&
+    /^PM_Video (graphite canopy roof|pale canopy roof strips)$/.test((mesh.material as T.Material).name));
 
   prepareReferenceCanopies(root);
   const coverage = root.userData['referenceCanopyCoverage'];
@@ -25,7 +27,8 @@ test('reference canopy replaces actual opaque roofs with open infill while prese
   expect(coverage.newGroundSupports).toBe(0);
   expect(coverage.frameMembers).toBeGreaterThan(100);
   expect(coverage.frameMembers).toBeLessThan(2_600);
-  const roofSet = new Set(roofs.map(item => item.mesh));
+  expect(coverage.legacyOpaqueSheetsRemoved).toBe(6);
+  const roofSet = new Set([...roofs, ...legacySheets].map(item => item.mesh));
   const supportSet = new Set(supports.map(item => item.mesh));
   for (const original of originals) {
     if (roofSet.has(original.mesh)) { expect(original.mesh.parent).toBeNull(); continue; }
@@ -54,12 +57,12 @@ test('reference canopy replaces actual opaque roofs with open infill while prese
   expect(material.alphaTest).toBeGreaterThan(0);
   expect(material.transparent).toBe(false);
   const texture = material.alphaMap as T.DataTexture;
-  expect(texture.image.width).toBe(256); expect(texture.image.height).toBe(256);
+  expect(texture.image.width).toBe(512); expect(texture.image.height).toBe(512);
   const data = texture.image.data as Uint8Array;
   let holes = 0;
   for (let i = 1; i < data.length; i += 4) if (data[i] === 0) holes++;
-  expect(holes / (256 * 256)).toBeGreaterThan(.3);
-  expect(holes / (256 * 256)).toBeLessThan(.8);
+  expect(holes / (512 * 512)).toBeGreaterThan(.3);
+  expect(holes / (512 * 512)).toBeLessThan(.8);
   expect(material.clone().alphaMap).toBe(texture);
   expect(material.userData['referenceMaterial']).toBe(true);
 

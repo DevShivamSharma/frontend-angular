@@ -28,6 +28,7 @@ export interface VisitorNavigation {
   bounds: T.Box2;
   spawn: T.Vector3;
   heading: number;
+  arrivalLabel?: string;
   geometry?: VisitorCollisionWorld;
   /** Assign only after the corresponding visible guard instances were created. */
   guards?: VisitorGuardPlacement[];
@@ -99,7 +100,8 @@ export function createPortal(hall: InteriorHall, obstacles: InteriorObstacle[], 
     approach: hall.level ? 30 : 10 };
 }
 /** Read the unbatched model once, before disconnected meshes are merged for rendering. */
-export function createVisitorNavigation(root: T.Group, halls: InteriorHall[], obstacles: Map<string, InteriorObstacle[]>, interiorLayer?: T.Group): VisitorNavigation {
+export function createVisitorNavigation(root: T.Group, halls: InteriorHall[], obstacles: Map<string, InteriorObstacle[]>, interiorLayer?: T.Group,
+  arrival?: { position: T.Vector3; heading: number; label: string }): VisitorNavigation {
   const points = new Map<string, GroundPoint[]>(), hazards: GroundPoint[][] = [];
   const bounds = new T.Box2();
   root.updateMatrixWorld(true);
@@ -126,11 +128,11 @@ export function createVisitorNavigation(root: T.Group, halls: InteriorHall[], ob
     !buildings.some(b => b.id !== (h.level ? 'cc' : h.id) && inFootprint(b.polygon, p.x, p.z, -.6)) &&
     !hazards.some(poly => inFootprint(poly, p.x, p.z, -.6))));
   // Gate 6 is the existing photographed main arrival, in the model's authored coordinates.
-  const spawn = new T.Vector3(.5 * -302 + Math.sqrt(3) / 2 * 151, .35,
+  const spawn = arrival?.position.clone() ?? new T.Vector3(.5 * -302 + Math.sqrt(3) / 2 * 151, .35,
     -Math.sqrt(3) / 2 * -302 + .5 * 151);
   bounds.expandByPoint(new T.Vector2(spawn.x, spawn.z)).expandByScalar(22);
   return { portals, buildings,
-    hazards, bounds, spawn, heading: Math.PI * 5 / 6,
+    hazards, bounds, spawn, heading: arrival?.heading ?? Math.PI * 5 / 6, arrivalLabel: arrival?.label ?? 'Gate 6',
     geometry: createVisitorCollisionWorld(root, portals, interiorLayer,
       Math.max(3, ...halls.map(h => h.center.y + h.height))) };
 }
@@ -142,7 +144,7 @@ export function visitorGroundHeight(nav: VisitorNavigation, point: T.Vector3, ha
     const local = worldToHall(hall, point);
     return hall.center.y + (hall.elevation?.(local.x, local.z) ?? 0);
   }
-  return Math.hypot(point.x - nav.spawn.x, point.z - nav.spawn.z) < 34 ? .35 : .24;
+  return Math.hypot(point.x - nav.spawn.x, point.z - nav.spawn.z) < 34 ? nav.spawn.y : .24;
 }
 export function visitorBodyClear(nav: VisitorNavigation, point: T.Vector3, hall?: InteriorHall): boolean {
   const ground = visitorGroundHeight(nav, point, hall);

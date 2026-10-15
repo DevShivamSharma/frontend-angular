@@ -13,8 +13,9 @@ import { prepareVenueSurfaceDetail } from './venue-surface-detail';
 import { prepareVenueArchitecturalDetail } from './venue-architectural-detail';
 import { prepareReferenceHall14 } from './venue-reference-hall14';
 import { prepareReferenceMaterials } from './venue-reference-materials';
-import { prepareReferenceConcourse } from './venue-reference-concourse';
+import { prepareReferenceConcourse, prepareCoveredConcourseFloor } from './venue-reference-concourse';
 import { prepareReferenceCanopies } from './venue-reference-canopy';
+import { prepareGroundPhotoDetails, preparePhotoEntrances } from './venue-ground-photos';
 import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
 import { createVenueAppearance, VenueAppearance, VenueScenery } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
@@ -22,6 +23,7 @@ import { createVenueInteriors, InteriorState } from './venue-interiors';
 import { createVisitorNavigation } from './visitor-navigation';
 import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor';
 import { createVenueSecurityGuards } from './venue-security-guards';
+import { capturePedestrianPaths, createVenuePedestrians } from './venue-pedestrians';
 import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration } from './venue-site-detail';
 import { prepareGate9 } from './venue-gate9';
 import { prepareVenueRoadFinish } from './venue-road-finish';
@@ -131,6 +133,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         let interiors:Awaited<ReturnType<typeof createVenueInteriors>>|undefined,daylight=true;
         let water: ReturnType<typeof createVenueWater> | undefined;
         let securityGuards: Awaited<ReturnType<typeof createVenueSecurityGuards>> | undefined;
+        let pedestrians: Awaited<ReturnType<typeof createVenuePedestrians>> | undefined;
+        let crowdRenderScale = 1;
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
         const frames = createVenueRenderLoop(updateFrame, renderFrame);
         const invalidate = () => { ambientOcclusion.invalidate(); if (prepared) frames.invalidate(); };
@@ -289,6 +293,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         prepareVenueArchitecturalDetail(root);
         prepareReferenceConcourse(root);
         prepareReferenceCanopies(root);
+        prepareCoveredConcourseFloor(root);
+        prepareGroundPhotoDetails(root, new T.TextureLoader().load(asset('references/concourse-banner-photo.jpg'), () => invalidate()));
         prepareVenueFountainJets(root);
         try {
             siteRegistration = await prepareVenueSiteDetail(root, asset, signal);
@@ -338,7 +344,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 return await new GLTFExporter().parseAsync(model,{binary:true,onlyVisible:false}) as ArrayBuffer;
             };
         } catch(error) {signal.throwIfAborted();console.warn('Interior components unavailable',error);events.interiorsReady?.([],'Interiors could not load. Reload to retry.');}
-        const visitorNavigation = createVisitorNavigation(root, interiors?.halls ?? [], interiors?.obstacles ?? new Map(), interiors?.layer);
+        const visitorNavigation = createVisitorNavigation(root, interiors?.halls ?? [], interiors?.obstacles ?? new Map(), interiors?.layer, gate9?.arrival);
+        const onPedestrianPath = capturePedestrianPaths(root);
+        preparePhotoEntrances(root, visitorNavigation.portals);
         // Export is already metres, Y-up, east +X / south +Z. Do not rotate the
         // glTF a second time; W converts only the authored navigation coordinates.
         batchVenue(root, classify, o => [
@@ -393,6 +401,13 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             changed:state=>{gate9?.visitorChanged(state);events.visitorState?.(state);if(state.active)events.status(`Visiting · ${state.location}`);},
             exit:()=>stopVisitorCommand()});
         cleanups.push(()=>visitor?.dispose());
+        // Optional crowd loads after the venue/navigation are ready, sharing one
+        // asset across all walkers without delaying the welcome screen.
+        void createVenuePedestrians({ navigation: visitorNavigation, onPath: onPedestrianPath, asset, signal }).then(crowd => {
+            if (signal.aborted) { crowd.dispose(); return; }
+            pedestrians = crowd; scene.add(crowd.group);
+            cleanups.push(() => crowd.dispose()); invalidate();
+        }).catch(error => { if (!signal.aborted) console.warn('Concourse pedestrians unavailable.', error); });
         events.visitorReady?.(visitorNavigation.portals.map(p=>({id:p.hall.id,label:p.hall.level?'Convention Centre':p.hall.label})));
         startVisitorCommand=()=>{
             if(globe?.isGlobe||globe?.transitioning){view('overview');pendingInterior=()=>startVisitorCommand();events.status('Returning to the venue…');return;}
@@ -513,7 +528,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 break;
         } }, { signal });
         function resize() {
-            renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.setSize(innerWidth, innerHeight);
+            renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5) * crowdRenderScale); renderer.setSize(innerWidth, innerHeight);
             const aspect = innerWidth / innerHeight;
             if (!visitor?.active && !globe?.isGlobe && !globe?.transitioning)
                 camera.position.sub(controls.target).multiplyScalar(fitDetailWidth(aspect) / fitDetailWidth(camera.aspect)).add(controls.target);
@@ -539,7 +554,16 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             const walking=interiors?.update(performance.now());
             const flowing = water?.update(performance.now(), camera,
                 !reducedMotion.matches && !globe?.isGlobe && camera.position.distanceTo(controls.target) < 3000, innerHeight);
-            return Boolean(changed || walking || visiting || gateMoving || tween || pendingInterior || globe?.transitioning || flowing);
+            const strolling = pedestrians?.update(performance.now(), camera, innerHeight,
+                !globe?.isGlobe && !globe?.transitioning && !interiors?.active, reducedMotion.matches,
+                visitor?.active ? visitor.position : undefined);
+            const scale = pedestrians?.group.visible ? pedestrians.group.userData['renderScale'] ?? 1 : 1;
+            if (scale !== crowdRenderScale) {
+                crowdRenderScale = scale;
+                renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5) * scale);
+                ambientOcclusion.resize(); invalidate();
+            }
+            return Boolean(changed || walking || visiting || gateMoving || strolling || tween || pendingInterior || globe?.transitioning || flowing);
         }
         function renderFrame() {
             if (securityGuards?.update(camera, innerHeight, !globe?.isGlobe || globe.transitioning))
@@ -551,8 +575,12 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             if (!visitor?.active && !interiors?.active) {
                 // Screen-space sky has no surface depth or ambient occlusion.
                 sky.mesh.visible = false;
+                const crowdVisible = pedestrians?.group.visible;
+                // Crowd has its own animated GPU poses; exclude it from the
+                // cached static AO mask to avoid frozen standing silhouettes.
+                if (pedestrians) pedestrians.group.visible = false;
                 try { ambientOcclusion.render(camera.position.distanceTo(controls.target)); }
-                finally { sky.mesh.visible = true; }
+                finally { sky.mesh.visible = true; if (pedestrians) pedestrians.group.visible = !!crowdVisible; }
             }
         }
         // Draw a prepared scene before releasing the welcome screen.

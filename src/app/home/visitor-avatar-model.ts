@@ -2,7 +2,7 @@ import * as T from 'three';
 import { disposeVisitorModel } from './visitor-avatar-rig';
 
 /** Nathan's captured walk, played in place so navigation owns displacement. */
-export function createVisitorAvatarModel(model: T.Group, animations: T.AnimationClip[]) {
+export function createVisitorAvatarModel(model: T.Group, animations: T.AnimationClip[], options: { sharedResources?: boolean; phase?: number } = {}) {
   const source = animations.find(clip => clip.name === 'Walk');
   if (!source) throw new Error('Visitor model is missing its walking animation.');
   const walkClip = source.clone();
@@ -67,14 +67,24 @@ export function createVisitorAvatarModel(model: T.Group, animations: T.Animation
   const standingY = model.position.y, floorCorrection = bounds.min.y - walkFloor;
   const capturedSpeed = Math.max(.1, distance * scale / walkClip.duration);
   idle.setEffectiveWeight(1); walk.setEffectiveWeight(0); mixer.update(0);
+  walk.time = (options.phase ?? 0) * walkClip.duration;
   root.updateMatrixWorld(true);
   let weight = 0;
   return {
     root,
+    strideDuration: walkClip.duration,
+    capturedSpeed,
+    /** Used once to bake shared GPU crowd poses; player motion still uses update. */
+    sampleWalk(phase: number, standing = false) {
+      idle.setEffectiveWeight(standing ? 1 : 0); walk.setEffectiveWeight(standing ? 0 : 1);
+      walk.time = phase * walkClip.duration; mixer.update(0);
+      model.position.y = standingY + (standing ? 0 : floorCorrection);
+      root.updateMatrixWorld(true);
+    },
     update(dt: number, speed: number, reducedMotion: boolean, jumpHeight = 0) {
       const elapsed = T.MathUtils.clamp(dt, 0, .1);
       const target = !reducedMotion && jumpHeight <= .01 && speed > .05 ? 1 : 0;
-      weight = T.MathUtils.damp(weight, target, 14, elapsed);
+      weight = reducedMotion ? 0 : T.MathUtils.damp(weight, target, 14, elapsed);
       if (Math.abs(weight - target) < .002) weight = target;
       walk.setEffectiveWeight(weight); idle.setEffectiveWeight(1 - weight);
       // Match captured stride speed during normal walking; cap fast-travel cadence.
@@ -85,7 +95,12 @@ export function createVisitorAvatarModel(model: T.Group, animations: T.Animation
     },
     dispose() {
       mixer.stopAllAction(); mixer.uncacheRoot(model);
-      root.removeFromParent(); disposeVisitorModel(model); root.clear();
+      root.removeFromParent();
+      if (options.sharedResources) {
+        model.traverse(object => { if (object instanceof T.SkinnedMesh) object.skeleton.dispose(); });
+        model.clear();
+      } else disposeVisitorModel(model);
+      root.clear();
     },
   };
 }
