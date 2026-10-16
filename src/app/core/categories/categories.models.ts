@@ -27,5 +27,9 @@ export interface CategoryInput {
 
 export interface CategoryImportResult {
   created: number;
+  /** Linked to a row's SelfCare id, and took its new name or status. */
+  updated: number;
+  /** Already listed under the row's name, now linked to its SelfCare id. */
+  linked: number;
   skipped: Array<{ name: string; reason: string }>;
 }

@@ -33,10 +33,10 @@ export const STATUS_OPTIONS = [
         <app-field
           label="Name"
           hint="e.g. Premium, Corner, F&B"
-          error="1 to 80 characters"
+          error="1 to 160 characters"
           for="category-dialog-name"
         >
-          <input id="category-dialog-name" pInputText formControlName="name" maxlength="80" />
+          <input id="category-dialog-name" pInputText formControlName="name" maxlength="160" />
         </app-field>
         <app-field label="Status" hint="Inactive categories are not offered on event halls">
           <p-selectbutton
@@ -54,12 +54,7 @@ export const STATUS_OPTIONS = [
           error="Digits only"
           for="category-dialog-itpo-id"
         >
-          <input
-            id="category-dialog-itpo-id"
-            pInputText
-            formControlName="itpoId"
-            maxlength="12"
-          />
+          <input id="category-dialog-itpo-id" pInputText formControlName="itpoId" maxlength="12" />
         </app-field>
       </div>
       <div class="dialog-actions">
@@ -85,7 +80,7 @@ export class CategoryDialogComponent {
   protected readonly statuses = STATUS_OPTIONS;
 
   protected readonly form = inject(NonNullableFormBuilder).group({
-    name: [this.data.category?.name ?? '', [Validators.required, Validators.maxLength(80)]],
+    name: [this.data.category?.name ?? '', [Validators.required, Validators.maxLength(160)]],
     status: [(this.data.category?.status ?? 'active') as CategoryStatus],
     itpoId: [this.data.category?.itpoId ?? '', Validators.pattern(/^\d{0,12}$/)],
   });

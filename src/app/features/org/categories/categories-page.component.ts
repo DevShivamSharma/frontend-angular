@@ -235,9 +235,16 @@ export class CategoriesPageComponent {
       .subscribe((result) => {
         if (!result) return;
         const skipped = result.skipped.length;
+        const parts = [
+          `${result.created} ${result.created === 1 ? 'category' : 'categories'} added`,
+          ...(result.updated ? [`${result.updated} updated from SelfCare`] : []),
+          ...(result.linked ? [`${result.linked} linked to SelfCare`] : []),
+        ];
         this.notifier.success(
-          `${result.created} ${result.created === 1 ? 'category' : 'categories'} added` +
-            (skipped ? `; ${skipped} skipped (already listed).` : '.'),
+          parts.join(', ') +
+            (skipped
+              ? `; ${skipped} skipped (${result.skipped.map((s) => `${s.name}: ${s.reason}`).join('; ')}).`
+              : '.'),
         );
         void this.load();
       });

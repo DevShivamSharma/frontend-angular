@@ -29,6 +29,11 @@ const MAX_BYTES = 1024 * 1024;
         >
         or <code>inactive</code>; blank is active). Names already listed are skipped.
       </p>
+      <p class="muted">
+        Or SelfCare's <code>T_CODE_MASTER</code> export as it is: its stall categories (typeId 13 to
+        18) come in with their SelfCare ids. Import it again whenever SelfCare's list changes: the
+        same categories take the new names and statuses.
+      </p>
       <pre class="sample">
 name,status
 Premium,active
@@ -46,9 +51,15 @@ Pavilion,inactive</pre>
       }
       @if (rows().length) {
         <p>
+          @if (selfcare()) {
+            SelfCare export ·
+          }
           <b>{{ ready() }}</b> to import
           @if (rows().length - ready()) {
             · <span class="bad">{{ rows().length - ready() }} with a problem</span>
+          }
+          @if (notCategories()) {
+            · <span class="muted">{{ notCategories() }} other SelfCare codes left out</span>
           }
         </p>
         <div class="table-wrap">
@@ -56,6 +67,9 @@ Pavilion,inactive</pre>
             <thead>
               <tr>
                 <th>Line</th>
+                @if (selfcare()) {
+                  <th>SelfCare id</th>
+                }
                 <th>Name</th>
                 <th>Status</th>
                 <th></th>
@@ -65,6 +79,9 @@ Pavilion,inactive</pre>
               @for (r of rows(); track r.line) {
                 <tr [class.bad]="r.problem">
                   <td class="nums">{{ r.line }}</td>
+                  @if (selfcare()) {
+                    <td class="nums">{{ r.itpoId }}</td>
+                  }
                   <td>{{ r.name || '—' }}</td>
                   <td>{{ r.status === 'active' ? 'Active' : 'Inactive' }}</td>
                   <td>{{ r.problem ?? '' }}</td>
@@ -146,6 +163,8 @@ export class CategoryImportDialogComponent {
 
   protected readonly fileName = signal('');
   protected readonly rows = signal<CategoryCsvRow[]>([]);
+  protected readonly selfcare = signal(false);
+  protected readonly notCategories = signal(0);
   protected readonly error = signal<string | null>(null);
   protected readonly busy = signal(false);
   protected readonly ready = computed(() => importable(this.rows()).length);
@@ -156,11 +175,15 @@ export class CategoryImportDialogComponent {
     this.fileName.set(file.name);
     if (file.size > MAX_BYTES) {
       this.rows.set([]);
+      this.selfcare.set(false);
+      this.notCategories.set(0);
       this.error.set('The file is larger than 1 MB. A categories CSV is far smaller.');
       return;
     }
-    const { rows, error } = readCategoryCsv(await file.text());
+    const { rows, selfcare, notCategories, error } = readCategoryCsv(await file.text());
     this.rows.set(rows);
+    this.selfcare.set(selfcare);
+    this.notCategories.set(notCategories);
     this.error.set(error);
   }
 
