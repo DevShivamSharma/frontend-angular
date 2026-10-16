@@ -137,6 +137,15 @@ describe('importing stalls from a CAD plan', () => {
     expect(by('S').skip).toBe('Has a slanted edge: draw it by hand');
   });
 
+  it('moves the drawing in whole metres, so its grid lines stay on the hall grid', () => {
+    // A stall on a half metre does not move the rest off the grid: it stays on its half metre.
+    const result = drawing([stall('A', rect(0, 0, 3, 3)), stall('B', rect(3, 0, 2.5, 3))]);
+    result.groups[0].usesHalfMetres = true;
+    const o = autoFit(result, ['8'], floor).alignment.offsets['8'];
+    expect(Number.isInteger(o.x)).toBeTrue();
+    expect(Number.isInteger(o.z)).toBeTrue();
+  });
+
   describe('as whole cells', () => {
     it('cuts the corner out of an L', () => {
       const shape = cellShapeOf(L)!;
@@ -278,7 +287,8 @@ describe('importing stalls from a CAD plan', () => {
             {
               code: 'NO_LABEL',
               severity: 'warning',
-              message: 'Named area "HALL MASTER", not a lettered stall; import it only if it should be bookable.',
+              message:
+                'Named area "HALL MASTER", not a lettered stall; import it only if it should be bookable.',
             },
           ],
         }),
@@ -286,6 +296,14 @@ describe('importing stalls from a CAD plan', () => {
       expect(placeStalls(doubted, ['8'], at, floor)[0].skip).toContain('Not a stall');
       const taken = new Map([['A', { dx: 0, dz: 0, isStall: true }]]);
       expect(placeStalls(doubted, ['8'], at, floor, new Set(), taken)[0].skip).toBeNull();
+    });
+
+    it('leaves out an outline the drawing gives no letter, until the review takes it', () => {
+      // "4F-13 (s239)": a block was read near it, but no letter is drawn in it.
+      const bare = drawing([stall('A', rect(0, 0, 3, 2), { name: '08-01 (s1)', letter: null })]);
+      expect(placeStalls(bare, ['8'], at, floor)[0].skip).toBe('No stall letter in the drawing');
+      const taken = new Map([['A', { dx: 0, dz: 0, isStall: true }]]);
+      expect(placeStalls(bare, ['8'], at, floor, new Set(), taken)[0].skip).toBeNull();
     });
   });
 

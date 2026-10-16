@@ -5,13 +5,16 @@ import {
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
+import { TooltipModule } from 'primeng/tooltip';
 import { firstValueFrom } from 'rxjs';
 
 import type { DrawingImportResult } from '../../../core/plans/drawing-import.models';
@@ -25,6 +28,7 @@ import {
   autoNumbers,
   bounds,
   centredAlignment,
+  DRAWING_STEP,
   type FitMethod,
   importNotes,
   isNoOverride,
@@ -68,7 +72,7 @@ const CHECK_ROUNDS = 4;
  */
 @Component({
   selector: 'app-drawing-import-dialog',
-  imports: [DecimalPipe, FormsModule, ButtonModule, CheckboxModule, IconComponent],
+  imports: [DecimalPipe, FormsModule, ButtonModule, CheckboxModule, TooltipModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="dialog-title head">
@@ -115,61 +119,125 @@ const CHECK_ROUNDS = 4;
             </p>
             <div class="grid">
               <div class="col">
-                <!-- A click on a stall picks it to change on its own; on the floor, lets it go. -->
-                <svg
-                  class="preview"
-                  [attr.viewBox]="viewBox()"
-                  preserveAspectRatio="xMidYMid meet"
-                  role="group"
-                  tabindex="0"
-                  [attr.aria-label]="
-                    'The drawing on ' +
-                    hallName() +
-                    '. Pick a stall to move it on its own; arrow keys move it, Escape lets it go.'
-                  "
-                  (click)="pick(null)"
-                  (keydown)="key($event)"
-                >
-                  @for (ring of floorRings(); track $index) {
-                    <polygon class="floor" [attr.points]="ring" />
-                  }
-                  @for (b of blocked(); track $index) {
-                    <rect
-                      class="blocked"
-                      [attr.x]="b.x"
-                      [attr.y]="b.y"
-                      [attr.width]="b.width"
-                      [attr.height]="b.height"
-                    />
-                  }
-                  @for (p of placed(); track p.stall.key) {
-                    <polygon
-                      [attr.points]="pointsOf(p.outline)"
-                      [class]="'stall ' + stateOf(p)"
-                      [class.picked]="picked() === p.stall.key"
-                      [class.changed]="overrides().has(p.stall.key)"
-                      role="button"
-                      tabindex="-1"
-                      [attr.aria-label]="p.stall.name"
-                      [attr.aria-pressed]="picked() === p.stall.key"
-                      (click)="pick(p.stall.key); $event.stopPropagation()"
+                <!-- A click on a stall picks it to change on its own; on the floor, lets it go.
+                     The wheel zooms, a drag moves the view. -->
+                <div class="stage">
+                  <svg
+                    #preview
+                    class="preview"
+                    [class.dragging]="dragging()"
+                    [attr.viewBox]="viewBox()"
+                    preserveAspectRatio="xMidYMid meet"
+                    role="group"
+                    tabindex="0"
+                    [attr.aria-label]="
+                      'The drawing on ' +
+                      hallName() +
+                      '. Pick a stall to move it on its own; arrow keys move it, Escape lets it go.'
+                    "
+                    (click)="tap(null)"
+                    (keydown)="key($event)"
+                    (wheel)="wheel($event)"
+                    (pointerdown)="dragStart($event)"
+                    (pointermove)="dragMove($event)"
+                    (pointerup)="dragEnd($event)"
+                    (pointercancel)="dragEnd($event)"
+                  >
+                    <defs>
+                      <!-- The hall's 1 m grid (5 m lines stronger), on whole metres as in the planner. -->
+                      <pattern
+                        id="drawing-import-grid"
+                        width="5"
+                        height="5"
+                        patternUnits="userSpaceOnUse"
+                      >
+                        <path
+                          class="grid-line"
+                          d="M 1 0 V 5 M 2 0 V 5 M 3 0 V 5 M 4 0 V 5 M 0 1 H 5 M 0 2 H 5 M 0 3 H 5 M 0 4 H 5"
+                        />
+                        <path class="grid-major" d="M 5 0 H 0 V 5" />
+                      </pattern>
+                    </defs>
+                    @for (ring of floorRings(); track $index) {
+                      <polygon class="floor" [attr.points]="ring" />
+                      <polygon class="floor-grid" [attr.points]="ring" />
+                    }
+                    @for (b of blocked(); track $index) {
+                      <rect
+                        class="blocked"
+                        [attr.x]="b.x"
+                        [attr.y]="b.y"
+                        [attr.width]="b.width"
+                        [attr.height]="b.height"
+                      />
+                    }
+                    @for (p of placed(); track p.stall.key) {
+                      <polygon
+                        [attr.points]="pointsOf(p.outline)"
+                        [class]="'stall ' + stateOf(p)"
+                        [class.picked]="picked() === p.stall.key"
+                        [class.changed]="overrides().has(p.stall.key)"
+                        role="button"
+                        tabindex="-1"
+                        [attr.aria-label]="p.stall.name"
+                        [attr.aria-pressed]="picked() === p.stall.key"
+                        (click)="tap(p.stall.key); $event.stopPropagation()"
+                      >
+                        <title>
+                          {{ p.stall.name }}{{ whyOf(p).length ? ' — ' + whyOf(p).join(' ') : '' }}
+                        </title>
+                      </polygon>
+                    }
+                    @if (pickedStall(); as p) {
+                      <text
+                        class="tag"
+                        [attr.x]="tagAt(p.outline).x"
+                        [attr.y]="tagAt(p.outline).z"
+                        [attr.font-size]="tagSize()"
+                      >
+                        {{ p.stall.name }}
+                      </text>
+                    }
+                  </svg>
+                  <span class="zoom" role="group" aria-label="Zoom the drawing">
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [text]="true"
+                      (click)="zoomBy(1.25)"
+                      [disabled]="zoom() >= MAX_ZOOM"
+                      aria-label="Zoom in"
+                      pTooltip="Zoom in"
                     >
-                      <title>
-                        {{ p.stall.name }}{{ whyOf(p).length ? ' — ' + whyOf(p).join(' ') : '' }}
-                      </title>
-                    </polygon>
-                  }
-                  @if (pickedStall(); as p) {
-                    <text
-                      class="tag"
-                      [attr.x]="tagAt(p.outline).x"
-                      [attr.y]="tagAt(p.outline).z"
-                      [attr.font-size]="tagSize()"
+                      <app-icon name="zoom_in" />
+                    </button>
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [text]="true"
+                      (click)="zoomBy(0.8)"
+                      [disabled]="zoom() <= 1"
+                      aria-label="Zoom out"
+                      pTooltip="Zoom out"
                     >
-                      {{ p.stall.name }}
-                    </text>
-                  }
-                </svg>
+                      <app-icon name="zoom_out" />
+                    </button>
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [text]="true"
+                      (click)="resetView()"
+                      [disabled]="zoom() === 1"
+                      aria-label="Show the whole hall"
+                      pTooltip="Show the whole hall"
+                    >
+                      <app-icon name="fit_screen" />
+                    </button>
+                  </span>
+                </div>
                 @if (pickedStall(); as p) {
                   <section class="one" [attr.aria-label]="'Change ' + p.stall.name + ' on its own'">
                     <header class="one-head">
@@ -360,13 +428,19 @@ const CHECK_ROUNDS = 4;
                   >
                     <app-icon name="rotate" />Turn
                   </button>
-                  <span class="pad" role="group" aria-label="Move the drawing half a metre">
+                  <span
+                    class="pad"
+                    role="group"
+                    [attr.aria-label]="
+                      'Move the drawing ' + (step() === 1 ? 'a metre' : 'half a metre')
+                    "
+                  >
                     <button
                       pButton
                       type="button"
                       size="small"
                       [text]="true"
-                      (click)="move(0, -0.5)"
+                      (click)="move(0, -step())"
                       aria-label="Move up"
                     >
                       <app-icon name="arrow_upward" />
@@ -376,7 +450,7 @@ const CHECK_ROUNDS = 4;
                       type="button"
                       size="small"
                       [text]="true"
-                      (click)="move(-0.5, 0)"
+                      (click)="move(-step(), 0)"
                       aria-label="Move left"
                     >
                       <app-icon name="arrow_back" />
@@ -386,7 +460,7 @@ const CHECK_ROUNDS = 4;
                       type="button"
                       size="small"
                       [text]="true"
-                      (click)="move(0.5, 0)"
+                      (click)="move(step(), 0)"
                       aria-label="Move right"
                     >
                       <app-icon name="arrow_forward" />
@@ -396,7 +470,7 @@ const CHECK_ROUNDS = 4;
                       type="button"
                       size="small"
                       [text]="true"
-                      (click)="move(0, 0.5)"
+                      (click)="move(0, step())"
                       aria-label="Move down"
                     >
                       <app-icon name="arrow_downward" />
@@ -571,6 +645,22 @@ const CHECK_ROUNDS = 4;
       align-content: start;
       min-width: 0;
     }
+    .stage {
+      position: relative;
+    }
+    .zoom {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 8px;
+      background: var(--app-surface);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+    }
+    .preview.dragging {
+      cursor: grabbing;
+    }
     .preview {
       width: 100%;
       aspect-ratio: 4 / 3;
@@ -587,21 +677,38 @@ const CHECK_ROUNDS = 4;
       fill: light-dark(#fecaca, #7f1d1d);
       opacity: 0.6;
     }
-    .stall {
+    .floor-grid {
+      fill: url(#drawing-import-grid);
+      pointer-events: none;
+    }
+    .grid-line {
+      fill: none;
+      stroke: light-dark(#94a3b8, #64748b);
+      stroke-width: 0.06;
+    }
+    /* Every 5 m a stronger line, to count metres while the drawing is moved. */
+    .grid-major {
+      fill: none;
+      stroke: light-dark(#64748b, #94a3b8);
       stroke-width: 0.12;
     }
+    /* Outlines only: the grid stays visible under the stalls while the drawing is moved. */
+    .stall {
+      fill: transparent;
+      stroke-width: 0.18;
+    }
     .stall.ok {
-      fill: #86efac;
       stroke: #16a34a;
     }
     .stall.hand {
-      fill: light-dark(#e2e8f0, #334155);
       stroke: #64748b;
       stroke-dasharray: 0.4 0.3;
     }
+    /* A stall with a problem stands out whole, not as an outline. */
     .stall.bad {
-      fill: #fca5a5;
-      stroke: #dc2626;
+      fill: #991b1b;
+      fill-opacity: 0.85;
+      stroke: #7f1d1d;
     }
     .stall.out {
       fill: transparent;
@@ -617,6 +724,8 @@ const CHECK_ROUNDS = 4;
     .stall.picked {
       stroke: var(--app-primary);
       stroke-width: 0.35;
+      fill: var(--app-primary);
+      fill-opacity: 0.12;
     }
     .preview:focus-visible {
       outline: 2px solid var(--app-primary);
@@ -738,20 +847,18 @@ const CHECK_ROUNDS = 4;
       width: 12px;
       height: 12px;
       border-radius: 3px;
-      border: 1px solid;
+      border: 2px solid;
     }
     .key.ok {
-      background: #86efac;
       border-color: #16a34a;
     }
     .key.hand {
-      background: light-dark(#e2e8f0, #334155);
       border-color: #64748b;
       border-style: dashed;
     }
     .key.bad {
-      background: #fca5a5;
-      border-color: #dc2626;
+      background: #991b1b;
+      border-color: #7f1d1d;
     }
     details summary {
       cursor: pointer;
@@ -799,6 +906,8 @@ export class DrawingImportDialogComponent {
 
   protected readonly hallName = computed(() => this.store.view()?.hall.hall.name ?? 'this hall');
   private readonly floor = computed(() => this.store.floor());
+  /** The nudge moves by the drawing's step, so its grid stays on the hall's. */
+  protected readonly step = signal(DRAWING_STEP);
 
   protected readonly otherHalls = computed(() => {
     const r = this.result();
@@ -912,13 +1021,14 @@ export class DrawingImportDialogComponent {
     (this.floor()?.floor ?? []).map((poly) => poly[0].map((p) => p.join(',')).join(' ')),
   );
   protected readonly blocked = computed(() => this.floor()?.blocked ?? []);
-  protected readonly viewBox = computed(() => {
+  /** The whole drawing on the hall; the view zooms and pans within it. */
+  private readonly fullBox = computed(() => {
     const f = this.floor();
     const pts = [
       ...(f?.floor ?? []).flatMap((poly) => poly[0]),
       ...this.placed().flatMap((p) => p.outline.map((q) => [q.x, q.z] as [number, number])),
     ];
-    if (!pts.length) return '0 0 10 10';
+    if (!pts.length) return [0, 0, 10, 10];
     const xs = pts.map((p) => p[0]);
     const ys = pts.map((p) => p[1]);
     const [minX, maxX, minY, maxY] = [
@@ -928,8 +1038,103 @@ export class DrawingImportDialogComponent {
       Math.max(...ys),
     ];
     const pad = Math.max(maxX - minX, maxY - minY) * 0.03;
-    return `${minX - pad} ${minY - pad} ${maxX - minX + 2 * pad} ${maxY - minY + 2 * pad}`;
+    return [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad];
   });
+
+  // ---- zoom and drag ---------------------------------------------------------------------
+
+  protected readonly MAX_ZOOM = 12;
+  /** 1 shows the whole drawing; more zooms in. */
+  protected readonly zoom = signal(1);
+  /** The view's centre from the drawing's centre, metres. */
+  private readonly pan = signal({ x: 0, y: 0 });
+  protected readonly dragging = signal(false);
+  private readonly previewEl = viewChild<ElementRef<SVGSVGElement>>('preview');
+  private drag: { id: number; x: number; y: number; pan: { x: number; y: number } } | null = null;
+  /** A drag just ended: its click neither picks nor lets go a stall. */
+  private dragged = false;
+
+  protected readonly viewBox = computed(() => {
+    const [x, y, w, h] = this.fullBox();
+    const z = this.zoom();
+    const { x: px, y: py } = this.pan();
+    const [vw, vh] = [w / z, h / z];
+    return `${x + w / 2 + px - vw / 2} ${y + h / 2 + py - vh / 2} ${vw} ${vh}`;
+  });
+
+  /** Zooms by a factor about a point of the drawing (the view's centre by default). */
+  protected zoomBy(factor: number, at?: { x: number; y: number }): void {
+    const before = this.zoom();
+    const z = Math.min(this.MAX_ZOOM, Math.max(1, before * factor));
+    if (z === before) return;
+    if (z === 1) {
+      this.resetView();
+      return;
+    }
+    const [x, y, w, h] = this.fullBox();
+    const { x: px, y: py } = this.pan();
+    // The point under the cursor stays under it.
+    const [cx, cy] = [x + w / 2 + px, y + h / 2 + py];
+    const [ax, ay] = at ? [at.x, at.y] : [cx, cy];
+    const k = before / z;
+    this.pan.set({ x: ax + (cx - ax) * k - (x + w / 2), y: ay + (cy - ay) * k - (y + h / 2) });
+    this.zoom.set(z);
+  }
+
+  protected resetView(): void {
+    this.zoom.set(1);
+    this.pan.set({ x: 0, y: 0 });
+  }
+
+  protected wheel(e: WheelEvent): void {
+    e.preventDefault();
+    this.zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15, this.toDrawing(e.clientX, e.clientY) ?? undefined);
+  }
+
+  protected dragStart(e: PointerEvent): void {
+    if (e.button !== 0) return;
+    this.dragged = false;
+    this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, pan: this.pan() };
+  }
+
+  protected dragMove(e: PointerEvent): void {
+    const d = this.drag;
+    const svg = this.previewEl()?.nativeElement;
+    const ctm = svg?.getScreenCTM();
+    if (!d || d.id !== e.pointerId || !svg || !ctm) return;
+    const [dx, dy] = [e.clientX - d.x, e.clientY - d.y];
+    // A few pixels are a click, not a drag.
+    if (!this.dragging() && Math.hypot(dx, dy) < 4) return;
+    if (!this.dragging()) {
+      this.dragging.set(true);
+      svg.setPointerCapture(e.pointerId);
+    }
+    this.pan.set({ x: d.pan.x - dx / ctm.a, y: d.pan.y - dy / ctm.d });
+  }
+
+  protected dragEnd(e: PointerEvent): void {
+    if (!this.drag || this.drag.id !== e.pointerId) return;
+    this.dragged = this.dragging();
+    this.drag = null;
+    this.dragging.set(false);
+  }
+
+  /** A click on a stall or the floor, unless it ended a drag. */
+  protected tap(key: string | null): void {
+    if (this.dragged) {
+      this.dragged = false;
+      return;
+    }
+    this.pick(key);
+  }
+
+  /** A point of the screen in drawing metres. */
+  private toDrawing(clientX: number, clientY: number): { x: number; y: number } | null {
+    const ctm = this.previewEl()?.nativeElement.getScreenCTM();
+    if (!ctm) return null;
+    const p = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  }
 
   constructor() {
     void this.read();

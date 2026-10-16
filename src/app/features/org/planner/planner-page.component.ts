@@ -100,6 +100,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { RowData, RowDialogComponent } from './row-dialog.component';
 import { ScaleData, ScaleDialogComponent } from './scale-dialog.component';
 import { SeatsData, SeatsDialogComponent } from './seats-dialog.component';
+import { SelfcareSendData, SelfcareSendDialogComponent } from './selfcare-send-dialog.component';
 import { cellCounts, cleanCutCells, stallArea } from '../../../core/plans/stall-cells';
 
 /** Colours of categories on the plan, in the order the hall lists them. */
@@ -749,6 +750,7 @@ const OBJECT_COLOR = '#334155';
                 [eventId]="eventId()"
                 [hallId]="hallId()"
                 [revision]="p.revision"
+                [refresh]="deliveryRefresh()"
               />
             }
           </div>
@@ -1731,6 +1733,8 @@ export class PlannerPageComponent {
   protected readonly store = inject(PlannerStore);
   private readonly api = inject(PlansApi);
   private readonly dialog = inject(AppDialog);
+  /** Bumped when the SelfCare dialog closes, so the push status next to Publish reads again. */
+  protected readonly deliveryRefresh = signal(0);
   private readonly rulesApi = inject(RulesApi);
   /** Labels of the rules, loaded once; null when they could not be. */
   private rulesCatalogue: Promise<RuleCatalogue | null> | null = null;
@@ -2768,14 +2772,37 @@ export class PlannerPageComponent {
 
   protected async publish(): Promise<void> {
     const p = this.store.published();
+    // An internal event that sells through SelfCare gets the plan sent there on publish.
+    const deliveries = await firstValueFrom(
+      this.api.deliveries(this.slug(), this.eventId(), this.hallId()),
+    ).catch(() => null);
+    const toSelfcare = !!deliveries?.pushes && !deliveries.reason;
     const ok = await this.confirm.confirm({
-      title: 'Publish the stall plan?',
-      message: p
-        ? `Version ${this.store.revision()} replaces version ${p.revision} as the published plan of this hall.`
-        : `Version ${this.store.revision()} becomes the published plan of this hall. You can keep drawing and publish again later.`,
-      confirmLabel: 'Publish',
+      title: toSelfcare ? 'Publish and send to SelfCare?' : 'Publish the stall plan?',
+      message:
+        (p
+          ? `Version ${this.store.revision()} replaces version ${p.revision} as the published plan of this hall.`
+          : `Version ${this.store.revision()} becomes the published plan of this hall. You can keep drawing and publish again later.`) +
+        (toSelfcare
+          ? ' It is then sent to SelfCare, which replaces this hall’s stalls there; you see it go.'
+          : ''),
+      confirmLabel: toSelfcare ? 'Publish and send' : 'Publish',
     });
-    if (ok) await this.store.publish();
+    if (!ok || !(await this.store.publish()) || !toSelfcare) return;
+    const revision = this.store.published()?.revision;
+    if (revision == null) return;
+    this.dialog
+      .open(SelfcareSendDialogComponent, {
+        data: {
+          slug: this.slug(),
+          eventId: this.eventId(),
+          hallId: this.hallId(),
+          revision,
+        } satisfies SelfcareSendData,
+        dismissable: false,
+      })
+      // The status next to Publish reads the push again, as the dialog may have resent it.
+      .subscribe(() => this.deliveryRefresh.update((n) => n + 1));
   }
 
   /** The hall's rate card and stall prices; can pick the stalls without a price on the plan. */

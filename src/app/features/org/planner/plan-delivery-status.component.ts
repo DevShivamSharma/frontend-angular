@@ -80,18 +80,20 @@ const WARNINGS: Record<string, string> = {
                 tooltipPosition="bottom"
                 >Not sent: {{ d.lastError ?? 'it failed' }}</span
               >
-              @if (v.canResend) {
-                <button
-                  pButton
-                  type="button"
-                  size="small"
-                  [text]="true"
-                  (click)="resend(d)"
-                  [disabled]="busy()"
-                >
-                  Resend
-                </button>
-              }
+            }
+            @if (v.canResend) {
+              <button
+                pButton
+                type="button"
+                size="small"
+                [text]="true"
+                (click)="resend(d)"
+                [disabled]="busy()"
+                pTooltip="Sends the published plan to SelfCare again; it replaces the hall's stalls there."
+                tooltipPosition="bottom"
+              >
+                Resend to SelfCare
+              </button>
             }
           } @else {
             <span
@@ -124,6 +126,8 @@ export class PlanDeliveryStatusComponent {
   readonly hallId = input.required<string>();
   /** The published revision; a change fetches the status again. */
   readonly revision = input<number | null>(null);
+  /** A change fetches the status again: the page's SelfCare dialog may have resent it. */
+  readonly refresh = input(0);
 
   private readonly api = inject(PlansApi);
   private readonly confirm = inject(ConfirmService);
@@ -138,8 +142,9 @@ export class PlanDeliveryStatusComponent {
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stopTimer());
     effect(() => {
-      // Reads all four inputs, so a change in any of them loads again.
+      // Reads all five inputs, so a change in any of them loads again.
       this.revision();
+      this.refresh();
       void this.load(this.slug(), this.eventId(), this.hallId());
     });
   }
@@ -199,7 +204,7 @@ export class PlanDeliveryStatusComponent {
   protected async resend(delivery: PlanDeliveryView): Promise<void> {
     const confirmed = await this.confirm.confirm({
       title: 'Send again?',
-      message: `Send version ${delivery.revision} to SelfCare again? It goes as a new delivery.`,
+      message: `Send version ${delivery.revision} to SelfCare again? It goes as a new delivery, and SelfCare replaces this hall's stalls with it.`,
       confirmLabel: 'Send again',
     });
     if (!confirmed) return;

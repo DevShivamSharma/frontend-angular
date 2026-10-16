@@ -67,11 +67,21 @@ export function matchGroups(
 
 export const round05 = (v: number): number => Math.round(v * 2) / 2;
 
-/** Each group's grid origin in the frame of `groups[0]`, metres, on the half-metre grid. */
+/**
+ * The step the drawing is moved in, metres. Its stalls are in metres of its own grid, so whole
+ * metres keep its grid lines on the hall's 1 m grid: a stall drawn on a grid line stays on one,
+ * and one drawn on a half metre stays on that half metre, as in the drawing.
+ */
+export const DRAWING_STEP = 1;
+
+const roundTo = (v: number, step: number): number => clean(Math.round(v / step) * step);
+
+/** Each group's grid origin in the frame of `groups[0]`, metres, on the drawing's grid. */
 export function frameOffsets(
   result: DrawingImportResult,
   groups: ReadonlyArray<string>,
 ): Record<string, DrawingPoint> {
+  const step = DRAWING_STEP;
   const cal = new Map(result.groups.map((g) => [g.group, g]));
   const ref = cal.get(groups[0]);
   const out: Record<string, DrawingPoint> = {};
@@ -80,8 +90,8 @@ export function frameOffsets(
     out[g] =
       ref && c
         ? {
-            x: round05((c.originX - ref.originX) / ref.pitchX),
-            z: round05((c.originY - ref.originY) / ref.pitchY),
+            x: roundTo((c.originX - ref.originX) / ref.pitchX, step),
+            z: roundTo((c.originY - ref.originY) / ref.pitchY, step),
           }
         : { x: 0, z: 0 };
   }
@@ -131,8 +141,9 @@ export function centredAlignment(
   if (!pts.length) return { rotation, offsets: turned };
   const hb = floorBounds(floor);
   const sb = bounds(pts);
-  const dx = round05((hb.minX + hb.maxX) / 2 - (sb.minX + sb.maxX) / 2);
-  const dz = round05((hb.minZ + hb.maxZ) / 2 - (sb.minZ + sb.maxZ) / 2);
+  const step = DRAWING_STEP;
+  const dx = roundTo((hb.minX + hb.maxX) / 2 - (sb.minX + sb.maxX) / 2, step);
+  const dz = roundTo((hb.minZ + hb.maxZ) / 2 - (sb.minZ + sb.maxZ) / 2, step);
   return {
     rotation,
     offsets: Object.fromEntries(
@@ -192,6 +203,7 @@ export function registeredAlignment(
   // One page, one scale: the halls of the drawing keep their places to each other, and are
   // laid on the floor together, as one.
   const frame = frameOffsets(result, groups);
+  const step = DRAWING_STEP;
   for (const rotation of [0, 180, 90, 270] as QuarterTurn[]) {
     const placed = groups.flatMap((g) => {
       const at = turn(frame[g], rotation);
@@ -216,8 +228,8 @@ export function registeredAlignment(
         Math.abs(f.maxZ - f.minZ - (box.maxZ - box.minZ)) <= SAME_SIZE,
     );
     const found = hall
-      ? searchAround({ x: hall.minX - box.minX, z: hall.minZ - box.minZ }, SEARCH, score)
-      : searchWithin(box, mask.box, cells, score);
+      ? searchAround({ x: hall.minX - box.minX, z: hall.minZ - box.minZ }, SEARCH, step, score)
+      : searchWithin(box, mask.box, cells, step, score);
     if (!found || found.score < cells.length * (2 * ON_FLOOR - 1)) continue;
     // The page's halls are drawn apart, each on its own walls, and their distances to each
     // other come to the half metre: each settles on its walls, near where the drawing puts it.
@@ -230,7 +242,7 @@ export function registeredAlignment(
       const start = { x: found.d.x + at.x, z: found.d.z + at.z };
       const settled =
         groups.length > 1
-          ? searchAround(start, SEARCH, (d) => {
+          ? searchAround(start, SEARCH, step, (d) => {
               let n = 0;
               for (const c of own) n += mask.free({ x: c.x + d.x, z: c.z + d.z }) ? 1 : -1;
               return n;
@@ -243,15 +255,17 @@ export function registeredAlignment(
   return null;
 }
 
-/** The best shift within `reach` of a start, in half metres; ties go to the nearest. */
+/** The best shift within `reach` of a start, on the drawing's step; ties go to the nearest. */
 function searchAround(
-  start: DrawingPoint,
+  from: DrawingPoint,
   reach: number,
+  step: number,
   score: (d: DrawingPoint) => number,
 ): { d: DrawingPoint; score: number } {
+  const start = { x: roundTo(from.x, step), z: roundTo(from.z, step) };
   let best = { d: start, score: -Infinity };
-  for (let dx = -reach; dx <= reach; dx += CELL) {
-    for (let dz = -reach; dz <= reach; dz += CELL) {
+  for (let dx = -reach; dx <= reach; dx += step) {
+    for (let dz = -reach; dz <= reach; dz += step) {
       const d = { x: start.x + dx, z: start.z + dz };
       const s = score(d);
       if (
@@ -268,12 +282,13 @@ function searchAround(
 
 /**
  * The best shift that keeps the drawing's grid and the hall's extent within each other: whole
- * metres on a sample of its cells first, then half metres around the best on all of them.
+ * metres on a sample of its cells first, then the drawing's step around the best on all of them.
  */
 function searchWithin(
   box: Box,
   hall: Box,
   cells: DrawingPoint[],
+  step: number,
   score: (d: DrawingPoint, sample?: DrawingPoint[]) => number,
 ): { d: DrawingPoint; score: number } {
   // The grid may reach a little past the hall's outline (over its walls); the score counts
@@ -294,7 +309,7 @@ function searchWithin(
       if (s > coarse.score) coarse = { d: { x: dx, z: dz }, score: s };
     }
   }
-  return searchAround(coarse.d, 1, (d) => score(d));
+  return searchAround(coarse.d, 1, step, (d) => score(d));
 }
 
 // --- auto-fit ------------------------------------------------------------------------------------
@@ -408,6 +423,7 @@ export function autoFit(
   rotations: ReadonlyArray<QuarterTurn> = [0, 90, 180, 270],
 ): FitResult {
   const chosen = result.stalls.filter((s) => groups.includes(s.group));
+  const step = DRAWING_STEP;
   const registered = registeredAlignment(result, groups, floor);
   if (registered) {
     return {
@@ -431,7 +447,7 @@ export function autoFit(
         .filter((s) => s.group === g)
         .map((s) => ring(s.outline).map((p) => turn(p, rotation)));
       if (!shapes.length) continue;
-      const found = searchShift(shapes, mask, start.offsets[g]);
+      const found = searchShift(shapes, mask, start.offsets[g], step);
       offsets[g] = found.shift;
       total += found.score;
       for (const outline of shapes) {
@@ -460,6 +476,7 @@ function searchShift(
   shapes: DrawingPoint[][],
   mask: FloorMask,
   preferred: DrawingPoint,
+  step: number,
 ): { shift: DrawingPoint; score: number } {
   const sb = bounds(shapes.flat());
   const hb = mask.box;
@@ -488,11 +505,11 @@ function searchShift(
       }
     }
   }
-  // Fine: half metres around it, every cell of every stall.
+  // Fine: the drawing's step around it, every cell of every stall.
   const c = bestD;
   bestS = -1;
-  for (let dx = c.x - 1; dx <= c.x + 1; dx += CELL) {
-    for (let dz = c.z - 1; dz <= c.z + 1; dz += CELL) {
+  for (let dx = c.x - 1; dx <= c.x + 1; dx += step) {
+    for (let dz = c.z - 1; dz <= c.z + 1; dz += step) {
       const s = score(dx, dz, true);
       if (better(s, { x: dx, z: dz }, bestS, bestD)) {
         bestS = s;
@@ -549,29 +566,31 @@ export function placeStalls(
         : notStall
           ? notStall
           : !rect
-              ? 'Has a slanted edge: draw it by hand'
-              : !onFloor
-                ? 'Off the hall floor: on a wall or outside the hall'
-                : null;
+            ? 'Has a slanted edge: draw it by hand'
+            : !onFloor
+              ? 'Off the hall floor: on a wall or outside the hall'
+              : null;
       return { stall, outline, rect, cutCells: shape?.cutCells ?? [], onFloor, skip };
     });
 }
 
 /**
  * Why an outline of the drawing is no stall, or null: a named area ("HALL MASTER") or a kiosk
- * (an ATM) the server left out of the import. A bare outline with no letter in it is a stall:
- * it comes in numbered by `autoNumbers`.
+ * (an ATM) the server left out of the import, or an outline the drawing gives no stall letter.
+ * Nothing is assumed for such an outline: it comes in only once the review takes it as a stall.
  */
 export function notAStall(
   stall: Pick<DrawingStall, 'include' | 'letter' | 'issues'>,
 ): string | null {
-  if (stall.include) return null;
-  const why = stall.issues.find(
-    (i) =>
-      i.code === 'KIOSK' ||
-      (i.code === 'NO_LABEL' && !stall.letter && i.message.startsWith('Named area')),
-  );
-  return why ? `Not a stall: ${why.message}` : null;
+  const why = stall.include
+    ? null
+    : stall.issues.find(
+        (i) =>
+          i.code === 'KIOSK' ||
+          (i.code === 'NO_LABEL' && !stall.letter && i.message.startsWith('Named area')),
+      );
+  if (why) return `Not a stall: ${why.message}`;
+  return stall.letter ? null : 'No stall letter in the drawing';
 }
 
 /**
