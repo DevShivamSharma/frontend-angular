@@ -313,6 +313,28 @@ for x in [19.05,20.15]:
     box('G9 floodlight head',gate(x,-2.35,9.45),(.42,.26,.3),M['dark'],ga)
     box('G9 floodlight diffuser',gate(x,-2.52,9.45),(.36,.03,.24),M['flood'],ga)
     LIGHTS.append({'kind':'flood','position':[*gs(x,-2.6),9.4],'aim':[*gs(x,-14),.3]})
+# Boundary either side of the entrance (photo 20261015_104444): left, a cream
+# plastered wall with black railings on top and a hedge along the road; right,
+# the picket fence continues past the mast, then a taller solid wall. The site
+# layer's own perimeter wall is clipped within 24 m of the gate, so these run
+# from the gate furniture out to 60 m. Heights are estimated.
+EVIDENCE='Photo 20261015_104444 (boundary either side of the gate); lengths and heights estimated'
+M['plaster']=mat('cream boundary plaster',(.66,.62,.52),.85)
+M['greywall']=mat('grey boundary wall',(.36,.35,.32),.85)
+def wall_run(a0,a1,height,material,depth=.3,base=.24):
+    centre=(a0+a1)/2
+    box('G9 boundary wall',gate(centre,.45,base+height/2),(abs(a1-a0),depth,height),material,ga)
+wall_run(-60,-19.2,1.5,M['plaster'])
+for x in np.arange(-59.8,-19.2,.18):beam('G9 boundary railing bar',gate(x,.45,1.74),gate(x,.45,2.6),.035,M['dark'])
+for h in [1.8,2.55]:beam('G9 boundary railing rail',gate(-60,.45,h),gate(-19.2,.45,h),.055,M['dark'])
+for x in np.arange(-60,-19,8):beam('G9 boundary railing post',gate(x,.45,1.74),gate(x,.45,2.65),.07,M['dark'])
+box('G9 boundary hedge',gate(-39.75,-1.3,.74),(40.5,.9,1.0),M['hedge'],ga)
+beam('G9 boundary base',gate(19,.45,.57),gate(27,.45,.57),.5,M['red'],.65)
+for x in np.arange(19,27,.2):beam('G9 fixed fence bar',gate(x,.45,.8),gate(x,.45,3.1),.045,M['dark'])
+for h in [1.1,2.85]:beam('G9 fixed fence rail',gate(19,.45,h),gate(27,.45,h),.065,M['dark'])
+wall_run(27,60,2.8,M['greywall'],.35)
+box('G9 boundary wall coping',gate(43.5,.45,3.12),(33,.45,.1),M['plaster'],ga)
+EVIDENCE='Photos 1,2,4,5,6; scale and hidden geometry estimated'
 
 # Checking room: user-supplied Gate 9 crop (2026-10-14). Brown ribbed
 # cladding, shallow gable, ivory window trim and security grille are observed;
@@ -491,6 +513,7 @@ def tree(s,t,h=7):
         beam('G9 tree branch',V(s,t,h*.6),end,.09,M['trunk'])
         o=bpy.data.objects.new('G9 leaf_canopy tree',crown);collection.objects.link(o);created.append(o);o.location=end;o.rotation_euler.z=random.random()*math.tau
 for p,d in samples(approach[12:-3],13):
+    if near_gate(p): continue   # the forecourt is open asphalt up to the boundary walls
     n=Vector((-d.y,d.x))
     for sign in [-1,1]:tree(*(p+n*sign*15),random.uniform(6.2,8.3))
 for s,t in [(-512,-401),(-520,-392),(-502,-412),(-505,-362),(-481,-381.5),(-409,-381.5),(-398,-382),(-376,-411)]:tree(s,t,random.uniform(5.5,7))

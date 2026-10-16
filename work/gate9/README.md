@@ -16,6 +16,10 @@ same walk at dusk with the lamps on. `scripts/build-gate9.py` now also builds:
   outside: cabin left of the vehicle gate, which supersedes the 14 October
   "right side" placement), two striped boom barriers (`GATE9_barrier_arm_*`,
   hinged objects the viewer raises), a floodlight mast and a wide asphalt forecourt.
+- **Boundary** — either side of the entrance out to 60 m: left, a cream plastered
+  wall with black railings on top and a hedge along the road; right, the picket
+  fence continues past the mast, then a taller grey wall. The forecourt keeps no
+  trees. (The site layer's own perimeter wall is clipped within 24 m of the gate.)
 - **Kiosk island** — the lane widens round a red-sandstone kiosk with glazing, CCTV
   and the blue direction board (text transcribed from `20261015_104147`); hydrant
   cabinets; clipped hedges behind the strappy beds; a twin-arm lamp on the bend.
