@@ -86,8 +86,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = .085;
-        controls.maxPolarAngle = Math.PI * .46;
-        controls.minDistance = 32;
+        // Near-horizontal tilt and close orbiting are allowed in venue mode too,
+        // so a viewer can drop to eye level at any spot without the walk mode.
+        controls.maxPolarAngle = Math.PI * .49;
+        controls.minDistance = 6;
         controls.maxDistance = 5e7;
         controls.zoomSpeed = .9;
         controls.panSpeed = .7;
@@ -229,8 +231,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         function view(id:string) {
             pendingInterior=undefined;
             visitor?.stop();
-            interiors?.leave();controls.enabled=true;controls.minDistance=32;
-            controls.maxPolarAngle = Math.PI * .46;
+            interiors?.leave();controls.enabled=true;controls.minDistance=6;
+            controls.maxPolarAngle = Math.PI * .49;
             resetLevel();highlight(id);const v=views[id];if(!v)return;
             const target=W(...v.t),eye=W(...v.p);
             const radius=v.radius ?? (({overview:490,cc:110,hall1:70,hall14:70,hall6:86,hall11:74,hall12A:74,hall12:56,fountain:72} as Record<string,number>)[id]||62);

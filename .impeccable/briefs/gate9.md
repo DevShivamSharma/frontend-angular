@@ -30,7 +30,15 @@ toggle (vertex-shader streaks round the camera, wet darker/polished ground, grey
 haze, an overcast bake of the day/night sky in `venue-sky.ts`). Three Gate 9 guards
 come from the asset's `guards` list through `venue-security-guards.ts`.
 
-Verification: `tsc` and browser captures of the approach, kiosk, drop-off, parking,
-walkway, night and rain views. No test cases, no survey accuracy claim.
+Follow-ups the same day: the boom arms are excluded from the triangle collider
+like the leaves (the raised right arm had stopped the walking visitor just inside
+the gate); night lighting keeps a fixed pool of 6 spot + 3 point lights that follow
+the camera, so shaders compile once; boundary walls run either side of the
+entrance out to 60 m (left cream wall with railings and hedge, right fence then grey
+wall) and the forecourt keeps no trees.
+
+Verification: `tsc`, `npm run build`, and browser captures of the approach, kiosk,
+drop-off, parking, walkway, night and rain views plus a visitor walk through the
+gate. No test cases, no survey accuracy claim.
 
 No test cases. Compile/build and static visual comparisons only. Final evidence covers desktop approach, gate close-up, interior lane and canopy, mobile, and the user's 676 px viewport. The finish reviewer accepted the bounded canopy-overlap correction: the cream shelter, fence and court read separately, with the office/lane intact. This verdict does not certify survey accuracy, navigation or performance. See `work/gate9/verification.md` for evidence and limits. Preserve root DESIGN.md: this is a local scene extension, not a UI redesign.

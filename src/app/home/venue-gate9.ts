@@ -55,7 +55,12 @@ export async function prepareGate9(root: T.Group, asset: (path: string) => strin
       arms.push({ object, rest, raised: new T.Quaternion().setFromAxisAngle(axis, sense * BARRIER_LIFT).multiply(rest) });
     }
     if (object instanceof T.Mesh) {
-      object.userData['destinationId'] = 'gate9';
+      // Only the entrance itself answers to "Gate 9" (click target and the menu
+      // highlight tint). The lane, parking and office-front detail further in
+      // would otherwise take the tint too, which reads as cyan on cream fabric.
+      const centre = new T.Box3().setFromObject(object).getCenter(new T.Vector3());
+      if (Math.hypot(centre.x - registration.gateCenter[0], centre.z - registration.gateCenter[2]) < 45)
+        object.userData['destinationId'] = 'gate9';
       for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
         material.side = T.DoubleSide;
       }

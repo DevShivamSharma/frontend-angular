@@ -34,8 +34,9 @@ export function prepareVenueRoadFinish(root: T.Group): void {
     const next = materials.map(material => {
       if (!(material instanceof T.MeshStandardMaterial)) return material;
       const road = material.userData['architecturalCategory'] === 'road' || /asphalt/i.test(material.name);
-      // Gate 9's authored concrete driving lane is distinct from its footpaths.
-      const gateLane = /^SITE_GROUND_gate9[ _]03[ _]Interior[ _]lanes/.test(object.name) &&
+      // Gate 9's authored concrete driving lane (and the widened kiosk fork) is
+      // distinct from its footpaths, walkway deck and parking deck.
+      const gateLane = /^SITE_GROUND_gate9[ _](03[ _]Interior[ _]lanes|09[ _]Kiosk)/.test(object.name) &&
         material.name === 'G9 brushed warm concrete';
       // Concrete joints/damp overlays otherwise become pale scars on asphalt.
       const concreteDetail = /^G9_static_03_Interior_lanes/.test(object.name) &&
