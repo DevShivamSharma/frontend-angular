@@ -3,48 +3,66 @@ import type { Gate9Light } from './venue-gate9';
 
 /** Evening lighting for the Gate 9 approach, lane and office frontage.
  * Glow comes from the venue's own diffuser/glazing materials (every layer,
- * not only Gate 9); a bounded set of real lights near the gate lights the
- * ground. Nothing here runs per frame: the sun/moon toggle drives it.
+ * not only Gate 9). A small fixed pool of real lights follows the camera to
+ * the nearest lamps: the pool size never changes, so materials compile their
+ * lit shader once, and a walking visitor is not paying for twenty lights.
  */
 const GLOW = /diffuser|luminaire|streetlight|kiosk glazing|ENTRY sign|floodlight/i;
-const REAL_LIGHT_BUDGET = 20;
-const PRIORITY: Record<Gate9Light['kind'], number> = { flood: 0, kiosk: 1, lamp: 2, canopy: 3, cabin: 4 };
+const SPOT_POOL = 6, POINT_POOL = 3;
+const REPICK_DISTANCE = 6;
 interface DayEmissive { color: number; intensity: number; }
+// Intensities are calibrated against this renderer's sun/exposure (a 60 000 cd
+// test spot at 12 m read as a moderate pool), not taken from photometric data.
+const SPOT: Record<'lamp' | 'flood', { color: number; intensity: number; distance: number; angle: number }> = {
+  lamp: { color: 0xffd9a0, intensity: 10000, distance: 36, angle: 1.05 },
+  flood: { color: 0xf4f1e2, intensity: 45000, distance: 80, angle: .55 },
+};
+const POINT: Record<'canopy' | 'kiosk' | 'cabin', { intensity: number; distance: number }> = {
+  canopy: { intensity: 1200, distance: 18 }, kiosk: { intensity: 600, distance: 10 }, cabin: { intensity: 300, distance: 10 },
+};
 
 export function createVenueNightLights(scene: T.Scene, root: T.Group, lights: Gate9Light[]) {
   const group = new T.Group();
   group.name = 'Gate 9 night lighting';
-  const owned: T.Light[] = [];
-  // Floodlights and the kiosk first, then street lamps; canopy lights fill the rest.
-  const ranked = [...lights].sort((a, b) => PRIORITY[a.kind] - PRIORITY[b.kind]).slice(0, REAL_LIGHT_BUDGET);
-  for (const light of ranked) {
-    const position = new T.Vector3(...light.position);
-    // Intensities are calibrated against this renderer's sun/exposure (a 60 000 cd
-    // test spot at 12 m read as a moderate pool), not taken from photometric data.
-    if (light.kind === 'lamp' || light.kind === 'flood') {
-      const flood = light.kind === 'flood';
-      const spot = new T.SpotLight(flood ? 0xf4f1e2 : 0xffd9a0, flood ? 45000 : 10000, flood ? 80 : 36, flood ? .55 : 1.05, .7, 2);
-      spot.position.copy(position);
-      spot.target.position.copy(light.aim ? new T.Vector3(...light.aim) : position.clone().setY(0));
-      group.add(spot, spot.target);
-      owned.push(spot);
-    } else {
-      const point = new T.PointLight(0xffe2b8, light.kind === 'canopy' ? 1200 : light.kind === 'kiosk' ? 600 : 300,
-        light.kind === 'canopy' ? 18 : 10, 2);
-      point.position.copy(position);
-      group.add(point);
-      owned.push(point);
-    }
+  const spots = Array.from({ length: SPOT_POOL }, () => new T.SpotLight(0xffffff, 0, 1, 1, .7, 2));
+  const points = Array.from({ length: POINT_POOL }, () => new T.PointLight(0xffe2b8, 0, 1, 2));
+  for (const spot of spots) group.add(spot, spot.target);
+  for (const point of points) group.add(point);
+  const spotSources = lights.filter(l => l.kind === 'lamp' || l.kind === 'flood');
+  const pointSources = lights.filter(l => l.kind === 'canopy' || l.kind === 'kiosk' || l.kind === 'cabin');
+  const lastPick = new T.Vector3(Infinity, Infinity, Infinity);
+  let disposed = false, attached = false;
+
+  function nearest<L extends Gate9Light>(sources: L[], at: T.Vector3, count: number): L[] {
+    return [...sources].sort((a, b) =>
+      at.distanceToSquared(new T.Vector3(...a.position)) - at.distanceToSquared(new T.Vector3(...b.position))).slice(0, count);
   }
-  // The group joins the scene only at night. The SSAO pass caches and restores
-  // `visible` across its normal pass, so toggling that flag can be overwritten;
-  // attaching and detaching the group cannot.
-  let disposed = false;
+  function assign(at: T.Vector3) {
+    nearest(spotSources, at, SPOT_POOL).forEach((source, i) => {
+      const spot = spots[i], preset = SPOT[source.kind as 'lamp' | 'flood'];
+      spot.color.setHex(preset.color); spot.intensity = preset.intensity;
+      spot.distance = preset.distance; spot.angle = preset.angle;
+      spot.position.set(...source.position);
+      spot.target.position.copy(source.aim ? new T.Vector3(...source.aim) : spot.position.clone().setY(0));
+    });
+    for (let i = spotSources.length; i < SPOT_POOL; i++) spots[i].intensity = 0;
+    nearest(pointSources, at, POINT_POOL).forEach((source, i) => {
+      const point = points[i], preset = POINT[source.kind as 'canopy' | 'kiosk' | 'cabin'];
+      point.intensity = preset.intensity; point.distance = preset.distance;
+      point.position.set(...source.position);
+    });
+    for (let i = pointSources.length; i < POINT_POOL; i++) points[i].intensity = 0;
+    lastPick.copy(at);
+  }
   return {
     /** Re-run after an appearance change too: material.copy() restores the day values. */
     setDaylight(daylight: boolean) {
       if (disposed) return;
-      if (daylight) group.removeFromParent(); else if (group.parent !== scene) scene.add(group);
+      // The group joins the scene only at night. The SSAO pass caches and restores
+      // `visible` across its normal pass, so toggling that flag can be overwritten;
+      // attaching and detaching the group cannot.
+      if (daylight) { group.removeFromParent(); attached = false; }
+      else if (!attached) { scene.add(group); attached = true; lastPick.set(Infinity, Infinity, Infinity); }
       root.traverse(object => {
         if (!(object instanceof T.Mesh)) return;
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
@@ -56,11 +74,17 @@ export function createVenueNightLights(scene: T.Scene, root: T.Group, lights: Ga
         }
       });
     },
+    /** Moves the pool to the lamps nearest the camera. Returns true when lights moved. */
+    update(at: T.Vector3): boolean {
+      if (disposed || !attached || at.distanceTo(lastPick) < REPICK_DISTANCE) return false;
+      assign(at);
+      return true;
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
       group.removeFromParent();
-      for (const light of owned) light.dispose();
+      for (const light of [...spots, ...points]) light.dispose();
       group.clear();
     },
   };

@@ -573,6 +573,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             const hazy = raining && !globe?.isGlobe && !globe?.transitioning && !interiors?.active;
             if ((scene.fog === rainFog) !== hazy) scene.fog = hazy ? rainFog : null;
             const pouring = !globe?.isGlobe && !globe?.transitioning && rain?.update(performance.now(), camera);
+            const relit = !globe?.isGlobe && nightLights?.update(camera.position);
             const changed = !visitor?.active && !interiors?.active && !globe?.transitioning && controls.update();
             if(!visitor?.active&&!interiors?.active)globe?.update();
             const walking=interiors?.update(performance.now());
@@ -587,7 +588,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5) * scale);
                 ambientOcclusion.resize(); invalidate();
             }
-            return Boolean(changed || walking || visiting || gateMoving || strolling || tween || pendingInterior || globe?.transitioning || flowing || pouring);
+            return Boolean(changed || walking || visiting || gateMoving || strolling || tween || pendingInterior || globe?.transitioning || flowing || pouring || relit);
         }
         function renderFrame() {
             if (securityGuards?.update(camera, innerHeight, !globe?.isGlobe || globe.transitioning))
