@@ -1,5 +1,5 @@
 {
-  "status": "Photo-informed reconstruction; unsurveyed dimensions and camera registration. Photo 3 provenance unconfirmed; not used for unique geometry.",
+  "status": "Photo and walkthrough-informed reconstruction (2026-10-16); unsurveyed dimensions and approximate camera registration. Audio transcription is not accepted as survey evidence. Photo 3 provenance unconfirmed; not used for unique geometry.",
   "sourceSha256": "e998ea8716b8ff7a233f49aed65992bdf9d071e93697948badbef09df15e02ac",
   "gateCenter": [
     -585.9860229492188,
@@ -120,16 +120,68 @@
     },
     "gate9-walkway": {
       "position": [
-        -557.2858276367188,
+        -555.6063232421875,
         1.899999976158142,
-        193.24732971191406
+        150.33836364746094
       ],
       "target": [
-        -576.2858276367188,
+        -573.1063232421875,
         2.4000000953674316,
-        226.1562957763672
+        180.64926147460938
       ],
       "label": "Gate 9 \u00b7 Arched walkway"
+    },
+    "gate9-video-office": {
+      "position": [
+        -580.2139892578125,
+        1.649999976158142,
+        216.96014404296875
+      ],
+      "target": [
+        -558.2139892578125,
+        2.0999999046325684,
+        178.8550262451172
+      ],
+      "label": "Gate 9 \u00b7 Walkthrough office lane (01:18)"
+    },
+    "gate9-video-entry": {
+      "position": [
+        -552.8120727539062,
+        1.649999976158142,
+        163.4986114501953
+      ],
+      "target": [
+        -553.6732788085938,
+        2.0,
+        147.99029541015625
+      ],
+      "label": "Gate 9 \u00b7 Walkthrough ENTRY pavilion (01:30)"
+    },
+    "gate9-video-turn": {
+      "position": [
+        -514.187744140625,
+        1.649999976158142,
+        124.59927368164062
+      ],
+      "target": [
+        -543.0082397460938,
+        2.0,
+        134.51785278320312
+      ],
+      "label": "Gate 9 \u00b7 Walkthrough garden details"
+    },
+    "gate9-video-lookout": {
+      "position": [
+        -604.7122192382812,
+        1.7999999523162842,
+        283.19635009765625
+      ],
+      "target": [
+        -597.4252319335938,
+        3.200000047683716,
+        278.624755859375
+      ],
+      "label": "Gate 9 \u00b7 Lookout stairs"
     }
   },
   "approachConnectionLocal": [
@@ -294,41 +346,41 @@
     {
       "kind": "canopy",
       "position": [
-        -556.852783203125,
+        -554.6732788085938,
         3.0999999046325684,
-        193.49732971191406
+        149.7223358154297
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -555.352783203125,
+        -553.1732788085938,
         3.0999999046325684,
-        190.89926147460938
+        147.124267578125
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -573.2858276367188,
+        -571.1063232421875,
         4.300000190734863,
-        220.96014404296875
+        177.18515014648438
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -567.2858276367188,
+        -565.1063232421875,
         4.300000190734863,
-        210.56784057617188
+        166.7928466796875
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -561.2858276367188,
+        -559.1063232421875,
         4.300000190734863,
-        200.175537109375
+        156.40054321289062
       ]
     },
     {
@@ -444,12 +496,17 @@
     1,
     4
   ],
+  "walkthroughReference": "work/gate9/references/2026-10-16/README.md",
+  "walkthroughDurationSeconds": 145.112,
   "assumptions": [
     "14 m gate opening and 4.4 m gate height are estimates.",
     "Gate bearing is aligned to the connected outside road; exact surveyed bearing is unavailable.",
     "Small unreadable sign text, concealed rooms and transient traffic are omitted.",
     "Canopy footprints, spacing, road widths and planting positions are inferred from overlapping views.",
     "Office building footprint retained from the existing venue.",
+    "Walkway/pavilion moved to the garden side using the 01:18-01:36 sequence; absolute campus placement and connection to unseen paths remain estimates.",
+    "Lookout stairs, kerb height, drain-panel spacing and garden tree positions are inferred rather than measured.",
+    "Browser inspection was not authorized for this revision; app navigation and mobile appearance remain unverified.",
     "Two inferred northwest context masses are cut back locally at t=-444 m to clear the photographed canopy court; this setback is not surveyed."
   ]
 }

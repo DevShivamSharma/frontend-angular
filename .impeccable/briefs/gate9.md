@@ -1,5 +1,27 @@
 # Gate 9 photographic reconstruction
 
+## Walkthrough revision — 2026-10-16
+
+The latest 145.112-second walkthrough supplements the earlier photographs. The
+revision adds lookout stairs/glazing, office paving and pots, rounded planting,
+flush drains/utility covers and sparse layered garden foliage. The ENTRY pavilion
+and arched walkway move to the garden side. A kerb gap and modeled 3.8 m flush
+connector join the road to the pavilion, clear of columns and the return wall.
+
+Preserve halls, hangars, office footprint, avatar, controls and the prior global
+asphalt-road preference. Video dimensions and campus registration remain estimates.
+The unreliable audio transcript was not accepted as factual evidence.
+`gate9-video-turn` inspects garden details; it is not a calibrated 02:12 phone pose.
+`gate9-video-lookout` frames the stairs. Reference notes are in
+`work/gate9/references/2026-10-16/README.md`.
+
+Earlier browser/mobile/walk evidence below is historical. This revision is reviewed
+only in offline Blender Workbench images. Browser access was declined; application
+appearance, navigation, collisions and performance remain unverified. No test cases.
+See `work/gate9/verification-video-2026-10-16.md` for current evidence.
+Work is isolated on `codex/gate9-video-reference`, based on main `a230875`.
+Root DESIGN.md and PRODUCT.md are outside scope.
+
 Mode: Experience. Scope: Gate 9 approach, checkpoint, office-side lane and adjacent canopies. Preserve the venue interface, halls/hangars, avatar and existing controls.
 
 Visual authority: the six supplied photographs in `work/gate9/references/`. The exterior arrival is photo 5, metalwork photo 2, internal office lane photo 6, reverse lane photo 1 and canopy court photo 4. Photo 3 has an AI-generated-content watermark and remains unverified. No invented signage or accuracy percentage.

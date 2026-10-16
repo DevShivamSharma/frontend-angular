@@ -1,5 +1,27 @@
 # Gate 9 reconstruction
 
+## Latest walkthrough revision — 16 October 2026
+
+The latest video-based revision corrects the garden-side walkway/pavilion placement,
+adds external lookout stairs and glazing, rounds planting edges, and adds office
+paving, pots, flush drain covers and layered garden trees. A modeled 3.8 m flush
+connector and kerb opening keep the pavilion approach clear. Its width and absolute
+placement are estimates, not measured accessibility or navigation results.
+
+Halls, hangars, office footprint, avatar, controls and the prior global asphalt finish
+are preserved. Local speech recognition was unreliable; no transcript was used as
+factual layout evidence. See [timestamped references](references/2026-10-16/README.md).
+
+New views: `gate9-video-office`, `gate9-video-entry`, `gate9-video-turn`,
+`gate9-video-lookout`. The turn view inspects the garden; it is not a calibrated
+02:12 phone pose. Work is isolated on `codex/gate9-video-reference` from main
+`a230875`; the original checkout was not edited by this revision.
+
+See [current verification](verification-video-2026-10-16.md). No test cases run.
+Browser access was declined, so application movement, mobile appearance and runtime
+performance remain unverified. Records below, including asset sizes, browser captures
+and visitor-walk verdicts, describe earlier iterations only.
+
 Source: six user-supplied photographs, copied unchanged into `references/`.
 This is a photo-informed, editable reconstruction, not a measured survey.
 

@@ -210,11 +210,13 @@ def kerbs(points,width):
     for sign in (-1,1):
         for i,(p,d) in enumerate(samples(points,.7)):
             if (p-Vector((-492,-393))).length < 9: continue
+            # Walkthrough ENTRY pavilion: leave a clear, flush road-to-pavilion opening.
+            if sign == -1 and abs(width-12)<.01 and -406.6 < p.x < -402.4: continue
             # The gate forecourt (photo 20261015_104444) is one wide asphalt apron.
             if (p-Vector(GATE)).length < 34: continue
             n=Vector((-d.y,d.x));q=p+n*(width/2+.13)*sign
-            a=V(*(q-d*.34),.37);b=V(*(q+d*.34),.37)
-            beam('G9 alternating kerb',a,b,.26,M['yellow' if i%2 else 'black'],.27)
+            a=V(*(q-d*.34),.33);b=V(*(q+d*.34),.33)
+            beam('G9 alternating kerb',a,b,.26,M['yellow' if i%2 else 'black'],.18)
 
 def road(name,coords,width,material,kerb=True):
     points=smooth(coords)
@@ -486,7 +488,8 @@ def planting_edge(points,offset,width):
         for delta in [-width*.28,width*.28]:
             q=p+n*(offset+delta)+Vector((random.uniform(-.17,.17),random.uniform(-.17,.17)))
             plant(*q,random.uniform(.7,1.2))
-planting_edge(inside[19:60],-8,3)
+planting_edge([p for p in inside[19:60] if p.x < -447],-8,3)
+planting_edge([p for p in inside[19:60] if p.x > -399],-8,3)
 # Office side: the 2026-10-15 arched walkway and drop-off replace the bed between s=-486 and s=-404.
 planting_edge([p for p in inside[24:60] if p.x<-486],8,2.5)
 planting_edge([p for p in inside[24:60] if p.x>-404],8,2.5)
@@ -552,7 +555,15 @@ def ridge(name,points,width,z0,z1,material,offset=0):
 def kerb_ring(points):
     loop=[Vector(p) for p in points]+[Vector(points[0])]
     for i,(p,d) in enumerate(samples(loop,.7)):
-        beam('G9 alternating kerb',V(*(p-d*.34),.37),V(*(p+d*.34),.37),.26,M['yellow' if i%2 else 'black'],.27)
+        beam('G9 alternating kerb',V(*(p-d*.34),.33),V(*(p+d*.34),.33),.26,M['yellow' if i%2 else 'black'],.18)
+def rounded_rectangle(x0,y0,x1,y1,r,steps=8):
+    out=[]
+    for cx,cy,start in [(x1-r,y1-r,0),(x0+r,y1-r,90),(x0+r,y0+r,180),(x1-r,y0+r,270)]:
+        for k in range(steps+1):
+            angle=math.radians(start+k*90/steps)
+            out.append((cx+r*math.cos(angle),cy+r*math.sin(angle)))
+    return out
+
 def island(name,points):
     kerb_ring(points)
     mesh('G9 planted earth bed '+name,[V(*p,.29) for p in points],[tuple(range(len(points)))],M['soil'])
@@ -608,9 +619,9 @@ sign('G9 kiosk direction sign',gate(-1.7,KD-1.76,2.0),gate(1.7,KD-1.76,2.0),gate
 for ax in (-1.9,1.9):kx('cctv camera',ax,-1.95,3.55,(.16,.3,.14),M['white'])
 LIGHTS.append({'kind':'kiosk','position':[*gs(0,KD),3.4]})
 lamp(*gs(3.6,43.4),*(-Vector(R)))
-# Red fire-hydrant cabinets on a low wall beside the office-side planting.
-box('G9 hydrant plinth wall',V(-505.2,-383.6,.55),(3.4,.5,.6),M['wall'],math.pi/3)
-for s in (-506,-504.4):box('G9 red hydrant cabinet',V(s,-383.6,1.3),(.9,.45,.9),M['hydrant'],math.pi/3)
+# Video 00:45–01:00: paired red fire cabinets at the broad shelter end wall.
+box('G9 hydrant plinth wall',V(-494.2,-404.6,.55),(3.4,.5,.6),M['wall'],math.pi/3)
+for s in (-495,-493.4):box('G9 red hydrant cabinet',V(s,-404.6,1.3),(.9,.45,.9),M['hydrant'],math.pi/3)
 # Clipped hedges behind the strappy beds (photos 20261015_104147, 20261015_104447).
 ridge('G9 clipped hedge canopy side',[p for p in inside[22:60] if -500<p.x<-452],.8,.3,1.15,M['hedge'],-9.8)
 ridge('G9 clipped hedge office side west',[p for p in inside[22:60] if p.x<-486],.8,.3,1.15,M['hedge'],9.8)
@@ -672,7 +683,7 @@ im.filepath_raw=str(WORK/'sett.png');im.file_format='PNG';im.save();im.pack()
 nt=M['sett'].node_tree;tx=nt.nodes.new('ShaderNodeTexImage');tx.image=im
 nt.links.new(tx.outputs['Color'],nt.nodes.get('Principled BSDF').inputs['Base Color'])
 mesh('SITE_GROUND_gate9 drop-off setts',[V(-445,-394,.2425),V(-404,-394,.2425),V(-404,-383.6,.2425),V(-445,-383.6,.2425)],[(0,1,2,3)],M['sett'])
-island('plumeria',[(-432,-389.2),(-416,-389.2),(-416,-384.4),(-432,-384.4)])
+island('plumeria',rounded_rectangle(-432,-389.2,-416,-384.4,1.65))
 def plumeria(s,t):
     cylinder('G9 plumeria trunk',V(s,t,1.4),.11,2.3,M['trunk'],8)
     for j in range(5):
@@ -714,30 +725,31 @@ o=mesh('G9 barrier sign roundel',[V(BS-.21,BT-.55+.46*math.cos(k*math.tau/24),1.
 uv=o.data.uv_layers.new(name='Lettering')
 for loop in o.data.loops:
     k=loop.vertex_index;uv.data[loop.index].uv=(.5+.5*math.cos(k*math.tau/24),.5+.5*math.sin(k*math.tau/24))
-# ENTRY pavilion: four white posts, barrel fabric roof, low ivory wall with the red ENTRY sign.
-for x in (-448,-441):
-    for t in (-389,-382):beam('G9 pavilion post',V(x,t,.24),V(x,t,3.3),.09,M['white'])
-o,verts=barrel('G9 pavilion fabric',-448.3,-440.7,-385.5,3.75,3.3,1.9,M['cream'])
+EVIDENCE='Walkthrough 2026-10-16 01:18-01:36; garden-side relationship observed, absolute registration estimated'
+# 2026-10-16 walkthrough revision (01:18–01:36): garden-side ENTRY pavilion: four white posts, barrel fabric roof, low ivory wall with the red ENTRY sign.
+for x in (-409,-402):
+    for t in (-409,-402):beam('G9 pavilion post',V(x,t,.24),V(x,t,3.3),.09,M['white'])
+o,verts=barrel('G9 pavilion fabric',-409.3,-401.7,-405.5,3.75,3.3,1.9,M['cream'])
 for base in (0,25):
     for k in range(24):beam('G9 pavilion rib',verts[base+k],verts[base+k+1],.06,M['white'])
 for k in range(0,25,6):beam('G9 pavilion purlin',verts[k],verts[k+25],.06,M['white'])
-box('G9 entry wall',V(-448.6,-385.5,.85),(.35,2.6,1.25),M['ivory'],math.pi/3)
+box('G9 entry wall',V(-409.6,-405.5,.85),(.35,2.6,1.25),M['ivory'],math.pi/3)
 entry=image_material('ENTRY sign lettering',SIGNS/'entry-sign.png',.8)
-sign('G9 entry sign',V(-448.8,-386.1,.6),V(-448.8,-384.9,.6),V(-448.8,-384.9,1.2),V(-448.8,-386.1,1.2),entry)
-for s in (-446,-443):LIGHTS.append({'kind':'canopy','position':[s,-385.5,3.1]})
-# Arched walkway canopy from the pavilion towards the gate (video, left side).
-strip('SITE_GROUND_gate9 walkway deck',[Vector((-484,-386)),Vector((-448,-386))],4.2,.2425,M['concrete'])
-arches=list(np.arange(-484,-447.9,6))
+sign('G9 entry sign',V(-409.8,-406.1,.6),V(-409.8,-404.9,.6),V(-409.8,-404.9,1.2),V(-409.8,-406.1,1.2),entry)
+for s in (-407,-404):LIGHTS.append({'kind':'canopy','position':[s,-405.5,3.1]})
+# Garden-side arched walkway. Campus registration is estimated; see reference notes.
+strip('SITE_GROUND_gate9 walkway deck',[Vector((-445,-406)),Vector((-409,-406))],4.2,.2425,M['concrete'])
+arches=list(np.arange(-445,-408.9,6))
 for x in arches:
-    o,verts=barrel('G9 walkway arch',x-.03,x+.03,-386,2.1,2.7,1.9,M['white'],16)
+    o,verts=barrel('G9 walkway arch',x-.03,x+.03,-406,2.1,2.7,1.9,M['white'],16)
     for k in range(16):beam('G9 walkway arch tube',verts[k],verts[k+1],.07,M['white'])
-    for t in (-388.1,-383.9):beam('G9 walkway post',V(x,t,.24),V(x,t,2.7),.08,M['white'])
+    for t in (-408.1,-403.9):beam('G9 walkway post',V(x,t,.24),V(x,t,2.7),.08,M['white'])
 for a,b in zip(arches,arches[1:]):
-    barrel('G9 walkway fabric',a,b,-386,2.05,2.72,1.86,M['cream'],16)
+    barrel('G9 walkway fabric',a,b,-406,2.05,2.72,1.86,M['cream'],16)
 for k in (0,4,8,12,16):
     th=k*math.pi/16
-    beam('G9 walkway purlin',V(-484,-386+2.1*math.cos(th),2.7+1.9*math.sin(th)),V(-448,-386+2.1*math.cos(th),2.7+1.9*math.sin(th)),.06,M['white'])
-for s in (-478,-466,-454):LIGHTS.append({'kind':'canopy','position':[s,-386,4.3]})
+    beam('G9 walkway purlin',V(-445,-406+2.1*math.cos(th),2.7+1.9*math.sin(th)),V(-409,-406+2.1*math.cos(th),2.7+1.9*math.sin(th)),.06,M['white'])
+for s in (-439,-427,-415):LIGHTS.append({'kind':'canopy','position':[s,-406,4.3]})
 lamp2(-434,-383.2,0,1);lamp2(-412,-383.2,0,1)
 collection=collections['06']
 EVIDENCE='Photos 1,2,4,5,6; scale and hidden geometry estimated'
@@ -764,6 +776,106 @@ for o in context.objects:
             copy.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=(.28,.105,.072,1)
             o.data.materials[i]=copy
 
+
+# 2026-10-16 walkthrough revision: observed details; measurements are estimates.
+collection=bpy.data.collections.new('12 Walkthrough details (2026-10-16)')
+bpy.context.scene.collection.children.link(collection);collections['12']=collection
+EVIDENCE='WhatsApp walkthrough 2026-10-16; timestamps in work/gate9/references/2026-10-16/README.md. Unsurveyed geometry.'
+
+# 00:09: external stair alongside the elevated lookout, kept outside the entry lane.
+stair_a=-13.1
+for i in range(20):
+    d=5.1+i*.28; h=.24+(i+1)*.18
+    box('G9 lookout stair tread',gate(stair_a,d,h-.04),(1.15,.30,.08),M['dark'],ga)
+for side in (-.54,.54):
+    beam('G9 lookout stair stringer',gate(stair_a+side,5,.25),gate(stair_a+side,10.7,3.9),.075,M['dark'],.16)
+    beam('G9 lookout stair handrail',gate(stair_a+side,5,1.2),gate(stair_a+side,10.7,4.85),.045,M['steel'])
+    for i in (0,4,8,12,16,19):
+        d=5.1+i*.28; h=.24+(i+1)*.18
+        beam('G9 lookout stair baluster',gate(stair_a+side,d,h),gate(stair_a+side,d,h+.95),.035,M['steel'])
+box('G9 lookout landing',gate(-12,10.65,3.8),(2.8,1.15,.12),M['dark'],ga)
+for a in (-13.4,-10.6):
+    beam('G9 lookout landing support',gate(a,11,.24),gate(a,11,3.8),.09,M['dark'])
+beam('G9 lookout landing rail',gate(-13.4,11.2,4.78),gate(-10.6,11.2,4.78),.045,M['steel'])
+for a in (-13.4,-12.7,-12,-11.3,-10.6):beam('G9 lookout landing baluster',gate(a,11.2,3.85),gate(a,11.2,4.78),.035,M['steel'])
+for a in (-12.315,-9.685):
+    beam('G9 lookout side glazing',gate(a,8.04,5.15),gate(a,9.96,5.15),.04,M['glass'],1.05)
+    for d in (8.04,9,9.96):beam('G9 lookout side mullion',gate(a,d,4.62),gate(a,d,5.68),.04,M['steel'])
+
+# 01:18: the office edge is an open lane with a modest hedge, not a covered arcade.
+# Reuse the existing office shell and ground-floor piers; add only frontage detail.
+M['paving']=mat('office sidewalk warm stone',(.43,.36,.27),.9)
+walkedge=rounded_rectangle(-474,-382.5,-437,-379.1,.8)
+mesh('SITE_GROUND_gate9 office sidewalk',[V(*p,.28) for p in walkedge],[tuple(range(len(walkedge)))],M['paving'])
+kerb_ring(walkedge)
+for s in np.arange(-472,-438,1):
+    beam('SITE_GROUND_gate9 paving joint',V(s,-382.1,.282),V(s,-379.3,.282),.012,M['joint'],.002)
+for t in (-381.6,-380.6,-379.6):
+    beam('SITE_GROUND_gate9 paving joint',V(-473.2,t,.282),V(-437.8,t,.282),.012,M['joint'],.002)
+ridge('G9 low office foundation hedge',[Vector((-473,-379.35)),Vector((-439,-379.35))],.55,.29,.78,M['hedge'])
+for s in (-471,-463,-455,-447):
+    cylinder('G9 office terracotta pot',V(s,-381,.49),.26,.42,M['pot'],12)
+    plant_at(s,-381,.68,.67)
+
+# Garden strip between the vehicle lane and the corrected garden-side walkway.
+garden_edge=[Vector((-445,-401.8)),Vector((-414,-401.8))]
+strip('SITE_GROUND_gate9 garden soil',garden_edge,2.6,.27,M['soil'])
+ridge('G9 clipped garden edge',garden_edge,.65,.28,.72,M['hedge'])
+for s in np.arange(-444.5,-414,.85):plant_at(s,-402.8,.30,.62)
+
+# 01:57–02:21: low lawn/hedge, slender layered trees and a planted turning corner.
+M['lawn']=mat('walkthrough lawn',(.12,.22,.045),.98)
+garden=rounded_rectangle(-398,-410,-378,-401,2.8)
+mesh('SITE_GROUND_gate9 turning garden',[V(*p,.275) for p in garden],[tuple(range(len(garden)))],M['lawn'])
+kerb_ring(garden)
+ridge('G9 turning garden hedge',[Vector((-395,-402.0)),Vector((-381,-402.0))],.55,.29,.78,M['hedge'])
+# Sparse shared leaf layers: only 213 of the existing 850 leaf groups per layer.
+# Preserve individual leaf silhouettes without exporting the full broadleaf crown 24 times.
+garden_vertices=[];garden_faces=[]
+for leaf_index in range(0,850,4):
+    base=len(garden_vertices)
+    garden_vertices.extend(tuple(crown.vertices[leaf_index*5+k].co) for k in range(5))
+    garden_faces.extend(tuple(base+k for k in f) for f in [(0,1,2),(0,2,3),(2,1,4),(3,2,4)])
+garden_crown=bpy.data.meshes.new('G9 shared sparse garden foliage')
+garden_crown.from_pydata(garden_vertices,[],garden_faces);garden_crown.materials.append(M['leaf1'])
+for s in (-395,-391,-387,-383):
+    cylinder('G9 slender garden tree trunk',V(s,-407,2.9),.065,5.3,M['trunk'],8)
+    for layer in range(6):
+        h=1.7+layer*.66; radius=1.15-layer*.15
+        for j in range(5):
+            angle=j*math.tau/5+layer*.53
+            end=V(s+radius*math.cos(angle),-407+radius*math.sin(angle),h+.16)
+            beam('G9 slender garden tree branch',V(s,-407,h),end,.023,M['trunk'])
+        crown_object=bpy.data.objects.new('G9 leaf_canopy layered garden tree',garden_crown)
+        collection.objects.link(crown_object);created.append(crown_object)
+        crown_object.location=V(s,-407,h);crown_object.scale=(radius/2.7,radius/2.7,.13)
+        crown_object.rotation_euler.z=layer*.53
+
+# Drains and perforated utility panels are flush visual surfaces, not new blockers.
+# The cover width and exact map position are estimates from the 02:12 view.
+for j in range(9):
+    s=-377+j*1.03; t=-388
+    box('SITE_GROUND_gate9 perforated access panel',V(s,t,.249),(.99,1.55,.006),M['wall'],math.pi/3)
+    for dx in (-.28,0,.28):
+        for dy in (-.49,0,.49):
+            cylinder('SITE_GROUND_gate9 access panel recess',V(s+dx,t+dy,.253),.027,.001,M['dark'],8)
+for s,t in [(-465,-394.5),(-456,-394.5),(-367.8,-388)]:
+    box('SITE_GROUND_gate9 recessed drain',V(s,t,.249),(1.0,.72,.006),M['dark'],math.pi/3)
+    for j in range(10):
+        beam('SITE_GROUND_gate9 flush drain grille',V(s-.45+j*.1,t-.32,.254),V(s-.45+j*.1,t+.32,.254),.025,M['steel'],.004)
+for i in range(32):
+    s=-472+i*.32
+    for t in (-393.1,-392.8):
+        cylinder('SITE_GROUND_gate9 old fixing recess',V(s,t,.250),.019,.001,M['joint'],8)
+
+# Flush connector through the kerb opening, kept clear of columns and the low return wall.
+strip('SITE_GROUND_gate9 pavilion entry connector',[Vector((-404.5,-399.7)),Vector((-404.5,-406.2))],3.8,.2425,M['concrete'])
+# Front edge of the ENTRY pavilion: short return wall, open circulation beyond it.
+beam('G9 pavilion low return wall',V(-409.6,-406.8,.85),V(-406.8,-406.8,.85),.23,M['ivory'],1.25)
+beam('SITE_GROUND_gate9 pavilion opening threshold',V(-409.7,-404.1,.246),V(-407.3,-401.9,.246),.07,M['white'],.003)
+for s in (-408.5,-407.5,-406.5):plant_at(s,-410.1,.30,.8)
+
+
 # Retain the surrounding masses, with the photographed low canopy court clear.
 reconcile = runpy.run_path(str(ROOT/'scripts/gate9-context.py'))['reconcile_context']
 created.extend(reconcile(ASSETS/'venue-site-detail.glb', collections['08']))
@@ -784,7 +896,11 @@ views['gate9-checking-room']={'position':gate_world(-6.4,-10,2.25),
 views['gate9-kiosk']={'position':gate_world(-5,16,1.9),'target':gate_world(0,37,2.4),'label':'Gate 9 · Direction kiosk'}
 views['gate9-dropoff']={'position':world((-455,-392,1.9)),'target':world((-418,-386,2.2)),'label':'Gate 9 · Office drop-off'}
 views['gate9-parking']={'position':world((-470,-400,2.0)),'target':world((-440,-432,3)),'label':'Gate 9 · Fenced parking'}
-views['gate9-walkway']={'position':world((-446,-386,1.9)),'target':world((-484,-386,2.4)),'label':'Gate 9 · Arched walkway'}
+views['gate9-walkway']={'position':world((-408,-406,1.9)),'target':world((-443,-406,2.4)),'label':'Gate 9 · Arched walkway'}
+views['gate9-video-office']={'position':world((-478,-394,1.65)),'target':world((-434,-394,2.1)),'label':'Gate 9 · Walkthrough office lane (01:18)'}
+views['gate9-video-entry']={'position':world((-418,-397,1.65)),'target':world((-405,-405.5,2.0)),'label':'Gate 9 · Walkthrough ENTRY pavilion (01:30)'}
+views['gate9-video-turn']={'position':world((-365,-383,1.65)),'target':world((-388,-403,2.0)),'label':'Gate 9 · Walkthrough garden details'}
+views['gate9-video-lookout']={'position':gate_world(-19,4,1.8),'target':gate_world(-12,9,3.2),'label':'Gate 9 · Lookout stairs'}
 collection=collections['07']
 for name,view in views.items():
     cam=bpy.data.cameras.new(name);o=bpy.data.objects.new(name,cam);collection.objects.link(o)
@@ -840,7 +956,7 @@ for c in collections.values():
 from io_scene_gltf2.io.exp import meshopt
 meshopt.EXP_FILTER_BITS=18
 bpy.ops.export_scene.gltf(filepath=str(ASSETS/'gate9-detail.glb'),export_format='GLB',use_selection=True,export_extras=True,export_cameras=False,export_yup=True,export_meshopt_compression_enable=True)
-manifest={'status':'Photo-informed reconstruction; unsurveyed dimensions and camera registration. Photo 3 provenance unconfirmed; not used for unique geometry.',
+manifest={'status':'Photo and walkthrough-informed reconstruction (2026-10-16); unsurveyed dimensions and approximate camera registration. Audio transcription is not accepted as survey evidence. Photo 3 provenance unconfirmed; not used for unique geometry.',
           'sourceSha256':source_hash,'gateCenter':world((*GATE,.24)),
           'slideDirection':world((*R,0)), 'slideDistance':7.25,'clearOpeningMetres':14,
           'views':views,'approachConnectionLocal':[-627.798,-321.451],
@@ -853,11 +969,16 @@ manifest={'status':'Photo-informed reconstruction; unsurveyed dimensions and cam
           'photoSet2026_10_15':'work/gate9/references/2026-10-15: ten photographs and video 20261015_104455 (frames extracted every 2 s)',
           'checkingRoomReference':'User-supplied checking-room photograph, 2026-10-14: ribbed brown cabin, shallow gable roof, ivory-framed grilled window and yellow barricade. The 2026-10-15 gate photograph (20261015_104444, taken from outside) shows it between a small left gate and the two-leaf vehicle gate, so it now stands left of the vehicle gate. Footprint 3.4 x 3.2 m and concealed sides are estimated.',
           'photoSequence':[5,2,6,1,4],
+          'walkthroughReference':'work/gate9/references/2026-10-16/README.md',
+          'walkthroughDurationSeconds':145.112,
           'assumptions':['14 m gate opening and 4.4 m gate height are estimates.',
               'Gate bearing is aligned to the connected outside road; exact surveyed bearing is unavailable.',
               'Small unreadable sign text, concealed rooms and transient traffic are omitted.',
               'Canopy footprints, spacing, road widths and planting positions are inferred from overlapping views.',
               'Office building footprint retained from the existing venue.',
+              'Walkway/pavilion moved to the garden side using the 01:18-01:36 sequence; absolute campus placement and connection to unseen paths remain estimates.',
+              'Lookout stairs, kerb height, drain-panel spacing and garden tree positions are inferred rather than measured.',
+              'Browser inspection was not authorized for this revision; app navigation and mobile appearance remain unverified.',
               'Two inferred northwest context masses are cut back locally at t=-444 m to clear the photographed canopy court; this setback is not surveyed.']}
 (ASSETS/'gate9-detail.json').write_text(json.dumps(manifest,indent=2))
 (WORK/'reference.json').write_text(json.dumps(manifest,indent=2))
