@@ -1,5 +1,13 @@
 # Gate 9 photographic reconstruction
 
+## Section 1 correction — user annotations take precedence
+
+Left of the office-side road is the property boundary. Remove the wrongly placed
+parking and move the marked canopies/pavilion/details to the right, including lights.
+Parking belongs near CC; exact placement is deferred to that section. The kiosk
+fork must use the same asphalt texture as the connected road. See
+`work/gate9/section1-correction.md`; this supersedes prior left-side video inferences.
+
 ## Walkthrough revision — 2026-10-16
 
 The latest 145.112-second walkthrough supplements the earlier photographs. The
@@ -64,3 +72,7 @@ drop-off, parking, walkway, night and rain views plus a visitor walk through the
 gate. No test cases, no survey accuracy claim.
 
 No test cases. Compile/build and static visual comparisons only. Final evidence covers desktop approach, gate close-up, interior lane and canopy, mobile, and the user's 676 px viewport. The finish reviewer accepted the bounded canopy-overlap correction: the cream shelter, fence and court read separately, with the office/lane intact. This verdict does not certify survey accuracy, navigation or performance. See `work/gate9/verification.md` for evidence and limits. Preserve root DESIGN.md: this is a local scene extension, not a UI redesign.
+
+Latest entry-right correction: the user photo in work/gate9/references/entry-right supersedes the open right-hand court. Black railings/red piers enclose a nearby cream shelter. Dimensions are estimated; review via gate9-entry-right.
+
+2026-10-17 office-corner crops supersede the dense trees in the circled turn. See work/gate9/references/office-corner: office-front cream canopy, low wall with paired red cabinets, clear concrete circulation and right fence. No hall/office footprint changes.

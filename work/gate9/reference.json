@@ -55,14 +55,14 @@
     },
     "gate9-canopy": {
       "position": [
-        -555.2139892578125,
+        -483.99413299560547,
         1.899999976158142,
-        173.65887451171875
+        196.3024673461914
       ],
       "target": [
-        -586.0441284179688,
+        -514.8242721557617,
         2.5,
-        217.05821228027344
+        239.7018051147461
       ],
       "label": "Gate 9 \u00b7 Canopy lane"
     },
@@ -107,27 +107,27 @@
     },
     "gate9-parking": {
       "position": [
-        -581.41015625,
+        -580.2139892578125,
         2.0,
-        207.0319366455078
+        216.96014404296875
       ],
       "target": [
-        -594.1229858398438,
-        3.0,
-        165.05117797851562
+        -574.0082397460938,
+        2.0,
+        188.21142578125
       ],
-      "label": "Gate 9 \u00b7 Fenced parking"
+      "label": "Gate 9 \u00b7 Property boundary"
     },
     "gate9-walkway": {
       "position": [
-        -555.6063232421875,
+        -484.38646697998047,
         1.899999976158142,
-        150.33836364746094
+        172.9819564819336
       ],
       "target": [
-        -573.1063232421875,
+        -501.88646697998047,
         2.4000000953674316,
-        180.64926147460938
+        203.29285430908203
       ],
       "label": "Gate 9 \u00b7 Arched walkway"
     },
@@ -146,29 +146,29 @@
     },
     "gate9-video-entry": {
       "position": [
-        -552.8120727539062,
+        -481.5922164916992,
         1.649999976158142,
-        163.4986114501953
+        186.14220428466797
       ],
       "target": [
-        -553.6732788085938,
+        -482.4534225463867,
         2.0,
-        147.99029541015625
+        170.6338882446289
       ],
       "label": "Gate 9 \u00b7 Walkthrough ENTRY pavilion (01:30)"
     },
     "gate9-video-turn": {
       "position": [
-        -514.187744140625,
-        1.649999976158142,
-        124.59927368164062
+        -470.994140625,
+        1.7999999523162842,
+        173.7858123779297
       ],
       "target": [
-        -543.0082397460938,
+        -474.6544189453125,
         2.0,
-        134.51785278320312
+        160.12554931640625
       ],
-      "label": "Gate 9 \u00b7 Walkthrough garden details"
+      "label": "Gate 9 \u00b7 Right-side garden details"
     },
     "gate9-video-lookout": {
       "position": [
@@ -182,6 +182,58 @@
         278.624755859375
       ],
       "label": "Gate 9 \u00b7 Lookout stairs"
+    },
+    "gate9-section1": {
+      "position": [
+        -644.2210693359375,
+        220.0,
+        245.82359313964844
+      ],
+      "target": [
+        -540.5992431640625,
+        1.0,
+        206.3454132080078
+      ],
+      "label": "Gate 9 \u00b7 Section 1 overview"
+    },
+    "gate9-entry-right": {
+      "position": [
+        -582.572021484375,
+        1.850000023841858,
+        281.5198669433594
+      ],
+      "target": [
+        -565.1831665039062,
+        2.049999952316284,
+        275.551025390625
+      ],
+      "label": "Gate 9 \u00b7 Right after entering"
+    },
+    "gate9-office-corner": {
+      "position": [
+        -585.5178833007812,
+        1.75,
+        238.1466827392578
+      ],
+      "target": [
+        -552.072998046875,
+        2.0,
+        248.21847534179688
+      ],
+      "label": "Gate 9 \u00b7 Office canopy corner"
+    },
+    "gate9-office-lane": {
+      "position": [
+        -585.2498779296875,
+        1.75,
+        233.6825714111328
+      ],
+      "target": [
+        -561.7498779296875,
+        1.899999976158142,
+        192.97938537597656
+      ],
+      "label": "Gate 9 \u00b7 Beside the office"
     }
   },
   "approachConnectionLocal": [
@@ -218,41 +270,41 @@
     {
       "kind": "lamp",
       "position": [
-        -591.6503295898438,
+        -520.4304809570312,
         6.849999904632568,
-        225.36846923828125
+        248.01206970214844
       ]
     },
     {
       "kind": "lamp",
       "position": [
-        -579.1503295898438,
+        -507.9305114746094,
         6.849999904632568,
-        203.71783447265625
+        226.36143493652344
       ]
     },
     {
       "kind": "lamp",
       "position": [
-        -566.6503295898438,
+        -495.4305114746094,
         6.849999904632568,
-        182.06719970703125
+        204.71080017089844
       ]
     },
     {
       "kind": "lamp",
       "position": [
-        -554.1503295898438,
+        -482.9305114746094,
         6.849999904632568,
-        160.41656494140625
+        183.06016540527344
       ]
     },
     {
       "kind": "lamp",
       "position": [
-        -537.1503295898438,
+        -465.9305114746094,
         6.849999904632568,
-        130.97171020507812
+        153.61529541015625
       ]
     },
     {
@@ -296,46 +348,6 @@
       ]
     },
     {
-      "kind": "lamp",
-      "position": [
-        -604.0433959960938,
-        7.599999904632568,
-        235.5338592529297
-      ]
-    },
-    {
-      "kind": "lamp",
-      "position": [
-        -601.7051391601562,
-        7.599999904632568,
-        236.88385009765625
-      ]
-    },
-    {
-      "kind": "canopy",
-      "position": [
-        -599.0704345703125,
-        4.400000095367432,
-        217.62039184570312
-      ]
-    },
-    {
-      "kind": "canopy",
-      "position": [
-        -591.5704345703125,
-        4.400000095367432,
-        204.63002014160156
-      ]
-    },
-    {
-      "kind": "canopy",
-      "position": [
-        -584.0704345703125,
-        4.400000095367432,
-        191.63963317871094
-      ]
-    },
-    {
       "kind": "cabin",
       "position": [
         -595.5687866210938,
@@ -346,41 +358,41 @@
     {
       "kind": "canopy",
       "position": [
-        -554.6732788085938,
+        -483.4534606933594,
         3.0999999046325684,
-        149.7223358154297
+        172.36593627929688
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -553.1732788085938,
+        -481.9534606933594,
         3.0999999046325684,
-        147.124267578125
+        169.76785278320312
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -571.1063232421875,
+        -499.886474609375,
         4.300000190734863,
-        177.18515014648438
+        199.82875061035156
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -565.1063232421875,
+        -493.886474609375,
         4.300000190734863,
-        166.7928466796875
+        189.4364471435547
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -559.1063232421875,
+        -487.886474609375,
         4.300000190734863,
-        156.40054321289062
+        179.0441436767578
       ]
     },
     {
@@ -413,6 +425,46 @@
         -536.6917724609375,
         7.599999904632568,
         165.87747192382812
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -572.9649658203125,
+        6.849999904632568,
+        265.6600341796875
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -568.3576049804688,
+        3.799999952316284,
+        228.4242401123047
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -562.29541015625,
+        3.799999952316284,
+        231.9242401123047
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -556.2332763671875,
+        3.799999952316284,
+        235.4242401123047
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -550.1710815429688,
+        3.799999952316284,
+        238.9242401123047
       ]
     }
   ],
@@ -504,9 +556,13 @@
     "Small unreadable sign text, concealed rooms and transient traffic are omitted.",
     "Canopy footprints, spacing, road widths and planting positions are inferred from overlapping views.",
     "Office building footprint retained from the existing venue.",
-    "Walkway/pavilion moved to the garden side using the 01:18-01:36 sequence; absolute campus placement and connection to unseen paths remain estimates.",
+    "User section-one correction supersedes the video interpretation: left is property boundary; canopies/pavilion are on the right. Placement is editable and unsurveyed.",
+    "The incorrectly placed Gate 9 parking was removed. Parking belongs near CC; its exact placement awaits the CC section.",
+    "The latest right-facing entrance photo supersedes the open near-entry court: red piers, black railings and a low cream shelter now enclose the right side. Heights, lengths and photo pose remain estimated.",
     "Lookout stairs, kerb height, drain-panel spacing and garden tree positions are inferred rather than measured.",
     "Browser inspection was not authorized for this revision; app navigation and mobile appearance remain unverified.",
-    "Two inferred northwest context masses are cut back locally at t=-444 m to clear the photographed canopy court; this setback is not surveyed."
+    "Two inferred northwest context masses are cut back locally at t=-444 m to clear the photographed canopy court; this setback is not surveyed.",
+    "2026-10-17 sequential office-corner photographs: clear concrete turn, office-front cream canopy, low wall and paired fire cabinets. Approximate placement; office and halls retained.",
+    "2026-10-17 sequential office-corner photographs: clear concrete turn, office-front cream canopy, low wall and paired fire cabinets. Approximate placement; office and halls retained."
   ]
 }

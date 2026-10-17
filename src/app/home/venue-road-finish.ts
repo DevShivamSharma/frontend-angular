@@ -36,7 +36,8 @@ export function prepareVenueRoadFinish(root: T.Group): void {
       const road = material.userData['architecturalCategory'] === 'road' || /asphalt/i.test(material.name);
       // Gate 9's authored concrete driving lane (and the widened kiosk fork) is
       // distinct from its footpaths, walkway deck and parking deck.
-      const gateLane = /^SITE_GROUND_gate9[ _](03[ _]Interior[ _]lanes|09[ _]Kiosk)/.test(object.name) &&
+      // A single ground mesh keeps its authored name instead of the batch name.
+      const gateLane = /^SITE_GROUND_gate9[ _](03[ _]Interior[ _]lanes|09[ _]Kiosk|kiosk[ _]fork)/.test(object.name) &&
         material.name === 'G9 brushed warm concrete';
       // Concrete joints/damp overlays otherwise become pale scars on asphalt.
       const concreteDetail = /^G9_static_03_Interior_lanes/.test(object.name) &&

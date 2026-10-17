@@ -1,5 +1,10 @@
 # Gate 9 reconstruction
 
+Latest correction: [Section 1 user annotations](section1-correction.md). Left is the
+property boundary, parking is removed here, and marked canopies/pavilion move right.
+The earlier garden-side interpretation below is superseded. Kiosk fork asphalt now
+matches the connected road. Open `?view=gate9-section1` for the correction overview.
+
 ## Latest walkthrough revision — 16 October 2026
 
 The latest video-based revision corrects the garden-side walkway/pavilion placement,

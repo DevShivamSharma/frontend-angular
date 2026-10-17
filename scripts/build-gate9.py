@@ -211,7 +211,7 @@ def kerbs(points,width):
         for i,(p,d) in enumerate(samples(points,.7)):
             if (p-Vector((-492,-393))).length < 9: continue
             # Walkthrough ENTRY pavilion: leave a clear, flush road-to-pavilion opening.
-            if sign == -1 and abs(width-12)<.01 and -406.6 < p.x < -402.4: continue
+            # The former left-side pavilion opening is closed after the user's side correction.
             # The gate forecourt (photo 20261015_104444) is one wide asphalt apron.
             if (p-Vector(GATE)).length < 34: continue
             n=Vector((-d.y,d.x));q=p+n*(width/2+.13)*sign
@@ -598,7 +598,7 @@ collection=bpy.data.collections.new('09 Kiosk, hedges and lane furniture (2026-1
 bpy.context.scene.collection.children.link(collection);collections['09']=collection
 EVIDENCE='Photo 20261015_104147 (direction kiosk, hydrant boxes, hedges); kiosk 4.2 x 3.2 m estimated'
 # Fork island just inside the gate: the lane widens round a sandstone direction kiosk.
-strip('SITE_GROUND_gate9 kiosk fork',[Vector(GATE)+Vector(F)*d for d in (18,30,40,52)],24,.2415,M['concrete'])
+strip('SITE_GROUND_gate9 kiosk fork',[Vector(GATE)+Vector(F)*d for d in (18,30,40,52)],24,.2415,M['asphalt'])
 island('kiosk',[gs(-2.6,30),gs(2.6,30),gs(2.6,44),gs(-2.6,44)])
 KD=37
 def kx(name,a,d,z,size,matl):return box('G9 kiosk '+name,gate(a,KD+d,z),size,matl,ga)
@@ -876,6 +876,14 @@ beam('SITE_GROUND_gate9 pavilion opening threshold',V(-409.7,-404.1,.246),V(-407
 for s in (-408.5,-407.5,-406.5):plant_at(s,-410.1,.30,.8)
 
 
+# The user corrected the earlier video interpretation with annotated screenshots.
+section1 = runpy.run_path(str(ROOT/'scripts/gate9-section1.py'))
+section1['correct_section'](globals())
+right_corner = runpy.run_path(str(ROOT/'scripts/gate9-right-corner.py'))
+right_corner['build'](globals())
+office_corner = runpy.run_path(str(ROOT/'scripts/gate9-office-corner.py'))
+office_corner['build'](globals())
+
 # Retain the surrounding masses, with the photographed low canopy court clear.
 reconcile = runpy.run_path(str(ROOT/'scripts/gate9-context.py'))['reconcile_context']
 created.extend(reconcile(ASSETS/'venue-site-detail.glb', collections['08']))
@@ -901,6 +909,9 @@ views['gate9-video-office']={'position':world((-478,-394,1.65)),'target':world((
 views['gate9-video-entry']={'position':world((-418,-397,1.65)),'target':world((-405,-405.5,2.0)),'label':'Gate 9 · Walkthrough ENTRY pavilion (01:30)'}
 views['gate9-video-turn']={'position':world((-365,-383,1.65)),'target':world((-388,-403,2.0)),'label':'Gate 9 · Walkthrough garden details'}
 views['gate9-video-lookout']={'position':gate_world(-19,4,1.8),'target':gate_world(-12,9,3.2),'label':'Gate 9 · Lookout stairs'}
+section1['correct_views'](views, world)
+right_corner['views'](views, gate)
+office_corner['views'](views, world)
 collection=collections['07']
 for name,view in views.items():
     cam=bpy.data.cameras.new(name);o=bpy.data.objects.new(name,cam);collection.objects.link(o)
@@ -976,7 +987,9 @@ manifest={'status':'Photo and walkthrough-informed reconstruction (2026-10-16); 
               'Small unreadable sign text, concealed rooms and transient traffic are omitted.',
               'Canopy footprints, spacing, road widths and planting positions are inferred from overlapping views.',
               'Office building footprint retained from the existing venue.',
-              'Walkway/pavilion moved to the garden side using the 01:18-01:36 sequence; absolute campus placement and connection to unseen paths remain estimates.',
+              'User section-one correction supersedes the video interpretation: left is property boundary; canopies/pavilion are on the right. Placement is editable and unsurveyed.',
+              'The incorrectly placed Gate 9 parking was removed. Parking belongs near CC; its exact placement awaits the CC section.',
+              'The latest right-facing entrance photo supersedes the open near-entry court: red piers, black railings and a low cream shelter now enclose the right side. Heights, lengths and photo pose remain estimated.',
               'Lookout stairs, kerb height, drain-panel spacing and garden tree positions are inferred rather than measured.',
               'Browser inspection was not authorized for this revision; app navigation and mobile appearance remain unverified.',
               'Two inferred northwest context masses are cut back locally at t=-444 m to clear the photographed canopy court; this setback is not surveyed.']}
