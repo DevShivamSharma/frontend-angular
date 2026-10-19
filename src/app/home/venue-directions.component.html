@@ -17,6 +17,16 @@
   @if (journey(); as journey) { <p class="directions-result" role="status">{{ summary(journey) }}</p> }
 }
 
+@if (graph() && journey()) {
+  <!-- The key for what the route draws on the map, in the track's colours (venue-route-track.ts). -->
+  <p class="legend-key directions-legend" aria-label="Map key">
+    <span><i class="k-start"></i>Start</span>
+    <span><i class="k-end"></i>Destination</span>
+    <span><i class="k-route"></i>Walking route</span>
+    <span><i class="k-walker"></i>Visitor walking it</span>
+  </p>
+}
+
 <ng-template #field let-role="role" let-noun="noun" let-Noun="Noun" let-selection="selection" let-other="other">
   <label class="walk-room-label" [for]="'directions-' + role">{{ location(selection) ? Noun : 'Select ' + noun }}</label>
   <!-- [selected] on each option, not [value] on the select: the options render after the select's value is bound. -->
