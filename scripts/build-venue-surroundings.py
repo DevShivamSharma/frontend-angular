@@ -12,7 +12,9 @@ ROOT = Path(__file__).resolve().parent.parent
 WORK = ROOT / 'work/venue-surroundings'
 ASSETS = ROOT / 'src/assets/venue'
 ref = json.loads((WORK / 'reference.json').read_text())
+subprocess.run(['node', str(ROOT / 'scripts/fit-satellite-reference.cjs')], cwd=ROOT, check=True)
 subprocess.run(['node', str(ROOT / 'scripts/prepare-venue-roads.cjs')], cwd=ROOT, check=True)
+satellite = json.loads((WORK / 'satellite-reference.json').read_text())
 road_network = json.loads((WORK / 'roads-prepared.json').read_text())
 source = ASSETS / 'IITF_2026_ARCHITECTURAL.glb'
 source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
@@ -76,6 +78,7 @@ M={
  'ground':material('SITE surrounding planted ground',(.09,.14,.055)),
  'road':material('SITE weathered asphalt',(.14,.16,.16)),
  'walk':material('SITE warm concrete footpaths',(.57,.55,.48)),
+ 'path':material('SITE pale sandstone walkways',(.72,.66,.55)),
  'white':material('SITE road marking ivory',(.81,.81,.73)),
  'kerb':material('SITE pale kerb stone',(.61,.61,.54)),
  'dark':material('SITE charcoal kerb and metal',(.12,.15,.14),.66),
@@ -173,9 +176,11 @@ for i,ring in enumerate(ref['outsidePlanting']):
     prism(f'SITE_nearby_planted_ground_{i:02d}',ring,-.16,-.06,M['ground'])
 road_world=[]
 R={}
-for key in ['road','walk','white','kerb','turf','dark','light']:
+for key in ['road','walk','path','white','kerb','turf','dark','light']:
     R[key]=M[key].copy(); R[key].name='SITE_ROAD '+M[key].name.removeprefix('SITE ')
-for key,mat,lo,hi in [('asphalt','road',.025,.035),('footpaths','walk',.03,.11),('kerbs','kerb',.10,.16),('medians','turf',.04,.20),('edgePaint','white',.041,.045)]:
+# Internal service roads reuse the asphalt material and walkways get one paving
+# material, so both batch with the existing road surfaces at runtime.
+for key,mat,lo,hi in [('asphalt','road',.025,.035),('footpaths','walk',.03,.11),('kerbs','kerb',.10,.16),('medians','turf',.04,.20),('edgePaint','white',.041,.045),('serviceRoads','road',.03,.05),('walkways','path',.04,.06)]:
     for i,poly in enumerate(road_network['surfaces'][key]):
         prism(f'SITE_ROAD_{key}_{i:03d}',poly[0],lo,hi,R[mat],poly[1:])
 
@@ -199,7 +204,9 @@ for road in road_network['roads']:
         box('SITE_'+name+'_light_pole',p+Vector((0,0,4.1)),(.14,.14,8.2),R['dark'])
         beam('SITE_'+name+'_light_arm',p+Vector((0,0,8.2)),p-n*1.5+Vector((0,0,8.2)),.12,.12,R['dark'])
         box('SITE_'+name+'_light_head',p-n*1.5+Vector((0,0,8.12)),(.9,.36,.13),R['light'],math.atan2(d.y,d.x))
-    inventory.append({'id':name,'phase':1,'type':'road','widthMetres':width,'status':'Connected aerial/satellite trace; widths, junction detail and road levels estimated'})
+    inventory.append({'id':name,'phase':1,'type':'road','widthMetres':width,'status':'Satellite trace; widths measured off the image, junction detail and road levels estimated'})
+for way in road_network['walkways']:
+    inventory.append({'id':way['id'],'phase':1,'type':'service-road' if way['type']=='service' else 'walkway','widthMetres':way['width'],'status':'Satellite trace along the walkable centre; width measured off the image'})
 
 building_world=[]
 for building in ref['buildings']:
@@ -362,6 +369,8 @@ bpy.ops.export_scene.gltf(filepath=str(ASSETS/'venue-site-detail.glb'),export_fo
 report={'source':ref['source'],'status':ref['status'],'sourceModelSha256':source_hash,'affine':{'x':AX,'z':AZ},'anchorResidualsMetres':{a['id']:round(math.dist(world(a['pixel']),a['world']),3) for a in ref['anchors']},'propertyBoundary':ref['propertyBoundary'],'referenceExtent':[1918,820],
  'mapMask':{'polygons':ref['outsidePlanting']+[b['p'] for b in ref['buildings']]+[parking['outline']],'roads':road_network['roads'],'bounds':road_network['bounds']},
  'roadNetwork':{'source':road_network['source'],'status':road_network['status'],'topology':road_network['topology'],'fadeEnds':[world(e['p']) for e in road_network['topology']['openEnds']]},
+ 'walkways':{'source':road_network['source'],'status':'Internal service roads and main pedestrian walkways, traced along the walkable centre and joined at junctions. Points are reference-image pixels like mapMask.roads.','paths':road_network['walkways'],'topology':road_network['walkwayTopology']},
+ 'satelliteReference':{'image':satellite['image'],'imageSize':satellite['imageSize'],'fit':satellite['fit'],'fitAnchors':satellite['fitAnchors'],'excludedAnchors':satellite['excludedAnchors']},
  'trees':{'nearby':tree_count[0],'property':tree_count[1]},'bushes':{'nearby':bush_count[0],'property':bush_count[1]},'features':inventory,'protectedSourceUnchanged':source_hash==hashlib.sha256(source.read_bytes()).hexdigest(),'runtimeReplaces':['SUPREME_COURT_METRO_STN','PHOTO_ADMIN*'],'blenderFile':'work/venue-surroundings/bharat-mandapam-surroundings.blend'}
 (ASSETS/'venue-site-detail.json').write_text(json.dumps(report,indent=2))
 print('VENUE_SITE_RESULT '+json.dumps({k:v for k,v in report.items() if k not in ['features','propertyBoundary','mapMask']}))
