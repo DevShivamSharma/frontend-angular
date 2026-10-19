@@ -31,6 +31,7 @@ import { collectVenueLightSources } from './venue-light-sources';
 import { createVenueRain } from './venue-rain';
 import { prepareVenueRoadFinish } from './venue-road-finish';
 import { prepareGate9Paving } from './venue-gate9-paving';
+import { delhiTime, isVenueDaylight } from './venue-clock';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; }
@@ -136,7 +137,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         let siteRegistration: SiteRegistration | undefined;
         let gate9: Awaited<ReturnType<typeof prepareGate9>> | undefined;
         let pendingInterior: (()=>void) | undefined;
-        let interiors:Awaited<ReturnType<typeof createVenueInteriors>>|undefined,daylight=true;
+        let interiors:Awaited<ReturnType<typeof createVenueInteriors>>|undefined,daylight=isVenueDaylight(delhiTime());
         let water: ReturnType<typeof createVenueWater> | undefined;
         let securityGuards: Awaited<ReturnType<typeof createVenueSecurityGuards>> | undefined;
         let nightLights: ReturnType<typeof createVenueNightLights> | undefined;
@@ -464,7 +465,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             invalidate();
         };
         events.status('Bharat Mandapam');
-        lightCommand(true);
+        lightCommand(isVenueDaylight(delhiTime()));
         const detailView = new URLSearchParams(location.search).get('view');
         const fitDetailWidth = (aspect: number) =>
             ['itpo-arrival', 'itpo-office', 'gate9', 'gate9-checking-room', 'gate6-road', 'fountain', 'cc-cascade', 'hall6-basin'].includes(detailView ?? '') ? Math.max(1, 1.4 / aspect) : 1;

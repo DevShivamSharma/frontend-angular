@@ -9,6 +9,7 @@ import { FloorPlanDialogComponent } from './floor-plan-dialog.component';
 import { Destination, VenueDetail, VenueInformation } from './venue.models';
 import { VenueViewer, createVenueViewer } from './venue-viewer';
 import { VenueAppearance, VenueScenery } from './venue-appearance';
+import { delhiTime, isVenueDaylight, isValidVenueTime } from './venue-clock';
 import { InteriorState } from './venue-interiors';
 import { INITIAL_VISITOR_STATE, VisitorInput, VisitorState } from './venue-visitor';
 
@@ -17,7 +18,7 @@ import { INITIAL_VISITOR_STATE, VisitorInput, VisitorState } from './venue-visit
   imports: [RouterLink, NgTemplateOutlet, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent],
   providers: [VenueDataService],
   templateUrl: './home-page.component.html',
-  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css', './venue-visitor-controls.css', './venue-visitor.css'],
+  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-time.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css', './venue-visitor-controls.css', './venue-visitor.css'],
   encapsulation: ViewEncapsulation.ShadowDom,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -45,7 +46,10 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly detailsVisible = signal(false);
   readonly selection = signal(0);
   readonly status = signal('Bharat Mandapam');
-  readonly daylight = signal(true);
+  readonly venueTime = signal(delhiTime());
+  readonly liveTime = signal(true);
+  readonly timeControlsOpen = signal(false);
+  readonly daylight = signal(isVenueDaylight(this.venueTime()));
   readonly raining = signal(false);
   readonly appearance = signal<VenueAppearance>('natural');
   readonly appearanceBusy = signal(false);
@@ -106,20 +110,42 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
       });
     });
   }
-  /** Evening lighting follows New Delhi's clock (IST, no daylight saving) until the sun/moon button overrides it. */
-  private lightOverride = false;
   private clockTimer?: ReturnType<typeof setInterval>;
   private followDelhiClock(): void {
-    const apply = () => {
-      if (this.destroyed || this.lightOverride) return;
-      const ist = new Date(Date.now() + (330 + new Date().getTimezoneOffset()) * 60_000);
-      const hour = ist.getHours() + ist.getMinutes() / 60;
-      const day = hour >= 6.5 && hour < 18.5;
-      if (day !== this.daylight()) { this.daylight.set(day); this.zone.runOutsideAngular(() => this.viewer?.setDaylight(day)); }
-    };
-    apply();
-    this.clockTimer = setInterval(() => this.zone.run(apply), 60_000);
+    if (this.clockTimer) clearInterval(this.clockTimer);
+    this.syncVenueClock(true);
+    // Poll outside Angular; update the UI only when the displayed minute changes.
+    this.zone.runOutsideAngular(() => {
+      this.clockTimer = setInterval(() => this.syncVenueClock(), 1000);
+    });
   }
+  private syncVenueClock(force = false): void {
+    if (this.destroyed) return;
+    const time = this.liveTime() ? delhiTime() : this.venueTime();
+    if (force || time !== this.venueTime()) this.zone.run(() => this.applyVenueTime(time, force));
+  }
+  private applyVenueTime(time: string, force = false): void {
+    this.venueTime.set(time);
+    const day = isVenueDaylight(time);
+    if (force || day !== this.daylight()) {
+      this.daylight.set(day);
+      this.zone.runOutsideAngular(() => this.viewer?.setDaylight(day));
+    }
+  }
+  setManualTime(time: string): void {
+    if (!isValidVenueTime(time)) return;
+    this.liveTime.set(false);
+    this.applyVenueTime(time);
+  }
+  resumeLiveTime(): void {
+    this.liveTime.set(true);
+    this.syncVenueClock(true);
+  }
+  @HostListener('window:focus')
+  @HostListener('window:pageshow')
+  resumeVenueClock(): void { this.syncVenueClock(); }
+  @HostListener('document:visibilitychange')
+  visibilityChanged(): void { if (!document.hidden) this.syncVenueClock(); }
   private setInformation(info: VenueInformation): void {
     this.destinations.set(info.destinations.filter(d => d.hall).sort((a, b) => parseInt(a.hall!) - parseInt(b.hall!) || a.hall!.localeCompare(b.hall!)));
     this.gates.set(info.destinations.filter(d => d.gate).sort((a,b) => a.gate!.localeCompare(b.gate!, undefined, {numeric:true})));
@@ -165,7 +191,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   globe(): void { this.closeDetails(); this.activeLevel.set(0); this.zone.runOutsideAngular(() => this.viewer?.goGlobe()); }
   zoom(factor: number): void { this.zone.runOutsideAngular(() => this.viewer?.zoom(factor)); }
   toggleRain(): void { this.raining.update(value => !value); this.zone.runOutsideAngular(() => this.viewer?.setRain(this.raining())); }
-  toggleLight(): void { this.lightOverride = true; this.daylight.update(value => !value); this.zone.runOutsideAngular(() => this.viewer?.setDaylight(this.daylight())); }
+  toggleLight(): void { this.setManualTime(this.daylight() ? '21:00' : '12:00'); }
   startVisitor():void { this.closeDetails();this.group.set(null);this.zone.runOutsideAngular(()=>this.viewer?.startVisitor()); }
   stopVisitor():void { this.zone.runOutsideAngular(()=>this.viewer?.stopVisitor()); }
   visitorHold(input:VisitorInput,event:PointerEvent,down:boolean):void {

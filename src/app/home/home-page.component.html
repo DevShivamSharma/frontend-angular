@@ -110,6 +110,28 @@
       <button type="button" data-scenery="map" [attr.aria-pressed]="scenery() === 'map'" (click)="setScenery('map')">Map</button>
     </div>
   }
+  <div class="venue-time-control" aria-label="Venue time">
+    <div class="venue-time-summary">
+      <button type="button" class="venue-time-toggle" aria-controls="venue-time-options"
+        [attr.aria-expanded]="timeControlsOpen()" title="Manual change time"
+        (click)="timeControlsOpen.set(!timeControlsOpen())">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span>{{ venueTime() }} IST <small>{{ liveTime() ? 'Live' : 'Demo' }} · {{ daylight() ? 'Day' : 'Night' }}</small></span>
+      </button>
+      @if (!liveTime()) { <button type="button" class="venue-time-live" (click)="resumeLiveTime()" title="Follow current India time">Live</button> }
+    </div>
+    <div id="venue-time-options" [hidden]="!timeControlsOpen()">
+      <label for="venue-demo-time">Manual time <span>IST</span></label>
+      <input id="venue-demo-time" type="time" step="60" [value]="venueTime()"
+        (input)="setManualTime($any($event.target).value)" aria-describedby="venue-time-help" />
+      <div class="venue-time-presets" role="group" aria-label="Demo lighting">
+        <button type="button" (click)="setManualTime('12:00')">Day</button>
+        <button type="button" (click)="setManualTime('21:00')">Night</button>
+        <button type="button" [attr.aria-pressed]="liveTime()" (click)="resumeLiveTime()">Live time</button>
+      </div>
+      <p id="venue-time-help">Day 06:30–18:30 · Night after 18:30.<br>Live follows New Delhi time automatically.</p>
+    </div>
+  </div>
   <p id="appearance-status" role="status" [hidden]="!appearanceBusy() && !appearanceError()">{{ appearanceBusy() ? 'Preparing materials…' : appearanceError() }}</p>
 </div>
 

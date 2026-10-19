@@ -1,0 +1,17 @@
+.venue-time-control{margin-top:6px;background:#f3f0ea;color:#29352f;text-align:left;width:200px;margin-left:auto;box-shadow:0 2px 8px #172c2926}
+.venue-time-summary{display:flex;align-items:center}
+.venue-time-toggle{display:flex;align-items:center;gap:8px;flex:1;min-height:44px;padding:6px 10px;background:transparent;text-align:left;font-size:12px;font-variant-numeric:tabular-nums}
+.venue-time-toggle small{display:block;margin-top:3px;font-size:11px;color:#47574d}
+.venue-time-live{min-height:36px;padding:6px 10px;margin-right:4px;background:#353c36;color:#fff;font-size:12px}
+.venue-time-toggle:hover{background:#fff}.venue-time-live:hover{background:#455448}
+#venue-time-options{padding:10px;border-top:1px solid #cdd3cb}
+#venue-time-options label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:6px}
+#venue-time-options label span{font-weight:400;color:#47574d}
+#venue-demo-time{box-sizing:border-box;display:block;width:100%;min-height:40px;padding:6px 8px;border:1px solid #9daba1;background:#fffdf8;color:#29352f;font:inherit;font-size:14px;font-variant-numeric:tabular-nums;color-scheme:light;accent-color:#9a623f}
+.venue-time-presets{display:flex;gap:4px;margin-top:8px}
+.venue-time-presets button{flex:1;min-height:36px;padding:4px;background:#e1e5de;color:#304036;font-size:11px;white-space:nowrap}
+.venue-time-presets button:hover{background:#cdd6cb}.venue-time-presets button[aria-pressed=true]{background:#353c36;color:#fff}
+#venue-time-help{margin:8px 0 0;font-size:11px;line-height:1.5;color:#47574d}
+.venue-time-control :focus-visible{outline:2px solid #9a623f;outline-offset:2px}
+.venue-time-control ::selection{background:#c2d6c7;color:#1d3024}
+@media(max-width:700px){.venue-time-control{width:180px}.venue-time-presets button{min-height:40px}}
