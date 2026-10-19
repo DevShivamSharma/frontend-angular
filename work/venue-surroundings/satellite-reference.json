@@ -1,0 +1,89 @@
+{
+  "source": "Esri World Imagery zoom 18, tiles x 187310-187325, y 109300-109315 stitched to 4096 x 4096 (docs/aerial-reference/bharat-mandapam-satellite-z18-full.jpg)",
+  "image": "docs/aerial-reference/bharat-mandapam-satellite-z18-full.jpg",
+  "imageSize": [
+    4096,
+    4096
+  ],
+  "projection": "Web Mercator, north up, one zoom level: a similarity transform (scale, rotation, translation) maps its pixels to the venue's X/Z metres",
+  "groundMetresPerPixel": 0.5242,
+  "anchors": [
+    {
+      "id": "cc",
+      "pixel": [
+        2137,
+        1731
+      ],
+      "world": [
+        -345.2,
+        129
+      ],
+      "note": "Convention Centre: centre of the oval roof and stone drum outline"
+    },
+    {
+      "id": "hall14",
+      "pixel": [
+        2355,
+        1957.5
+      ],
+      "world": [
+        -223.6,
+        4.9
+      ],
+      "note": "Hall 14: centre of the red oval roof"
+    },
+    {
+      "id": "hall1",
+      "pixel": [
+        1942,
+        2592
+      ],
+      "world": [
+        151.5,
+        232.7
+      ],
+      "note": "Hall 1: centre of the red oval roof beside the fountain pond"
+    },
+    {
+      "id": "hall6",
+      "pixel": [
+        2850,
+        2818
+      ],
+      "world": [
+        248,
+        -277.2
+      ],
+      "note": "Hall 6: centre of the rectangular red roof"
+    }
+  ],
+  "worldSource": "Roof and envelope centroids of the read-only IITF_2026_ARCHITECTURAL.glb (PHOTO_CC roof panelwork, PHOTO_HALL_14 detailed envelope, PHOTO_HALL_1 detailed envelope, PHOTO_HALL_6 roof)",
+  "fitAnchors": [
+    "cc",
+    "hall14",
+    "hall6"
+  ],
+  "excludedAnchors": {
+    "hall1": "The pixel pick is right: it is the centre of the red oval roof (segmented roof centroid 1942, 2592). The model's Hall 1 envelope is the problem: it is about 95 m long where the roof on the image is about 125 m, and it sits in the southern part of the real footprint, so its centre lands about 20 m from the image centre. Fitting it would pull the CC, Hall 14 and Hall 6 several metres off, so it is kept as a check only."
+  },
+  "fit": {
+    "x": [
+      -0.01063088,
+      0.55311409,
+      -1280.52832348
+    ],
+    "z": [
+      -0.55311409,
+      -0.01063088,
+      1328.94449018
+    ],
+    "worldMetresPerPixel": 0.553216,
+    "rotationDegrees": -91.1011,
+    "residualsMetres": {
+      "cc": 0.762,
+      "hall14": 0.998,
+      "hall1": 19.77,
+      "hall6": 0.241
+    }
+  }
+}
