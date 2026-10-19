@@ -3258,7 +3258,8 @@
   "protectedSourceUnchanged": true,
   "runtimeReplaces": [
     "SUPREME_COURT_METRO_STN",
-    "PHOTO_ADMIN*"
+    "PHOTO_ADMIN*",
+    "PHOTO_PATH campus drives off the satellite (see venue-site-detail.ts SUPERSEDED_DRIVES)"
   ],
   "blenderFile": "work/venue-surroundings/bharat-mandapam-surroundings.blend"
 }

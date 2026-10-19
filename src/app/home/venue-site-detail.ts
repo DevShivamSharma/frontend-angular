@@ -9,6 +9,14 @@ export interface SiteRegistration {
   roadNetwork?: { fadeEnds: [number, number][] };
 }
 
+// Model campus drives that the z18 satellite shows in the wrong place (16 to 184 m
+// from any visible carriageway); the traced service roads in this layer replace them.
+// The Gate 3, Gate 4 and Gate 5B approaches match the satellite and stay.
+const SUPERSEDED_DRIVES = ['Eastern perimeter service drive', 'Gate 10 north campus approach',
+  'Gate 11 forecourt connector', 'Hall 1 rear service drive', 'Hall 6 north approach',
+  'Hall 6 south and Gate 1 approach', 'Hall 12A east service link', 'Hall 14 to exhibition plaza drive',
+].map(name => `PHOTO_PATH_${name.replaceAll(' ', '_')}`);
+
 /** Separate Blender-authored surroundings. The original hall asset is never edited. */
 export async function prepareVenueSiteDetail(root: T.Group, asset: (path: string) => string,
   signal: AbortSignal): Promise<SiteRegistration> {
@@ -40,6 +48,11 @@ export async function prepareVenueSiteDetail(root: T.Group, asset: (path: string
       object.visible = false;
       object.userData['supersededBySiteReference'] = true;
     }
+    // Drives and their edge inlays; flag every mesh so batching cannot merge one back into view.
+    if (SUPERSEDED_DRIVES.some(name => object.name.startsWith(name))) object.traverse(child => {
+      child.visible = false;
+      child.userData['supersededBySiteReference'] = true;
+    });
   });
   return registration;
 }
