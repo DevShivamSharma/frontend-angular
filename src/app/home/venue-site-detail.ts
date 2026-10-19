@@ -7,6 +7,7 @@ export interface SiteRegistration {
   status: string;
   mapMask: { polygons: [number, number][][]; roads: { points: [number, number][]; width: number }[]; bounds?: [number, number, number, number] };
   roadNetwork?: { fadeEnds: [number, number][] };
+  walkways?: { paths: { id: string; type: 'service' | 'path'; width: number; points: [number, number][] }[] };
 }
 
 // Model campus drives that the z18 satellite shows in the wrong place (16 to 184 m

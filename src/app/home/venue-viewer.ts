@@ -25,6 +25,7 @@ import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor'
 import { createVenueSecurityGuards } from './venue-security-guards';
 import { capturePedestrianPaths, createVenuePedestrians } from './venue-pedestrians';
 import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration } from './venue-site-detail';
+import { createVenueWalkwayRoute } from './venue-walkway-route';
 import { prepareGate9 } from './venue-gate9';
 import { createVenueNightLights } from './venue-night-lights';
 import { collectVenueLightSources } from './venue-light-sources';
@@ -139,6 +140,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         let pendingInterior: (()=>void) | undefined;
         let interiors:Awaited<ReturnType<typeof createVenueInteriors>>|undefined,daylight=isVenueDaylight(delhiTime());
         let water: ReturnType<typeof createVenueWater> | undefined;
+        let walkwayRoute: ReturnType<typeof createVenueWalkwayRoute> | undefined;
         let securityGuards: Awaited<ReturnType<typeof createVenueSecurityGuards>> | undefined;
         let nightLights: ReturnType<typeof createVenueNightLights> | undefined;
         let rain: ReturnType<typeof createVenueRain> | undefined, raining = false;
@@ -212,6 +214,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 }
             }
             highlighted = id;
+            walkwayRoute?.show(id);
             nightLights?.setDaylight(daylight);
         }
         function resetLevel() {
@@ -411,6 +414,13 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         if (raining) rain.setEnabled(true);
         water = createVenueWater(root);
         cleanups.push(() => water?.dispose());
+        if (siteRegistration?.walkways) {
+            // Halls, the CC and the fountain get a route from the gate nearest on foot.
+            const ground = (d: Destination) => { const p = W(d.center[0], d.center[1], 0); return new T.Vector2(p.x, p.z); };
+            walkwayRoute = createVenueWalkwayRoute(scene, siteRegistration,
+                new Map(destinations.filter(d => !d.gate).map(d => [d.id, ground(d)])), destinations.filter(d => d.gate).map(ground));
+            cleanups.push(() => walkwayRoute?.dispose());
+        }
         try {
             securityGuards = await createVenueSecurityGuards({ renderer, navigation: visitorNavigation, asset, signal, extra: gate9?.guards });
             scene.add(securityGuards.group);
