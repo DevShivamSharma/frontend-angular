@@ -25,7 +25,8 @@ import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor'
 import { createVenueSecurityGuards } from './venue-security-guards';
 import { capturePedestrianPaths, createVenuePedestrians } from './venue-pedestrians';
 import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration } from './venue-site-detail';
-import { createVenueWalkwayRoute } from './venue-walkway-route';
+import { createVenueRouteTrack, ROUTE_FRAME_MS } from './venue-route-track';
+import { Point } from './venue-route-geometry';
 import { prepareGate9 } from './venue-gate9';
 import { createVenueNightLights } from './venue-night-lights';
 import { collectVenueLightSources } from './venue-light-sources';
@@ -35,8 +36,8 @@ import { prepareGate9Paving } from './venue-gate9-paving';
 import { delhiTime, isVenueDaylight } from './venue-clock';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
-interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; }
-export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setRain:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; startVisitor:()=>void; stopVisitor:()=>void; visitorInput:(input:VisitorInput,down:boolean)=>void; visitorStep:(input:VisitorInput)=>void; visitorDestination:(id:string)=>void; visitorGo:()=>void; visitorEnter:()=>void; visitorJump:()=>void; visitorStopAutoWalk:()=>void; visitorFaster:()=>void; visitorRestart:()=>void; visitorFloor:(level:number)=>void; readonly isGlobe:boolean; dispose:()=>void; }
+interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; routeEnded?:()=>void; }
+export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setRain:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; startVisitor:()=>void; stopVisitor:()=>void; visitorInput:(input:VisitorInput,down:boolean)=>void; visitorStep:(input:VisitorInput)=>void; visitorDestination:(id:string)=>void; visitorGo:()=>void; visitorEnter:()=>void; visitorJump:()=>void; visitorStopAutoWalk:()=>void; visitorFaster:()=>void; visitorRestart:()=>void; visitorFloor:(level:number)=>void; showRoute:(points:Point[])=>void; clearRoute:()=>void; readonly isGlobe:boolean; dispose:()=>void; }
 /** Render camera motion and visible fountain water with consistent scene shading. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement): VenueViewer {
     const lifetime = new AbortController();
@@ -51,9 +52,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
     let roomCommand=(_id:string,_room:string)=>{};
     let visitor:ReturnType<typeof createVenueVisitor>|undefined;
     let startVisitorCommand=()=>{},stopVisitorCommand=()=>{};
+    let showRouteCommand=(_points:Point[])=>{},clearRouteCommand=()=>{};
     let exportCommand=async(_id:string):Promise<ArrayBuffer>=>{throw new Error('Interiors are still loading');};
     const ready = initializeVenue();
-    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setRain:r=>rainCommand(r), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), enterHall:(id,guided)=>enterCommand(id,guided),pauseTour:()=>pauseCommand(),leaveInterior:()=>leaveCommand(),walk:(f,t)=>walkCommand(f,t),exportHall:id=>exportCommand(id),visitRoom:(id,room)=>roomCommand(id,room),startVisitor:()=>startVisitorCommand(),stopVisitor:()=>stopVisitorCommand(),visitorInput:(i,d)=>visitor?.input(i,d),visitorStep:i=>visitor?.step(i),visitorDestination:id=>visitor?.destination(id),visitorGo:()=>visitor?.goToDestination(),visitorEnter:()=>visitor?.enterNearby(),visitorJump:()=>visitor?.jump(),visitorStopAutoWalk:()=>visitor?.stopAutoWalk(),visitorFaster:()=>visitor?.faster(),visitorRestart:()=>visitor?.restart(),visitorFloor:n=>visitor?.floor(n),get isGlobe(){return isGlobe();}, dispose };
+    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setRain:r=>rainCommand(r), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), enterHall:(id,guided)=>enterCommand(id,guided),pauseTour:()=>pauseCommand(),leaveInterior:()=>leaveCommand(),walk:(f,t)=>walkCommand(f,t),exportHall:id=>exportCommand(id),visitRoom:(id,room)=>roomCommand(id,room),startVisitor:()=>startVisitorCommand(),stopVisitor:()=>stopVisitorCommand(),visitorInput:(i,d)=>visitor?.input(i,d),visitorStep:i=>visitor?.step(i),visitorDestination:id=>visitor?.destination(id),visitorGo:()=>visitor?.goToDestination(),visitorEnter:()=>visitor?.enterNearby(),visitorJump:()=>visitor?.jump(),visitorStopAutoWalk:()=>visitor?.stopAutoWalk(),visitorFaster:()=>visitor?.faster(),visitorRestart:()=>visitor?.restart(),visitorFloor:n=>visitor?.floor(n),showRoute:points=>showRouteCommand(points),clearRoute:()=>clearRouteCommand(),get isGlobe(){return isGlobe();}, dispose };
     function dispose() {
         if (signal.aborted) return;
         lifetime.abort();
@@ -64,7 +66,8 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const noop = () => {};
         viewCommand = levelCommand = globeCommand = zoomCommand = lightCommand = rainCommand = noop;
         sceneryCommand = enterCommand = pauseCommand = leaveCommand = walkCommand = roomCommand = noop;
-        startVisitorCommand = stopVisitorCommand = noop;
+        startVisitorCommand = stopVisitorCommand = clearRouteCommand = noop;
+        showRouteCommand = noop;
         appearanceCommand = async () => {};
         isGlobe = () => false;
         exportCommand = async () => { throw new Error('Viewer has been disposed'); };
@@ -140,7 +143,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         let pendingInterior: (()=>void) | undefined;
         let interiors:Awaited<ReturnType<typeof createVenueInteriors>>|undefined,daylight=isVenueDaylight(delhiTime());
         let water: ReturnType<typeof createVenueWater> | undefined;
-        let walkwayRoute: ReturnType<typeof createVenueWalkwayRoute> | undefined;
+        // Route mode: the aerial walking route. The orbit settings it replaces are restored on the way out.
+        let routeTrack: ReturnType<typeof createVenueRouteTrack> | undefined, routeTimer: number | undefined, routeLockPending = false;
+        let routeMode: { fov: number; minPolar: number; maxPolar: number; rotate: boolean; maxDistance: number } | undefined;
+        cleanups.push(() => window.clearTimeout(routeTimer));
         let securityGuards: Awaited<ReturnType<typeof createVenueSecurityGuards>> | undefined;
         let nightLights: ReturnType<typeof createVenueNightLights> | undefined;
         let rain: ReturnType<typeof createVenueRain> | undefined, raining = false;
@@ -214,7 +220,6 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 }
             }
             highlighted = id;
-            walkwayRoute?.show(id);
             nightLights?.setDaylight(daylight);
         }
         function resetLevel() {
@@ -235,7 +240,23 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             globe.goVenue({ position, target });
             return;
         } tween = { start: performance.now(), duration, a: camera.position.clone(), b: controls.target.clone(), p: position, t: target }; invalidate(); }
+        const ROUTE_FOV = 18, ROUTE_MAX_DISTANCE = 4200;   // stays under the globe's automatic departure at 4600 m
+        const degrees = (fov: number) => Math.tan(T.MathUtils.degToRad(fov / 2));
+        /** Change the field of view and keep the framing by moving along the view line. */
+        function setFov(fov: number) {
+            const distance = camera.position.distanceTo(controls.target) * degrees(camera.fov) / degrees(fov);
+            camera.fov = fov; camera.updateProjectionMatrix();
+            camera.position.sub(controls.target).setLength(distance).add(controls.target);
+        }
+        function leaveRoute() {
+            if (!routeMode) return;
+            const saved = routeMode; routeMode = undefined; routeLockPending = false;
+            routeTrack?.clear(); setFov(saved.fov);
+            controls.minPolarAngle = saved.minPolar; controls.maxPolarAngle = saved.maxPolar; controls.enableRotate = saved.rotate; controls.maxDistance = saved.maxDistance;
+            events.routeEnded?.(); invalidate();
+        }
         function view(id:string) {
+            leaveRoute();
             pendingInterior=undefined;
             visitor?.stop();
             interiors?.leave();controls.enabled=true;controls.minDistance=6;
@@ -257,7 +278,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         // Include the adjoining checkpoint when selecting Gate 9 from the menu.
         views['gate9'] = { p: [-574, -349, 18], t: [-540, -365, 2.2], radius: 18 };
         levelCommand=n=>{view('cc');level=n;};
-        globeCommand=()=>{pendingInterior=undefined;visitor?.stop();interiors?.leave();controls.enabled=true;resetLevel();tween=null;globe?.goGlobe();};
+        globeCommand=()=>{leaveRoute();pendingInterior=undefined;visitor?.stop();interiors?.leave();controls.enabled=true;resetLevel();tween=null;globe?.goGlobe();};
         isGlobe=()=>!!globe?.isGlobe;
         zoomCommand=f=>{if(interiors?.active){interiors.step(f<1?1:-1);return;}if(globe?.transitioning)return;tween=null;camera.position.sub(controls.target).multiplyScalar(f).add(controls.target);controls.update();invalidate();};
         // Sun/moon and rain share one lighting pass: rain flattens the sun into
@@ -342,9 +363,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             }});
             cleanups.push(()=>interiors?.dispose());
             events.interiorsReady?.(interiors.halls.map(h=>({id:h.id,label:h.label,rooms:h.rooms?.map(r=>({id:r.id,label:r.label}))})));
-            enterCommand=(id,guided=false)=>{visitor?.stop();if(globe?.isGlobe||globe?.transitioning){view(id.startsWith('cc-level')?'cc':id);pendingInterior=()=>enterCommand(id,guided);events.status('Returning to the venue…');return;}tween=null;resetLevel();highlight('');interiors?.enter(id,guided);events.status(`${interiors?.hall?.label??'Hall'} · ${guided?'Guided tour':'Interior walkthrough'}`);};
+            enterCommand=(id,guided=false)=>{leaveRoute();visitor?.stop();if(globe?.isGlobe||globe?.transitioning){view(id.startsWith('cc-level')?'cc':id);pendingInterior=()=>enterCommand(id,guided);events.status('Returning to the venue…');return;}tween=null;resetLevel();highlight('');interiors?.enter(id,guided);events.status(`${interiors?.hall?.label??'Hall'} · ${guided?'Guided tour':'Interior walkthrough'}`);};
             levelCommand=n=>{
-                visitor?.stop();
+                leaveRoute();visitor?.stop();
                 if(globe?.isGlobe||globe?.transitioning){view('cc');pendingInterior=()=>levelCommand(n);return;}
                 tween=null;resetLevel();highlight('');const h=interiors?.preview(`cc-level${n}`);if(!h)return;
                 level=n;controls.enabled=true;controls.minDistance=8;controls.maxPolarAngle=Math.PI*.48;
@@ -414,13 +435,33 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         if (raining) rain.setEnabled(true);
         water = createVenueWater(root);
         cleanups.push(() => water?.dispose());
-        if (siteRegistration?.walkways) {
-            // Halls, the CC and the fountain get a route from the gate nearest on foot.
-            const ground = (d: Destination) => { const p = W(d.center[0], d.center[1], 0); return new T.Vector2(p.x, p.z); };
-            walkwayRoute = createVenueWalkwayRoute(scene, siteRegistration,
-                new Map(destinations.filter(d => !d.gate).map(d => [d.id, ground(d)])), destinations.filter(d => d.gate).map(ground));
-            cleanups.push(() => walkwayRoute?.dispose());
-        }
+        routeTrack = createVenueRouteTrack(scene, invalidate);
+        cleanups.push(() => routeTrack?.dispose());
+        // Screen up in route mode is east, so Mathura Road runs along the bottom as on the ITPO map;
+        // the direction comes from the satellite registration rather than a guessed angle.
+        const fit = siteRegistration?.satelliteReference?.fit;
+        const east = fit ? new T.Vector2(fit.x[0], fit.z[0]).normalize() : new T.Vector2(0, -1);
+        showRouteCommand=points=>{
+            if(globe?.isGlobe||globe?.transitioning){view('overview');pendingInterior=()=>showRouteCommand(points);return;}
+            if(!routeTrack||points.length<2)return;
+            pendingInterior=undefined;visitor?.stop();interiors?.leave();resetLevel();highlight('');controls.enabled=true;
+            if(!routeMode){
+                routeMode={fov:camera.fov,minPolar:controls.minPolarAngle,maxPolar:controls.maxPolarAngle,rotate:controls.enableRotate,maxDistance:controls.maxDistance};
+                setFov(ROUTE_FOV);
+            }
+            controls.minPolarAngle=0;controls.enableRotate=true;controls.maxDistance=ROUTE_MAX_DISTANCE;
+            routeTrack.show(points);
+            // Fit the route on screen, measured along the screen's up (east) and right axes.
+            const right=new T.Vector2(-east.y,east.x);let u0=Infinity,u1=-Infinity,v0=Infinity,v1=-Infinity;
+            for(const p of points){const u=p.x*east.x+p.z*east.y,v=p.x*right.x+p.z*right.y;u0=Math.min(u0,u);u1=Math.max(u1,u);v0=Math.min(v0,v);v1=Math.max(v1,v);}
+            const um=(u0+u1)/2,vm=(v0+v1)/2,half=Math.max((u1-u0)/2*1.2+25,((v1-v0)/2*1.2+25)/camera.aspect);
+            const height=T.MathUtils.clamp(half/degrees(ROUTE_FOV),150,ROUTE_MAX_DISTANCE);
+            const target=new T.Vector3(east.x*um+right.x*vm,0,east.y*um+right.y*vm);
+            // A tiny southward offset gives OrbitControls a heading, so screen up is east.
+            const eye=target.clone().add(new T.Vector3(-east.x*height*.002,height,-east.y*height*.002));
+            routeLockPending=true;fly(eye,target,1600);
+        };
+        clearRouteCommand=()=>{if(routeMode){leaveRoute();view('overview');}};
         try {
             securityGuards = await createVenueSecurityGuards({ renderer, navigation: visitorNavigation, asset, signal, extra: gate9?.guards });
             scene.add(securityGuards.group);
@@ -447,7 +488,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         events.visitorReady?.(visitorNavigation.portals.map(p=>({id:p.hall.id,label:p.hall.level?'Convention Centre':p.hall.label})));
         startVisitorCommand=()=>{
             if(globe?.isGlobe||globe?.transitioning){view('overview');pendingInterior=()=>startVisitorCommand();events.status('Returning to the venue…');return;}
-            pendingInterior=undefined;tween=null;interiors?.leave();resetLevel();highlight('');
+            leaveRoute();pendingInterior=undefined;tween=null;interiors?.leave();resetLevel();highlight('');
             controls.enabled=false;visitor?.start();renderer.shadowMap.needsUpdate=true;invalidate();
         };
         stopVisitorCommand=()=>{pendingInterior=undefined;visitor?.stop();view('overview');events.status('Bharat Mandapam');};
@@ -586,6 +627,11 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             if (k >= 1)
                 tween = null;
         }
+            // Once the camera has arrived straight above the route, tilt and rotation are locked; pan and zoom stay.
+            if (routeLockPending && !tween) {
+                routeLockPending = false; controls.update();
+                controls.minPolarAngle = controls.maxPolarAngle = controls.getPolarAngle(); controls.enableRotate = false;
+            }
             const visiting = visitor?.update(performance.now());
             const gateMoving = gate9?.update(performance.now(), reducedMotion.matches, globe?.isGlobe ? undefined : camera.position);
             if (gateMoving) renderer.shadowMap.needsUpdate = true;
@@ -608,7 +654,11 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5) * scale);
                 ambientOcclusion.resize(); invalidate();
             }
-            return Boolean(changed || walking || visiting || gateMoving || strolling || tween || pendingInterior || globe?.transitioning || flowing || pouring || relit);
+            const routing = !globe?.isGlobe && routeTrack?.update(performance.now(), camera, innerHeight, reducedMotion.matches);
+            const moving = Boolean(changed || walking || visiting || gateMoving || strolling || tween || pendingInterior || globe?.transitioning || flowing || pouring || relit);
+            // The route alone animates at the app's capped ~40 fps instead of every display frame.
+            if (routing && !moving && routeTimer === undefined) routeTimer = window.setTimeout(() => { routeTimer = undefined; invalidate(); }, ROUTE_FRAME_MS);
+            return moving;
         }
         function renderFrame() {
             if (securityGuards?.update(camera, innerHeight, !globe?.isGlobe || globe.transitioning))
@@ -624,8 +674,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 // Crowd has its own animated GPU poses; exclude it from the
                 // cached static AO mask to avoid frozen standing silhouettes.
                 if (pedestrians) pedestrians.group.visible = false;
+                // The route draws without depth over everything; it has no place in the AO mask.
+                if (routeTrack) routeTrack.group.visible = false;
                 try { ambientOcclusion.render(camera.position.distanceTo(controls.target)); }
-                finally { sky.mesh.visible = true; if (pedestrians) pedestrians.group.visible = !!crowdVisible; }
+                finally { sky.mesh.visible = true; if (pedestrians) pedestrians.group.visible = !!crowdVisible; if (routeTrack) routeTrack.group.visible = routeTrack.active; }
             }
         }
         // Draw a prepared scene before releasing the welcome screen.

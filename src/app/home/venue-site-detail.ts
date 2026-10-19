@@ -7,7 +7,8 @@ export interface SiteRegistration {
   status: string;
   mapMask: { polygons: [number, number][][]; roads: { points: [number, number][]; width: number }[]; bounds?: [number, number, number, number] };
   roadNetwork?: { fadeEnds: [number, number][] };
-  walkways?: { paths: { id: string; type: 'service' | 'path'; width: number; points: [number, number][] }[] };
+  /** z18 satellite pixel -> world fit; route mode takes screen up (east) from it. */
+  satelliteReference?: { fit: { x: [number, number, number]; z: [number, number, number] } };
 }
 
 // Model campus drives that the z18 satellite shows in the wrong place (16 to 184 m

@@ -1,0 +1,36 @@
+@if (error()) { <p class="walk-error" role="alert">{{ error() }}</p> }
+@else if (!graph()) { <p class="walk-hint">Loading walking routes…</p> }
+@else if (folded() && journey(); as journey) {
+  <div class="directions-summary" role="status">
+    <span>{{ summary(journey) }}</span>
+    <button type="button" (click)="change()" [attr.aria-label]="'Route from ' + journey.start.label + ' to ' + journey.end.label + '. Change source or destination'">Change</button>
+  </div>
+} @else {
+  <ng-container *ngTemplateOutlet="field; context: { role: 'source', noun: 'source', Noun: 'Source', selection: source(), other: destination() }" />
+  <div class="directions-swap">
+    <button type="button" (click)="swap()" [disabled]="!source() && !destination()" aria-label="Swap source and destination">⇅ Swap</button>
+    <button type="button" (click)="clear()" [disabled]="!source() && !destination()" aria-label="Clear source and destination">Clear</button>
+  </div>
+  <ng-container *ngTemplateOutlet="field; context: { role: 'destination', noun: 'destination', Noun: 'Destination', selection: destination(), other: source() }" />
+  <button type="button" class="walk-primary directions-submit" [disabled]="!canSubmit()" (click)="submit()" aria-label="Submit to show the route">Submit</button>
+  @if (problem(); as problem) { <p class="walk-error" role="alert">{{ problemMessage(problem) }}</p> }
+  @if (journey(); as journey) { <p class="directions-result" role="status">{{ summary(journey) }}</p> }
+}
+
+<ng-template #field let-role="role" let-noun="noun" let-Noun="Noun" let-selection="selection" let-other="other">
+  <label class="walk-room-label" [for]="'directions-' + role">{{ location(selection) ? Noun : 'Select ' + noun }}</label>
+  <!-- [selected] on each option, not [value] on the select: the options render after the select's value is bound. -->
+  <select [id]="'directions-' + role" (change)="setLocation(role, $any($event.target).value)">
+    <option value="" disabled [selected]="!selection">Select {{ noun }}</option>
+    @for (option of locationOptions(other); track option.value) { <option [value]="option.value" [selected]="option.value === selection?.locationId">{{ option.label }}</option> }
+  </select>
+  @if (location(selection); as place) {
+    @if (pointOptions(selection, other).length) {
+      <label class="walk-room-label" [for]="'directions-' + role + '-point'">{{ Noun }} {{ pointNoun(place).toLowerCase() }}</label>
+      <select [id]="'directions-' + role + '-point'" (change)="setPoint(role, $any($event.target).value)">
+        <option [value]="closest" [selected]="selection.pointId === closest">Closest {{ pointNoun(place).toLowerCase() }}</option>
+        @for (option of pointOptions(selection, other); track option.value) { <option [value]="option.value" [selected]="option.value === selection.pointId">{{ option.label }}</option> }
+      </select>
+    }
+  }
+</ng-template>

@@ -12,13 +12,15 @@ import { VenueAppearance, VenueScenery } from './venue-appearance';
 import { delhiTime, isVenueDaylight, isValidVenueTime } from './venue-clock';
 import { InteriorState } from './venue-interiors';
 import { INITIAL_VISITOR_STATE, VisitorInput, VisitorState } from './venue-visitor';
+import { VenueDirectionsComponent } from './venue-directions.component';
+import { Point } from './venue-route-geometry';
 
 @Component({
   selector: 'app-home-page', standalone: true,
-  imports: [RouterLink, NgTemplateOutlet, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent],
+  imports: [RouterLink, NgTemplateOutlet, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent, VenueDirectionsComponent],
   providers: [VenueDataService],
   templateUrl: './home-page.component.html',
-  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-time.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css', './venue-visitor-controls.css', './venue-visitor.css'],
+  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-time.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css', './venue-visitor-controls.css', './venue-visitor.css', './venue-directions.css'],
   encapsulation: ViewEncapsulation.ShadowDom,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -37,7 +39,11 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly loading = new VenueLoadingState();
   readonly destinations = signal<Destination[]>([]);
   readonly details = signal<Record<string, VenueDetail>>({});
-  readonly group = signal<'cc' | 'halls' | 'gates' | null>(null);
+  readonly group = signal<'cc' | 'halls' | 'gates' | 'directions' | null>(null);
+  /** The explorer is showing a walking route (route mode). */
+  readonly routeActive = signal(false);
+  readonly directionsTarget = signal('');
+  readonly directionsRequest = signal(0);
   readonly gates = signal<Destination[]>([]);
   readonly collapsed = signal(false);
   readonly activeView = signal('overview');
@@ -86,6 +92,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
           satelliteReady: () => this.zone.run(() => this.satelliteReady.set(true)),
           interiorsReady:(halls,error)=>this.zone.run(()=>{this.interiorHalls.set(halls);this.interiorError.set(error??'');}),
           visitorReady:destinations=>this.zone.run(()=>{this.visitorDestinations.set(destinations);this.visitorReady.set(true);}),
+          routeEnded:()=>this.zone.run(()=>this.routeActive.set(false)),
           visitorState:state=>this.zone.run(()=>{
             if(this.destroyed)return;
             const wasActive=this.visitor().active;
@@ -165,7 +172,19 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     this.collapsed.set(false); this.activeView.set(''); this.activeLevel.set(level);
     this.group.set('cc');this.menuInterior.set('cc-level'+level);this.interiorHall.set('cc-level'+level);this.interiorRoom.set('');this.closeDetails();this.revealWalkthrough(); this.status.set('Convention Centre · Level ' + level);
   }
-  toggleGroup(group: 'cc' | 'halls' | 'gates'): void {
+  /** Show a submitted walking route in route mode, or leave route mode when it is withdrawn. */
+  showRoute(points: Point[] | null): void {
+    if (points) {
+      this.closeDetails(); this.activeView.set(''); this.activeLevel.set(0); this.routeActive.set(true); this.status.set('Walking route');
+      this.zone.runOutsideAngular(() => this.viewer?.showRoute(points));
+    } else if (this.routeActive()) this.zone.runOutsideAngular(() => this.viewer?.clearRoute());
+  }
+  /** "Directions here" from a hall's or the CC's options: open the planner with it as the destination. */
+  directionsTo(id: string): void {
+    this.group.set('directions'); this.collapsed.set(false);
+    this.directionsTarget.set(id.startsWith('cc-level') ? 'cc' : id); this.directionsRequest.update(n => n + 1);
+  }
+  toggleGroup(group: 'cc' | 'halls' | 'gates' | 'directions'): void {
     const open = this.group() !== group; this.group.set(open ? group : null);
     if (group === 'cc') { if (open) this.view('cc'); else this.closeDetails(); }
     else { this.closeDetails(); if (open && this.viewer?.isGlobe) this.view('overview', false); }

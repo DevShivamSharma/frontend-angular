@@ -34,6 +34,8 @@
 </div>
 <button class="section-row" id="gates-group" [attr.aria-expanded]="group() === 'gates'" (click)="toggleGroup('gates')" aria-controls="gate-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V5h18v16M7 21V9h10v12M3 5V2m18 3V2"/></svg><span>Gates</span><b>›</b></button>
 <div id="gate-menu" class="sub-menu" [hidden]="group() !== 'gates'">@for (destination of gates(); track destination.id) {<button [attr.data-view]="destination.id" [class.active]="activeView() === destination.id" (click)="view(destination.id, false)"><span>{{ destination.label }}</span><span>›</span></button>}</div>
+<button class="section-row" id="directions-group" [class.active]="routeActive()" [attr.aria-expanded]="group() === 'directions'" (click)="toggleGroup('directions')" aria-controls="directions-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12-14a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 17V9a3 3 0 0 1 3-3h4m5 3v8a3 3 0 0 1-3 3h-4"/></svg><span>Directions</span><b>›</b></button>
+<div id="directions-menu" class="sub-menu" [hidden]="group() !== 'directions'"><section appVenueDirections [active]="routeActive()" [destinationNode]="directionsTarget()" [request]="directionsRequest()" (route)="showRoute($event)"></section></div>
 </nav>
 <aside appVenueDetails [id]="detailId()" [detail]="details()[detailId()]" [visible]="detailsVisible()" [selection]="selection()" (close)="closeDetails()" (levelChange)="selectLevel($event)" (openPlan)="plan().open($event)"></aside>
 </div>
@@ -92,6 +94,7 @@
     <div class="walk-secondary-actions">
       <button type="button" (click)="openInteriorPlan(id)">Floor plan</button>
       <button type="button" (click)="showInteriorDetails(id)">Photos &amp; details</button>
+      <button type="button" (click)="directionsTo(id)">Directions here</button>
     </div>
     @if (interiorError()) { <p class="walk-error" role="alert">{{ interiorError() }}</p> }
   </section>
