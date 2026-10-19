@@ -80,6 +80,134 @@
       "width": 9,
       "median": 0,
       "points": [[1695.2,2620],[1735,2650],[1763,2696],[1826,2794],[1875,2892],[1917,2990],[1924,3095],[1925,3218.2]]
+    },
+    {
+      "id": "bhairon-road-parking-slip",
+      "name": "Slip road from Bhairon Road into the southern parking",
+      "width": 13.4,
+      "median": 0,
+      "points": [[2676.0,3584.0],[2751.8,3534.9],[2768.0,3504.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "mathura-road-west-service",
+      "name": "Service road on the west side of Mathura Road",
+      "width": 14.4,
+      "median": 0,
+      "points": [[1680.9,2840.7],[1640.0,2838.0],[1641.1,2758.0],[1636.7,2750.2],[1619.6,2737.8],[1613.1,2716.0],[1606.0,2652.0],[1604.0,2586.0],[1594.9,2532.0],[1587.6,2518.9],[1571.1,2503.8],[1549.1,2492.4],[1520.0,2484.7],[1496.0,2462.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "purana-qila-road",
+      "name": "Purana Qila Road, west of the Mathura Road junction",
+      "width": 24,
+      "median": 0,
+      "points": [[1496.0,2462.0],[1511.3,2435.3],[1603.6,2385.1],[1632.0,2376.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "purana-qila-road-west",
+      "name": "Purana Qila Road towards India Gate",
+      "width": 24,
+      "median": 0,
+      "points": [[1496.0,2462.0],[1471.3,2468.0],[1433.1,2484.2],[1402.0,2534.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "mathura-road-west-lane",
+      "name": "West lane of Mathura Road beside the flyover",
+      "width": 7,
+      "median": 0,
+      "points": [[1632.0,2376.0],[1654.9,2402.0],[1660.0,2418.0],[1660.0,2512.0],[1652.0,2674.0],[1691.5,2676.6]],
+      "fromGuide": true
+    },
+    {
+      "id": "metro-corridor-road-east",
+      "name": "Road along the metro viaduct, east of the railway (uncertain: confirm on site)",
+      "width": 15.9,
+      "median": 0,
+      "points": [[3228.5,1482.6],[3182.0,1500.0],[3168.0,1490.7],[3062.0,1458.7],[2810.0,1414.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "north-junction-link",
+      "name": "Link road north of the Mathura Road junction",
+      "width": 10.0,
+      "median": 0,
+      "points": [[1452.7,543.2],[1460.0,514.0],[1520.0,514.0],[1666.0,525.3],[1682.0,532.7],[1698.0,564.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "bhairon-road-south-carriageway",
+      "name": "Southern carriageway of Bhairon Road",
+      "width": 12.9,
+      "median": 0,
+      "points": [[2208.7,3295.4],[2222.0,3274.0],[2256.0,3282.7],[2306.0,3288.0],[2698.0,3316.4],[2730.2,3339.6],[2778.0,3348.9],[2836.0,3340.0],[2874.0,3334.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "roundabout-south-carriageway",
+      "name": "Southern carriageway past the Purana Qila roundabout",
+      "width": 24,
+      "median": 0,
+      "points": [[3256.4,3344.5],[3260.0,3390.0],[3148.0,3406.0],[2976.9,3386.9],[2910.4,3406.9],[2865.1,3444.7],[2847.1,3467.6],[2805.1,3490.7],[2768.0,3504.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "west-avenue-north",
+      "name": "Tree-lined avenue west of Mathura Road",
+      "width": 11.0,
+      "median": 0,
+      "points": [[1475.6,999.0],[1444.0,980.0],[1453.1,957.3],[1602.0,732.0],[1626.9,746.9]],
+      "fromGuide": true
+    },
+    {
+      "id": "purana-qila-park-road",
+      "name": "Road along the Purana Qila park wall",
+      "width": 9.5,
+      "median": 0,
+      "points": [[2460.0,3698.0],[2441.3,3690.0],[2244.4,3521.6],[2133.6,3405.1],[2084.7,3340.0],[2058.0,3314.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "bhairon-road-junction-link",
+      "name": "Short link at the Bhairon Road junction",
+      "width": 22.4,
+      "median": 0,
+      "points": [[2060.0,3282.0],[2100.0,3276.0],[2146.0,3282.0],[2158.9,3262.6]],
+      "fromGuide": true
+    },
+    {
+      "id": "bhairon-road-parking-access",
+      "name": "Access road to the parking south of Bhairon Road",
+      "width": 13.9,
+      "median": 0,
+      "points": [[2392.0,3490.0],[2448.0,3508.9],[2524.0,3518.0],[2588.0,3520.0],[2620.0,3517.1],[2746.0,3492.2],[2756.0,3494.4],[2768.0,3504.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "bhairon-marg-flyover-ramp",
+      "name": "Flyover ramp west of Bhairon Marg (modelled at ground level)",
+      "width": 18.4,
+      "median": 0,
+      "points": [[3453.0,2322.6],[3410.0,2334.0],[3410.2,2398.0],[3399.1,2455.1],[3390.7,2480.2],[3360.0,2532.0],[3298.4,2598.0],[3279.3,2652.7],[3286.0,2660.4],[3302.0,2664.0],[3380.0,2656.0],[3432.0,2668.0]],
+      "fromGuide": true
+    },
+    {
+      "id": "metro-corridor-road",
+      "name": "Road along the metro viaduct, north-east of the venue (uncertain: confirm on site)",
+      "width": 21.4,
+      "median": 0,
+      "points": [[2634.0,1368.0],[2580.4,1347.6],[2521.6,1309.6],[2468.4,1267.6],[2380.0,1178.7],[2183.8,942.7],[2024.9,771.6],[1962.9,707.8],[1872.7,626.0],[1838.0,612.7],[1828.9,542.0],[1831.3,531.3],[1842.0,518.0],[1793.0,500.4]],
+      "fromGuide": true
+    },
+    {
+      "id": "purana-qila-lake-road",
+      "name": "Road along the Purana Qila lake",
+      "width": 23.9,
+      "median": 0,
+      "points": [[1778.0,3674.0],[1781.1,3657.8],[1807.1,3642.4],[1819.6,3611.6],[1930.2,3446.0],[2000.4,3363.8],[2038.4,3326.4],[2058.0,3314.0]],
+      "fromGuide": true
     }
   ],
   "walkways": [
@@ -1140,5 +1268,6 @@
       "points": [[2316.0,3216.0],[2313.0,3248.5]]
     }
   ],
-  "walkwaysSource": "Internal network, 2026-10-19: centrelines of the user's colour-coded aerial (orange = service road, cyan = walkway), registered to the z18 image on the Hall 14, Hall 1 and Hall 6 roofs, thinned to centrelines, then each line shifted by up to 12 z18 px onto the paving it follows on docs/aerial-reference/bharat-mandapam-satellite-z19-venue.jpg. Widths are 0.8 x the painted band, clamped."
+  "walkwaysSource": "Internal network, 2026-10-19: centrelines of the user's colour-coded aerial (orange = service road, cyan = walkway), registered to the z18 image on the Hall 14, Hall 1 and Hall 6 roofs, thinned to centrelines, then each line shifted by up to 12 z18 px onto the paving it follows on docs/aerial-reference/bharat-mandapam-satellite-z19-venue.jpg. Widths are 0.8 x the painted band, clamped.",
+  "outerRoadsFromGuide": "2026-10-20: roads marked fromGuide are red bands of the user's colour-coded aerial that no other road covered, thinned to centrelines and kept only where the z18 photo shows a road; candidates on the railway, on roofs, on lawns or duplicating an existing road were dropped. Ends join the nearest road within 30 m."
 }

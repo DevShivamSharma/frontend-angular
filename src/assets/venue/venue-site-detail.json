@@ -1947,6 +1947,618 @@
             770.0482025423265
           ]
         ]
+      },
+      {
+        "id": "bhairon-road-parking-slip",
+        "name": "Slip road from Bhairon Road into the southern parking",
+        "width": 13.4,
+        "median": 0,
+        "points": [
+          [
+            1797.748292882482,
+            471.823233001066
+          ],
+          [
+            1791.9628320340225,
+            418.9352452792879
+          ],
+          [
+            1779.2649876687628,
+            402.22646654413626
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "mathura-road-west-service",
+        "name": "Service road on the west side of Mathura Road",
+        "width": 14.4,
+        "median": 0,
+        "points": [
+          [
+            1094.169642176224,
+            798.5143919025029
+          ],
+          [
+            1080.9094026079242,
+            819.2953591911216
+          ],
+          [
+            1036.2930280207763,
+            797.5249792288031
+          ],
+          [
+            1030.6471308721996,
+            797.773824614026
+          ],
+          [
+            1018.7664533764962,
+            803.4861660824103
+          ],
+          [
+            1004.6536140905854,
+            801.1313774939077
+          ],
+          [
+            966.6663241722425,
+            787.9136935925563
+          ],
+          [
+            929.0219306581619,
+            771.4828905057458
+          ],
+          [
+            896.076232758944,
+            761.9664451871015
+          ],
+          [
+            886.6198214912894,
+            762.3371598717704
+          ],
+          [
+            873.3951637011638,
+            767.0185983508796
+          ],
+          [
+            860.6674305992856,
+            775.5739351464524
+          ],
+          [
+            847.9766341658811,
+            788.8449988436525
+          ],
+          [
+            828.3271839797428,
+            795.4593046487647
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "purana-qila-road",
+        "name": "Purana Qila Road, west of the Mathura Road junction",
+        "width": 24,
+        "median": 0,
+        "points": [
+          [
+            828.3271839797428,
+            795.4593046487647
+          ],
+          [
+            817.7295587117744,
+            780.3366146902936
+          ],
+          [
+            816.0699008424148,
+            718.4758848703772
+          ],
+          [
+            819.1236030835124,
+            701.1228803890823
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "purana-qila-road-west",
+        "name": "Purana Qila Road towards India Gate",
+        "width": 24,
+        "median": 0,
+        "points": [
+          [
+            828.3271839797428,
+            795.4593046487647
+          ],
+          [
+            824.5960651507824,
+            810.0444051429804
+          ],
+          [
+            822.7127059896952,
+            834.4343662327918
+          ],
+          [
+            841.7422425336694,
+            863.9891945561474
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "mathura-road-west-lane",
+        "name": "West lane of Mathura Road beside the flyover",
+        "width": 7,
+        "median": 0,
+        "points": [
+          [
+            819.1236030835124,
+            701.1228803890823
+          ],
+          [
+            840.3102819305238,
+            695.9614861771835
+          ],
+          [
+            850.7630170137033,
+            697.516482123978
+          ],
+          [
+            903.5588412258262,
+            722.4166389257498
+          ],
+          [
+            992.2474492372086,
+            769.5388180418558
+          ],
+          [
+            1005.0704888863341,
+            749.4342601332041
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "metro-corridor-road-east",
+        "name": "Road along the metro viaduct, east of the railway (uncertain: confirm on site)",
+        "width": 15.9,
+        "median": 0,
+        "points": [
+          [
+            776.31872112661,
+            -375.5079433554814
+          ],
+          [
+            772.7248481992618,
+            -346.4468312579316
+          ],
+          [
+            763.4765363754627,
+            -341.54435728941417
+          ],
+          [
+            715.0292835251159,
+            -294.249862646328
+          ],
+          [
+            617.4750710246809,
+            -173.50267972814723
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "north-junction-link",
+        "name": "Link road north of the Mathura Road junction",
+        "width": 10,
+        "median": 0,
+        "points": [
+          [
+            -261.8415693209403,
+            309.95088984818756
+          ],
+          [
+            -276.1317546057695,
+            298.3844323909936
+          ],
+          [
+            -258.88220386423205,
+            266.81586044735576
+          ],
+          [
+            -210.5615650002817,
+            192.99231877308546
+          ],
+          [
+            -201.80541779009474,
+            186.53425803137551
+          ],
+          [
+            -179.62565144512328,
+            186.40719460415855
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "bhairon-road-south-carriageway",
+        "name": "Southern carriageway of Bhairon Road",
+        "width": 12.9,
+        "median": 0,
+        "points": [
+          [
+            1501.3133109128523,
+            641.2482652398165
+          ],
+          [
+            1493.1128039123864,
+            628.5745556524366
+          ],
+          [
+            1507.773971360734,
+            612.990287198298
+          ],
+          [
+            1525.1253828119188,
+            588.0870889230968
+          ],
+          [
+            1653.773526461144,
+            389.36211165555306
+          ],
+          [
+            1676.0612441008175,
+            378.56588199403984
+          ],
+          [
+            1695.02680284235,
+            355.87977916393965
+          ],
+          [
+            1706.7026149901494,
+            323.0059249141416
+          ],
+          [
+            1714.2573842334841,
+            301.4231243057533
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "roundabout-south-carriageway",
+        "name": "Southern carriageway past the Purana Qila roundabout",
+        "width": 24,
+        "median": 0,
+        "points": [
+          [
+            1830.0849555864422,
+            103.00483630169944
+          ],
+          [
+            1856.6823254495619,
+            113.1661141020299
+          ],
+          [
+            1833.469687335507,
+            176.33243962549062
+          ],
+          [
+            1773.5520563171497,
+            261.2959840055391
+          ],
+          [
+            1765.6669583329644,
+            301.58239027890903
+          ],
+          [
+            1773.8742087488297,
+            335.42970387408934
+          ],
+          [
+            1781.561304956769,
+            350.9663774865484
+          ],
+          [
+            1782.4609124089693,
+            379.1834589334877
+          ],
+          [
+            1779.2649876687628,
+            402.22646654413626
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "west-avenue-north",
+        "name": "Tree-lined avenue west of Mathura Road",
+        "width": 11,
+        "median": 0,
+        "points": [
+          [
+            0.7571152134091738,
+            418.65081697138584
+          ],
+          [
+            -18.999144560435372,
+            430.24392111098877
+          ],
+          [
+            -29.132592587492187,
+            419.4428980605277
+          ],
+          [
+            -112.86643829502313,
+            281.4193176150182
+          ],
+          [
+            -97.35754221063544,
+            272.27610017426423
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "purana-qila-park-road",
+        "name": "Road along the Purana Qila park wall",
+        "width": 9.5,
+        "median": 0,
+        "points": [
+          [
+            1799.6788885127555,
+            615.6681545024387
+          ],
+          [
+            1789.809516896569,
+            623.3878638105374
+          ],
+          [
+            1638.6190837947763,
+            682.3770280571526
+          ],
+          [
+            1541.3317908646343,
+            709.8133568626477
+          ],
+          [
+            1490.7094904548644,
+            718.2970599350599
+          ],
+          [
+            1468.4303400608885,
+            725.4577970367225
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "bhairon-road-junction-link",
+        "name": "Short link at the Bhairon Road junction",
+        "width": 22.4,
+        "median": 0,
+        "points": [
+          [
+            1451.0322785453095,
+            715.9288621812602
+          ],
+          [
+            1459.1620328133622,
+            693.2937758414174
+          ],
+          [
+            1475.7566346081799,
+            670.6805757287129
+          ],
+          [
+            1468.5691285525552,
+            658.7543642294011
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "bhairon-road-parking-access",
+        "name": "Access road to the parking south of Bhairon Road",
+        "width": 13.9,
+        "median": 0,
+        "points": [
+          [
+            1663.3045951604154,
+            596.3476500658464
+          ],
+          [
+            1690.0195064653801,
+            571.8901704739847
+          ],
+          [
+            1716.9800225145577,
+            534.3138597733498
+          ],
+          [
+            1736.5028587142995,
+            501.17050693705346
+          ],
+          [
+            1744.0738117670714,
+            483.56573890691675
+          ],
+          [
+            1766.3125914851314,
+            410.6758452256587
+          ],
+          [
+            1770.4231635583665,
+            405.9971861956617
+          ],
+          [
+            1779.2649876687628,
+            402.22646654413626
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "bhairon-marg-flyover-ramp",
+        "name": "Flyover ramp west of Bhairon Marg (modelled at ground level)",
+        "width": 18.4,
+        "median": 0,
+        "points": [
+          [
+            1312.6535215677836,
+            -271.1225570155596
+          ],
+          [
+            1306.695666473599,
+            -245.48473684931102
+          ],
+          [
+            1342.699258056665,
+            -228.63666717444156
+          ],
+          [
+            1371.5787460898234,
+            -207.67096058421762
+          ],
+          [
+            1383.2614173660536,
+            -196.60248885546517
+          ],
+          [
+            1403.52926632374,
+            -166.7283271081499
+          ],
+          [
+            1422.889136051791,
+            -116.83483776108322
+          ],
+          [
+            1448.1207054955555,
+            -92.29573692934161
+          ],
+          [
+            1454.3716696521192,
+            -93.78120043424991
+          ],
+          [
+            1460.9935175856463,
+            -101.24586325943604
+          ],
+          [
+            1478.9246719145704,
+            -144.40416906716703
+          ],
+          [
+            1500.6141750098475,
+            -168.5848546634835
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "metro-corridor-road",
+        "name": "Road along the metro viaduct, north-east of the venue (uncertain: confirm on site)",
+        "width": 21.4,
+        "median": 0,
+        "points": [
+          [
+            541.0401344478273,
+            -93.08671847590394
+          ],
+          [
+            514.1727186159478,
+            -70.28932468947562
+          ],
+          [
+            475.925166122638,
+            -49.41814501946934
+          ],
+          [
+            437.0409408810014,
+            -32.55294653803696
+          ],
+          [
+            361.6952328687067,
+            -9.591108055377074
+          ],
+          [
+            172.73798370918763,
+            31.122834910763505
+          ],
+          [
+            30.955790275197867,
+            69.40335298990357
+          ],
+          [
+            -22.70250703077489,
+            85.12389147400593
+          ],
+          [
+            -94.57793186418756,
+            110.9135436393644
+          ],
+          [
+            -112.02396951135447,
+            125.64759378793586
+          ],
+          [
+            -154.3493510737899,
+            111.70739720770027
+          ],
+          [
+            -159.6691064810404,
+            107.61027477911468
+          ],
+          [
+            -164.0629840671105,
+            98.45743882366695
+          ],
+          [
+            -188.02518623581392,
+            119.56736533210369
+          ]
+        ],
+        "fromGuide": true
+      },
+      {
+        "id": "purana-qila-lake-road",
+        "name": "Road along the Purana Qila lake",
+        "width": 23.9,
+        "median": 0,
+        "points": [
+          [
+            1590.129210178724,
+            968.1401020854495
+          ],
+          [
+            1581.9215821560108,
+            962.2177555826663
+          ],
+          [
+            1580.746858829826,
+            944.4586536828278
+          ],
+          [
+            1567.0414579392768,
+            929.7230930793795
+          ],
+          [
+            1505.8276139601398,
+            827.6650329132018
+          ],
+          [
+            1479.8413250273504,
+            768.9554113018514
+          ],
+          [
+            1469.7600423530187,
+            739.0548987405306
+          ],
+          [
+            1468.4303400608885,
+            725.4577970367225
+          ]
+        ],
+        "fromGuide": true
       }
     ],
     "bounds": [
@@ -1960,9 +2572,9 @@
     "source": "Traced on docs/aerial-reference/bharat-mandapam-satellite-z18-full.jpg (Esri z18, about 0.524 m per pixel), in its pixels; converted through satellite-reference.json.",
     "status": "Satellite trace, not a survey. Centrelines follow the visible carriageways; widths and medians are measured off the image to about 1 to 2 m; grade separation (flyovers, the underpass) is not modelled.",
     "topology": {
-      "components": 1,
-      "junctions": 12,
-      "segments": 124,
+      "components": 2,
+      "junctions": 26,
+      "segments": 236,
       "openEnds": [
         {
           "p": [
@@ -2017,6 +2629,96 @@
           "road": [
             "northwest-city-approach"
           ]
+        },
+        {
+          "p": [
+            1797.748292882482,
+            471.823233001066
+          ],
+          "road": [
+            "bhairon-road-parking-slip"
+          ]
+        },
+        {
+          "p": [
+            841.7422425336694,
+            863.9891945561474
+          ],
+          "road": [
+            "purana-qila-road-west"
+          ]
+        },
+        {
+          "p": [
+            617.4750710246809,
+            -173.50267972814723
+          ],
+          "road": [
+            "metro-corridor-road-east"
+          ]
+        },
+        {
+          "p": [
+            -179.62565144512328,
+            186.40719460415855
+          ],
+          "road": [
+            "north-junction-link"
+          ]
+        },
+        {
+          "p": [
+            1799.6788885127555,
+            615.6681545024387
+          ],
+          "road": [
+            "purana-qila-park-road"
+          ]
+        },
+        {
+          "p": [
+            1451.0322785453095,
+            715.9288621812602
+          ],
+          "road": [
+            "bhairon-road-junction-link"
+          ]
+        },
+        {
+          "p": [
+            1663.3045951604154,
+            596.3476500658464
+          ],
+          "road": [
+            "bhairon-road-parking-access"
+          ]
+        },
+        {
+          "p": [
+            1500.6141750098475,
+            -168.5848546634835
+          ],
+          "road": [
+            "bhairon-marg-flyover-ramp"
+          ]
+        },
+        {
+          "p": [
+            541.0401344478273,
+            -93.08671847590394
+          ],
+          "road": [
+            "metro-corridor-road"
+          ]
+        },
+        {
+          "p": [
+            1590.129210178724,
+            968.1401020854495
+          ],
+          "road": [
+            "purana-qila-lake-road"
+          ]
         }
       ]
     },
@@ -2044,6 +2746,46 @@
       [
         -1013.6037807499999,
         908.8253753199999
+      ],
+      [
+        673.3843402000002,
+        -189.2898885800001
+      ],
+      [
+        106.15828682000006,
+        526.53988608
+      ],
+      [
+        -528.2977730199999,
+        -240.3381670399999
+      ],
+      [
+        -986.6232109599999,
+        383.76094904
+      ],
+      [
+        738.7356165399999,
+        -71.02916545999997
+      ],
+      [
+        512.8925071000001,
+        154.63891661999983
+      ],
+      [
+        624.4107856600003,
+        -31.20618430000016
+      ],
+      [
+        158.69488847999992,
+        -597.7062545399999
+      ],
+      [
+        -551.8699862799999,
+        -142.50106672000013
+      ],
+      [
+        732.7111385400001,
+        306.4497850399998
       ]
     ]
   },
@@ -6408,12 +7150,12 @@
     }
   },
   "trees": {
-    "nearby": 1371,
-    "property": 6
+    "nearby": 1224,
+    "property": 7
   },
   "bushes": {
     "nearby": 0,
-    "property": 328
+    "property": 330
   },
   "features": [
     {
@@ -6491,6 +7233,118 @@
       "phase": 1,
       "type": "road",
       "widthMetres": 9,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "bhairon-road-parking-slip",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 13.4,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "mathura-road-west-service",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 14.4,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "purana-qila-road",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 24,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "purana-qila-road-west",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 24,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "mathura-road-west-lane",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 7,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "metro-corridor-road-east",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 15.9,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "north-junction-link",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 10,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "bhairon-road-south-carriageway",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 12.9,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "roundabout-south-carriageway",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 24,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "west-avenue-north",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 11,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "purana-qila-park-road",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 9.5,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "bhairon-road-junction-link",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 22.4,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "bhairon-road-parking-access",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 13.9,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "bhairon-marg-flyover-ramp",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 18.4,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "metro-corridor-road",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 21.4,
+      "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
+    },
+    {
+      "id": "purana-qila-lake-road",
+      "phase": 1,
+      "type": "road",
+      "widthMetres": 23.9,
       "status": "Satellite trace; widths measured off the image, junction detail and road levels estimated"
     },
     {
