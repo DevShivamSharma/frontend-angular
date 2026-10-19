@@ -48,18 +48,52 @@
       <div class="xv-body">
         <section class="xv-map" aria-label="Floor plan">
           @if (hall(); as hall) {
-            <app-exhibitor-plan
-              class="xv-plan"
-              [hall]="hall"
-              [stalls]="stalls()"
-              [selectedId]="selectedId()"
-              [matches]="matchIds()"
-              [focus]="focus()"
-              (select)="choose($event)"
-            />
+            @if (viewMode() === '3d') {
+              <app-exhibitor-scene3d
+                class="xv-plan"
+                [hall]="hall"
+                [stalls]="stalls()"
+                [selectedId]="selectedId()"
+                [matches]="matchIds()"
+                [focus]="focus()"
+                (select)="choose($event)"
+              />
+            } @else {
+              <app-exhibitor-plan
+                class="xv-plan"
+                [hall]="hall"
+                [stalls]="stalls()"
+                [selectedId]="selectedId()"
+                [matches]="matchIds()"
+                [focus]="focus()"
+                (select)="choose($event)"
+              />
+            }
           }
+          <div class="xv-view-toggle" role="group" aria-label="View mode">
+            <button type="button"
+                    class="xv-view-btn"
+                    [class.is-active]="viewMode() === '2d'"
+                    [attr.aria-pressed]="viewMode() === '2d'"
+                    (click)="setViewMode('2d')">
+              2D Map
+            </button>
+            <button type="button"
+                    class="xv-view-btn"
+                    [class.is-active]="viewMode() === '3d'"
+                    [attr.aria-pressed]="viewMode() === '3d'"
+                    (click)="setViewMode('3d')">
+              3D View
+            </button>
+          </div>
           @if (!selected()) {
-            <p class="xv-hint">Tap a stall to see its details. Drag to move, pinch or scroll to zoom.</p>
+            <p class="xv-hint">
+              @if (viewMode() === '3d') {
+                Click a stall to see its details. Drag to orbit, right-drag to pan, scroll to zoom.
+              } @else {
+                Tap a stall to see its details. Drag to move, pinch or scroll to zoom.
+              }
+            </p>
           }
         </section>
 

@@ -13,6 +13,7 @@ import { LayoutApiService } from '../layout-api.service';
 import type { Hall } from '../models/hall.model';
 import type { Stall } from '../models/stall.model';
 import { ExhibitorPlanComponent } from './exhibitor-plan.component';
+import { ExhibitorScene3dComponent } from './exhibitor-scene3d.component';
 import { ExhibitorStallDetailsComponent } from './exhibitor-stall-details.component';
 import {
   exhibitorStalls,
@@ -37,7 +38,7 @@ type Filter = 'ALL' | 'AVAILABLE';
   selector: 'app-exhibitor-view-page',
   templateUrl: './exhibitor-view-page.component.html',
   styleUrl: './exhibitor-view-page.component.css',
-  imports: [ExhibitorPlanComponent, ExhibitorStallDetailsComponent, IconComponent],
+  imports: [ExhibitorPlanComponent, ExhibitorScene3dComponent, ExhibitorStallDetailsComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown.escape)': 'choose(null)' }
 })
@@ -90,6 +91,8 @@ export class ExhibitorViewPageComponent {
   readonly kindOptions = computed(() => STALL_KINDS
     .map(k => ({ ...k, count: this.stalls().filter(s => s.kind === k.kind).length }))
     .filter(k => k.count > 0));
+
+  readonly viewMode = signal<'2d' | '3d'>('3d');
 
   readonly selectedId = signal<string | null>(null);
   readonly selected = computed(() => this.stalls().find(s => s.id === this.selectedId()) ?? null);
@@ -162,6 +165,10 @@ export class ExhibitorViewPageComponent {
 
   kindLabel(kind: StallKind): string {
     return kindLabel(kind);
+  }
+
+  setViewMode(mode: '2d' | '3d'): void {
+    this.viewMode.set(mode);
   }
 
   async loadQuote(id: string | null, number: string | null | undefined, pricing: PricingSnapshot | null, type: 'bare' | 'shell'): Promise<void> {
