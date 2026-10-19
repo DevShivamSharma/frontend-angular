@@ -1,31 +1,36 @@
 {
-  "status": "Photo and walkthrough-informed reconstruction (2026-10-16); unsurveyed dimensions and approximate camera registration. Audio transcription is not accepted as survey evidence. Photo 3 provenance unconfirmed; not used for unique geometry.",
+  "status": "Photo and walkthrough-informed reconstruction (2026-10-18); unsurveyed dimensions and approximate camera registration. Audio transcription is not accepted as survey evidence. Original six-photo set photo 3 provenance unconfirmed; not used for unique geometry.",
   "sourceSha256": "e998ea8716b8ff7a233f49aed65992bdf9d071e93697948badbef09df15e02ac",
   "gateCenter": [
-    -585.9860229492188,
+    -577.002197265625,
     0.23999999463558197,
-    288.3275451660156
+    288.8667907714844
   ],
   "slideDirection": [
     0.998203456401825,
     0.0,
     0.05991525948047638
   ],
-  "slideDistance": 7.25,
-  "clearOpeningMetres": 14,
+  "slideDistance": 4.25,
+  "clearOpeningMetres": 8,
+  "leafSwings": {
+    "GATE9_moving_leaf_left": 90,
+    "GATE9_moving_leaf_right": -90,
+    "GATE9_moving_leaf_exit": 90
+  },
   "views": {
     "gate9-approach": {
       "position": [
-        -588.10888671875,
+        -584.4893188476562,
         1.899999976158142,
-        318.6344909667969
+        313.46240234375
       ],
       "target": [
-        -585.0992431640625,
-        2.5,
-        283.4216613769531
+        -582.9913940429688,
+        2.0,
+        288.5072937011719
       ],
-      "label": "Gate 9 \u00b7 Approach"
+      "label": "Gate 9 \u00b7 Corrected entrance"
     },
     "gate9-close": {
       "position": [
@@ -68,16 +73,16 @@
     },
     "gate9-checking-room": {
       "position": [
-        -592.9736938476562,
-        2.25,
-        297.9261474609375
+        -583.0913696289062,
+        1.850000023841858,
+        294.5121154785156
       ],
       "target": [
-        -595.5687866210938,
-        1.9500000476837158,
-        287.75238037109375
+        -582.2525634765625,
+        1.850000023841858,
+        280.5372619628906
       ],
-      "label": "Gate 9 \u00b7 Checking room"
+      "label": "Gate 9 \u00b7 Extended checking passage"
     },
     "gate9-kiosk": {
       "position": [
@@ -172,16 +177,16 @@
     },
     "gate9-video-lookout": {
       "position": [
-        -604.7122192382812,
-        1.7999999523162842,
-        283.19635009765625
+        -601.2586669921875,
+        2.0,
+        292.41986083984375
       ],
       "target": [
-        -597.4252319335938,
-        3.200000047683716,
-        278.624755859375
+        -594.2750854492188,
+        3.0,
+        286.2271423339844
       ],
-      "label": "Gate 9 \u00b7 Lookout stairs"
+      "label": "Gate 9 \u00b7 Tower at left gate edge"
     },
     "gate9-section1": {
       "position": [
@@ -234,6 +239,188 @@
         192.97938537597656
       ],
       "label": "Gate 9 \u00b7 Beside the office"
+    },
+    "gate9-photo-outside": {
+      "position": [
+        -591.4168090820312,
+        1.75,
+        312.0447692871094
+      ],
+      "target": [
+        -587.1436157226562,
+        4.199999809265137,
+        274.2328796386719
+      ],
+      "label": "Gate 9 \u00b7 Photo entrance"
+    },
+    "gate9-photo-shelter": {
+      "position": [
+        -579.9764404296875,
+        2.5999999046325684,
+        271.6576843261719
+      ],
+      "target": [
+        -573.787109375,
+        2.0,
+        251.99317932128906
+      ],
+      "label": "Gate 9 \u00b7 Parking entrance right of kiosk"
+    },
+    "gate9-photo-shelter-reverse": {
+      "position": [
+        -575.463623046875,
+        1.75,
+        229.85296630859375
+      ],
+      "target": [
+        -570.9722290039062,
+        2.0,
+        255.16754150390625
+      ],
+      "label": "Gate 9 \u00b7 Shelter reverse view"
+    },
+    "gate9-shelter-layout": {
+      "position": [
+        -573.3078002929688,
+        90.0,
+        244.00755310058594
+      ],
+      "target": [
+        -573.3078002929688,
+        0.0,
+        244.00755310058594
+      ],
+      "label": "Gate 9 \u00b7 Kiosk and parking layout"
+    },
+    "gate9-parallel-layout": {
+      "position": [
+        -616.2928466796875,
+        110.0,
+        213.45053100585938
+      ],
+      "target": [
+        -552.3839111328125,
+        0.0,
+        178.75694274902344
+      ],
+      "label": "Gate 9 \u00b7 Parallel passages layout"
+    },
+    "gate9-parallel-office": {
+      "position": [
+        -569.6207275390625,
+        1.7999999523162842,
+        219.612060546875
+      ],
+      "target": [
+        -546.5178833007812,
+        2.299999952316284,
+        170.59669494628906
+      ],
+      "label": "Gate 9 \u00b7 Office passage and planted strip"
+    },
+    "gate9-parallel-boundary": {
+      "position": [
+        -584.1781005859375,
+        1.7999999523162842,
+        215.826171875
+      ],
+      "target": [
+        -552.5800170898438,
+        2.200000047683716,
+        167.09669494628906
+      ],
+      "label": "Gate 9 \u00b7 Outer passage beside shelter"
+    },
+    "gate9-parallel-reverse": {
+      "position": [
+        -535.1781005859375,
+        1.7999999523162842,
+        130.95567321777344
+      ],
+      "target": [
+        -561.0800170898438,
+        2.200000047683716,
+        181.81912231445312
+      ],
+      "label": "Gate 9 \u00b7 Parallel passages reverse view"
+    },
+    "gate9-entry-reverse": {
+      "position": [
+        -589.199951171875,
+        1.899999976158142,
+        275.11126708984375
+      ],
+      "target": [
+        -595.9680786132812,
+        2.0999999046325684,
+        287.7283935546875
+      ],
+      "label": "Gate 9 \u00b7 Reverse gate view"
+    },
+    "gate9-entry-turn": {
+      "position": [
+        -588.5012817382812,
+        1.899999976158142,
+        280.16217041015625
+      ],
+      "target": [
+        -572.7493286132812,
+        2.0,
+        268.0842590332031
+      ],
+      "label": "Gate 9 \u00b7 Right turn"
+    },
+    "gate9-entry-straight": {
+      "position": [
+        -574.1070556640625,
+        1.899999976158142,
+        274.0135803222656
+      ],
+      "target": [
+        -574.1466064453125,
+        2.0,
+        257.9823913574219
+      ],
+      "label": "Gate 9 \u00b7 Shelter approach"
+    },
+    "gate9-entry-overview": {
+      "position": [
+        -614.9147338867188,
+        33.0,
+        319.65057373046875
+      ],
+      "target": [
+        -582.9710693359375,
+        0.0,
+        271.4779357910156
+      ],
+      "label": "Gate 9 \u00b7 Aligned left road"
+    },
+    "gate9-left-road": {
+      "position": [
+        -588.9606323242188,
+        1.850000023841858,
+        286.1454162597656
+      ],
+      "target": [
+        -588.7800903320312,
+        1.850000023841858,
+        248.08786010742188
+      ],
+      "label": "Gate 9 \u00b7 Left gate to campus road"
+    },
+    "gate9-left-road-reverse": {
+      "position": [
+        -587.6019897460938,
+        2.0,
+        240.14418029785156
+      ],
+      "target": [
+        -589.0804443359375,
+        2.0,
+        288.1418151855469
+      ],
+      "label": "Gate 9 \u00b7 Road meets left gate"
     }
   },
   "approachConnectionLocal": [
@@ -350,9 +537,9 @@
     {
       "kind": "cabin",
       "position": [
-        -595.5687866210938,
+        -583.59033203125,
         3.0,
-        287.75238037109375
+        288.4713439941406
       ]
     },
     {
@@ -398,38 +585,6 @@
     {
       "kind": "lamp",
       "position": [
-        -550.0300903320312,
-        7.599999904632568,
-        183.5800323486328
-      ]
-    },
-    {
-      "kind": "lamp",
-      "position": [
-        -547.6917724609375,
-        7.599999904632568,
-        184.93002319335938
-      ]
-    },
-    {
-      "kind": "lamp",
-      "position": [
-        -539.0300903320312,
-        7.599999904632568,
-        164.5274658203125
-      ]
-    },
-    {
-      "kind": "lamp",
-      "position": [
-        -536.6917724609375,
-        7.599999904632568,
-        165.87747192382812
-      ]
-    },
-    {
-      "kind": "lamp",
-      "position": [
         -572.9649658203125,
         6.849999904632568,
         265.6600341796875
@@ -438,33 +593,225 @@
     {
       "kind": "canopy",
       "position": [
-        -568.3576049804688,
-        3.799999952316284,
-        228.4242401123047
+        -569.7943115234375,
+        4.199999809265137,
+        252.23284912109375
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -562.29541015625,
-        3.799999952316284,
-        231.9242401123047
+        -569.3748779296875,
+        4.199999809265137,
+        245.24542236328125
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -556.2332763671875,
-        3.799999952316284,
-        235.4242401123047
+        -568.9555053710938,
+        4.199999809265137,
+        238.25799560546875
       ]
     },
     {
       "kind": "canopy",
       "position": [
-        -550.1710815429688,
-        3.799999952316284,
-        238.9242401123047
+        -568.4761962890625,
+        4.199999809265137,
+        230.27236938476562
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -573.98193359375,
+        4.179999828338623,
+        210.16590881347656
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -570.48193359375,
+        4.179999828338623,
+        204.10372924804688
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -566.98193359375,
+        4.179999828338623,
+        198.04156494140625
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -563.48193359375,
+        4.179999828338623,
+        191.97938537597656
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -559.98193359375,
+        4.179999828338623,
+        185.91720581054688
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -556.48193359375,
+        4.179999828338623,
+        179.8550262451172
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -552.98193359375,
+        4.179999828338623,
+        173.7928466796875
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -549.48193359375,
+        4.179999828338623,
+        167.7306671142578
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -545.98193359375,
+        4.179999828338623,
+        161.66848754882812
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -542.48193359375,
+        4.179999828338623,
+        155.60630798339844
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -538.98193359375,
+        4.179999828338623,
+        149.5441436767578
+      ]
+    },
+    {
+      "kind": "canopy",
+      "position": [
+        -535.48193359375,
+        4.179999828338623,
+        143.48196411132812
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -579.756591796875,
+        6.849999904632568,
+        203.3678436279297
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -570.0137939453125,
+        7.599999904632568,
+        208.9928436279297
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -567.675537109375,
+        7.599999904632568,
+        210.34283447265625
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -569.256591796875,
+        6.849999904632568,
+        185.18130493164062
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -559.5137939453125,
+        7.599999904632568,
+        190.80630493164062
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -557.175537109375,
+        7.599999904632568,
+        192.15631103515625
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -558.756591796875,
+        6.849999904632568,
+        166.99476623535156
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -549.0137939453125,
+        7.599999904632568,
+        172.61976623535156
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -546.675537109375,
+        7.599999904632568,
+        173.9697723388672
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -548.256591796875,
+        6.849999904632568,
+        148.80824279785156
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -538.5137939453125,
+        7.599999904632568,
+        154.43324279785156
+      ]
+    },
+    {
+      "kind": "lamp",
+      "position": [
+        -536.175537109375,
+        7.599999904632568,
+        155.78323364257812
       ]
     }
   ],
@@ -472,9 +819,9 @@
     {
       "name": "GATE9_barrier_arm_left",
       "hinge": [
-        -605.4430541992188,
+        -593.4646606445312,
         1.1200000047683716,
-        290.3654479980469
+        291.0844421386719
       ],
       "axis": [
         0.05991525948047638,
@@ -486,25 +833,25 @@
     {
       "name": "GATE9_barrier_arm_right",
       "hinge": [
-        -578.0841674804688,
+        -572.5023803710938,
         1.1200000047683716,
-        285.19537353515625
+        292.3426513671875
       ],
       "axis": [
         0.05991525948047638,
         0.0,
         -0.998203456401825
       ],
-      "length": 13
+      "length": 8
     }
   ],
   "guards": [
     {
       "id": "gate9-cabin",
       "position": [
-        -593.5404663085938,
+        -581.5620727539062,
         0.23999999463558197,
-        290.6791687011719
+        291.39813232421875
       ],
       "facing": [
         -0.05991525948047638,
@@ -528,9 +875,9 @@
     {
       "id": "gate9-inside",
       "position": [
-        -582.7877197265625,
+        -571.308349609375,
         0.23999999463558197,
-        285.1134033203125
+        285.80242919921875
       ],
       "facing": [
         -0.05991525948047638,
@@ -540,7 +887,7 @@
     }
   ],
   "photoSet2026_10_15": "work/gate9/references/2026-10-15: ten photographs and video 20261015_104455 (frames extracted every 2 s)",
-  "checkingRoomReference": "User-supplied checking-room photograph, 2026-10-14: ribbed brown cabin, shallow gable roof, ivory-framed grilled window and yellow barricade. The 2026-10-15 gate photograph (20261015_104444, taken from outside) shows it between a small left gate and the two-leaf vehicle gate, so it now stands left of the vehicle gate. Footprint 3.4 x 3.2 m and concealed sides are estimated.",
+  "checkingRoomReference": "User-supplied checking-room photograph, 2026-10-14: ribbed brown cabin, shallow gable roof, ivory-framed grilled window and yellow barricade. The 2026-10-15 gate photograph (20261015_104444, taken from outside) shows it between a small left gate and the two-leaf vehicle gate, so it now stands left of the vehicle gate. Footprint corrected to 3.4 x 8.4 m on 19 October; open front/rear checking passage and concealed sides are estimated.",
   "photoSequence": [
     5,
     2,
@@ -551,7 +898,7 @@
   "walkthroughReference": "work/gate9/references/2026-10-16/README.md",
   "walkthroughDurationSeconds": 145.112,
   "assumptions": [
-    "14 m gate opening and 4.4 m gate height are estimates.",
+    "8 m right and 7 m left gate openings; 4.4 m gate height; inward swing is a walkability approximation, not a surveyed gate mechanism.",
     "Gate bearing is aligned to the connected outside road; exact surveyed bearing is unavailable.",
     "Small unreadable sign text, concealed rooms and transient traffic are omitted.",
     "Canopy footprints, spacing, road widths and planting positions are inferred from overlapping views.",
@@ -560,9 +907,7 @@
     "The incorrectly placed Gate 9 parking was removed. Parking belongs near CC; its exact placement awaits the CC section.",
     "The latest right-facing entrance photo supersedes the open near-entry court: red piers, black railings and a low cream shelter now enclose the right side. Heights, lengths and photo pose remain estimated.",
     "Lookout stairs, kerb height, drain-panel spacing and garden tree positions are inferred rather than measured.",
-    "Browser inspection was not authorized for this revision; app navigation and mobile appearance remain unverified.",
-    "Two inferred northwest context masses are cut back locally at t=-444 m to clear the photographed canopy court; this setback is not surveyed.",
-    "2026-10-17 sequential office-corner photographs: clear concrete turn, office-front cream canopy, low wall and paired fire cabinets. Approximate placement; office and halls retained.",
-    "2026-10-17 sequential office-corner photographs: clear concrete turn, office-front cream canopy, low wall and paired fire cabinets. Approximate placement; office and halls retained."
+    "The 17 October gate photo replaces the white context massing with a long stone neighbouring building behind its own left boundary. Dimensions are estimated.",
+    "The 18 October annotated view supersedes the office-front shelter placement: the parking entrance is immediately right of the red kiosk (gate-local a=9..19, d=34..62), extending inward toward the office. Three new photos guide the cream canopy, concrete walls, fire cabinets and outer planted kerb; unseen underground levels are not inferred."
   ]
 }

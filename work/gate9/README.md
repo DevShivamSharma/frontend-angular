@@ -1,6 +1,75 @@
 # Gate 9 reconstruction
 
-Latest correction: [Section 1 user annotations](section1-correction.md). Left is the
+## Shared grey tile flooring — 18 October 2026
+
+`venue-gate9-paving.ts` reuses the existing plaza paving material and its 32 m
+campus-aligned texture atlas across the inner court, kiosk base, shelter decks
+and parallel passages. Both appearance palettes share the reference material.
+The outside approach asphalt and planted areas remain separate. Old bare soil
+strip triangles crossing the kiosk court receive the same paving locally.
+
+## Marked office-side parallel passages — 18 October 2026
+
+The marked long side of the office now follows the three 11:03 photographs:
+open passage → long planted strip → white curved shelter → second open passage.
+`scripts/gate9-parallel-passages.py` applies this local correction after the
+earlier entrance work. The existing office, neighboring property, gate and
+kiosk-side shelter retain their geometry. Both ends connect to the open court.
+
+References and estimated widths are in
+`references/2026-10-18-parallel-passages/README.md`. The editable blend, GLB and
+camera manifest were regenerated. `parallel-passages-validation.json` records
+clear straight passage rays, 14 roof bays, 30 pillars, unchanged source-venue
+hash, and unchanged extents/counts for unrelated entrance meshes.
+`venue-itpo-arrival.ts` also skips the old runtime hedge/tree row within this
+footprint when the new photo layer is present; otherwise it would obstruct the
+office passage after loading. The old fallback remains if that layer is absent.
+Preview `?view=gate9-parallel-layout`, `?view=gate9-parallel-office`,
+`?view=gate9-parallel-boundary` and `?view=gate9-parallel-reverse`.
+
+## Parking entrance beside the kiosk — 18 October 2026
+
+The user's annotated model view places the parking entrance immediately right of
+the red direction kiosk. This supersedes the earlier canopy spanning the office
+frontage. The entrance now faces the gate approach at gate-local `d=34`, with a
+10 m wide canopy at `a=9..19` extending inward to `d=62`. Its 3.7 m opening,
+concrete side walls, fire cabinets, floor and night lights share this placement.
+The outside planted strip and yellow/black kerb follow the new side photograph.
+The kiosk and office stay fixed; placement and dimensions are estimates.
+
+References: `references/2026-10-18-parking/` (three photographs and the unmarked
+model screenshot; the red-arrow instruction was supplied inline in chat).
+Inspect `?view=gate9-photo-shelter`, `?view=gate9-photo-shelter-reverse` and
+`?view=gate9-shelter-layout`.
+
+## Gate-front and shelter photographs — 17 October 2026
+
+The latest outside-gate photo replaces the low white context blocks with the
+long stone neighbouring building on the left, behind a cream boundary wall,
+railing and hedge. It is a separate property; the gate opening stays clear.
+The kiosk/shelter daylight image and reverse dusk image guide the office-side
+curved cream shelter, white supports, low enclosure, open entrance and lighting.
+No unseen underground garage is modelled. Dimensions and photo poses are estimates.
+
+Road/property separation correction: the long transverse facade fence was the
+wrong alignment. It is replaced by a solid cream wall beside the left edge of
+the approach forecourt, tapering toward the approach verge and joining the small
+gate post with a short return. The property is behind this wall, not part of the
+road. Its height and alignment remain estimated from the user's correction.
+The neighbouring building retains the earlier 14 m inward setback.
+The right roadside gap now uses the same cream wall, coping, piers and railing,
+following the opposite forecourt edge and returning to the fixed gate-side fence.
+Both sides leave the driving lane and automatic gate opening clear.
+
+Validation: `photo-correction-validation.json` records browser checks and the old/new performance comparison. Gate crossing passed; no runtime errors. This test session had low FPS with both assets, so smooth performance remains unverified.
+
+Source images: `references/2026-10-17-photo/`. Rebuild with Blender using
+`scripts/build-gate9.py`; the correction is in `scripts/gate9-photo-correction.py`.
+Review views: `gate9-photo-outside`, `gate9-photo-shelter`,
+`gate9-photo-shelter-reverse` (use the existing evening toggle for dusk).
+
+
+Earlier correction: [Section 1 user annotations](section1-correction.md). Left is the
 property boundary, parking is removed here, and marked canopies/pavilion move right.
 The earlier garden-side interpretation below is superseded. Kiosk fork asphalt now
 matches the connected road. Open `?view=gate9-section1` for the correction overview.
@@ -146,3 +215,71 @@ Road/canopy widths, plant spacing, concealed surfaces and camera calibration rem
 Procedural concrete/asphalt texture PNGs are authored by the builder from deterministic noise, embedded in the GLB and packed into the Blender source. They are not extracted photographic textures.
 
 No test cases were requested or run for this task. Build results and visual-review evidence are recorded separately.
+# Entrance route correction — 19 October 2026
+
+The latest front and reverse photographs supersede the earlier closed checking
+room. The cabin remains between two independent openings, with a 3.4 × 4.2 m
+footprint, shallow pitched roof, barred service window, plain maroon side walls
+and open front/rear doors. Door clearance accommodates the visitor controller's
+1.23 m collision envelope. These dimensions remain photographic estimates.
+
+The right opening is 8 m, the left 7 m. The former raised base across the left
+opening is removed. Both boom arms now sit outside their respective gates.
+Gate panels swing inward on approach; this is an estimated animation mechanism
+chosen to avoid sliding through the cabin. Older assets retain sliding support.
+
+`scripts/gate9-entrance-route.py` adds a continuous, flush worn concrete apron,
+repair patches, cracks, joints and inset utility covers only at the entrance and
+right turn. It also adds the electrical box, green bin, cone and water container.
+The loose pink barricade is moved out of the entry line. The office, existing
+canopies and the previously corrected parallel passage layout are retained.
+Rebuilding also includes four boundary lamps already present in the earlier
+parallel-passages source but absent from the preceding exported asset.
+
+Review views: `gate9-approach`, `gate9-checking-room`, `gate9-entry-reverse`,
+`gate9-entry-turn`, `gate9-entry-straight`, `gate9-entry-overview`.
+`entrance-route-validation.json` records collision sampling against the exported
+model and source venue with the same superseded context hidden as in the viewer.
+# Gate and road alignment — latest 19 October correction
+
+The user's two annotated screenshots supersede the tower and cabin placement
+described below. `scripts/gate9-alignment-correction.py` shifts the gate openings,
+checking room, barrier controls and guards 12 m to the right in gate-local axes.
+The tower is now immediately outside the left gate post, centred at a=-8.4,
+d=1.6; its stair is reversed to keep the foot inside the boundary and away from
+the road. The checking room is 3.4 m wide and 8.4 m deep, retaining the front
+doorway at d=-2.1 and extending inward to d=6.3.
+
+The left gate is centred at a=-3.1. Its road continues past the kiosk's left side
+and joins the existing outer office passage at approximately campus (-479,-398).
+The former tower footprint becomes a planted road margin. The right return
+fence is shortened to the moved vehicle opening; loose barricades stay outside
+the walking line. All dimensions are editable photographic estimates.
+
+Review `gate9-entry-overview`, `gate9-left-road` and `gate9-left-road-reverse`.
+Coordinates are saved in `gate-alignment.json`; collision and preservation
+results are in `gate-alignment-validation.json`. Source screenshots are retained
+in `references/2026-10-19-alignment/`.
+
+## Continuous grey paving — latest flooring correction
+
+The user's latest request supersedes the entrance's worn-concrete/repair finish.
+`prepareGate9Paving` now applies the existing approved grey plaza tile atlas to
+all loaded exterior paving: Gate 9's added apron and aligned road, kiosk court,
+checking-room floor, shelter decks, office courts, pedestrian promenades and
+site footpaths. UVs use the same campus axes and 32 m atlas origin, so material
+and joint spacing continue across separately authored pieces. Street asphalt,
+landscaped beds, access covers, kerbs and buildings keep their own finishes.
+Old concrete patches, repair overlays and independently drawn cracks/joints are
+removed from the rendered floor. No circulation positions or dimensions change.
+
+`batchVenue` now leaves meshes beneath hidden ancestors in their original
+hierarchy. Previously those obsolete garden/floor meshes could be detached into
+visible batches and appear as pale triangular fragments over replacement floors.
+
+Validation: production build passed (existing CSS budget/CommonJS warnings);
+48 loaded paved meshes / 21,050 UV vertices align in world space, 13,577 other
+meshes retain geometry/material, and six site boundary fades are preserved.
+A hidden-parent regression check confirms only visible paving gets batched.
+See `flooring-validation.json`; daytime Gate 9 and entire-venue screenshots are
+in `tmp/flooring/`. The live viewer performs this finish pass after model loading.

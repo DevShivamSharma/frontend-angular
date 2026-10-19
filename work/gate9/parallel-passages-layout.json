@@ -1,0 +1,37 @@
+{
+  "reference": "2026-10-18 marked aerial and three photographs",
+  "scopeCampus": {
+    "s": [
+      -478,
+      -368
+    ],
+    "t": [
+      -403,
+      -379
+    ]
+  },
+  "longAxisCampusS": [
+    -472.0,
+    -388.0
+  ],
+  "estimatedWidthsMetres": {
+    "officePassage": 6,
+    "plantingStrip": 2.4,
+    "shelter": 6,
+    "boundaryPassage": 6
+  },
+  "crossSectionFromOffice": [
+    "open passage",
+    "planted strip",
+    "curved shelter",
+    "open passage",
+    "boundary hedge"
+  ],
+  "roofCampusT": [
+    -395.0,
+    -389.0
+  ],
+  "removedLocalObjects": 963,
+  "openEnds": true,
+  "sourceOfficeAndOtherVenueGeometry": "retained"
+}

@@ -166,10 +166,13 @@ export function prepareItpoArrival(root: T.Group): void {
   hedge([[-481, -323], [-411, -323]], 1.5);
   for (let i = 0; i < 10; i++) fig(-477 + i * 7, -330, i);
   box('side_entrance_landing', concrete, ITPO_PORCH.s, -344.5, .15, [22, .3, 18]);
-  // Entrance lane: planting stays behind the existing Gate 9 kerb lines.
-  hedge([[-482, -385.5], [-410, -385.5]], 1.15);
-  hedge([[-487, -402.2], [-454, -402.2]], 1.1);
-  for (let i = 0; i < 7; i++) fig(-480 + i * 10, -383.5, i);
+  // The photo corridor owns planting inside its footprint. The older tree row
+  // would otherwise be recreated in the newly cleared office-side passage.
+  let parallelPassages = false;
+  root.traverse(o => { if (/18[ _]Photo[ _]parallel[ _]office[ _]passages/.test(o.name)) parallelPassages = true; });
+  hedge([[-482, -385.5], [parallelPassages ? -478 : -410, -385.5]], 1.15);
+  hedge([[-487, -402.2], [parallelPassages ? -478 : -454, -402.2]], 1.1);
+  for (let i = 0; i < (parallelPassages ? 1 : 7); i++) fig(-480 + i * 10, -383.5, i);
 
   // Reverse photograph's enclosure, clear of the drive and cream shelters.
   box('service_wall', stone, -435, -407, 1.65, [10.5, 2.7, 3.1]);

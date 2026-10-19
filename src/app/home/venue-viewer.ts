@@ -27,8 +27,10 @@ import { capturePedestrianPaths, createVenuePedestrians } from './venue-pedestri
 import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration } from './venue-site-detail';
 import { prepareGate9 } from './venue-gate9';
 import { createVenueNightLights } from './venue-night-lights';
+import { collectVenueLightSources } from './venue-light-sources';
 import { createVenueRain } from './venue-rain';
 import { prepareVenueRoadFinish } from './venue-road-finish';
+import { prepareGate9Paving } from './venue-gate9-paving';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; }
@@ -209,6 +211,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 }
             }
             highlighted = id;
+            nightLights?.setDaylight(daylight);
         }
         function resetLevel() {
             level = 0;
@@ -325,6 +328,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }
         prepareItpoArrival(root);
         prepareVenueRoadFinish(root);
+        prepareGate9Paving(root);
         try {
             interiors=await createVenueInteriors({root,scene,camera,canvas,asset,signal,invalidate,shadowsChanged:()=>renderer.shadowMap.needsUpdate=true,exit:()=>leaveCommand(),daylight:()=>daylight,state:state=>{
                 controls.enabled=!state.walking&&!visitor?.active;
@@ -361,6 +365,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const visitorNavigation = createVisitorNavigation(root, interiors?.halls ?? [], interiors?.obstacles ?? new Map(), interiors?.layer, gate9?.arrival);
         const onPedestrianPath = capturePedestrianPaths(root);
         preparePhotoEntrances(root, visitorNavigation.portals);
+        const venueLightSources = collectVenueLightSources(root, gate9?.lights ?? [], visitorNavigation.portals);
         // Export is already metres, Y-up, east +X / south +Z. Do not rotate the
         // glTF a second time; W converts only the authored navigation coordinates.
         batchVenue(root, classify, o => [
@@ -398,7 +403,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const appearance = createVenueAppearance(root, renderer, asset, signal);
         cleanups.push(() => appearance.dispose());
         // After batching and per-mesh material cloning, so the glow edits touch the live materials.
-        nightLights = createVenueNightLights(scene, root, gate9?.lights ?? []);
+        nightLights = createVenueNightLights(scene, root, venueLightSources);
         cleanups.push(() => nightLights?.dispose());
         rain = createVenueRain(scene, root);
         cleanups.push(() => rain?.dispose());
@@ -441,7 +446,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             originals.set(mesh, mats.map(m => ({color:m.color.clone(), emissive:m.emissive.clone(), emissiveIntensity:m.emissiveIntensity})));
         }
         appearanceCommand = async mode => {
+            nightLights?.setDaylight(true);
             await appearance.apply(mode);
+            nightLights?.refreshMaterials();
             nightLights?.setDaylight(daylight);
             rain?.refreshMaterials();
             water?.refreshMaterials();

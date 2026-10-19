@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-17",
+  "branch": "codex/gate9-video-reference",
+  "scope": [
+    "Left stone neighbouring building behind independent boundary wall/railing/hedge",
+    "Curved cream shelter, white columns, low walls, open entrance, corrected ENTRY lettering",
+    "Kiosk header and front/reverse inspection cameras"
+  ],
+  "registration": "Photo-informed estimated dimensions; no hidden underground levels modelled",
+  "asset": {
+    "bytes": 16351296,
+    "sha256": "003ab6f3f38cd9c4a0068deaddf76dbb547c915e3999087288f86a9c1083d4a0"
+  },
+  "checks": {
+    "geometry": {
+      "geometries": 654,
+      "lights": 27,
+      "neighbour": 1
+    },
+    "start": [
+      -588.10888671875,
+      0.23999999463558197,
+      318.6344909667969
+    ],
+    "inside": [
+      -585.4536652507879,
+      0.24,
+      280.72737027745006
+    ],
+    "rendering": {
+      "medianFrameMs": 111.89999997615814,
+      "p95FrameMs": 142.09999990463257,
+      "drawCalls": 256,
+      "triangles": 2200481
+    },
+    "errors": []
+  },
+  "performanceComparison": {
+    "old": {
+      "median": 232.39999997615814,
+      "p95": 285,
+      "calls": 250,
+      "triangles": 2148671,
+      "gpu": "ANGLE (Intel, Intel(R) Graphics (0x0000A7AC) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "new": {
+      "median": 199.39999997615814,
+      "p95": 292.10000002384186,
+      "calls": 256,
+      "triangles": 2200481,
+      "gpu": "ANGLE (Intel, Intel(R) Graphics (0x0000A7AC) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    }
+  },
+  "performanceNote": "Intel integrated-GPU browser session: low throughput with both old and new assets; no smooth-FPS guarantee. Added geometry is about 2.4% of visible triangles in this view. Timings vary with host load.",
+  "screenshots": [
+    "tmp/gate9-photo/gate9-photo-outside.png",
+    "tmp/gate9-photo/gate9-photo-shelter.png",
+    "tmp/gate9-photo/shelter-night.png",
+    "tmp/gate9-photo/mobile-night.png"
+  ],
+  "boundaryCorrection": {
+    "date": "2026-10-17",
+    "fix": "Neighbour building moved 14m inward behind front boundary; no new geometry",
+    "asset": {
+      "bytes": 16350948,
+      "sha256": "24a74bcf809e207b6b661ea798b163d91cf513fe546ddbdea67f0d8a41faa2ee"
+    },
+    "start": [
+      -588.10888671875,
+      0.23999999463558197,
+      318.6344909667969
+    ],
+    "inside": [
+      -585.4536652507879,
+      0.24,
+      280.72737027745006
+    ],
+    "errors": [],
+    "screenshots": [
+      "tmp/gate9-photo/boundary-front.png",
+      "tmp/gate9-photo/boundary-left.png"
+    ]
+  },
+  "roadsideBoundaryCorrection": {
+    "date": "2026-10-17",
+    "fix": "Transverse facade fence replaced with a solid roadside property boundary following the left forecourt edge",
+    "asset": {
+      "bytes": 16351992,
+      "sha256": "7f52409507ad20195064028141f96e8070f193c8b62edc3cb9c0c466d60d8b2a"
+    },
+    "start": [
+      -588.10888671875,
+      0.23999999463558197,
+      318.6344909667969
+    ],
+    "inside": [
+      -585.4536652507879,
+      0.24,
+      280.72737027745006
+    ],
+    "errors": [],
+    "screenshots": [
+      "tmp/gate9-photo/boundary-front.png",
+      "tmp/gate9-photo/boundary-left.png"
+    ]
+  },
+  "rightBoundaryCorrection": {
+    "date": "2026-10-17",
+    "fix": "Both forecourt edges have continuous roadside walls; restored right boundary joins existing fixed fence",
+    "asset": {
+      "bytes": 16382652,
+      "sha256": "ad4eb21b07ca33875b2decfba1c7722781ff5a9b83e7e1309930b3e6fcde73f6"
+    },
+    "start": [
+      -588.10888671875,
+      0.23999999463558197,
+      318.6344909667969
+    ],
+    "inside": [
+      -585.4536652507879,
+      0.24,
+      280.72737027745006
+    ],
+    "errors": [],
+    "screenshots": [
+      "tmp/gate9-photo/boundary-front.png",
+      "tmp/gate9-photo/boundary-left.png",
+      "tmp/gate9-photo/boundary-right.png",
+      "tmp/gate9-photo/boundary-layout.png"
+    ]
+  }
+}

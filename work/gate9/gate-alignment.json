@@ -1,0 +1,120 @@
+{
+  "gateShiftRightMetres": 12.0,
+  "leftGateCentre": [
+    -3.1,
+    0
+  ],
+  "rightGateCentre": [
+    9,
+    0
+  ],
+  "watchtowerCentre": [
+    -8.4,
+    1.6
+  ],
+  "checkingCabin": {
+    "width": 3.4,
+    "depth": 8.4,
+    "frontD": -2.1,
+    "rearD": 6.3
+  },
+  "leftRoadCentreline": [
+    [
+      -3.1,
+      0
+    ],
+    [
+      -5.2,
+      28
+    ],
+    [
+      -5.2,
+      48
+    ],
+    [
+      -2.5,
+      72
+    ]
+  ],
+  "plantingClearedFromRoad": [
+    {
+      "name": "G9 leaf_canopy ground planting.490",
+      "a": -7.227,
+      "d": 54.695,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 0"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.492",
+      "a": -6.426,
+      "d": 54.325,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 3"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.493",
+      "a": -7.439,
+      "d": 53.451,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 3"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.494",
+      "a": -6.169,
+      "d": 53.921,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 0"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.495",
+      "a": -7.051,
+      "d": 52.781,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 3"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.496",
+      "a": -5.521,
+      "d": 53.233,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 0"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.497",
+      "a": -6.434,
+      "d": 52.506,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 0"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.498",
+      "a": -5.166,
+      "d": 52.571,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 0"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.499",
+      "a": -5.997,
+      "d": 51.799,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 3"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.500",
+      "a": -4.439,
+      "d": 52.252,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 0"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.501",
+      "a": -5.56,
+      "d": 51.114,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 3"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.502",
+      "a": -4.217,
+      "d": 51.566,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 0"
+    },
+    {
+      "name": "G9 leaf_canopy ground planting.503",
+      "a": -5.0,
+      "d": 50.623,
+      "exportBatch": "G9 leaf_canopy 05 Planting G9 leaf tone 0"
+    }
+  ],
+  "reference": "19 October annotated road-to-left-gate screenshots; dimensions estimated"
+}

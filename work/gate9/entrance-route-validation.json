@@ -1,0 +1,37 @@
+{
+  "full": true,
+  "faces": 237301,
+  "routes": {
+    "checking": {
+      "samples": 238,
+      "blocked": []
+    },
+    "rightGate": {
+      "samples": 293,
+      "blocked": []
+    },
+    "leftGate": {
+      "samples": 94,
+      "blocked": []
+    },
+    "parallelOfficeCampus": {
+      "samples": 412,
+      "blocked": []
+    },
+    "parallelOuterCampus": {
+      "samples": 412,
+      "blocked": []
+    },
+    "campusConnection": {
+      "samples": 312,
+      "blocked": []
+    }
+  },
+  "preservedMeshes": 72,
+  "sourceUnchanged": true,
+  "existingLightingRebuilt": [
+    "G9 static 18 Photo parallel office passages G9 lamp diffuser",
+    "G9 static 18 Photo parallel office passages G9 painted dark metal"
+  ],
+  "assetBytes": 14766576
+}

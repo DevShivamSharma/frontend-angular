@@ -11,6 +11,8 @@ interface Gate9Registration {
   gateCenter: [number, number, number];
   slideDirection: [number, number, number];
   slideDistance: number;
+  /** Degrees about each panel's upright hinge; absent on older assets. */
+  leafSwings?: Record<string, number>;
   views: Record<string, { position: [number, number, number]; target: [number, number, number]; label: string }>;
   /** 2026-10-15 additions: lamp positions for night lighting, hinged boom arms and staff positions. */
   lights?: Gate9Light[];
@@ -34,12 +36,13 @@ export async function prepareGate9(root: T.Group, asset: (path: string) => strin
   root.add(scene); // Scene ownership includes disposal after an aborted load.
   signal.throwIfAborted();
   trimGate9Context(root, scene);
-  const leaves: { object: T.Object3D; origin: T.Vector3; sign: number }[] = [];
+  const leaves: { object: T.Object3D; origin: T.Vector3; sign: number; rest: T.Quaternion; swing?: number }[] = [];
   const arms: { object: T.Object3D; rest: T.Quaternion; raised: T.Quaternion }[] = [];
   scene.traverse(object => {
     if (object.name.startsWith('GATE9_moving_leaf_')) {
       object.userData['dynamicGate9'] = true;
-      leaves.push({ object, origin: object.position.clone(), sign: object.name.endsWith('left') ? -1 : 1 });
+      leaves.push({ object, origin: object.position.clone(), sign: object.name.endsWith('left') ? -1 : 1,
+        rest: object.quaternion.clone(), swing: registration.leafSwings?.[object.name] });
     }
     const barrier = registration.barriers?.find(b => object.name === b.name || object.name.startsWith(b.name + '.'));
     if (barrier) {
@@ -128,7 +131,11 @@ export async function prepareGate9(root: T.Group, asset: (path: string) => strin
       if (opening === target) return false;
       opening = reducedMotion ? target : T.MathUtils.clamp(opening + Math.sign(target - opening) * dt * 1.5, 0, 1);
       const eased = opening * opening * (3 - 2 * opening);
-      for (const leaf of leaves) leaf.object.position.copy(leaf.origin).addScaledVector(direction, leaf.sign * eased * registration.slideDistance);
+      for (const leaf of leaves) {
+        if (leaf.swing !== undefined)
+          leaf.object.quaternion.setFromAxisAngle(T.Object3D.DEFAULT_UP, T.MathUtils.degToRad(leaf.swing) * eased).multiply(leaf.rest);
+        else leaf.object.position.copy(leaf.origin).addScaledVector(direction, leaf.sign * eased * registration.slideDistance);
+      }
       // Boom arms lead the leaves slightly, as staff raise them while the gate still slides.
       const lift = T.MathUtils.clamp(opening * 1.3, 0, 1), armEased = lift * lift * (3 - 2 * lift);
       for (const arm of arms) arm.object.quaternion.slerpQuaternions(arm.rest, arm.raised, armEased);

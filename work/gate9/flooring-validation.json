@@ -1,0 +1,31 @@
+{
+  "tiledMeshes": 48,
+  "alignedVertices": 21050,
+  "unchangedOtherMeshes": 13577,
+  "siteBoundaryFadesPreserved": 6,
+  "positionsAndTransformsUnchanged": true,
+  "remainingConcretePatches": [],
+  "removedOverlays": [
+    "G9_static_03_Interior_lanes_G9_damp_concrete_patches",
+    "G9_static_03_Interior_lanes_G9_expansion_joints",
+    "SITE_GROUND_gate9_18_Photo_parallel_office_passages_G9_expansion_joints",
+    "SITE_GROUND_gate9_20_Corrected_gate_alignment_and_left_road_G9_entrance_hairline_cracks",
+    "SITE_GROUND_gate9_aligned_street_repair",
+    "SITE_GROUND_gate9_right_worn_surface"
+  ],
+  "coverage": {
+    "SITE_ADMIN limestone paving": 3,
+    "PM_CC aerial limestone paving": 5,
+    "REF_Supplied red Kota stone paving": 7,
+    "GATE_PATH pedestrian paving": 12,
+    "SITE warm concrete footpaths": 1,
+    "SITE_ROAD warm concrete footpaths": 5,
+    "G9 brushed warm concrete": 9,
+    "G9 planted earth": 1,
+    "G9 shared asphalt / G9 brushed warm concrete": 1,
+    "G9 entrance weathered cement": 2,
+    "G9 weathered asphalt": 1
+  },
+  "hiddenParentBatchRegression": "passed",
+  "productionBuild": "passed; existing CSS budget and CommonJS warnings"
+}

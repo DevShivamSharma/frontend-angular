@@ -1,0 +1,34 @@
+{
+  "roofGateLocalBounds": {
+    "min": [
+      9.0,
+      34.0,
+      3.55
+    ],
+    "max": [
+      19.0,
+      62.0,
+      5.0
+    ]
+  },
+  "kioskGateLocalCenter": [
+    0,
+    37
+  ],
+  "frontOpeningAcross": [
+    12,
+    15.7
+  ],
+  "frontOpeningDepth": 34,
+  "registration": "User annotated kiosk view, 18 October 2026; dimensions estimated",
+  "asset": {
+    "sha256": "3f2cfcbb3f68148495aafb4a56be19f6e95f291bca4a6cdb68f65a90f58df7ec",
+    "bytes": 16817560
+  },
+  "checks": {
+    "blenderExport": "completed",
+    "sourceVenue": "unchanged",
+    "navigation": "not tested",
+    "browser": "entrance and overhead placement inspected; no console errors"
+  }
+}

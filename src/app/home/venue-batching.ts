@@ -14,7 +14,10 @@ export function batchVenue(root: T.Group, classify: (object: T.Object3D) => stri
         if (!(object instanceof T.Mesh) || object instanceof T.SkinnedMesh || object instanceof T.InstancedMesh || object.children.length ||
             Array.isArray(object.material) || object.material.transparent || object.morphTargetInfluences) return;
         for (let node: T.Object3D | null = object; node; node = node.parent)
-            if (node.userData['cc_level'] || node.userData['interiorRoof'] || node.userData['dynamicGate9'] || /^(OUTER_GROUND|CONTEXT_GROUND)$/.test(node.name)) return;
+            // A hidden source layer must stay under its hidden parent. Moving
+            // its children into a visible batch resurrects obsolete floor and
+            // garden triangles through the replacement paving.
+            if (!node.visible || node.userData['cc_level'] || node.userData['interiorRoof'] || node.userData['dynamicGate9'] || /^(OUTER_GROUND|CONTEXT_GROUND)$/.test(node.name)) return;
         const geometry = object.geometry;
         const attributes = Object.entries(geometry.attributes as Record<string, T.BufferAttribute>).map(([key, a]) =>
             `${key}:${a.itemSize}:${a.normalized}:${a.array.constructor.name}`).sort().join(',');

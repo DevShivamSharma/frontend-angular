@@ -1,0 +1,14 @@
+{
+  "roofBays": 14,
+  "pillars": 30,
+  "passageRayBlockers": {
+    "office": [],
+    "outer": [],
+    "shelter": []
+  },
+  "assetBytes": 14738252,
+  "sourceUnchanged": true,
+  "unrelatedMeshExtentsAndCounts": "unchanged",
+  "browser": "Office-side and reverse outer-passage views inspected after runtime planting cleanup; no console errors",
+  "build": "TypeScript and production build passed; existing CSS budget/CommonJS warnings"
+}

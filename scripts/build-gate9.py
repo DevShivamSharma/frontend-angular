@@ -265,28 +265,22 @@ def leaf_bars(member,lo,hi,d=0):
     for y in [.38,1.3,2.3,3.3,4.35]:member('G9 sliding leaf horizontal rail',(lo,d,y),(hi,d,y),.11)
     for x in [lo,(lo+hi)/2,hi]:member('G9 sliding leaf vertical frame',(x,d,.38),(x,d,4.4),.12)
     for x in np.arange(lo+.16,hi-.08,.16):member('G9 khaki vertical bar',(x,d,.42),(x,d,4.32),.04)
-for side in (-1,1):
-    group=bpy.data.objects.new('GATE9_moving_leaf_'+('left' if side<0 else 'right'),None)
+# Separate clear openings. Hinges keep the moving panels out of the checking room.
+for name,lo,hi,pivot in [('left',-7,-3,-7),('right',-3,1,1),('exit',-18.6,-11.6,-18.6)]:
+    group=bpy.data.objects.new('GATE9_moving_leaf_'+name,None)
     collection.objects.link(group);created.append(group)
-    group['slideSign']=side
+    group.location=gate(pivot,0,0)
     def member(name,a,b,w,matl=M['khaki'],depth=None):
-        o=beam(name,gate(*a),gate(*b),w,matl,depth);o.parent=group
+        o=beam(name,gate(*a),gate(*b),w,matl,depth)
+        o.parent=group;o.matrix_parent_inverse=Matrix.Translation(-group.location)
         return o
-    lo,hi=(-7,0) if side<0 else (0,7)
     leaf_bars(member,lo,hi)
-    for x in [lo+.4,hi-.4]:
-        o=cylinder('G9 gate roller',gate(x,0,.31),.14,.12,M['dark']);o.parent=group
-for side in [-1,1]:
-    box('G9 gate post',gate(side*7.2,0,2.4),(.3,.3,4.4),M['khaki'])
-# Right of the vehicle gate (from outside): the retained dark fence on its red base.
-beam('G9 boundary base',gate(7.4,.45,.57),gate(19,.45,.57),.5,M['red'],.65)
-for x in np.arange(7.4,19,.2):beam('G9 fixed fence bar',gate(x,.45,.8),gate(x,.45,3.1),.045,M['dark'])
-for h in [1.1,2.85]:beam('G9 fixed fence rail',gate(7.4,.45,h),gate(19,.45,h),.065,M['dark'])
-# Left of the cabin: a narrower single-leaf khaki gate (closed) with its own posts.
-beam('G9 boundary base',gate(-19,.45,.57),gate(-11.6,.45,.57),.5,M['red'],.65)
-def fixed(name,a,b,w,matl=M['khaki'],depth=None):return beam(name,gate(*a),gate(*b),w,matl,depth)
-leaf_bars(fixed,-18.6,-12.0)
-for x in [-18.9,-11.7]:box('G9 gate post',gate(x,0,2.4),(.3,.3,4.4),M['khaki'])
+for x in [-18.9,-11.4,-7.2,1.2]:
+    box('G9 gate post',gate(x,0,2.4),(.3,.3,4.4),M['khaki'])
+# Right return starts at the vehicle opening; neither lane has a raised base.
+beam('G9 boundary base',gate(1.4,.45,.57),gate(19,.45,.57),.5,M['red'],.65)
+for x in np.arange(1.4,19,.2):beam('G9 fixed fence bar',gate(x,.45,.8),gate(x,.45,3.1),.045,M['dark'])
+for h in [1.1,2.85]:beam('G9 fixed fence rail',gate(1.4,.45,h),gate(19,.45,h),.065,M['dark'])
 # Boom barriers: one before the small gate, one behind the vehicle gate. Arms are
 # separate objects (origin at the hinge) that venue-gate9.ts raises on approach.
 def barrier(name,a,d,length,direction):
@@ -307,7 +301,7 @@ def barrier(name,a,d,length,direction):
     arm.location=origin;arm['hinge']=True
     return arm
 barrier('GATE9_barrier_arm_left',-19.3,-3.2,7,1)
-barrier('GATE9_barrier_arm_right',7.7,3.6,13,-1)
+barrier('GATE9_barrier_arm_right',1.7,-3.2,8,-1)
 # Floodlight mast at the right boundary (photo 20261015_104444, far right).
 beam('G9 floodlight mast',gate(19.6,-2.2,.3),gate(19.6,-2.2,9.6),.14,M['dark'])
 beam('G9 floodlight crossarm',gate(18.9,-2.2,9.5),gate(20.3,-2.2,9.5),.09,M['dark'])
@@ -326,11 +320,27 @@ M['greywall']=mat('grey boundary wall',(.36,.35,.32),.85)
 def wall_run(a0,a1,height,material,depth=.3,base=.24):
     centre=(a0+a1)/2
     box('G9 boundary wall',gate(centre,.45,base+height/2),(abs(a1-a0),depth,height),material,ga)
-wall_run(-60,-19.2,1.5,M['plaster'])
-for x in np.arange(-59.8,-19.2,.18):beam('G9 boundary railing bar',gate(x,.45,1.74),gate(x,.45,2.6),.035,M['dark'])
-for h in [1.8,2.55]:beam('G9 boundary railing rail',gate(-60,.45,h),gate(-19.2,.45,h),.055,M['dark'])
-for x in np.arange(-60,-19,8):beam('G9 boundary railing post',gate(x,.45,1.74),gate(x,.45,2.65),.07,M['dark'])
-box('G9 boundary hedge',gate(-39.75,-1.3,.74),(40.5,.9,1.0),M['hedge'],ga)
+# User correction: this is the road/property divider, not a long facade fence.
+# Follow the 44 m forecourt's left edge (a=-22), taper to the approach verge,
+# then return only the short distance to the small gate's outer post.
+# Match both roadside dividers; the right return meets the fixed fence at a=27.
+for side,road_boundary in (
+    ('left',[(-11.5,-43),(-22.25,-33),(-22.25,-4),(-19.2,.45)]),
+    ('right',[(11.5,-43),(22.25,-33),(22.25,-4),(27,.45)]),
+):
+    for (a,d),(b,e) in zip(road_boundary,road_boundary[1:]):
+        beam('G9 '+side+' roadside boundary wall',gate(a,d,1.14),gate(b,e,1.14),.4,M['plaster'],1.8)
+        beam('G9 '+side+' roadside boundary coping',gate(a,d,2.09),gate(b,e,2.09),.48,M['red'],.1)
+        for h in (2.22,2.75):
+            beam('G9 '+side+' roadside boundary railing rail',gate(a,d,h),gate(b,e,h),.045,M['dark'])
+        count=max(1,int(math.hypot(b-a,e-d)/.24))
+        for i in range(count+1):
+            u=i/count;x=a+(b-a)*u;y=d+(e-d)*u
+            beam('G9 '+side+' roadside boundary railing bar',gate(x,y,2.14),gate(x,y,2.8),.03,M['dark'])
+        count=max(1,int(math.hypot(b-a,e-d)/6))
+        for i in range(count+1):
+            u=i/count;x=a+(b-a)*u;y=d+(e-d)*u
+            box('G9 '+side+' roadside boundary pier',gate(x,y,1.54),(.52,.52,2.6),M['plaster'],ga)
 beam('G9 boundary base',gate(19,.45,.57),gate(27,.45,.57),.5,M['red'],.65)
 for x in np.arange(19,27,.2):beam('G9 fixed fence bar',gate(x,.45,.8),gate(x,.45,3.1),.045,M['dark'])
 for h in [1.1,2.85]:beam('G9 fixed fence rail',gate(19,.45,h),gate(27,.45,h),.065,M['dark'])
@@ -348,14 +358,27 @@ M['roof'] = mat('checking room charcoal roof', (.047,.045,.034), .83)
 # Positive gate axis is the right side when approaching from outside. The
 # 2026-10-15 gate photo shows the cabin between the small left gate and the
 # vehicle gate, so it now stands left of the vehicle gate (door towards it).
-a,d,w,depth = -9.6,0,3.4,3.2
+a,d,w,depth = -9.6,0,3.4,4.2
 front = d-depth/2
 def cabin_box(name,x,y,z,size,material):
     o=box('G9 checking room '+name,gate(a+x,d+y,z),size,material,ga)
     o['evidence']='User checking-room photo, 2026-10-14; dimensions estimated'
     return o
-cabin_box('concrete plinth',0,0,.32,(w+.22,depth+.22,.16),M['concrete'])
-cabin_box('brown walls',0,0,1.81,(w,depth,2.82),M['cabin'])
+cabin_box('floor slab',0,0,.27,(w,depth,.06),M['concrete'])
+# Clear 1.395 m doorway accommodates the visitor controller's 1.23 m body envelope.
+for side in [-1,1]:
+    cabin_box('plain maroon side wall',side*(w/2-.08),0,1.76,(.16,depth,2.92),M['cabin'])
+for y in [-depth/2,depth/2]:
+    cabin_box('service wall',-.775,y,1.76,(1.85,.14,2.92),M['cabin'])
+    cabin_box('door outer pier',1.65,y,1.76,(.10,.14,2.92),M['cabin'])
+    cabin_box('door lintel',.875,y,2.98,(1.45,.14,.48),M['cabin'])
+    for x in [.15,1.6]:
+        cabin_box('open doorway jamb',x,y,1.51,(.055,.22,2.42),M['trim'])
+    cabin_box('open doorway head',.875,y,2.74,(1.50,.22,.06),M['trim'])
+    # Flush ramp, rising only six centimetres from the street to the cabin floor.
+    outer=y+(-.9 if y<0 else .9)
+    mesh('SITE_GROUND_gate9 checking ramp',[gate(a+.15,y,.30),gate(a+1.6,y,.30),
+         gate(a+1.6,outer,.244),gate(a+.15,outer,.244)],[(0,1,2,3)],M['concrete'])
 # Shallow pitched roof, including solid gable ends and an overhang on all sides.
 profile=[(-w/2,3.22),(w/2,3.22),(0,3.77)]
 verts=[gate(a+x,y,z) for y in [-depth/2,depth/2] for x,z in profile]
@@ -370,11 +393,8 @@ for side in [-1,1]:
 # Fine vertical battens continue onto the gable without filling the windows.
 for x in np.arange(-w/2+.08,w/2,.14):
     top=3.77-abs(x)/(w/2)*.55
-    cabin_box('front rib',x,front-.018,(.42+top)/2,(.035,.035,top-.42),M['rib'])
-for side in [-1,1]:
-    for y in np.arange(-depth/2+.06,depth/2,.15):
-        cabin_box('side rib',side*(w/2+.018),y,1.81,(.035,.035,2.78),M['rib'])
-    cabin_box('corner trim',side*(w/2-.05),front-.055,1.81,(.075,.075,2.84),M['trim'])
+    bottom=2.78 if .10<x<1.65 else .42
+    cabin_box('front rib',x,front-.09,(bottom+top)/2,(.035,.035,top-bottom),M['rib'])
 # Front service window, recessed dark glass with clearly spaced vertical bars.
 wx,wy,ww,wh=-.61,1.99,1.34,1.38
 cabin_box('window recess',wx,front-.05,wy,(ww+.16,.07,wh+.16),M['dark'])
@@ -387,13 +407,8 @@ for x in np.linspace(wx-ww/2+.10,wx+ww/2-.10,9):
     cabin_box('window grille bar',x,front-.19,wy,(.022,.025,wh),M['steel'])
 for z in [wy-.42,wy+.42]:
     cabin_box('window grille rail',wx,front-.195,z,(ww,.025,.025),M['steel'])
-# Narrow entrance to the right, with a glazed upper panel and metal handle.
-cabin_box('door surround',.91,front-.065,1.58,(.99,.09,2.40),M['trim'])
-cabin_box('door leaf',.91,front-.12,1.58,(.82,.055,2.24),M['dark'])
-cabin_box('door lower panel',.91,front-.155,.96,(.71,.025,.91),M['cabin'])
-cabin_box('door glazing',.91,front-.155,2.04,(.68,.025,1.12),M['glass'])
-cabin_box('door handle',1.20,front-.22,1.49,(.035,.07,.24),M['steel'])
-cabin_box('entry step',.91,front-.30,.31,(1.08,.60,.15),M['concrete'])
+# Door leaf is held open beside the right wall; the doorway itself stays clear.
+cabin_box('open metal door',1.73,front+.5,1.50,(.045,1.0,2.34),M['dark'])
 
 # Retain the separate raised lookout and open boom arm.
 for a,d,w,depth,height in [(-11,9,2.6,2.6,5.8)]:
@@ -425,8 +440,8 @@ def cage(a,d):
         for off in [-.32,.32]:cylinder('G9 barricade wheel',gate(a+x,d+off,.3),.10,.1,M['dark'])
 # The single yellow barricade stands before the cabin, left of the vehicle gate (20261015_104444).
 cage(-14,-4.4)
-box('G9 pink plastic barrier',gate(-4.2,-15,.81),(2.1,.65,1.12),M['pink'],ga)
-for x in [-.65,.65]:box('G9 moulded barrier slot',gate(-4.2+x,-15-.331,1.14),(.32,.012,.15),M['dark'],ga)
+box('G9 pink plastic barrier',gate(8,-15,.81),(2.1,.65,1.12),M['pink'],ga)
+for x in [-.65,.65]:box('G9 moulded barrier slot',gate(8+x,-15-.331,1.14),(.32,.012,.15),M['dark'],ga)
 beam('G9 lane reader pole',gate(.8,-10,.3),gate(.8,-10,2.15),.075,M['dark'])
 box('G9 lane reader housing',gate(.8,-10,2.18),(.28,.22,.18),M['white'],ga)
 cylinder('G9 green litter bin',gate(12.3,-1,.79),.32,1.1,M['green'])
@@ -884,9 +899,15 @@ right_corner['build'](globals())
 office_corner = runpy.run_path(str(ROOT/'scripts/gate9-office-corner.py'))
 office_corner['build'](globals())
 
-# Retain the surrounding masses, with the photographed low canopy court clear.
-reconcile = runpy.run_path(str(ROOT/'scripts/gate9-context.py'))['reconcile_context']
-created.extend(reconcile(ASSETS/'venue-site-detail.glb', collections['08']))
+# The latest outside photo supersedes the inferred white context masses.
+photo_correction = runpy.run_path(str(ROOT/'scripts/gate9-photo-correction.py'))
+photo_correction['build'](globals())
+parallel_passages = runpy.run_path(str(ROOT/'scripts/gate9-parallel-passages.py'))
+parallel_passages['build'](globals())
+entrance_route = runpy.run_path(str(ROOT/'scripts/gate9-entrance-route.py'))
+entrance_route['build'](globals())
+alignment = runpy.run_path(str(ROOT/'scripts/gate9-alignment-correction.py'))
+alignment['build'](globals())
 
 # Match photo viewpoints approximately; no fabricated camera calibration.
 def world(p):
@@ -912,6 +933,10 @@ views['gate9-video-lookout']={'position':gate_world(-19,4,1.8),'target':gate_wor
 section1['correct_views'](views, world)
 right_corner['views'](views, gate)
 office_corner['views'](views, world)
+photo_correction['views'](views, world, gate_world)
+parallel_passages['views'](views, world)
+entrance_route['views'](views, gate_world)
+alignment['views'](views, gate_world)
 collection=collections['07']
 for name,view in views.items():
     cam=bpy.data.cameras.new(name);o=bpy.data.objects.new(name,cam);collection.objects.link(o)
@@ -922,6 +947,7 @@ bpy.context.scene.camera=bpy.data.objects['gate9-approach']
 # Retain editable objects in .blend; merge static export objects by collection/material.
 bpy.ops.object.select_all(action='DESELECT')
 for o in created:o.select_set(True)
+bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(WORK/'gate9-reconstruction.blend'))
 for c in collections.values():
     bins={}
@@ -967,22 +993,23 @@ for c in collections.values():
 from io_scene_gltf2.io.exp import meshopt
 meshopt.EXP_FILTER_BITS=18
 bpy.ops.export_scene.gltf(filepath=str(ASSETS/'gate9-detail.glb'),export_format='GLB',use_selection=True,export_extras=True,export_cameras=False,export_yup=True,export_meshopt_compression_enable=True)
-manifest={'status':'Photo and walkthrough-informed reconstruction (2026-10-16); unsurveyed dimensions and approximate camera registration. Audio transcription is not accepted as survey evidence. Photo 3 provenance unconfirmed; not used for unique geometry.',
-          'sourceSha256':source_hash,'gateCenter':world((*GATE,.24)),
-          'slideDirection':world((*R,0)), 'slideDistance':7.25,'clearOpeningMetres':14,
+manifest={'status':'Photo and walkthrough-informed reconstruction (2026-10-18); unsurveyed dimensions and approximate camera registration. Audio transcription is not accepted as survey evidence. Original six-photo set photo 3 provenance unconfirmed; not used for unique geometry.',
+          'sourceSha256':source_hash,'gateCenter':gate_world(9,0,.24),
+          'slideDirection':world((*R,0)), 'slideDistance':4.25,'clearOpeningMetres':8,
+          'leafSwings':{'GATE9_moving_leaf_left':90,'GATE9_moving_leaf_right':-90,'GATE9_moving_leaf_exit':90},
           'views':views,'approachConnectionLocal':[-627.798,-321.451],
           'lights':[{'kind':l['kind'],'position':world(l['position']),**({'aim':world(l['aim'])} if 'aim' in l else {})} for l in LIGHTS],
-          'barriers':[{'name':'GATE9_barrier_arm_left','hinge':world((*gs(-19.3,-3.2),1.12)),'axis':world((F[0],F[1],0)),'length':7},
-                      {'name':'GATE9_barrier_arm_right','hinge':world((*gs(7.7,3.6),1.12)),'axis':world((F[0],F[1],0)),'length':13}],
-          'guards':[{'id':'gate9-cabin','position':world((*gs(-7.4,-2.8),.24)),'facing':world((-F[0],-F[1],0))},
+          'barriers':[{'name':'GATE9_barrier_arm_left','hinge':world((*gs(-7.3,-3.2),1.12)),'axis':world((F[0],F[1],0)),'length':7},
+                      {'name':'GATE9_barrier_arm_right','hinge':world((*gs(13.7,-3.2),1.12)),'axis':world((F[0],F[1],0)),'length':8}],
+          'guards':[{'id':'gate9-cabin','position':world((*gs(4.6,-2.8),.24)),'facing':world((-F[0],-F[1],0))},
                     {'id':'gate9-kiosk','position':world((*gs(4.4,33.5),.24)),'facing':world((-F[0],-F[1],0))},
-                    {'id':'gate9-inside','position':world((*gs(3,3.4),.24)),'facing':world((-F[0],-F[1],0))}],
+                    {'id':'gate9-inside','position':world((*gs(14.5,3.4),.24)),'facing':world((-F[0],-F[1],0))}],
           'photoSet2026_10_15':'work/gate9/references/2026-10-15: ten photographs and video 20261015_104455 (frames extracted every 2 s)',
-          'checkingRoomReference':'User-supplied checking-room photograph, 2026-10-14: ribbed brown cabin, shallow gable roof, ivory-framed grilled window and yellow barricade. The 2026-10-15 gate photograph (20261015_104444, taken from outside) shows it between a small left gate and the two-leaf vehicle gate, so it now stands left of the vehicle gate. Footprint 3.4 x 3.2 m and concealed sides are estimated.',
+          'checkingRoomReference':'User-supplied checking-room photograph, 2026-10-14: ribbed brown cabin, shallow gable roof, ivory-framed grilled window and yellow barricade. The 2026-10-15 gate photograph (20261015_104444, taken from outside) shows it between a small left gate and the two-leaf vehicle gate, so it now stands left of the vehicle gate. Footprint corrected to 3.4 x 8.4 m on 19 October; open front/rear checking passage and concealed sides are estimated.',
           'photoSequence':[5,2,6,1,4],
           'walkthroughReference':'work/gate9/references/2026-10-16/README.md',
           'walkthroughDurationSeconds':145.112,
-          'assumptions':['14 m gate opening and 4.4 m gate height are estimates.',
+          'assumptions':['8 m right and 7 m left gate openings; 4.4 m gate height; inward swing is a walkability approximation, not a surveyed gate mechanism.',
               'Gate bearing is aligned to the connected outside road; exact surveyed bearing is unavailable.',
               'Small unreadable sign text, concealed rooms and transient traffic are omitted.',
               'Canopy footprints, spacing, road widths and planting positions are inferred from overlapping views.',
@@ -991,8 +1018,8 @@ manifest={'status':'Photo and walkthrough-informed reconstruction (2026-10-16); 
               'The incorrectly placed Gate 9 parking was removed. Parking belongs near CC; its exact placement awaits the CC section.',
               'The latest right-facing entrance photo supersedes the open near-entry court: red piers, black railings and a low cream shelter now enclose the right side. Heights, lengths and photo pose remain estimated.',
               'Lookout stairs, kerb height, drain-panel spacing and garden tree positions are inferred rather than measured.',
-              'Browser inspection was not authorized for this revision; app navigation and mobile appearance remain unverified.',
-              'Two inferred northwest context masses are cut back locally at t=-444 m to clear the photographed canopy court; this setback is not surveyed.']}
+              'The 17 October gate photo replaces the white context massing with a long stone neighbouring building behind its own left boundary. Dimensions are estimated.',
+              'The 18 October annotated view supersedes the office-front shelter placement: the parking entrance is immediately right of the red kiosk (gate-local a=9..19, d=34..62), extending inward toward the office. Three new photos guide the cream canopy, concrete walls, fire cabinets and outer planted kerb; unseen underground levels are not inferred.']}
 (ASSETS/'gate9-detail.json').write_text(json.dumps(manifest,indent=2))
 (WORK/'reference.json').write_text(json.dumps(manifest,indent=2))
 print('GATE9_EXPORT',json.dumps({'bytes':(ASSETS/'gate9-detail.glb').stat().st_size,'sourceUnchanged':hashlib.sha256(source.read_bytes()).hexdigest()==source_hash}))

@@ -1,0 +1,37 @@
+{
+  "full": true,
+  "faces": 237397,
+  "routes": {
+    "checking": {
+      "samples": 210,
+      "blocked": []
+    },
+    "rightGate": {
+      "samples": 255,
+      "blocked": []
+    },
+    "leftRoad": {
+      "samples": 468,
+      "blocked": []
+    },
+    "parallelOfficeCampus": {
+      "samples": 412,
+      "blocked": []
+    },
+    "parallelOuterCampus": {
+      "samples": 412,
+      "blocked": []
+    },
+    "campusConnection": {
+      "samples": 49,
+      "blocked": []
+    }
+  },
+  "preservedMeshes": 72,
+  "sourceUnchanged": true,
+  "plantingBatchesClearedLocally": [
+    "G9 leaf_canopy 05 Planting G9 leaf tone 0",
+    "G9 leaf_canopy 05 Planting G9 leaf tone 3"
+  ],
+  "assetBytes": 14893600
+}
