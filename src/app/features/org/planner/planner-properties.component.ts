@@ -159,9 +159,23 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
               [disabled]="ro"
             />
           </label>
+          <label
+            >Area as per drawing (m²)
+            <p-inputnumber
+              [ngModel]="s.labelArea"
+              (onBlur)="labelArea($event, s.labelArea)"
+              [min]="0.1"
+              [maxFractionDigits]="2"
+              placeholder="As drawn"
+              [disabled]="ro"
+            />
+          </label>
         </div>
         <p class="muted small nums">
-          {{ stallArea(s) | number: '1.0-2' }} m²
+          {{ s.labelArea ?? stallArea(s) | number: '1.0-2' }} m²
+          @if (s.labelArea !== null) {
+            · drawn {{ stallArea(s) | number: '1.0-2' }} m² to fit
+          }
           @if (s.cutCells.length) {
             · {{ s.cutCells.length }} {{ s.cutCells.length === 1 ? 'cell' : 'cells' }} cut
             @if (!ro) {
@@ -630,6 +644,14 @@ export class PlannerPropertiesComponent {
     if (!raw || !Number.isFinite(value) || value === current) return;
     if ((key === 'width' || key === 'depth') && value <= 0) return;
     this.patch.emit({ [key]: value });
+  }
+
+  /** The drawing's area of the stall; cleared, the stall's area is its cells again. */
+  protected labelArea(event: Event, current: number | null): void {
+    const raw = (event.target as HTMLInputElement).value.replace(/,/g, '');
+    const value = raw ? Number(raw) : null;
+    if (value === current || (value !== null && !(value > 0))) return;
+    this.patch.emit({ labelArea: value });
   }
 
   protected toggleSide(s: PlanStall, side: StallSide): void {

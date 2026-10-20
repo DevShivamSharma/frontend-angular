@@ -26,6 +26,7 @@ export function toPlanStall(s: PublishedStallView, key: string): PlanStall {
     depth: s.depth,
     openSides: s.openSides,
     cutCells: s.cutCells,
+    labelArea: null,
     scheme: s.scheme,
     // The canvas colours a stall by the first category's colour, so availability rides on it.
     categoryIds: [key],

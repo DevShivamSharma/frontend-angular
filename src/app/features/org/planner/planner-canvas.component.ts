@@ -246,8 +246,8 @@ const LABELLED = 1500;
           <li>
             <span class="swatch fitted" [style.border-color]="fittedColor"></span>
             {{
-              fitted().size
-                ? fitted().size + ' drawn smaller to fit'
+              fittedCount()
+                ? fittedCount() + ' drawn smaller to fit'
                 : 'Every stall fits at its real size'
             }}
           </li>
@@ -714,6 +714,11 @@ export class PlannerCanvasComponent {
   protected readonly fitted = computed(() =>
     fitScales(this.plan().stalls, plannerFloor(this.floor())),
   );
+  /** Stalls Fit view marks: shrunk to clear others, or drawn smaller than the drawing writes. */
+  protected readonly fittedCount = computed(() => {
+    const fitted = this.fitted();
+    return this.plan().stalls.filter((s) => fitted.has(s.id) || drawnSmall(s)).length;
+  });
   protected readonly fittedColor = FITTED;
   /** Hover text of the stalls drawn smaller: where each is drawn, and its real size. */
   private fittedTips: Array<{ rect: Rect; text: string }> = [];
@@ -1430,11 +1435,12 @@ export class PlannerCanvasComponent {
       if (sel?.kind === 'stall' && selected.has(s.id)) {
         for (const [, a, b] of sides(grow(r, 0.08))) picked.push(a[0], -a[1], 22, b[0], -b[1], 22);
       }
-      if (k < 1) {
+      if (k < 1 || (this.fitView() && drawnSmall(s))) {
         for (const [, a, b] of sides(grow(r, 0.15))) fitted.push(a[0], -a[1], 22, b[0], -b[1], 22);
+        const size = s.labelArea === null ? ` (${fmt(s.width)} × ${fmt(s.depth)} m)` : '';
         this.fittedTips.push({
           rect: r,
-          text: `${stallLabel(s)} · Actual: ${fmt(stallArea(s))} m² (${fmt(s.width)} × ${fmt(s.depth)} m), drawn smaller to fit`,
+          text: `${stallLabel(s)} · Actual: ${fmt(s.labelArea ?? stallArea(s))} m²${size}, drawn smaller to fit`,
         });
       }
     }
@@ -2199,6 +2205,11 @@ function rectBetween(a: Point, b: Point): Rect {
     width: Math.abs(b[0] - a[0]),
     height: Math.abs(b[1] - a[1]),
   };
+}
+
+/** Whether the drawing writes more area on the stall than its box on the grid has. */
+function drawnSmall(s: PlanStall): boolean {
+  return s.labelArea !== null && s.labelArea > stallArea(s) + 0.01;
 }
 
 function rectPoints(r: Rect): Point[] {

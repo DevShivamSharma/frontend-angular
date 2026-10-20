@@ -283,6 +283,7 @@ export function boothsOf(option: PlanOption, brief: PlanBrief, setting: PlanSett
       depth: p.height,
       openSides: [...p.openSides],
       cutCells: [],
+      labelArea: null,
       scheme: 'shell',
       categoryIds,
       isPremium: false,

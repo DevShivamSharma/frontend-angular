@@ -878,6 +878,7 @@ export class AutoBoothsDialogComponent {
         depth: r.height,
         openSides: facing(r),
         cutCells: [],
+        labelArea: null,
         scheme: this.scheme(),
         categoryIds,
         isPremium: false,

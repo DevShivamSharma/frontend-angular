@@ -900,6 +900,9 @@ export function toPlanStall(
     stall.category === 'start-up' ? named(/start[- ]?up/i) : undefined,
   ].filter((id): id is string => !!id);
   const open = openSidesOf(stall, placed.outline);
+  // The drawing writes more than it draws (no room on the grid): sold at what it writes.
+  const cells = stallArea({ width: r.width, depth: r.height, cutCells: placed.cutCells });
+  const written = stall.labels.area;
   return {
     id: newId(),
     zoneId: zoneAt(centre(r), zones)?.id ?? null,
@@ -911,6 +914,7 @@ export function toPlanStall(
     depth: r.height,
     openSides: open.length ? open : ['bottom'],
     cutCells: placed.cutCells,
+    labelArea: written !== null && written - cells > 1 ? written : null,
     scheme: 'shell',
     categoryIds,
     isPremium: stall.category === 'premium',

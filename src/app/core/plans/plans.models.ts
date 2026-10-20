@@ -28,6 +28,11 @@ export interface PlanStall {
   openSides: StallSide[];
   /** Cells cut out of the rectangle, [column, row] from its top-left corner. */
   cutCells: Array<[number, number]>;
+  /**
+   * m² the hall drawing writes on the stall, when more than fits on the grid: drawn smaller, but
+   * sold and sent to the venue at this area. Null: its area is its cells.
+   */
+  labelArea: number | null;
   scheme: StallScheme;
   categoryIds: string[];
   isPremium: boolean;

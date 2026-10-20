@@ -2129,6 +2129,7 @@ export class PlannerPageComponent {
       depth: rect.height,
       openSides: [...DEFAULT_OPEN],
       cutCells: [],
+      labelArea: null,
       scheme: 'shell',
       categoryIds: [],
       isPremium: false,
@@ -2353,7 +2354,10 @@ export class PlannerPageComponent {
     const plan = this.store.plan();
     const wide = s.width >= s.depth;
     const half = round((wide ? s.width : s.depth) / 2);
-    const first: PlanStall = wide ? { ...s, width: half } : { ...s, depth: half };
+    // The halves are their cells: the drawing's area was for the whole stall.
+    const first: PlanStall = wide
+      ? { ...s, width: half, labelArea: null }
+      : { ...s, depth: half, labelArea: null };
     first.cutCells = cleanCutCells(first, s.cutCells);
     const [number] = stallNumbers(plan.stalls, s.islandNumber, 'numbers', 1, '');
     const second: PlanStall = this.rezone(
@@ -2362,6 +2366,7 @@ export class PlannerPageComponent {
             ...s,
             id: newId(),
             stallNumber: number,
+            labelArea: null,
             x: round(s.x + half),
             width: round(s.width - half),
             cutCells: cleanCutCells(
@@ -2373,6 +2378,7 @@ export class PlannerPageComponent {
             ...s,
             id: newId(),
             stallNumber: number,
+            labelArea: null,
             y: round(s.y + half),
             depth: round(s.depth - half),
             cutCells: cleanCutCells(
@@ -2413,6 +2419,7 @@ export class PlannerPageComponent {
       width: round(box.width),
       depth: round(box.height),
       cutCells: [],
+      labelArea: null,
     });
     const plan = this.store.plan();
     await this.store.change(
