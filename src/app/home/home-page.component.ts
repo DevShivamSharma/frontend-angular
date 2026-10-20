@@ -14,10 +14,11 @@ import { InteriorState } from './venue-interiors';
 import { INITIAL_VISITOR_STATE, VisitorInput, VisitorState } from './venue-visitor';
 import { VenueDirectionsComponent } from './venue-directions.component';
 import { Point } from './venue-route-geometry';
+import { VenueMapComponent } from './venue-map.component';
 
 @Component({
   selector: 'app-home-page', standalone: true,
-  imports: [RouterLink, NgTemplateOutlet, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent, VenueDirectionsComponent],
+  imports: [RouterLink, NgTemplateOutlet, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent, VenueDirectionsComponent, VenueMapComponent],
   providers: [VenueDataService],
   templateUrl: './home-page.component.html',
   styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-time.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css', './venue-visitor-controls.css', './venue-visitor.css', './venue-directions.css'],
@@ -30,6 +31,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly plan = viewChild.required(FloorPlanDialogComponent);
   private readonly globeMarker = viewChild.required<ElementRef<HTMLButtonElement>>('globeMarker');
   private readonly homeButton = viewChild.required<ElementRef<HTMLButtonElement>>('homeButton');
+  private readonly placesMap = viewChild.required(VenueMapComponent);
   private markerPointer: { x: number; y: number } | null = null;
   private readonly zone = inject(NgZone);
   private readonly injector = inject(Injector);
@@ -111,7 +113,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
               this.closeDetails();
             }
           })
-        }, this.globeMarker().nativeElement);
+        }, this.globeMarker().nativeElement, this.placesMap().pinLayer()?.nativeElement);
         const info = await this.viewer.ready;
         if (!this.destroyed) this.zone.run(() => { this.setInformation(info); this.followDelhiClock(); });
       });
@@ -206,6 +208,11 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     if (id.startsWith('hall')) this.group.set('halls');
     if (id === 'cc') this.group.set('cc');
     this.view(id);
+  }
+  /** A map pin: places the explorer has a view for fly there; the rest only name themselves. */
+  pickPlace(id: string): void {
+    if (this.details()[id] || this.gates().some(gate => gate.id === id)) this.pick(id, 0);
+    else this.status.set(this.placesMap().places().find(place => place.id === id)?.label ?? 'Bharat Mandapam');
   }
   globe(): void { this.closeDetails(); this.activeLevel.set(0); this.zone.runOutsideAngular(() => this.viewer?.goGlobe()); }
   zoom(factor: number): void { this.zone.runOutsideAngular(() => this.viewer?.zoom(factor)); }

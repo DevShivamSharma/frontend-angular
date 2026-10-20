@@ -1,0 +1,73 @@
+<header class="map-head">
+  @if (mode === 'image') { <h1>Venue Map <small>Bharat Mandapam · New Delhi</small></h1> }
+  <div class="map-search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+    <input type="search" placeholder="Search halls, gates, facilities…" aria-label="Search halls, gates and facilities"
+      [value]="query()" (input)="query.set($any($event.target).value)" (keydown.enter)="results()[0] && select(results()[0], true)" />
+    @if (results().length) {
+      <ul class="map-results" role="listbox" aria-label="Search results">
+        @for (place of results(); track place.id) {
+          <li><button type="button" role="option" (click)="select(place, true)">{{ place.label }}</button></li>
+        }
+      </ul>
+    }
+  </div>
+  <div class="map-chips" role="group" aria-label="Show on the map">
+    <button type="button" [attr.aria-pressed]="!group()" (click)="group.set('')">All</button>
+    @for (item of groups(); track item.id) {
+      <button type="button" [attr.data-group]="item.id" [attr.aria-pressed]="group() === item.id" (click)="group.set(item.id)">{{ item.title }}</button>
+    }
+  </div>
+</header>
+
+<ng-template #pin let-place>
+  <span class="pin-head" aria-hidden="true"></span>
+  @if (labels() && (mode === 'overlay' || labelled().has(place.id))) { <span class="pin-label">{{ place.label }}</span> }
+</ng-template>
+
+@if (mode === 'overlay') {
+  <div #pinLayer class="map-pin-layer" [class.no-labels]="!labels()">
+    @for (place of places(); track place.id) {
+      <button type="button" class="map-pin" [attr.data-group]="place.group" [attr.data-x]="place.x" [attr.data-y]="place.y" [attr.data-z]="place.z"
+        [hidden]="group() && place.group !== group()" [attr.aria-label]="place.label" (click)="select(place)">
+        <ng-container *ngTemplateOutlet="pin; context: { $implicit: place }" />
+      </button>
+    }
+  </div>
+} @else {
+  <div #viewport class="map-viewport" (pointerdown)="pointerDown($event)" (pointermove)="pointerMove($event)"
+    (pointerup)="pointerUp($event)" (pointercancel)="pointerUp($event)" (wheel)="wheel($event)">
+    @if (map(); as map) {
+      <p class="map-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5m0 3v.01"/></svg>Tap a hall, gate or facility for details</p>
+      <div class="map-stage" [style.aspect-ratio]="map.size[0] + ' / ' + map.size[1]" [style.--zoom]="zoom()"
+        [style.transform]="'translate(' + pan()[0] + 'px,' + pan()[1] + 'px) scale(' + zoom() + ')'">
+        <img [src]="'assets/venue/geography/satellite/' + map.image" [width]="map.size[0]" [height]="map.size[1]" alt="Satellite view of Bharat Mandapam" draggable="false" />
+        @for (place of shown(); track place.id) {
+          <button type="button" class="map-pin" [class.selected]="selected()?.id === place.id" [attr.data-group]="place.group"
+            [style.left.%]="place.u / map.size[0] * 100" [style.top.%]="place.v / map.size[1] * 100" [attr.aria-label]="place.label" (click)="tap(place)">
+            <ng-container *ngTemplateOutlet="pin; context: { $implicit: place }" />
+          </button>
+        }
+      </div>
+    } @else if (error()) {
+      <div class="map-error" role="alert"><p>{{ error() }}</p><button type="button" (click)="load()">Retry</button></div>
+    } @else {
+      <p class="map-loading" role="status">Loading the venue map…</p>
+    }
+  </div>
+  <div class="map-tools" aria-label="Map controls">
+    <button type="button" aria-label="Zoom in" (click)="zoomBy(1.5)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg></button>
+    <button type="button" aria-label="Zoom out" (click)="zoomBy(1 / 1.5)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/></svg></button>
+    <button type="button" aria-label="Show the whole venue" (click)="fit()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></button>
+  </div>
+  @if (selected(); as place) {
+    <section class="map-card" role="dialog" [attr.aria-label]="place.label">
+      <button type="button" class="map-card-close" aria-label="Close" (click)="selected.set(null)">×</button>
+      <small>{{ groupTitle(place.group) }}</small>
+      <h2>{{ details()[place.id]?.title || place.label }}</h2>
+      @if (details()[place.id]; as detail) { <p>{{ detail.description }}</p> }
+    </section>
+  }
+  <p class="map-credit">{{ attribution() }}</p>
+}
+<label class="map-labels"><input type="checkbox" [checked]="labels()" (change)="labels.set($any($event.target).checked)" /> Show labels</label>

@@ -34,12 +34,13 @@ import { createVenueRain } from './venue-rain';
 import { prepareVenueRoadFinish } from './venue-road-finish';
 import { prepareGate9Paving } from './venue-gate9-paving';
 import { delhiTime, isVenueDaylight } from './venue-clock';
+import { createVenueMapPins } from './venue-map-pins';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; routeEnded?:()=>void; }
 export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setRain:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; startVisitor:()=>void; stopVisitor:()=>void; visitorInput:(input:VisitorInput,down:boolean)=>void; visitorStep:(input:VisitorInput)=>void; visitorDestination:(id:string)=>void; visitorGo:()=>void; visitorEnter:()=>void; visitorJump:()=>void; visitorStopAutoWalk:()=>void; visitorFaster:()=>void; visitorRestart:()=>void; visitorFloor:(level:number)=>void; showRoute:(points:Point[])=>void; clearRoute:()=>void; readonly isGlobe:boolean; dispose:()=>void; }
 /** Render camera motion and visible fountain water with consistent scene shading. */
-export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement): VenueViewer {
+export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement, pinLayer?: HTMLElement): VenueViewer {
     const lifetime = new AbortController();
     const { signal } = lifetime;
     const cleanups: (() => void)[] = [];
@@ -158,6 +159,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const invalidate = () => { ambientOcclusion.invalidate(); if (prepared) frames.invalidate(); };
         reducedMotion.addEventListener('change', invalidate, { signal });
         cleanups.push(() => frames.dispose());
+        const updatePins = pinLayer ? createVenueMapPins(pinLayer, camera, canvas, invalidate, signal) : undefined;
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) frames.pause(); else invalidate();
         }, { signal });
@@ -667,6 +669,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             // AO uses the same distance fade during movement and at rest.
             renderer.setRenderTarget(null);
             renderer.render(scene, camera);
+            updatePins?.(!globe?.isGlobe && !globe?.transitioning && !visitor?.active && !interiors?.active);
             if (!visitor?.active && !interiors?.active) {
                 // Screen-space sky has no surface depth or ambient occlusion.
                 sky.mesh.visible = false;

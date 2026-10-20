@@ -1,0 +1,29 @@
+{
+  "image": "venue-map.jpg",
+  "size": [
+    2400,
+    1417
+  ],
+  "orientation": "north-left",
+  "source": "Esri World Imagery zoom 18, tiles x 187310-187325, y 109300-109315 stitched to 4096 x 4096 (docs/aerial-reference/bharat-mandapam-satellite-z18-full.jpg)",
+  "crop": [
+    1550,
+    820,
+    3250,
+    3700
+  ],
+  "worldToImage": {
+    "u": [
+      1.5060647,
+      -0.02894664,
+      1283.69364435
+    ],
+    "v": [
+      0.02894664,
+      1.5060647,
+      743.92393986
+    ]
+  },
+  "note": "u = a*x + b*z + c and v = d*x + e*z + f give image pixels for venue world X/Z (the satellite-reference.json fit).",
+  "attribution": "Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+}

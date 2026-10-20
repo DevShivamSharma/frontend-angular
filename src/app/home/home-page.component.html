@@ -7,6 +7,7 @@
     <span class="venue-marker-tooltip" id="venue-marker-tooltip" role="tooltip">Bharat Mandapam</span>
   </button>
 </div>
+<section appVenueMap mode="overlay" [hidden]="visitor().active || interior().walking || globeActive()" [inert]="!loading.ready()" (picked)="pickPlace($event)"></section>
 <section appVenueLoading [state]="loading" (retry)="retry()"></section>
 <div class="identity" [inert]="!loading.ready()"><span>BHARAT MANDAPAM</span><small>NEW DELHI</small></div>
 <div id="navigation" class="navigation" [hidden]="visitor().active" [class.collapsed]="collapsed()" [inert]="!loading.ready()">

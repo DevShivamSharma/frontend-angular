@@ -2,6 +2,9 @@ import { Routes } from '@angular/router';
 
 import { HomePageComponent } from './home/home-page.component';
 
+/** Portrait phones, and landscape phones by their short side. */
+const PHONE = '(max-width: 767px), (pointer: coarse) and (max-height: 500px)';
+
 /**
  * The root shows the 3D venue model. `/planner` is the stall-planner setup: step 1 selects (or
  * imports) a hall, step 2 sets its plotting rules, step 3 is the stall editor. The planner
@@ -11,7 +14,9 @@ import { HomePageComponent } from './home/home-page.component';
 export const routes: Routes = [
   { path: 'hall14-detail', title: 'Hall 14 — detail study', loadComponent: () => import('./home/hall14-study.component').then(m => m.Hall14StudyComponent) },
   { path: 'planner/pricing', title: 'Hall pricing library', loadComponent: () => import('./planner/pricing/pricing-library.component').then(m => m.PricingLibraryComponent) },
-  { path: '', component: HomePageComponent },
+  // Phones get the 2D satellite venue map; the 3D model does not run there.
+  { path: '', loadComponent: () => matchMedia(PHONE).matches
+    ? import('./home/venue-map.component').then(m => m.VenueMapComponent) : Promise.resolve(HomePageComponent) },
   // Step 3, the stall editor, full screen. Listed before the setup routes so `planner/editor`
   // is never taken for a setup step. Opened with `?hallId=` from "Start creating".
   {
