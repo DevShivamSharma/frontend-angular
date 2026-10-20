@@ -3,6 +3,7 @@ import {
   fillBooths,
   fillRows,
   fillSeats,
+  fitScales,
   keepClearOf,
   letterIndex,
   letters,
@@ -28,6 +29,20 @@ function stall(stallNumber: string, islandNumber: string | null = null): PlanSta
 }
 
 describe('planner geometry', () => {
+  it('fit view shrinks only stalls that overlap, sharing the gap, and leaves fitting ones', () => {
+    const box = (id: string, x: number, width: number) => ({ id, x, y: 0, width, depth: 4 });
+    const open = { ...floor, blocked: [] };
+    // Centres 6 m apart, 8 m of stall between them: both drawn at 6 / 8.
+    const s = fitScales([box('a', 0, 8), box('b', 2, 8), box('c', 12, 4)], open);
+    expect(s.get('a')).toBeCloseTo(0.75);
+    expect(s.get('b')).toBeCloseTo(0.75);
+    expect(s.has('c')).toBeFalse();
+    expect(fitScales([box('a', 0, 4), box('b', 4, 4)], open).size).toBe(0);
+    // A passage 1 m right of a 4 m stall's centre: half the stall fits.
+    const passage = { ...floor, blocked: [{ x: 3, y: 0, width: 1, height: 4 }] };
+    expect(fitScales([box('a', 0, 4)], passage).get('a')).toBeCloseTo(0.5);
+  });
+
   it('counts rows A to Z, then AA', () => {
     expect([letters(0), letters(25), letters(26), letters(27)]).toEqual(['A', 'Z', 'AA', 'AB']);
     expect(letterIndex('AB')).toBe(27);

@@ -197,6 +197,52 @@ export function onOpenFloor(r: Rect, floor: PlannerFloor): boolean {
   return ok && !floor.blocked.some((b) => overlaps(r, b));
 }
 
+/**
+ * Fit view: how far each stall is drawn shrunk about its centre, aspect kept, so it clears the
+ * other stalls and what blocks the floor. Only stalls drawn smaller are in the map. For drawing
+ * only: the plan keeps every stall's real size and place.
+ */
+export function fitScales(
+  stalls: ReadonlyArray<Pick<PlanStall, 'id' | 'x' | 'y' | 'width' | 'depth'>>,
+  floor: PlannerFloor,
+): Map<string, number> {
+  const scale = new Map<string, number>();
+  const shrink = (id: string, s: number) => {
+    // s <= 0: the centre itself is covered, so no shrinking clears it; it stays as it is.
+    if (s > EPS && s < 1 - EPS) scale.set(id, Math.min(scale.get(id) ?? 1, s));
+  };
+  for (const [i, a] of stalls.entries()) {
+    const [ax, ay] = centre(stallRect(a));
+    // Two stalls shrink by the same factor, so their gap is shared and both stay clear.
+    for (const b of stalls.slice(i + 1)) {
+      const [bx, by] = centre(stallRect(b));
+      const s = Math.max(
+        Math.abs(ax - bx) / ((a.width + b.width) / 2),
+        Math.abs(ay - by) / ((a.depth + b.depth) / 2),
+      );
+      shrink(a.id, s);
+      shrink(b.id, s);
+    }
+    for (const o of floor.blocked) {
+      const gx = Math.max(o.x - ax, ax - (o.x + o.width), 0);
+      const gy = Math.max(o.y - ay, ay - (o.y + o.height), 0);
+      shrink(a.id, Math.max(gx / (a.width / 2), gy / (a.depth / 2)));
+    }
+  }
+  return scale;
+}
+
+/** A rectangle scaled by `s` about a point, its own centre unless given. */
+export function scaleRect(r: Rect, s: number, about: Point = centre(r)): Rect {
+  const [cx, cy] = about;
+  return {
+    x: cx + (r.x - cx) * s,
+    y: cy + (r.y - cy) * s,
+    width: r.width * s,
+    height: r.height * s,
+  };
+}
+
 function ringsMeet(r: Rect, ring: Point[]): boolean {
   return overlaps(r, ringBox(ring));
 }

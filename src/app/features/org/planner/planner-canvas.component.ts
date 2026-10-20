@@ -32,17 +32,21 @@ import {
   labelSize,
 } from '../../../shared/floor/floor-annotations';
 import {
+  centre,
+  fitScales,
   objectOutline,
+  plannerFloor,
   pointInRing,
   polygonArea,
   Rect,
   ringBox,
+  scaleRect,
   segmentDistance,
   snap,
   stallRect,
   textBox,
 } from './planner-geometry';
-import { cellAt, isCut, keptCells, stallWalls } from '../../../core/plans/stall-cells';
+import { cellAt, isCut, keptCells, stallArea, stallWalls } from '../../../core/plans/stall-cells';
 import { AREA_LABELS } from '../../../shared/floor/floor-view.component';
 import { buildScene3d } from './planner-scene-3d';
 import type { Selection, SelectionKind } from './planner.store';
@@ -163,6 +167,8 @@ const AREA_COLORS: Record<AreaKind, string> = {
 const STALL_FILL = '#86efac';
 const STALL_BLOCKED = '#cbd5e1';
 const STALL_EDGE = '#15803d';
+/** The dashed border of a stall drawn smaller in Fit view. */
+const FITTED = '#d97706';
 const SEAT_FILL = '#a855f7';
 const SELECTED = '#1d4ed8';
 const DRAFT = '#ea580c';
@@ -236,6 +242,16 @@ const LABELLED = 1500;
             >{{ l.label }}
           </li>
         }
+        @if (fitView() && !is3d()) {
+          <li>
+            <span class="swatch fitted" [style.border-color]="fittedColor"></span>
+            {{
+              fitted().size
+                ? fitted().size + ' drawn smaller to fit'
+                : 'Every stall fits at its real size'
+            }}
+          </li>
+        }
       </ul>
     </details>
     <div class="cube-wrap">
@@ -293,6 +309,28 @@ const LABELLED = 1500;
             3D
           </button>
         </div>
+        @if (!is3d()) {
+          <div class="dims" role="group" aria-label="Stall size">
+            <button
+              type="button"
+              [class.on]="!fitView()"
+              [attr.aria-pressed]="!fitView()"
+              (click)="fitView.set(false)"
+              title="Every stall at its real size, as the drawing gives it"
+            >
+              Exact size
+            </button>
+            <button
+              type="button"
+              [class.on]="fitView()"
+              [attr.aria-pressed]="fitView()"
+              (click)="fitView.set(true)"
+              title="Stalls that do not fit drawn smaller, so nothing overlaps. Sizes are not changed."
+            >
+              Fit view
+            </button>
+          </div>
+        }
       </div>
     </div>
     @if (error()) {
@@ -460,6 +498,10 @@ const LABELLED = 1500;
       border-width: 2px 0 0;
       border-style: dashed;
       border-radius: 0;
+    }
+    .swatch.fitted {
+      border-width: 2px;
+      border-style: dashed;
     }
     .cube-wrap {
       position: absolute;
@@ -666,6 +708,15 @@ export class PlannerCanvasComponent {
   protected readonly hint = signal('');
   protected readonly north = signal(0);
   readonly is3d = signal(false);
+  /** Fit view: stalls that do not fit are drawn smaller (2D only). The plan is not changed. */
+  readonly fitView = signal(false);
+  /** Fit view's shrink factor of each stall drawn smaller. */
+  protected readonly fitted = computed(() =>
+    fitScales(this.plan().stalls, plannerFloor(this.floor())),
+  );
+  protected readonly fittedColor = FITTED;
+  /** Hover text of the stalls drawn smaller: where each is drawn, and its real size. */
+  private fittedTips: Array<{ rect: Rect; text: string }> = [];
   /** The hall's own legend, or else what kinds of area the floor has. */
   protected readonly hallLegend = computed(() => {
     const f = this.floor();
@@ -771,6 +822,7 @@ export class PlannerCanvasComponent {
       this.selection();
       this.categoryColors();
       this.showLabels();
+      this.fitView();
       untracked(() => this.buildPlan());
     });
     effect(() => {
@@ -1349,21 +1401,41 @@ export class PlannerCanvasComponent {
     const closed: number[] = [];
     const open: number[] = [];
     const picked: number[] = [];
+    const fitted: number[] = [];
     const color = new T.Color();
+    // Fit view draws some stalls smaller about their centre; their data stays as it is.
+    const scales = this.fitView() ? this.fitted() : new Map<string, number>();
+    const drawn = new Map<string, Rect>();
+    this.fittedTips = [];
     for (const s of plan.stalls) {
-      const r = stallRect(s);
+      const real = stallRect(s);
+      const k = scales.get(s.id) ?? 1;
+      const c = centre(real);
+      const at = (p: Point): Point => [c[0] + (p[0] - c[0]) * k, c[1] + (p[1] - c[1]) * k];
+      const r = scaleRect(real, k);
+      drawn.set(s.id, r);
       color.set(s.isBlocked ? STALL_BLOCKED : (colors.get(s.categoryIds[0] ?? '') ?? STALL_FILL));
       // A stall with cells cut away is drawn cell by cell, walled round the cuts.
       const cut = s.cutCells?.length > 0;
-      const cells = cut ? keptCells(s) : [r];
+      const cells = cut ? keptCells(s).map((cell) => scaleRect(cell, k, c)) : [r];
       for (const cell of cells) {
         pushRect(fills, cell, 20);
         for (let i = 0; i < 6; i++) fillColors.push(color.r, color.g, color.b);
       }
-      for (const [side, a, b] of cut ? stallWalls(s) : sides(r))
+      const walls = cut
+        ? stallWalls(s).map(([side, a, b]) => [side, at(a), at(b)] as const)
+        : sides(r);
+      for (const [side, a, b] of walls)
         (side && s.openSides.includes(side) ? open : closed).push(a[0], -a[1], 21, b[0], -b[1], 21);
       if (sel?.kind === 'stall' && selected.has(s.id)) {
         for (const [, a, b] of sides(grow(r, 0.08))) picked.push(a[0], -a[1], 22, b[0], -b[1], 22);
+      }
+      if (k < 1) {
+        for (const [, a, b] of sides(grow(r, 0.15))) fitted.push(a[0], -a[1], 22, b[0], -b[1], 22);
+        this.fittedTips.push({
+          rect: r,
+          text: `${stallLabel(s)} · Actual: ${fmt(stallArea(s))} m² (${fmt(s.width)} × ${fmt(s.depth)} m), drawn smaller to fit`,
+        });
       }
     }
     if (fills.length) {
@@ -1385,9 +1457,10 @@ export class PlannerCanvasComponent {
       addSegments(g, closed, STALL_EDGE, 21, false);
       addSegments(g, open, STALL_EDGE, 21, true);
       addSegments(g, picked, SELECTED, 22, false);
+      addSegments(g, fitted, FITTED, 22, true);
     }
     if (this.showLabels() && plan.stalls.length <= LABELLED) {
-      for (const s of plan.stalls) addLabel(g, stallLabel(s), stallRect(s));
+      for (const s of plan.stalls) addLabel(g, stallLabel(s), drawn.get(s.id)!);
     }
 
     if (plan.seats.length) {
@@ -1793,7 +1866,11 @@ export class PlannerCanvasComponent {
       this.buildDraft();
     }
     const d = this.down;
-    if (!d) return;
+    if (!d) {
+      const tip = this.fittedTips.find((t) => pointInRing(world, rectPoints(t.rect)));
+      this.host().nativeElement.title = tip?.text ?? '';
+      return;
+    }
     const far = Math.hypot(e.clientX - d.px, e.clientY - d.py) >= CLICK_PX;
     if (d.mode === 'pan') {
       this.camera.position.x = d.cam[0];
