@@ -1,5 +1,10 @@
 <header class="map-head">
-  @if (mode === 'image') { <h1>Venue Map <small>Bharat Mandapam · New Delhi</small></h1> }
+  @if (mode === 'image') {
+    <h1>Venue Map <small>Bharat Mandapam · New Delhi</small></h1>
+    <button type="button" class="map-head-directions" [attr.aria-pressed]="directions()" (click)="directions() ? closeDirections() : openDirections()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12-14a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 17V9a3 3 0 0 1 3-3h4m5 3v8a3 3 0 0 1-3 3h-4"/></svg>Directions
+    </button>
+  }
   <div class="map-search">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
     <input type="search" placeholder="Search halls, gates, facilities…" aria-label="Search halls, gates and facilities"
@@ -50,31 +55,45 @@
             <ng-container *ngTemplateOutlet="pin; context: { $implicit: place }" />
           </button>
         }
+        <!-- The walking route in the 3D track's colours (venue-route-track.ts): a white casing under the blue line, green start, red end. -->
+        @if (route().length; as count) {
+          <svg class="map-route" [attr.viewBox]="'0 0 ' + map.size[0] + ' ' + map.size[1]" preserveAspectRatio="none" aria-hidden="true">
+            <polyline class="route-casing" [attr.points]="routeLine()" /><polyline class="route-line" [attr.points]="routeLine()" />
+          </svg>
+          <span class="route-end k-start" [style.left.%]="route()[0].u / map.size[0] * 100" [style.top.%]="route()[0].v / map.size[1] * 100"></span>
+          <span class="route-end k-end" [style.left.%]="route()[count - 1].u / map.size[0] * 100" [style.top.%]="route()[count - 1].v / map.size[1] * 100"></span>
+        }
       </div>
     } @else if (error()) {
       <div class="map-error" role="alert"><p>{{ error() }}</p><button type="button" (click)="load()">Retry</button></div>
     } @else {
       <p class="map-loading" role="status">Loading the venue map…</p>
     }
+    <p class="map-credit">{{ attribution() }}</p>
   </div>
   <!-- The details card takes the bottom of the screen; the controls come back when it closes. -->
-  @if (!selected()) {
+  @if (!selected() && !directions()) {
   <div class="map-tools" aria-label="Map controls">
     <button type="button" aria-label="Zoom in" (click)="zoomBy(1.5)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg></button>
     <button type="button" aria-label="Zoom out" (click)="zoomBy(1 / 1.5)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/></svg></button>
     <button type="button" aria-label="Show the whole venue" (click)="fit()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></button>
   </div>
   }
-  @if (selected(); as place) {
+  @if (!directions() && selected(); as place) {
     <section class="map-card" role="dialog" [attr.aria-label]="place.label">
       <button type="button" class="map-card-close" aria-label="Close" (click)="selected.set(null)">×</button>
       <small>{{ groupTitle(place.group) }}</small>
       <h2>{{ details()[place.id]?.title || place.label }}</h2>
       @if (details()[place.id]; as detail) { <p>{{ detail.description }}</p> }
+      <button type="button" class="map-card-directions" (click)="openDirections(place)">Directions</button>
     </section>
   }
-  <p class="map-credit">{{ attribution() }}</p>
+  <!-- The sheet sits below the map, not over it, so a route framed in the viewport stays in view. -->
+  <section class="map-sheet" role="dialog" aria-label="Walking directions" [hidden]="!directions()">
+    <header><h2>Directions</h2><button type="button" class="map-card-close" aria-label="Close directions" (click)="closeDirections()">×</button></header>
+    <section appVenueDirections [active]="directions()" [destinationNode]="target()" [request]="request()" (route)="showRoute($event)"></section>
+  </section>
 }
-@if (mode === 'overlay' || !selected()) {
+@if (mode === 'overlay' || (!selected() && !directions())) {
 <label class="map-labels"><input type="checkbox" [checked]="labels()" (change)="labels.set($any($event.target).checked)" /> Show labels</label>
 }

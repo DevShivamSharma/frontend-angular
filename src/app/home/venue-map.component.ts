@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListe
 import { VenueDetail, venueAsset } from './venue.models';
 import { parseMapGraph } from './venue-route-graph';
 import { NAVIGATION_LOCATIONS, availableLocations } from './venue-route-locations';
+import { Point } from './venue-route-geometry';
+import { VenueDirectionsComponent } from './venue-directions.component';
 
 /** A pin: a walkways-graph point (venue-walkways.json) in its picker group, with its spot on the map image. */
 export interface MapPlace { id: string; label: string; group: string; x: number; y: number; z: number; u: number; v: number; }
@@ -20,7 +22,7 @@ const LABEL_RANK: Record<string, number> = { halls: 1, conventionCentre: 1, gate
  * `image` mode is the 2D satellite map shown on phones instead of the 3D model; `overlay` mode only
  * renders the pins and filters, and the 3D viewer moves `pinLayer`'s pins over their world points.
  */
-@Component({ selector: 'section[appVenueMap]', standalone: true, imports: [NgTemplateOutlet], templateUrl: './venue-map.component.html', styleUrl: './venue-map.css',
+@Component({ selector: 'section[appVenueMap]', standalone: true, imports: [NgTemplateOutlet, VenueDirectionsComponent], templateUrl: './venue-map.component.html', styleUrl: './venue-map.css',
   encapsulation: ViewEncapsulation.ShadowDom, changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'aria-label': 'Venue map', '[class.overlay]': "mode === 'overlay'" } })
 export class VenueMapComponent implements OnInit {
@@ -40,6 +42,13 @@ export class VenueMapComponent implements OnInit {
   /** The hint shows until the first touch on the map. */
   readonly touched = signal(false);
   readonly zoom = signal(1);
+  /** The Directions sheet (image mode): `target` and `request` feed its destination, as the 3D explorer's "Directions here" does. */
+  readonly directions = signal(false);
+  readonly target = signal('');
+  readonly request = signal(0);
+  /** The walking route on the image, in image pixels. */
+  readonly route = signal<{ u: number; v: number }[]>([]);
+  readonly routeLine = computed(() => this.route().map(({ u, v }) => u + ',' + v).join(' '));
   readonly pan = signal<[number, number]>([0, 0]);
   readonly shown = computed(() => this.places().filter(place => !this.group() || place.group === this.group()));
   readonly results = computed(() => {
@@ -119,10 +128,30 @@ export class VenueMapComponent implements OnInit {
     this.fitTo(id ? this.shown() : this.main());
   }
 
+  /** Open the Directions sheet, routing to `place` when given. */
+  openDirections(place?: MapPlace): void {
+    if (place) { this.target.set(place.id); this.request.update(n => n + 1); }
+    this.selected.set(null);
+    this.touched.set(true);
+    this.directions.set(true);
+  }
+
+  /** Closing the sheet ends the directions; the panel resets its form when no longer active. */
+  closeDirections(): void { this.directions.set(false); this.route.set([]); }
+
+  /** Draw the panel's route (world metres) on the image and frame it once the sheet has folded to its summary. */
+  showRoute(points: Point[] | null): void {
+    const map = this.map();
+    if (!points || !map) { this.route.set([]); return; }
+    const { u, v } = map.worldToImage;
+    this.route.set(points.map(({ x, z }) => ({ u: u[0] * x + u[1] * z + u[2], v: v[0] * x + v[1] * z + v[2] })));
+    requestAnimationFrame(() => this.fitTo(this.route()));
+  }
+
   private main(): MapPlace[] { return this.places().filter(place => LABEL_RANK[place.group] === 1); }
 
   /** Zoom and centre so the places fill the viewport, leaving room for the controls (the viewport div is always rendered); at most a readable 3x. */
-  private fitTo(places: MapPlace[]): void {
+  private fitTo(places: { u: number; v: number }[]): void {
     const map = this.map(), box = this.viewport()?.nativeElement.getBoundingClientRect();
     if (!map || !box || !places.length) return;
     const [w, h] = map.size, us = places.map(place => place.u), vs = places.map(place => place.v);
