@@ -37,6 +37,8 @@ export class VenueMapComponent implements OnInit {
   readonly query = signal('');
   readonly labels = signal(true);
   readonly selected = signal<MapPlace | null>(null);
+  /** The hint shows until the first touch on the map. */
+  readonly touched = signal(false);
   readonly zoom = signal(1);
   readonly pan = signal<[number, number]>([0, 0]);
   readonly shown = computed(() => this.places().filter(place => !this.group() || place.group === this.group()));
@@ -80,6 +82,8 @@ export class VenueMapComponent implements OnInit {
       this.groups.set(locations.map(({ id, title }) => ({ id, title })).sort((a, b) => order(a.id) - order(b.id)));
       this.details.set(details as Record<string, VenueDetail>);
       this.map.set(map as MapImage);
+      // Open on the halls and the CC rather than the whole image, so a phone screen is filled and labels are readable.
+      if (this.mode === 'image') this.fitTo(this.main());
     } catch { this.error.set('The venue map could not load. Check your connection and retry.'); }
   }
 
@@ -109,6 +113,26 @@ export class VenueMapComponent implements OnInit {
 
   fit(): void { this.zoom.set(1); this.pan.set([0, 0]); }
 
+  /** A chip filters the pins and frames them; All frames the halls and the CC, as on opening. */
+  showGroup(id: string): void {
+    this.group.set(id);
+    this.fitTo(id ? this.shown() : this.main());
+  }
+
+  private main(): MapPlace[] { return this.places().filter(place => LABEL_RANK[place.group] === 1); }
+
+  /** Zoom and centre so the places fill the viewport, leaving room for the controls (the viewport div is always rendered); at most a readable 3x. */
+  private fitTo(places: MapPlace[]): void {
+    const map = this.map(), box = this.viewport()?.nativeElement.getBoundingClientRect();
+    if (!map || !box || !places.length) return;
+    const [w, h] = map.size, us = places.map(place => place.u), vs = places.map(place => place.v);
+    const u0 = Math.min(...us), u1 = Math.max(...us), v0 = Math.min(...vs), v1 = Math.max(...vs);
+    const height = box.width * h / w;
+    const scale = Math.min(3, Math.max(1, Math.min(.8 * w / (u1 - u0 || 1), .7 * box.height / height * h / (v1 - v0 || 1))));
+    this.zoom.set(scale);
+    this.setPan(-((u0 + u1) / 2 / w - .5) * box.width * scale, -((v0 + v1) / 2 / h - .5) * height * scale);
+  }
+
   private setPan(x: number, y: number): void {
     const box = this.viewport()?.nativeElement.getBoundingClientRect(), map = this.map();
     if (!box || !map) return;
@@ -125,6 +149,7 @@ export class VenueMapComponent implements OnInit {
   pointerDown(event: PointerEvent): void {
     this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (this.pointers.size === 1) this.dragged = false;
+    this.touched.set(true);
   }
 
   pointerMove(event: PointerEvent): void {
@@ -153,4 +178,7 @@ export class VenueMapComponent implements OnInit {
 
   /** A drag that ends on a pin is not a tap. */
   tap(place: MapPlace): void { if (!this.dragged) this.select(place); }
+
+  /** A tap on the map itself, not on a pin, closes the details card. */
+  mapClick(event: MouseEvent): void { if (!this.dragged && !(event.target as Element).closest('.map-pin')) this.selected.set(null); }
 }

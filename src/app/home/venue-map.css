@@ -14,6 +14,7 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .map-search:focus-within{box-shadow:0 0 0 2px var(--navy)}
 .map-results{position:absolute;left:0;right:0;top:54px;margin:0;padding:6px;list-style:none;background:#fff;border-radius:14px;box-shadow:0 8px 24px #0003}
 .map-results button{display:block;width:100%;padding:11px 12px;border:0;border-radius:8px;background:none;text-align:left;font-size:15px}
+.map-empty{padding:14px 16px;font-size:15px;color:#69707e}
 .map-results button:hover,.map-results button:focus-visible{background:#eef0f7}
 .map-chips{display:flex;gap:8px;margin:12px -16px 0;padding:0 16px 2px;overflow-x:auto;scrollbar-width:none}
 .map-chips button{flex-shrink:0;min-height:40px;padding:8px 16px;border:1px solid var(--line);border-radius:20px;background:#f5f6fb;color:var(--navy);font-size:14px;white-space:nowrap}
@@ -58,7 +59,7 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .map-labels input{width:20px;height:20px;margin:0;accent-color:var(--navy)}
 .map-credit{position:absolute;z-index:2;left:16px;bottom:6px;margin:0;color:#c9ccd2;font-size:9px}
 
-.map-card{position:absolute;z-index:4;left:12px;right:12px;bottom:100px;max-width:420px;margin:0 auto;padding:16px 44px 16px 18px;border-radius:16px;background:#fff;box-shadow:0 8px 28px #0006}
+.map-card{position:absolute;z-index:4;left:12px;right:12px;bottom:28px;max-width:420px;margin:0 auto;padding:16px 44px 16px 18px;border-radius:16px;background:#fff;box-shadow:0 8px 28px #0006}
 .map-card small{color:#69707e;font-size:12px;text-transform:uppercase;letter-spacing:.6px}
 .map-card h2{margin:4px 0 0;color:var(--navy);font-size:19px}
 .map-card p{margin:8px 0 0;font-size:14px;line-height:1.45;color:#3d4542}

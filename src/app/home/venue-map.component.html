@@ -10,12 +10,14 @@
           <li><button type="button" role="option" (click)="select(place, true)">{{ place.label }}</button></li>
         }
       </ul>
+    } @else if (query().trim()) {
+      <p class="map-results map-empty" role="status">No hall, gate or facility matches "{{ query().trim() }}"</p>
     }
   </div>
   <div class="map-chips" role="group" aria-label="Show on the map">
-    <button type="button" [attr.aria-pressed]="!group()" (click)="group.set('')">All</button>
+    <button type="button" [attr.aria-pressed]="!group()" (click)="showGroup('')">All</button>
     @for (item of groups(); track item.id) {
-      <button type="button" [attr.data-group]="item.id" [attr.aria-pressed]="group() === item.id" (click)="group.set(item.id)">{{ item.title }}</button>
+      <button type="button" [attr.data-group]="item.id" [attr.aria-pressed]="group() === item.id" (click)="showGroup(item.id)">{{ item.title }}</button>
     }
   </div>
 </header>
@@ -36,9 +38,9 @@
   </div>
 } @else {
   <div #viewport class="map-viewport" (pointerdown)="pointerDown($event)" (pointermove)="pointerMove($event)"
-    (pointerup)="pointerUp($event)" (pointercancel)="pointerUp($event)" (wheel)="wheel($event)">
+    (pointerup)="pointerUp($event)" (pointercancel)="pointerUp($event)" (wheel)="wheel($event)" (click)="mapClick($event)">
     @if (map(); as map) {
-      <p class="map-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5m0 3v.01"/></svg>Tap a hall, gate or facility for details</p>
+      @if (!touched()) { <p class="map-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5m0 3v.01"/></svg>Tap a hall, gate or facility for details</p> }
       <div class="map-stage" [style.aspect-ratio]="map.size[0] + ' / ' + map.size[1]" [style.--zoom]="zoom()"
         [style.transform]="'translate(' + pan()[0] + 'px,' + pan()[1] + 'px) scale(' + zoom() + ')'">
         <img [src]="'assets/venue/geography/satellite/' + map.image" [width]="map.size[0]" [height]="map.size[1]" alt="Satellite view of Bharat Mandapam" draggable="false" />
@@ -55,11 +57,14 @@
       <p class="map-loading" role="status">Loading the venue map…</p>
     }
   </div>
+  <!-- The details card takes the bottom of the screen; the controls come back when it closes. -->
+  @if (!selected()) {
   <div class="map-tools" aria-label="Map controls">
     <button type="button" aria-label="Zoom in" (click)="zoomBy(1.5)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg></button>
     <button type="button" aria-label="Zoom out" (click)="zoomBy(1 / 1.5)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/></svg></button>
     <button type="button" aria-label="Show the whole venue" (click)="fit()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></button>
   </div>
+  }
   @if (selected(); as place) {
     <section class="map-card" role="dialog" [attr.aria-label]="place.label">
       <button type="button" class="map-card-close" aria-label="Close" (click)="selected.set(null)">×</button>
@@ -70,4 +75,6 @@
   }
   <p class="map-credit">{{ attribution() }}</p>
 }
+@if (mode === 'overlay' || !selected()) {
 <label class="map-labels"><input type="checkbox" [checked]="labels()" (change)="labels.set($any($event.target).checked)" /> Show labels</label>
+}
