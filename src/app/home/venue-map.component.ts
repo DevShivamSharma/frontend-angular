@@ -1,9 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, ViewEncapsulation, computed, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnDestroy, OnInit, Output, ViewEncapsulation, computed, inject, signal, viewChild } from '@angular/core';
 import { VenueDetail, venueAsset } from './venue.models';
 import { parseMapGraph } from './venue-route-graph';
 import { NAVIGATION_LOCATIONS, availableLocations } from './venue-route-locations';
-import { Point } from './venue-route-geometry';
+import { Point, RouteGeometry, buildRouteGeometry, positionAtDistance, roundCorners } from './venue-route-geometry';
 import { VenueDirectionsComponent } from './venue-directions.component';
 
 /** A pin: a walkways-graph point (venue-walkways.json) in its picker group, with its spot on the map image. */
@@ -25,11 +25,13 @@ const LABEL_RANK: Record<string, number> = { halls: 1, conventionCentre: 1, gate
 @Component({ selector: 'section[appVenueMap]', standalone: true, imports: [NgTemplateOutlet, VenueDirectionsComponent], templateUrl: './venue-map.component.html', styleUrl: './venue-map.css',
   encapsulation: ViewEncapsulation.ShadowDom, changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'aria-label': 'Venue map', '[class.overlay]': "mode === 'overlay'" } })
-export class VenueMapComponent implements OnInit {
+export class VenueMapComponent implements OnInit, OnDestroy {
   @Input() mode: 'image' | 'overlay' = 'image';
   @Output() readonly picked = new EventEmitter<string>();
   readonly pinLayer = viewChild<ElementRef<HTMLElement>>('pinLayer');
   private readonly viewport = viewChild<ElementRef<HTMLElement>>('viewport');
+  private readonly walker = viewChild<ElementRef<SVGGElement>>('walker');
+  private readonly zone = inject(NgZone);
   readonly map = signal<MapImage | null>(null);
   readonly places = signal<MapPlace[]>([]);
   readonly groups = signal<{ id: string; title: string }[]>([]);
@@ -71,8 +73,10 @@ export class VenueMapComponent implements OnInit {
   });
   private readonly pointers = new Map<number, { x: number; y: number }>();
   private dragged = false;
+  private walk?: { route: RouteGeometry; speed: number; progress: number; last: number; frame: number };
 
   ngOnInit(): void { void this.load(); }
+  ngOnDestroy(): void { this.stopWalk(); }
   @HostListener('window:resize') resized(): void { this.width.set(innerWidth); }
 
   async load(): Promise<void> {
@@ -137,16 +141,47 @@ export class VenueMapComponent implements OnInit {
   }
 
   /** Closing the sheet ends the directions; the panel resets its form when no longer active. */
-  closeDirections(): void { this.directions.set(false); this.route.set([]); }
+  closeDirections(): void { this.directions.set(false); this.showRoute(null); }
 
   /** Draw the panel's route (world metres) on the image and frame it once the sheet has folded to its summary. */
   showRoute(points: Point[] | null): void {
     const map = this.map();
+    this.stopWalk();
     if (!points || !map) { this.route.set([]); return; }
-    const { u, v } = map.worldToImage;
-    this.route.set(points.map(({ x, z }) => ({ u: u[0] * x + u[1] * z + u[2], v: v[0] * x + v[1] * z + v[2] })));
+    // Rounded as the 3D track rounds them (venue-route-track.ts), so the walker keeps to the drawn line.
+    const route = buildRouteGeometry(roundCorners(points, 6));
+    this.route.set(route.points.map(point => this.toImage(point)));
     requestAnimationFrame(() => this.fitTo(this.route()));
+    if (!route.segments.length) return;
+    // The 3D track's pace: a long route is walked in ~25 s, a short one at no less than 6 m/s.
+    this.walk = { route, speed: Math.min(45, Math.max(6, route.totalLength / 25)), progress: 0, last: 0, frame: 0 };
+    this.zone.runOutsideAngular(() => this.walk!.frame = requestAnimationFrame(now => this.step(now)));
   }
+
+  private toImage({ x, z }: Point): { u: number; v: number } {
+    const { u, v } = this.map()!.worldToImage;
+    return { u: u[0] * x + u[1] * z + u[2], v: v[0] * x + v[1] * z + v[2] };
+  }
+
+  /** One frame of the visitor walking the route, start to end and round again; it stands at the start under reduced motion. */
+  private step(now: number): void {
+    const walk = this.walk, map = this.map(), walker = this.walker()?.nativeElement;
+    if (!walk || !map) return;
+    walk.frame = requestAnimationFrame(next => this.step(next));
+    if (!walker) return;
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches, dt = walk.last ? Math.min(.1, (now - walk.last) / 1000) : 0;
+    walk.last = now;
+    if (!still) walk.progress = (walk.progress + dt * walk.speed) % walk.route.totalLength;
+    const head = positionAtDistance(walk.route, walk.progress, { x: 0, z: 0, yaw: 0 })!, at = this.toImage(head);
+    // The heading in image space: a metre ahead along the segment, mapped like the point itself.
+    const ahead = this.toImage({ x: head.x + Math.sin(head.yaw), z: head.z + Math.cos(head.yaw) });
+    const angle = Math.atan2(ahead.v - at.v, ahead.u - at.u) * 180 / Math.PI, scale = map.size[0] / (this.width() * this.zoom());
+    walker.setAttribute('transform', `translate(${at.u} ${at.v}) rotate(${angle}) scale(${scale})`);
+    // Feet swing about three steps a second.
+    walker.style.setProperty('--stride', String(still ? 0 : Math.sin(now / 1000 * 6 * Math.PI)));
+  }
+
+  private stopWalk(): void { if (this.walk) cancelAnimationFrame(this.walk.frame); this.walk = undefined; }
 
   private main(): MapPlace[] { return this.places().filter(place => LABEL_RANK[place.group] === 1); }
 

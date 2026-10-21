@@ -75,6 +75,12 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .map-route polyline{fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .route-casing{stroke:#fff;stroke-width:calc(8px / var(--zoom,1))}
 .route-line{stroke:#0A81FF;stroke-width:calc(4.5px / var(--zoom,1))}
+.route-walker *{stroke:none}
+.walker-ring{fill:#0A81FF2e;stroke:#0A81FF;stroke-width:2}
+.walker-foot{fill:#eee9db;transform:translateX(calc(var(--stride,0) * var(--side) * 3px))}
+.walker-body{fill:#376b88}
+.walker-face{fill:#b87a50}
+.walker-hair{fill:#29221e}
 .route-end{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px #0008;transform:scale(calc(1 / var(--zoom,1)));pointer-events:none}
 .k-start{background:#10B981}
 .k-end{background:#DC344B}
@@ -97,12 +103,12 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .directions-result{margin:10px 0 0;font-weight:600;line-height:1.45}
 .walk-hint{margin:0;color:#69707e}
 .walk-error{margin:8px 0 0;color:#a3262f;line-height:1.5}
-/* The key from the panel; the 2D map draws no walking visitor, so that entry is left out. */
+/* The key from the panel. */
 .directions-legend{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--line)}
 .directions-legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:#505b59}
-.directions-legend span:has(.k-walker){display:none}
 .directions-legend i{flex-shrink:0;width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #0003}
 .directions-legend .k-route{width:18px;height:5px;border-radius:3px;background:#0A81FF}
+.directions-legend .k-walker{background:#0A81FF2e;border:2px solid #0A81FF}
 
 /* Overlay on the 3D explorer: pins follow the camera; the filters sit above the footer. */
 :host(.overlay){position:absolute;inset:0;z-index:1;background:none;pointer-events:none}
