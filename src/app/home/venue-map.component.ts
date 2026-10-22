@@ -27,6 +27,9 @@ const LABEL_RANK: Record<string, number> = { halls: 1, conventionCentre: 1, gate
   host: { 'aria-label': 'Venue map', '[class.overlay]': "mode === 'overlay'", '[class.routing]': 'directions()' } })
 export class VenueMapComponent implements OnInit, OnDestroy {
   @Input() mode: 'image' | 'overlay' = 'image';
+  /** Image mode on the web: open on this place, and draw this route, carried over from the 3D explorer. */
+  @Input() initialPlace = '';
+  @Input() initialRoute: Point[] | null = null;
   @Output() readonly picked = new EventEmitter<string>();
   readonly pinLayer = viewChild<ElementRef<HTMLElement>>('pinLayer');
   private readonly viewport = viewChild<ElementRef<HTMLElement>>('viewport');
@@ -97,14 +100,18 @@ export class VenueMapComponent implements OnInit, OnDestroy {
       this.details.set(details as Record<string, VenueDetail>);
       this.map.set(map as MapImage);
       // Open on the halls and the CC rather than the whole image, so a phone screen is filled and labels are readable.
-      if (this.mode === 'image') this.fitTo(this.main());
+      const start = this.places().find(place => place.id === this.initialPlace);
+      if (this.mode === 'image' && start) { this.selected.set(start); this.focus(start); }
+      else if (this.mode === 'image') this.fitTo(this.main());
+      if (this.mode === 'image' && this.initialRoute) this.showRoute(this.initialRoute);
     } catch { this.error.set('The venue map could not load. Check your connection and retry.'); }
   }
 
   select(place: MapPlace, focus = false): void {
     this.query.set('');
     if (this.group() && place.group !== this.group()) this.group.set('');
-    if (this.mode === 'overlay') { this.picked.emit(place.id); return; }
+    this.picked.emit(place.id);
+    if (this.mode === 'overlay') return;
     this.selected.set(place);
     if (focus) this.focus(place); else this.reveal(place);
   }

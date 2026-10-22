@@ -16,6 +16,11 @@ import { VenueDirectionsComponent } from './venue-directions.component';
 import { Point } from './venue-route-geometry';
 import { VenueMapComponent } from './venue-map.component';
 
+const VENUE_VIEW_KEY = 'venue-explorer-view';
+function storedVenueView(): '3d' | 'image' {
+  try { return localStorage.getItem(VENUE_VIEW_KEY) === 'image' ? 'image' : '3d'; } catch { return '3d'; }
+}
+
 @Component({
   selector: 'app-home-page', standalone: true,
   imports: [RouterLink, NgTemplateOutlet, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent, VenueDirectionsComponent, VenueMapComponent],
@@ -78,6 +83,13 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly visitorReady = signal(false);
   readonly visitorRouteExpanded = signal(false);
   readonly visitorDestinations = signal<{id:string;label:string}[]>([]);
+  /** 3D explorer or the 2D image map phones use; remembered per browser. */
+  readonly venueView = signal<'3d' | 'image'>(storedVenueView());
+  /** The place last picked in either view (walkways-graph ids, which halls and gates share), so the other view opens on it. */
+  readonly place = signal('');
+  /** The 3D walking route, drawn on the image map when switching to it. */
+  readonly route = signal<Point[] | null>(null);
+  private placeFromImage = false;
   private readonly visitButton = viewChild<ElementRef<HTMLButtonElement>>('visitButton');
   ngAfterViewInit(): void {
     this.zone.runOutsideAngular(() => {
@@ -114,6 +126,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
             }
           })
         }, this.globeMarker().nativeElement, this.placesMap().pinLayer()?.nativeElement);
+        if (this.venueView() === 'image') this.viewer.setPaused(true);
         const info = await this.viewer.ready;
         if (!this.destroyed) this.zone.run(() => { this.setInformation(info); this.followDelhiClock(); });
       });
@@ -164,6 +177,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   closeDetails(): void { this.detailsVisible.set(false); }
   view(id: string, details = true): void {
     this.zone.runOutsideAngular(() => this.viewer?.view(id));
+    this.place.set(id === 'overview' ? '' : id);
     this.activeLevel.set(0); this.activeView.set(id); this.collapsed.set(false);
     this.menuInterior.set(id.startsWith('hall')?id:'');if(id.startsWith('hall')){this.interiorHall.set(id);this.interiorRoom.set('');}
     if (details && id !== 'overview' && !id.startsWith('gate')) this.showDetails(id); else this.closeDetails();
@@ -176,6 +190,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   }
   /** Show a submitted walking route in route mode, or leave route mode when it is withdrawn. */
   showRoute(points: Point[] | null): void {
+    this.route.set(points);
     if (points) {
       this.closeDetails(); this.activeView.set(''); this.activeLevel.set(0); this.routeActive.set(true); this.status.set('Walking route');
       this.zone.runOutsideAngular(() => this.viewer?.showRoute(points));
@@ -213,6 +228,17 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   pickPlace(id: string): void {
     if (this.details()[id] || this.gates().some(gate => gate.id === id)) this.pick(id, 0);
     else this.status.set(this.placesMap().places().find(place => place.id === id)?.label ?? 'Bharat Mandapam');
+    this.place.set(id);
+  }
+  /** A place picked on the image map is shown in 3D when switching back. */
+  imagePicked(id: string): void { this.place.set(id); this.placeFromImage = true; }
+  setVenueView(view: '3d' | 'image'): void {
+    if (view === this.venueView()) return;
+    this.venueView.set(view);
+    try { localStorage.setItem(VENUE_VIEW_KEY, view); } catch { /* storage blocked: the choice lasts this visit */ }
+    this.zone.runOutsideAngular(() => this.viewer?.setPaused(view === 'image'));
+    if (view === '3d' && this.placeFromImage && this.place()) this.pickPlace(this.place());
+    this.placeFromImage = false;
   }
   globe(): void { this.closeDetails(); this.activeLevel.set(0); this.zone.runOutsideAngular(() => this.viewer?.goGlobe()); }
   zoom(factor: number): void { this.zone.runOutsideAngular(() => this.viewer?.zoom(factor)); }
