@@ -40,6 +40,8 @@ export async function prepareVenueSiteDetail(root: T.Group, asset: (path: string
       for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
         material.userData['siteDetail'] = true;
         material.userData['siteRoad'] = material.name.startsWith('SITE_ROAD ');
+        // Building walls, roofs and parapets (traced and OSM-footprint blocks) stand outside the aerial crop too.
+        material.userData['siteBuilding'] = /^SITE (nearby|institutional) /.test(material.name);
       }
     }
   });
@@ -84,7 +86,7 @@ export function prepareSiteDetailRendering(root: T.Group, registration: SiteRegi
     if (!(object instanceof T.Mesh)) return;
     for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
       if (!material.userData['siteDetail']) continue;
-      const road = !!material.userData['siteRoad'];
+      const road = !!material.userData['siteRoad'], building = !!material.userData['siteBuilding'];
       // Continuous alpha keeps the crop transition free of visible screen-door dots.
       // Retain depth writes so opaque parts of the static batches occlude correctly.
       material.transparent = true;
@@ -101,11 +103,11 @@ export function prepareSiteDetailRendering(root: T.Group, registration: SiteRegi
           vec2 sitePixel = vec2(dot(siteU, sitePoint), dot(siteV, sitePoint));
           float edge = min(min(sitePixel.x, ${registration.referenceExtent[0]}.0 - sitePixel.x), min(sitePixel.y, ${registration.referenceExtent[1]}.0 - sitePixel.y));
           float coverage = smoothstep(-25.0, 65.0, edge);
-          ${road ? `coverage = 1.0; ${ends.length ? `for (int i = 0; i < ${ends.length}; i++) coverage = min(coverage, smoothstep(0.0, 65.0, distance(vSitePosition, siteRoadEnds[i])));` : ''}` : ''}
+          ${road || building ? `coverage = 1.0; ${road && ends.length ? `for (int i = 0; i < ${ends.length}; i++) coverage = min(coverage, smoothstep(0.0, 65.0, distance(vSitePosition, siteRoadEnds[i])));` : ''}` : ''}
           diffuseColor.a *= coverage;
           if (diffuseColor.a < 0.005) discard;`);
       };
-      material.customProgramCacheKey = () => `venue-site-edge-v3-${road}-${ends.length}`;
+      material.customProgramCacheKey = () => `venue-site-edge-v4-${road}-${building}-${ends.length}`;
       material.needsUpdate = true;
     }
   });

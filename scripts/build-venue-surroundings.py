@@ -74,6 +74,29 @@ def material(name, color, rough=.85, metal=0):
     m=bpy.data.materials.new(name); m.diffuse_color=(*color,1); m.use_nodes=True
     s=m.node_tree.nodes.get('Principled BSDF'); s.inputs['Base Color'].default_value=(*color,1); s.inputs['Roughness'].default_value=rough; s.inputs['Metallic'].default_value=metal
     return m
+TEXTURES=WORK/'textures'  # Poly Haven CC0, 1k diffuse + 512 normal jpgs (see geography/ATTRIBUTION.md)
+def textured(name, color, texture, metres, rough=.85):
+    # Image textures are tiled through UVs that box_uv writes in world metres, so no Mapping node is needed for export.
+    m=material(name,color,rough); nodes=m.node_tree.nodes; links=m.node_tree.links; s=nodes['Principled BSDF']
+    diffuse=nodes.new('ShaderNodeTexImage'); diffuse.image=bpy.data.images.load(str(TEXTURES/f'{texture}_diff_1k.jpg'))
+    normal=nodes.new('ShaderNodeTexImage'); normal.image=bpy.data.images.load(str(TEXTURES/f'{texture}_nor_gl_1k.jpg')); normal.image.colorspace_settings.name='Non-Color'
+    bump=nodes.new('ShaderNodeNormalMap')
+    links.new(diffuse.outputs['Color'],s.inputs['Base Color']); links.new(normal.outputs['Color'],bump.inputs['Color']); links.new(bump.outputs['Normal'],s.inputs['Normal'])
+    m['textureMetres']=metres
+    return m
+def box_uv(o):
+    # Box projection: each face uses the two world axes across its dominant normal, divided by the texture's real size.
+    if o.type!='MESH' or not o.data.materials: return
+    metres=o.data.materials[0].get('textureMetres')
+    if not metres: return
+    # Curve-converted prisms already carry a per-face 0..1 layer, which would stretch one tile over each wall; overwrite it.
+    me=o.data; uv=me.uv_layers.active or me.uv_layers.new(name='UVMap'); offset=o.location  # matrix_world is not evaluated yet for objects made this run
+    for poly in me.polygons:
+        n=poly.normal; axis=max(range(3),key=lambda i:abs(n[i]))
+        for li in poly.loop_indices:
+            v=me.vertices[me.loops[li].vertex_index].co+offset
+            u,w=((v.y,v.z),(v.x,v.z),(v.x,v.y))[axis]
+            uv.data[li].uv=(u/metres,w/metres)
 M={
  'ground':material('SITE surrounding planted ground',(.09,.14,.055)),
  'road':material('SITE weathered asphalt',(.14,.16,.16)),
@@ -82,9 +105,10 @@ M={
  'white':material('SITE road marking ivory',(.81,.81,.73)),
  'kerb':material('SITE pale kerb stone',(.61,.61,.54)),
  'dark':material('SITE charcoal kerb and metal',(.12,.15,.14),.66),
- 'wall':material('SITE nearby warm limestone',(.62,.58,.49)),
- 'roof':material('SITE nearby weathered roof',(.47,.46,.40)),
- 'red':material('SITE institutional sandstone',(.53,.35,.26)),
+ 'wall':textured('SITE nearby warm limestone',(.62,.58,.49),'concrete_wall_004',3),
+ 'roof':textured('SITE nearby weathered roof',(.47,.46,.40),'concrete_floor_02',4),
+ 'red':textured('SITE institutional sandstone',(.53,.35,.26),'red_sandstone_wall',2.5),
+ 'facade':textured('SITE nearby plaster facade',(.62,.58,.49),'facade_plaster',3),  # one 3 m tile = one floor with a window (scripts/make-facade-texture.py)
  'glass':material('SITE blue-grey recessed glazing',(.16,.24,.28),.32,.35),
  'silver':material('SITE metro silver canopy',(.51,.57,.59),.42,.38),
  'bark':material('SITE tree bark',(.20,.15,.095)),
@@ -235,6 +259,41 @@ for building in ref['buildings']:
         box('SITE_'+name+'_roof_service',center,(3,2,1.4),M['kerb'])
     inventory.append({'id':name,'phase':1,'type':'building','heightMetres':h,'status':'Visible footprint traced; height and façade estimated'})
 
+# The other nearby buildings come from the registered OSM footprints (venue-map-context.json, venue X/Z metres,
+# heights from building:levels). Windows are in the facade texture, not beams, so 200+ blocks stay light.
+context=json.loads((ASSETS/'geography/venue-map-context.json').read_text(encoding='utf-8'))
+def offset_ring(ring, d):
+    # Mitred offset in world metres, outward for d>0 (holes pass -d), so the Color → Map extrusion of the same
+    # footprint sits inside these walls instead of z-fighting with them.
+    area=sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(ring,ring[1:]+ring[:1])); sign=1 if area>0 else -1
+    normals=[]
+    for a,b in zip(ring,ring[1:]+ring[:1]):
+        dx,dz=b[0]-a[0],b[1]-a[1]; length=math.hypot(dx,dz) or 1
+        normals.append((sign*dz/length,-sign*dx/length))
+    out=[]
+    for i,p in enumerate(ring):
+        n1,n2=normals[i-1],normals[i]; dot=1+n1[0]*n2[0]+n1[1]*n2[1]
+        m=((n1[0]+n2[0])/dot,(n1[1]+n2[1])/dot) if dot>.3 else n2
+        out.append((p[0]+m[0]*d,p[1]+m[1]*d))
+    return out
+osm_footprints=[]
+for index,feature in enumerate(context['features']):
+    if feature['k']!='building':continue
+    pts=[pixel(x,z) for x,z in offset_ring(feature['p'],.25)]; h=feature['h']
+    cx=sum(p[0] for p in pts)/len(pts); cy=sum(p[1] for p in pts)/len(pts)
+    wx,wz=world((cx,cy))
+    if math.hypot(wx,wz)>950 or abs(sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(feature['p'],feature['p'][1:]+feature['p'][:1])))/2<150:continue
+    if inside((cx,cy),ref['propertyBoundary']) or any(inside(p,traced) for traced in building_world for p in pts[::3]+[(cx,cy)]):continue
+    holes=[[pixel(x,z) for x,z in offset_ring(hole,-.25)] for hole in feature.get('holes',[])]
+    name=f'osm-building-{index}'
+    prism('SITE_'+name+'_walls',pts,.04,h,M['facade'],holes)
+    prism('SITE_'+name+'_roof',pts,h,h+.22,M['roof'],holes)
+    for ring in [pts]+holes:
+        vs=[V(p,h+.5) for p in ring]
+        for a,b in zip(vs,vs[1:]+vs[:1]):beam('SITE_'+name+'_parapet',a,b,.26,.55,M['wall'])
+    osm_footprints.append(pts)
+inventory.append({'id':'osm-footprint-buildings','phase':1,'type':'building','count':len(osm_footprints),'status':'OpenStreetMap footprints within 950 m, outside the property and the traced buildings; heights from building:levels or an 8 m default, façades from a repeating texture'})
+
 # Raised metro viaduct and station. All coordinates follow the visible aerial alignment.
 metro=ref['metro']; track=[V(p,metro['deckHeight']) for p in metro['track']]
 strip('SITE_metro_viaduct_deck',metro['track'],8,metro['deckHeight'],M['kerb'])
@@ -375,6 +434,7 @@ for kind,mat in S.items():
 
 # Consolidate static construction by material; retain linked foliage as GLB instances.
 # Export the added collections only, leaving every hall/hangar source object untouched.
+for o in created:box_uv(o)  # every mesh on a textured material, including the metro parts that share the wall material
 bpy.ops.object.select_all(action='DESELECT')
 for o in originals:o.select_set(False)
 for o in created:o.select_set(True)
@@ -387,7 +447,7 @@ runpy.run_path(str(ROOT/'scripts/frame-venue-surroundings.py'))
 bpy.ops.wm.save_as_mainfile(filepath=str(blend_path))
 bpy.ops.export_scene.gltf(filepath=str(ASSETS/'venue-site-detail.glb'),export_format='GLB',use_selection=True,export_extras=True,export_cameras=False,export_lights=False,export_yup=True,export_apply=True)
 report={'source':ref['source'],'status':ref['status'],'sourceModelSha256':source_hash,'affine':{'x':AX,'z':AZ},'anchorResidualsMetres':{a['id']:round(math.dist(world(a['pixel']),a['world']),3) for a in ref['anchors']},'propertyBoundary':ref['propertyBoundary'],'referenceExtent':[1918,820],
- 'mapMask':{'polygons':tree_cover+[b['p'] for b in ref['buildings']]+[parking['outline']],'roads':road_network['roads'],'bounds':road_network['bounds']},
+ 'mapMask':{'polygons':tree_cover+[b['p'] for b in ref['buildings']]+osm_footprints+[parking['outline']],'roads':road_network['roads'],'bounds':road_network['bounds']},
  'roadNetwork':{'source':road_network['source'],'status':road_network['status'],'topology':road_network['topology'],'fadeEnds':[world(e['p']) for e in road_network['topology']['openEnds']]},
  'walkways':{'source':road_network['source'],'status':'Internal service roads and main pedestrian walkways, traced along the walkable centre and joined at junctions. Points are reference-image pixels like mapMask.roads.','paths':road_network['walkways'],'topology':road_network['walkwayTopology']},
  'satelliteReference':{'image':satellite['image'],'imageSize':satellite['imageSize'],'fit':satellite['fit'],'fitAnchors':satellite['fitAnchors'],'excludedAnchors':satellite['excludedAnchors']},
