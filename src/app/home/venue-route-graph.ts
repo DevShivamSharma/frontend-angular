@@ -188,10 +188,12 @@ export const gateAccessOf = (gate: VenueGate): GateAccess => gate.entry && gate.
 
 /**
  * The `gates` overrides for visitor routes. Only pedestrian gates are walked through; a VIP, cargo or office gate
- * counts as closed, so it can still start or end a route picked by name but is never the way in or out.
+ * counts as closed, so it can still start or end a route picked by name but is never the way in or out. `alsoThrough`
+ * names gates walked through all the same (visit mode's arrival gate).
  */
-export function visitorGateOverrides(gates: VenueGate[]): PathOverrides {
-  return { gates: Object.fromEntries(gates.map(gate => [gate.id, { access: gate.use.includes('pedestrian') ? gateAccessOf(gate) : 'closed' }])) };
+export function visitorGateOverrides(gates: VenueGate[], alsoThrough: string[] = []): PathOverrides {
+  return { gates: Object.fromEntries(gates.map(gate => [gate.id,
+    { access: gate.use.includes('pedestrian') || alsoThrough.includes(gate.id) ? gateAccessOf(gate) : 'closed' }])) };
 }
 
 const GATE_USE_LABEL: Record<string, string> = { vip: 'VIP', cargo: 'Cargo', office: 'Office' };

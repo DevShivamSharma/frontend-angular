@@ -14,6 +14,8 @@ const pointNoun = (location: NavigationLocation) => location.title.replace(/s$/i
 const MY_LOCATION = 'me|me';
 /** Further than this from every walkway, a fix is not at the venue and is not routed from. */
 const MAX_LINK_METRES = 1500;
+/** Visit mode starts at Gate 9's arrival (venue-gate9.ts), so the visitor's walks may pass it; public routes may not. */
+const VISIT_GATES = ['gate9'];
 
 type Side = 'inside' | 'outside';
 type Locating = { state: 'finding' } | { state: 'error'; message: string };
@@ -55,7 +57,12 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     const g = this.graph(), me = this.me();
     return g && me ? createMapGraph([...g.nodes, me.node], [...g.edges, me.edge]) : g;
   });
-  readonly gateAccess = computed(() => { const g = this.graph(); return g ? resolveGateAccess(visitorGateOverrides(this.gates()), g.nodes) : {}; });
+  /** True for the planner in the visitor panel (visitorAt set). */
+  private readonly visiting = signal(false);
+  readonly gateAccess = computed(() => {
+    const g = this.graph();
+    return g ? resolveGateAccess(visitorGateOverrides(this.gates(), this.visiting() ? VISIT_GATES : []), g.nodes) : {};
+  });
   readonly adjacency = computed(() => { const g = this.routeGraph(); return g ? buildAdjacency(g.edges, this.gateAccess(), g.nodeMap) : {}; });
   readonly insideAdjacency = computed(() => {
     const g = this.routeGraph();
@@ -120,6 +127,7 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     if (changes['active'] && !this.active && this.submitted()) { this.submitted.set(null); this.folded.set(false); this.side.set(null); }
     if (changes['request'] && this.request) this.applyDestinationRequest();
     // In visitor mode the route always starts where the visitor stands (placed afresh on each plan, see replan).
+    if (changes['visitorAt']) this.visiting.set(!!this.visitorAt);
     if (changes['visitorAt'] && this.visitorAt && this.selectionValue(this.source()) !== MY_LOCATION) this.source.set({ locationId: 'me', pointId: 'me' });
   }
   private applyDestinationRequest(): void {
