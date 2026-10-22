@@ -14,7 +14,7 @@ type Mode = 'venue' | 'globe';
 interface Pose { position: T.Vector3; target: T.Vector3; }
 interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
 type Kind = 'road' | 'building' | 'water' | 'park';
-/** c: road class or park 'trees', b: bridge (venue-map-context.json only). */
+/** c: road class or park 'trees', b: bridge, h: building height in metres (venue-map-context.json only). */
 interface Feature { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][]; c?: string; b?: 1; }
 interface Geography { features: Feature[]; }
 interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onAtmosphereChange?: (spaceMix: number) => void; onLocalMapReady?: () => void; onSatelliteReady?: () => void; markerElement?: HTMLElement; }
@@ -164,9 +164,24 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     let material = sceneryMaterials.get(key);
     if (!material) {
       material = mapMaterial(sceneryPalette[key.replace('bridge-', '') as keyof typeof sceneryPalette]);
+      // Extruded buildings carry their wall shading (shadeBuilding) and are solid, so they sort and occlude as volumes.
+      if (key === 'building') Object.assign(material, { vertexColors: true, transparent: false });
       sceneryMaterials.set(key, material);
     }
     return material;
+  }
+  /**
+   * The map stays unlit so it reads the same by day and night; a building's faces are shaded once instead: roofs in
+   * full colour, walls darker the more they face away from the south-west, as in a drawn axonometric map.
+   */
+  const WALL_LIGHT = new T.Vector3(-.6, 0, .8).normalize();
+  function shadeBuilding(geometry: T.BufferGeometry) {
+    const normals = geometry.getAttribute('normal'), shade = new Float32Array(normals.count * 3), n = new T.Vector3();
+    for (let i = 0; i < normals.count; i++) {
+      n.fromBufferAttribute(normals, i);
+      shade.fill(n.y > .5 ? 1 : .64 + .26 * Math.max(0, n.dot(WALL_LIGHT)), i * 3, i * 3 + 3);
+    }
+    geometry.setAttribute('color', new T.BufferAttribute(shade, 3));
   }
   function loadSceneryFeatures() {
     sceneryState = 'loading';
@@ -232,8 +247,14 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
         // Nearby features are clipped offline against the real campus outline.
         // Preserve interior rings so a park cannot fill the excluded campus.
         for (const hole of f.holes ?? []) shape.holes.push(new T.Path(hole.map(p=>new T.Vector2(p[0],-p[1]))));
-        geometry=new T.ShapeGeometry(shape);
-        geometry.rotateX(-Math.PI/2);geometry.translate(0,height(f)??(f.k==='building'?-6.3:f.k==='road'?-6.6:f.k==='water'?-6.8:-6.9),0);
+        if(f.k==='building'&&f.h){
+          // Color → Map buildings stand to their height from the map ground.
+          geometry=new T.ExtrudeGeometry(shape,{depth:f.h,bevelEnabled:false});
+          geometry.rotateX(-Math.PI/2);geometry.translate(0,-6.9,0);shadeBuilding(geometry);
+        }else{
+          geometry=new T.ShapeGeometry(shape);
+          geometry.rotateX(-Math.PI/2);geometry.translate(0,height(f)??(f.k==='building'?-6.3:f.k==='road'?-6.6:f.k==='water'?-6.8:-6.9),0);
+        }
       }
       if(geometry.index){const indexed=geometry;geometry=geometry.toNonIndexed();indexed.dispose();}
       bins.get(key(f))?.push(geometry);

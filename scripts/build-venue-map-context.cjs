@@ -39,6 +39,27 @@ const inside = (p, ring) => {
 };
 const square = [nearSquare[0].map(fromGeo)];
 
+// Building heights `h` (metres) for the 3D buildings of Color → Map. OSM `height`, else `building:levels` at 3.5 m a
+// storey; then the landmarks below; else by OSM type and footprint (the neighbourhood is mostly 2-4 storeys). Only the
+// Supreme Court dome (27.6 m, sci.gov.in) and Purana Qila's walls and gates (about 18 m) are published figures; the
+// other landmark heights are estimates from their storey counts and should be replaced when surveyed.
+const LANDMARKS = [
+  [/^Supreme Court of India$/, 27.6], [/Darwaza|Sher Shah Suri Gate/, 18], [/Qila-i-Khuna Mosque/, 20], [/Sher Mandal/, 15],
+  [/Indira Gandhi Arena/, 30], [/Delhi Secretariat/, 36], [/Indraprastha Bhawan|Doordarshan Bhawan/, 36],
+  [/Indian Coast Guard headquarters/, 18], [/Patiala House Court/, 14], [/Supreme Court Metro Station/, 16], [/Matka Peer/, 8],
+];
+const TYPE_HEIGHT = { house: 8, detached: 8, residential: 11, roof: 5, shed: 5, parking: 9, industrial: 9, ruins: 6, stadium: 20, mosque: 14,
+  transportation: 9, bridge: 6 };
+const footprint = ring => Math.abs(ring.reduce((s, p, i) => { const q = ring[(i + 1) % ring.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
+const byFootprint = ring => { const a = footprint(ring); return a < 120 ? 5 : a < 400 ? 8 : a < 1500 ? 11 : a < 4000 ? 15 : 18; };
+function buildingHeight(tags, ring) {
+  const height = parseFloat(tags.height), levels = parseFloat(tags['building:levels']);
+  if (height > 0) return round(height);
+  if (levels > 0) return round(levels * 3.5 + 1);
+  const landmark = LANDMARKS.find(([name]) => name.test(tags.name ?? ''));
+  return landmark ? landmark[1] : TYPE_HEIGHT[tags.building] ?? byFootprint(ring);
+}
+
 const ROAD_CLASS = { trunk: 'arterial', trunk_link: 'arterial', primary: 'arterial', primary_link: 'arterial',
   secondary: 'arterial', secondary_link: 'arterial', tertiary: 'local', tertiary_link: 'local', residential: 'local',
   unclassified: 'local', living_street: 'local', service: 'service' };
@@ -55,7 +76,8 @@ function buildMapContext(raw) {
     if (f.k === 'road' && f.p.length === 2) {
       features.push({ k: 'road', c: (f.w ?? 8) >= 12 ? 'arterial' : 'local', w: round((f.w ?? 8) * widthScale), p: f.p.map(fromGeo) });
     } else {
-      features.push({ k: f.k, ...(f.k === 'road' ? { c: 'local' } : {}), p: f.p.map(fromGeo), ...(f.holes ? { holes: f.holes.map(h => h.map(fromGeo)) } : {}) });
+      const p = f.p.map(fromGeo);
+      features.push({ k: f.k, ...(f.k === 'road' ? { c: 'local' } : {}), ...(f.k === 'building' ? { h: byFootprint(p) } : {}), p, ...(f.holes ? { holes: f.holes.map(h => h.map(fromGeo)) } : {}) });
     }
   }
   // Nearby square, re-read from the OSM ways: clipped to the real property here, not to the campus footprint.
@@ -86,11 +108,11 @@ function buildMapContext(raw) {
     const clipped = clip.difference(clip.intersection([ring], square), property);
     if (!clipped.length) continue;
     counts[k]++;
-    area(k, clipped, k === 'park' && (tags.natural === 'wood' || tags.landuse === 'forest') ? { c: 'trees' } : {});
+    area(k, clipped, k === 'park' && (tags.natural === 'wood' || tags.landuse === 'forest') ? { c: 'trees' } : k === 'building' ? { h: buildingHeight(tags, ring) } : {});
   }
   if (counts.road < 100 || counts.park < 1) throw new Error('Incomplete nearby data; refusing to write the map context');
   return { credit: context.credit, frame: 'Venue X/Z metres through work/venue-surroundings/satellite-reference.json (z18 fit); delhi-context.json holds the same data in the geographic frame',
-    source: raw.source, distantSource: 'delhi-context.json features without osmWay', classes: 'road c: arterial (trunk, primary, secondary and links), local, service, path; b: bridge or layer above ground; park c: trees for woods and forest; tunnels left out',
+    source: raw.source, distantSource: 'delhi-context.json features without osmWay', classes: 'road c: arterial (trunk, primary, secondary and links), local, service, path; b: bridge or layer above ground; park c: trees for woods and forest; building h: height in metres (OSM height or levels, landmark table, else by type and footprint); tunnels left out',
     counts, features };
 }
 
