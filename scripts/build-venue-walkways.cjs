@@ -91,7 +91,9 @@ const PLACES = [
   // Hangar and amphitheatre centres: IITF_2026_ARCHITECTURAL.glb roof/seating bounds.
   { id: 'hangar7a', rm: 'hangar7a', label: 'Hangar 7A', category: 'hall', at: [90.9, -223.0] },
   { id: 'hangar7b', rm: 'hangar7b', label: 'Hangar 7B', category: 'hall', at: [67.7, -147.5] },
-  { id: 'cc', rm: 'conventionCentre', label: 'Convention Centre', category: 'amenity', at: [-345.2, 129.0] },
+  // `door`: where the place meets the walkways when that is not the walkway nearest its centre. The CC's nearest is
+  // its north-west side; the ITPO app uses the south forecourt, and routes to the halls otherwise walk round the building.
+  { id: 'cc', rm: 'conventionCentre', label: 'Convention Centre', category: 'amenity', at: [-345.2, 129.0], door: fromGate('conventionCentre', 'gate8') },
   { id: 'fountain', rm: 'musicalFountain', label: 'Musical Fountain & Amphitheatre', category: 'amenity', at: navPlace('fountain') },
   { id: 'amphitheatre1', rm: 'amphitheatre1', label: 'Amphitheatre 1', category: 'amenity', at: [181.8, -67.8] },
   { id: 'amphitheatre2', rm: 'amphitheatre2', label: 'Amphitheatre 2', category: 'amenity', at: [112.3, 52.6] },
@@ -136,10 +138,11 @@ for (const place of PLACES) {
   for (const insideSide of sides) {
     // Outside, only road footpaths count: traced walkway stubs past the fence lead nowhere.
     const onSide = s => inVenue(s.a) === insideSide && (insideSide || s.kind === 'road');
-    let best = nearestStep(place.at, onSide);
+    const door = place.door ?? place.at;
+    let best = nearestStep(door, onSide);
     // Buildings prefer a pedestrian walkway at their frontage when one is nearly as close.
     if ((place.category === 'hall' || place.category === 'amenity') && insideSide) {
-      const walk = nearestStep(place.at, s => onSide(s) && s.kind === 'path');
+      const walk = nearestStep(door, s => onSide(s) && s.kind === 'path');
       if (walk && walk.d <= best.d + 25) best = walk;
     }
     // A gate with no footpath within 90 m on its outer side is reached from inside only.
@@ -147,6 +150,56 @@ for (const place of PLACES) {
     attach.push({ place: place.id, inside: insideSide, metres: +best.d.toFixed(1) });
     placeNode[place.id + (insideSide ? ':in' : ':out')] = splitStep(best.id, best.q);
   }
+}
+
+// Close gaps: the traces often stop, or pass, a few metres short of a neighbouring line, and routes then went
+// round a whole block (Amphitheatre 1 to Hall 6 was 1.7 km). A junction inside the venue gets a short path to the
+// nearest venue line within JOIN_GAP, unless walking there is already short or the path would cross a traced line.
+// Outside, the lines are road centrelines and a gap between two of them is a carriageway, so nothing is joined there.
+const JOIN_GAP = 25, SHORT_WALK = 3 * JOIN_GAP;
+// Walking metres from `from` to the points within `limit` (Dijkstra; the radius holds a few dozen points).
+const walkFrom = (from, limit) => {
+  const done = new Map(), open = new Map([[from, 0]]);
+  while (open.size) {
+    let at, d = Infinity;
+    for (const [k, v] of open) if (v < d) { at = k; d = v; }
+    open.delete(at); done.set(at, d);
+    for (const l of points[at].links) {
+      const s = steps[l], next = s.a === at ? s.b : s.a, nd = d + dist(points[at].p, points[next].p);
+      if (nd <= limit && !done.has(next) && nd < (open.get(next) ?? Infinity)) open.set(next, nd);
+    }
+  }
+  return done;
+};
+// True when p-q crosses step s away from both ends.
+const crossesStep = (p, q, s) => {
+  const a = points[s.a].p, u = sub(q, p), v = sub(points[s.b].p, a), d = cross(u, v);
+  if (Math.abs(d) < 1e-9) return false;
+  const w = sub(a, p), t = cross(w, v) / d, r = cross(w, u) / d;
+  return t > 1e-6 && t < 1 - 1e-6 && r > 1e-6 && r < 1 - 1e-6;
+};
+const joins = [];
+const joinFrom = [...new Set(Object.values(placeNode))];
+points.forEach((pt, i) => { if (pt.links.length && pt.links.length !== 2) joinFrom.push(i); });
+for (const i of new Set(joinFrom)) {
+  if (!inVenue(i)) continue;
+  const p = points[i].p, near = walkFrom(i, SHORT_WALK);
+  const candidates = [];
+  steps.forEach((s, id) => {
+    if (s.dropped || s.join || s.a === i || s.b === i || !inVenue(s.a) || !inVenue(s.b)) return;
+    const r = project(p, points[s.a].p, points[s.b].p);
+    if (r.d >= .5 && r.d < JOIN_GAP) candidates.push({ id, ...r });
+  });
+  candidates.sort((x, y) => x.d - y.d);
+  const best = candidates.find(c => {
+    const s = steps[c.id], walk = Math.min((near.get(s.a) ?? Infinity) + dist(points[s.a].p, c.q), (near.get(s.b) ?? Infinity) + dist(points[s.b].p, c.q));
+    return walk > SHORT_WALK && !steps.some(o => !o.dropped && crossesStep(p, c.q, o));
+  });
+  if (!best) continue;
+  const n = splitStep(best.id, best.q);
+  if (n === i) continue;
+  const id = steps.length; steps.push({ a: i, b: n, kind: 'path', join: true }); points[i].links.push(id); points[n].links.push(id);
+  joins.push({ from: p.map(v => +v.toFixed(1)), to: best.q.map(v => +v.toFixed(1)), metres: +best.d.toFixed(1) });
 }
 
 // 4. Collapse chains of plain points into edges that keep their polyline.
@@ -185,11 +238,12 @@ const unreachable = PLACES.filter(p => !seen.has(p.id)).map(p => p.id);
 const result = {
   source: 'Built by scripts/build-venue-walkways.cjs from venue-site-detail.json walkways.paths (inside the property) and mapMask.roads (footpaths outside it). Steps across the property line are only possible through a gate.',
   coordinateFrame: 'Venue world X/Z metres (the three.js scene x/z)',
-  placeSources: 'Gates and halls: venue-navigation.json. Hangars, amphitheatres, CC, ITPO Admin Block: architectural model. Metro: traced station. Bus stop and parkings: route-map.json position relative to the nearest gate (the ITPO map is not to scale, so these are approximate). Gate access and outside flags: route-map.json.',
+  placeSources: 'Gates and halls: venue-navigation.json. Hangars, amphitheatres, CC, ITPO Admin Block: architectural model. The CC is attached at its route-map.json forecourt. Metro: traced station. Bus stop and parkings: route-map.json position relative to the nearest gate (the ITPO map is not to scale, so these are approximate). Gate access and outside flags: route-map.json.',
   attachments: attach,
+  joins,
   nodes, edges,
 };
 fs.writeFileSync(path.join(root, 'src/assets/venue/venue-walkways.json'), JSON.stringify(result));
 const far = attach.filter(a => a.metres > 40).map(a => `${a.place}${a.inside ? '' : ' (outside)'} ${a.metres} m`);
-console.log(JSON.stringify({ nodes: nodes.length, junctions: junctionId.size, edges: edges.length, longAttachments: far }));
+console.log(JSON.stringify({ nodes: nodes.length, junctions: junctionId.size, edges: edges.length, joins: joins.length, longAttachments: far }));
 if (unreachable.length) { console.error('Unreachable from Gate 1: ' + unreachable.join(', ')); process.exit(1); }
