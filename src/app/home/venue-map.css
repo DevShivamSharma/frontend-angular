@@ -59,22 +59,49 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .map-labels input{width:20px;height:20px;margin:0;accent-color:var(--navy)}
 .map-credit{position:absolute;z-index:2;left:16px;bottom:6px;margin:0;color:#c9ccd2;font-size:9px}
 
-.map-card{position:absolute;z-index:4;left:12px;right:12px;bottom:28px;max-width:420px;margin:0 auto;padding:16px 44px 16px 18px;border-radius:16px;background:#fff;box-shadow:0 8px 28px #0006}
-.map-card small{color:#69707e;font-size:12px;text-transform:uppercase;letter-spacing:.6px}
-.map-card h2{margin:4px 0 0;color:var(--navy);font-size:19px}
-.map-card p{margin:8px 0 0;font-size:14px;line-height:1.45;color:#3d4542}
-.map-card-close{position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;border-radius:18px;background:#eef0f4;color:var(--navy);font-size:22px;line-height:1}
+/* Phone map, in the Google Maps manner: the map fills the screen, the search and chips float over it, and place
+   details and directions rise from the bottom as sheets. Scoped off the 3D explorer's overlay, which keeps its bar. */
+:host(:not(.overlay)){--blue:#0A81FF;--text:#202124;--muted:#5f6368;--fill:#f1f3f4;--lift:0 1px 3px #0000004d,0 4px 10px #00000026}
+:host(:not(.overlay)) .map-head{position:absolute;top:0;left:0;right:0;padding:12px 12px 0;background:none;box-shadow:none;pointer-events:none}
+:host(:not(.overlay)) .map-head>*{pointer-events:auto}
+:host(:not(.overlay)) h1{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip-path:inset(50%)}
+:host(:not(.overlay)) .map-search{height:52px;padding:0 60px 0 18px;border-radius:26px;box-shadow:var(--lift)}
+:host(:not(.overlay)) .map-search svg{color:var(--muted)}
+:host(:not(.overlay)) .map-search:focus-within{box-shadow:0 0 0 2px var(--blue),var(--lift)}
+:host(:not(.overlay)) .map-results{top:58px}
+.map-head-directions{position:absolute;z-index:1;top:18px;right:18px;width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:var(--blue);color:#fff}
+.map-head-directions svg{width:24px;height:24px;stroke-width:1.6}
+:host(:not(.overlay)) .map-chips{margin:10px -12px 0;padding:2px 12px 8px}
+:host(:not(.overlay)) .map-chips button{display:flex;align-items:center;gap:7px;min-height:36px;padding:0 14px;border:0;border-radius:18px;background:#fff;color:var(--text);font-size:14px;box-shadow:0 1px 3px #0000004d}
+:host(:not(.overlay)) .map-chips button[data-group]::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--group)}
+:host(:not(.overlay)) .map-chips button[aria-pressed=true]{background:var(--group,var(--blue));color:#fff}
+:host(:not(.overlay)) .map-chips button[aria-pressed=true]::before{background:#fff}
+:host(.routing) .map-head{display:none}
+/* Past the image's edges the map carries on out of focus, rather than a black band. */
+.map-viewport::before{content:"";position:absolute;inset:-40px;background:var(--backdrop) center/cover;filter:blur(24px) brightness(.6);pointer-events:none}
 
-.map-head-directions{position:absolute;top:10px;right:12px;display:grid;justify-items:center;gap:2px;min-width:56px;min-height:44px;padding:4px;border:0;border-radius:12px;background:none;color:var(--navy);font-size:11px;font-weight:600}
-.map-head-directions svg{width:22px;height:22px}
-.map-head-directions[aria-pressed=true]{background:#eef0f7}
-.map-card-directions{margin-top:12px;min-height:44px;padding:10px 20px;border:0;border-radius:22px;background:var(--navy);color:#fff;font-weight:600}
+:host(:not(.overlay)) .map-hint{top:auto;bottom:96px;background:#323232;color:#fff;box-shadow:var(--lift)}
+.map-tools{right:12px;bottom:24px;gap:10px}
+.map-tools button{width:48px;height:48px;border-radius:50%;color:#3c4043;box-shadow:var(--lift)}
+.map-tools svg{width:22px;height:22px}
+:host(:not(.overlay)) .map-labels{left:12px;bottom:24px;min-height:40px;padding:0 14px;border-radius:20px;color:var(--text);font-size:14px;box-shadow:var(--lift)}
+:host(:not(.overlay)) .map-labels input{width:18px;height:18px;accent-color:var(--blue)}
+
+/* Place sheet: handle, category, name, description and the blue Directions button. */
+.map-card,.map-sheet{position:absolute;z-index:4;left:0;right:0;bottom:0;padding:22px 20px 20px;border-radius:20px 20px 0 0;background:#fff;box-shadow:0 -2px 16px #0000004d;color:var(--text)}
+.map-card::before,.map-sheet::before{content:"";position:absolute;top:8px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:#dadce0}
+.map-card small{color:var(--muted);font-size:13px}
+.map-card h2{margin:2px 48px 0 0;font-size:22px;font-weight:600;line-height:1.25}
+.map-card p{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--muted)}
+.map-card-close{position:absolute;top:16px;right:14px;width:36px;height:36px;border:0;border-radius:50%;background:var(--fill);color:var(--muted);font-size:22px;line-height:1}
+.map-card-directions{display:inline-flex;align-items:center;gap:8px;margin-top:16px;min-height:44px;padding:0 20px 0 16px;border:0;border-radius:22px;background:var(--blue);color:#fff;font-size:15px;font-weight:600}
+.map-card-directions svg{width:20px;height:20px;stroke-width:1.6}
 
 /* Walking route: line widths and end dots stay the same on screen at any zoom. */
 .map-route{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
 .map-route polyline{fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.route-casing{stroke:#fff;stroke-width:calc(8px / var(--zoom,1))}
-.route-line{stroke:#0A81FF;stroke-width:calc(4.5px / var(--zoom,1))}
+.route-casing{stroke:#fff;stroke-width:calc(9px / var(--zoom,1))}
+.route-line{stroke:#0A81FF;stroke-width:calc(5px / var(--zoom,1))}
 .route-walker *{stroke:none}
 .walker-ring{fill:#0A81FF2e;stroke:#0A81FF;stroke-width:2}
 .walker-foot{fill:#eee9db;transform:translateX(calc(var(--stride,0) * var(--side) * 3px))}
@@ -85,27 +112,32 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .k-start{background:#10B981}
 .k-end{background:#DC344B}
 
-/* Directions sheet: the panel from the 3D explorer's menu, restyled for the phone map. */
-.map-sheet{position:relative;z-index:4;max-height:55vh;overflow-y:auto;padding:12px 16px 16px;border-radius:16px 16px 0 0;background:#fff;box-shadow:0 -4px 20px #0005;font-size:14px}
+/* Directions sheet: the 3D explorer's panel as Google-style fields, a hollow dot for the start and a red pin for the
+   destination. It sits below the map, not over it, so a route framed in the viewport stays in view. */
+.map-sheet{position:relative;max-height:60vh;overflow-y:auto;padding-top:18px;font-size:14px}
 .map-sheet[hidden]{display:none}
-.map-sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.map-sheet h2{margin:0;color:var(--navy);font-size:18px}
+.map-sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.map-sheet h2{margin:0;font-size:20px;font-weight:600}
 .map-sheet .map-card-close{position:static}
-.walk-room-label{display:block;margin:12px 0 6px;font-size:13px;font-weight:600;color:var(--navy)}
+.walk-room-label{display:block;margin:12px 0 4px;color:var(--muted);font-size:12px}
 .venue-directions .walk-room-label:first-child{margin-top:0}
-.venue-directions select{display:block;width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#f5f6fb;color:var(--ink);font:inherit;font-size:16px}
-.venue-directions button{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:22px;background:#f5f6fb;color:var(--navy);font-size:14px}
-.venue-directions button:disabled{opacity:.5;cursor:default}
-.directions-swap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.venue-directions .directions-submit{width:100%;margin-top:14px;border-color:var(--navy);background:var(--navy);color:#fff;font-weight:600}
-.directions-summary span{display:block;font-weight:600;line-height:1.45}
-.venue-directions .directions-summary button{width:100%;margin-top:10px}
+.venue-directions select{display:block;width:100%;min-height:48px;padding:0 36px 0 42px;border:0;border-radius:12px;appearance:none;background:var(--fill) no-repeat;background-position:14px center,right 12px center;background-size:16px,14px;color:var(--text);font:inherit;font-size:16px}
+.venue-directions select:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.venue-directions [id^=directions-source]{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5.5' fill='%23fff' stroke='%235f6368' stroke-width='2.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='m3 5 4 4 4-4' fill='none' stroke='%235f6368' stroke-width='1.8'/%3E%3C/svg%3E")}
+.venue-directions [id^=directions-destination]{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 15s5-5 5-8.5a5 5 0 0 0-10 0C3 10 8 15 8 15Z' fill='%23DC344B'/%3E%3Ccircle cx='8' cy='6.5' r='2' fill='%23fff'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='m3 5 4 4 4-4' fill='none' stroke='%235f6368' stroke-width='1.8'/%3E%3C/svg%3E")}
+.venue-directions button{min-height:40px;padding:0 16px;border:1px solid #dadce0;border-radius:20px;background:#fff;color:var(--blue);font-size:14px;font-weight:600}
+.venue-directions button:disabled{color:#9aa0a6;cursor:default}
+.directions-swap{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.venue-directions .directions-submit{width:100%;min-height:48px;margin-top:16px;border:0;border-radius:24px;background:var(--blue);color:#fff;font-size:15px}
+.venue-directions .directions-submit:disabled{background:#e8eaed;color:#9aa0a6}
+.directions-summary span{display:block;font-size:16px;font-weight:600;line-height:1.45}
+.venue-directions .directions-summary button{width:100%;margin-top:12px}
 .directions-result{margin:10px 0 0;font-weight:600;line-height:1.45}
-.walk-hint{margin:0;color:#69707e}
-.walk-error{margin:8px 0 0;color:#a3262f;line-height:1.5}
+.walk-hint{margin:0;color:var(--muted)}
+.walk-error{margin:8px 0 0;color:#c5221f;line-height:1.5}
 /* The key from the panel. */
-.directions-legend{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--line)}
-.directions-legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:#505b59}
+.directions-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 0;padding-top:12px;border-top:1px solid #e8eaed}
+.directions-legend span{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 .directions-legend i{flex-shrink:0;width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #0003}
 .directions-legend .k-route{width:18px;height:5px;border-radius:3px;background:#0A81FF}
 .directions-legend .k-walker{background:#0A81FF2e;border:2px solid #0A81FF}
