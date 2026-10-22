@@ -1,0 +1,18 @@
+{
+  "asOf": "2025-11-07",
+  "source": "Layout of Bharat Mandapam, New Delhi (official layout image)",
+  "gates": [
+    { "id": "gate1", "label": "Gate 1", "use": ["vip", "cargo"], "entry": true, "exit": true, "position": { "x": 487.6, "z": -395.3 }, "note": "VIP & Cargo" },
+    { "id": "gate3", "label": "Gate 3", "use": ["pedestrian"], "entry": true, "exit": true, "position": { "x": 465.2, "z": -317.9 }, "note": "" },
+    { "id": "gate4", "label": "Gate 4", "use": ["pedestrian"], "entry": true, "exit": true, "position": { "x": 456.8, "z": -52.7 }, "note": "" },
+    { "id": "gate5a", "label": "Gate 5A", "use": ["cargo"], "entry": true, "exit": true, "position": { "x": 458.8, "z": -4.1 }, "note": "Cargo" },
+    { "id": "gate5b", "label": "Gate 5B", "use": ["cargo"], "entry": true, "exit": true, "position": { "x": 450.8, "z": 63.5 }, "note": "Cargo" },
+    { "id": "gate5c", "label": "Gate 5C", "use": ["cargo"], "entry": true, "exit": true, "position": { "x": 241.1, "z": 280.7 }, "note": "Cargo" },
+    { "id": "gate6", "label": "Gate 6", "use": ["pedestrian"], "entry": true, "exit": true, "position": { "x": -10.2, "z": 319.7 }, "note": "" },
+    { "id": "gate7", "label": "Gate 7", "use": ["vip"], "entry": true, "exit": true, "position": { "x": -343, "z": 303.5 }, "note": "VIP" },
+    { "id": "gate8", "label": "Gate 8", "use": ["pedestrian"], "entry": false, "exit": true, "position": { "x": -418.7, "z": 301.7 }, "note": "Only Exit" },
+    { "id": "gate9", "label": "Gate 9", "use": ["office", "vip"], "entry": true, "exit": true, "position": { "x": -586, "z": 288.3 }, "note": "Office & VIP" },
+    { "id": "gate10", "label": "Gate 10", "use": ["pedestrian"], "entry": true, "exit": true, "position": { "x": -609.5, "z": 11 }, "note": "" },
+    { "id": "gate11", "label": "Gate 11", "use": [], "entry": false, "exit": false, "position": { "x": 99.6, "z": -308.5 }, "note": "CLOSED" }
+  ]
+}

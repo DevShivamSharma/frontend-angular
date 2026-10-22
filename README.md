@@ -56,6 +56,26 @@ resource cleanup and browser coverage. The tests use the checked-in venue model.
 pillars, furniture, floor separation and furnished CC access. Auto-walk controller
 and browser coverage is in `e2e/visitor-auto-walk.spec.ts`.
 
+## Walking directions
+
+The **Directions** panel (and the phone map's Directions sheet) routes over
+`src/assets/venue/venue-walkways.json`, built by `node scripts/build-venue-walkways.cjs`.
+Outside the fence a route follows the traced road footpaths; inside it takes only the
+ITPO app's connections (`docs/reference/campus-navigation-rn/route-map.json`), each drawn
+along the traced walkways. A route with both ends inside never leaves the fence.
+
+Gate status lives in `src/assets/venue/venue-gates.json` (from the official layout, as on
+07-11-25). Visitors go in and out only through pedestrian gates (3, 4, 6, 10; Gate 8 is exit
+only); VIP, cargo and office gates can be picked as a start or end but are never walked
+through. **Use my location** asks for the browser's location only when picked, keeps it on
+the device, and asks "Are you inside the venue?" when the fix is vague or near the fence.
+
+Known gaps: the app has no edges for Gates 7 and 8, so each is joined to the app's network
+by its nearest traced walk (about 225 m and 345 m). Gate 5C's only app edge is outside, so
+it is reached along Mathura Road, as in the app. Gate 11 is closed and has no links; rebuild
+the graph if it reopens. A few app edges fall back to straight links (listed under
+`appEdges.straight` in the JSON).
+
 Video-based venue updates and building/gate coverage are documented in
 [Venue reconstruction from video references](docs/venue-video-reconstruction.md).
 The document distinguishes verified frontage and material changes from inherited

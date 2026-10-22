@@ -128,6 +128,8 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .venue-directions button{min-height:40px;padding:0 16px;border:1px solid #dadce0;border-radius:20px;background:#fff;color:var(--blue);font-size:14px;font-weight:600}
 .venue-directions button:disabled{color:#9aa0a6;cursor:default}
 .directions-swap{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.directions-ask{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.directions-ask span{flex-basis:100%;font-weight:600}
 .venue-directions .directions-submit{width:100%;min-height:48px;margin-top:16px;border:0;border-radius:24px;background:var(--blue);color:#fff;font-size:15px}
 .venue-directions .directions-submit:disabled{background:#e8eaed;color:#9aa0a6}
 .directions-summary span{display:block;font-size:16px;font-weight:600;line-height:1.45}

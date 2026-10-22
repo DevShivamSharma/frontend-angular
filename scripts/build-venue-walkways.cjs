@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, '..');
 const site = JSON.parse(fs.readFileSync(path.join(root, 'src/assets/venue/venue-site-detail.json'), 'utf8'));
 const navigation = JSON.parse(fs.readFileSync(path.join(root, 'src/assets/venue/venue-navigation.json'), 'utf8'));
 const routeMap = JSON.parse(fs.readFileSync(path.join(root, '../docs/reference/campus-navigation-rn/route-map.json'), 'utf8'));
+const gateStatus = JSON.parse(fs.readFileSync(path.join(root, 'src/assets/venue/venue-gates.json'), 'utf8')).gates;
 const { x: AX, z: AZ } = site.affine;
 const world = p => [AX[0]*p[0] + AX[1]*p[1] + AX[2], AZ[0]*p[0] + AZ[1]*p[1] + AZ[2]];
 // venue-navigation.json centres are authored s/t coordinates; this is the viewer's W().
@@ -157,20 +158,23 @@ for (const place of PLACES) {
 // nearest venue line within JOIN_GAP, unless walking there is already short or the path would cross a traced line.
 // Outside, the lines are road centrelines and a gap between two of them is a carriageway, so nothing is joined there.
 const JOIN_GAP = 25, SHORT_WALK = 3 * JOIN_GAP;
-// Walking metres from `from` to the points within `limit` (Dijkstra; the radius holds a few dozen points).
-const walkFrom = (from, limit) => {
-  const done = new Map(), open = new Map([[from, 0]]);
+// Walking metres from `from` to the points within `limit` that `allow` lets in, stopping at the first point `stop`
+// accepts (Dijkstra; the radius or corridor holds a few hundred points). `prev` gives the walk back to `from`.
+const walkFrom = (from, limit, allow = () => true, stop = () => false) => {
+  const done = new Map(), prev = new Map(), open = new Map([[from, 0]]);
   while (open.size) {
     let at, d = Infinity;
     for (const [k, v] of open) if (v < d) { at = k; d = v; }
     open.delete(at); done.set(at, d);
+    if (stop(at)) return { done, prev, at };
     for (const l of points[at].links) {
       const s = steps[l], next = s.a === at ? s.b : s.a, nd = d + dist(points[at].p, points[next].p);
-      if (nd <= limit && !done.has(next) && nd < (open.get(next) ?? Infinity)) open.set(next, nd);
+      if (nd <= limit && !done.has(next) && allow(next) && nd < (open.get(next) ?? Infinity)) { open.set(next, nd); prev.set(next, at); }
     }
   }
-  return done;
+  return { done, prev };
 };
+const lineTo = (prev, from, to) => { const line = [to]; while (line[0] !== from) line.unshift(prev.get(line[0])); return line.map(i => points[i].p); };
 // True when p-q crosses step s away from both ends.
 const crossesStep = (p, q, s) => {
   const a = points[s.a].p, u = sub(q, p), v = sub(points[s.b].p, a), d = cross(u, v);
@@ -183,7 +187,7 @@ const joinFrom = [...new Set(Object.values(placeNode))];
 points.forEach((pt, i) => { if (pt.links.length && pt.links.length !== 2) joinFrom.push(i); });
 for (const i of new Set(joinFrom)) {
   if (!inVenue(i)) continue;
-  const p = points[i].p, near = walkFrom(i, SHORT_WALK);
+  const p = points[i].p, near = walkFrom(i, SHORT_WALK).done;
   const candidates = [];
   steps.forEach((s, id) => {
     if (s.dropped || s.join || s.a === i || s.b === i || !inVenue(s.a) || !inVenue(s.b)) return;
@@ -202,9 +206,67 @@ for (const i of new Set(joinFrom)) {
   joins.push({ from: p.map(v => +v.toFixed(1)), to: best.q.map(v => +v.toFixed(1)), metres: +best.d.toFixed(1) });
 }
 
-// 4. Collapse chains of plain points into edges that keep their polyline.
-const keep = new Set(Object.values(placeNode));
-points.forEach((pt, i) => { if (pt.links.length !== 2) keep.add(i); });
+// 3b. Inside the fence a route may only take the ITPO app's connections (route-map.json, its ids mapped to ours),
+// plus hall doors and gates. An app junction sits where its spot on the app's map lands on the walkways; app edges
+// that touch an outside node are left out, since outside a route keeps to the traced road footpaths.
+const RM_TO_OURS = { conventionCentre: 'cc', hall12a: 'hall12A', musicalFountain: 'fountain' };
+const ourPlace = Object.fromEntries(PLACES.map(p => [p.rm, p]));
+// Affine fit of the app's map % to world metres over the inside places both graphs have (least squares).
+const anchors = routeMap.nodes.filter(n => n.category !== 'junction' && !n.outside && ourPlace[n.id]);
+const fitAxis = k => {
+  const M = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+  for (const n of anchors) {
+    const r = [n.x, n.y, 1], v = ourPlace[n.id].at[k];
+    for (let i = 0; i < 3; i++) { M[i][3] += r[i]*v; for (let j = 0; j < 3; j++) M[i][j] += r[i]*r[j]; }
+  }
+  for (let i = 0; i < 3; i++) {
+    const p = M[i][i]; for (let j = i; j < 4; j++) M[i][j] /= p;
+    for (let r = 0; r < 3; r++) if (r !== i) { const f = M[r][i]; for (let j = i; j < 4; j++) M[r][j] -= f*M[i][j]; }
+  }
+  return M.map(row => row[3]);
+};
+const FX = fitAxis(0), FZ = fitAxis(1), fromMap = n => [FX[0]*n.x + FX[1]*n.y + FX[2], FZ[0]*n.x + FZ[1]*n.y + FZ[2]];
+const appPoint = {};
+for (const n of routeMap.nodes) {
+  if (n.outside) continue;
+  if (n.category !== 'junction') { const at = placeNode[ourPlace[n.id]?.id + ':in']; if (at !== undefined) appPoint[n.id] = at; continue; }
+  const best = nearestStep(fromMap(n), s => inVenue(s.a) && inVenue(s.b));
+  if (best) appPoint[n.id] = splitStep(best.id, best.q);
+}
+// Each app edge is drawn as the shortest walk between its ends that keeps within CORRIDOR metres of the app's straight
+// edge, then within twice that; when none fits it is a straight link, logged.
+const CORRIDOR = 40;
+const insideLines = [], straight = [];
+for (const e of routeMap.edges) {
+  const a = appPoint[e.from], b = appPoint[e.to];
+  if (a === undefined || b === undefined || a === b) continue;
+  let walk;
+  for (const width of [CORRIDOR, 2 * CORRIDOR]) {
+    walk = walkFrom(a, Infinity, i => inVenue(i) && project(points[i].p, points[a].p, points[b].p).d <= width, i => i === b);
+    if (walk.at !== undefined) break;
+  }
+  if (walk.at === undefined) straight.push(`${e.from}-${e.to} ${dist(points[a].p, points[b].p).toFixed(0)} m`);
+  insideLines.push({ a, b, line: walk.at === undefined ? [points[a].p, points[b].p] : lineTo(walk.prev, a, b) });
+}
+// A gate the app gives no edge at all (7, 8) keeps its nearest traced walk onto the app's network. One whose only app
+// edge is outside (5C) is reached from outside, as in the app. Closed gates (venue-gates.json, Gate 11) stay unjoined,
+// so the graph needs rebuilding if one reopens.
+const onApp = new Set(insideLines.flatMap(l => [l.a, l.b]));
+const appLinked = new Set(routeMap.edges.flatMap(e => [e.from, e.to]));
+const closedGate = new Set(gateStatus.filter(g => !g.entry && !g.exit).map(g => g.id));
+const tracedLinks = [];
+for (const place of PLACES) {
+  const at = placeNode[place.id + ':in'];
+  if (place.category !== 'gate' || at === undefined || appLinked.has(place.rm) || closedGate.has(place.id)) continue;
+  const walk = walkFrom(at, Infinity, inVenue, i => onApp.has(i));
+  if (walk.at === undefined) continue;
+  insideLines.push({ a: at, b: walk.at, line: lineTo(walk.prev, at, walk.at) });
+  tracedLinks.push({ gate: place.id, metres: +walk.done.get(walk.at).toFixed(1) });
+}
+
+// 4. Collapse chains of plain points outside into edges that keep their polyline; inside, the app's edges above.
+const keep = new Set([...Object.values(placeNode), ...Object.values(appPoint)]);
+points.forEach((pt, i) => { if (pt.links.length !== 2 && !inVenue(i)) keep.add(i); });
 const junctionId = new Map();
 for (const i of keep) {
   const id = `j${junctionId.size + 1}`; junctionId.set(i, id);
@@ -212,7 +274,7 @@ for (const i of keep) {
 }
 const usedStep = new Set();
 for (const start of keep) for (const first of points[start].links) {
-  if (usedStep.has(first)) continue;
+  if (usedStep.has(first) || inVenue(steps[first].a)) continue;
   const line = [points[start].p]; let at = start, step = first, kind = steps[first].kind;
   for (;;) {
     usedStep.add(step); const s = steps[step]; at = s.a === at ? s.b : s.a; line.push(points[at].p);
@@ -223,27 +285,43 @@ for (const start of keep) for (const first of points[start].links) {
   if (!to || from === to) continue;
   edges.push({ id: `${from}-${to}`, from, to, active: true, direction: 'two-way', kind, points: line.map(p => [+p[0].toFixed(1), +p[1].toFixed(1)]) });
 }
+const insideEdge = new Set();
+for (const { a, b, line } of insideLines) {
+  const from = junctionId.get(a), to = junctionId.get(b);
+  if (insideEdge.has(`${from}-${to}`) || insideEdge.has(`${to}-${from}`)) continue;
+  insideEdge.add(`${from}-${to}`);
+  edges.push({ id: `${from}-${to}`, from, to, active: true, direction: 'two-way', kind: 'path', points: line.map(p => [+p[0].toFixed(1), +p[1].toFixed(1)]) });
+}
 // Places link to the junction they were attached at; a gate also links its two sides through itself.
 for (const [key, point] of Object.entries(placeNode)) {
   const [id] = key.split(':'), place = nodes.find(n => n.id === id), j = junctionId.get(point), jn = nodes.find(n => n.id === j);
+  // A closed gate has no way in or out; its attachment point may be another place's (Gate 11 shares Hangar 7A's).
+  if (closedGate.has(id)) continue;
   edges.push({ id: `${id}-${j}`, from: id, to: j, active: true, direction: 'two-way', kind: 'link', points: [[place.x, place.z], [jn.x, jn.z]] });
 }
 
-// 5. Check: every named place reachable from Gate 1 when every gate is open both ways.
+// 5. Check: every named place but a closed gate reachable from Gate 1 when every gate is open both ways.
 const adjacency = {};
 for (const e of edges) { (adjacency[e.from] ??= []).push(e.to); (adjacency[e.to] ??= []).push(e.from); }
 const seen = new Set(['gate1']), queue = ['gate1'];
 while (queue.length) for (const n of adjacency[queue.pop()] ?? []) if (!seen.has(n)) { seen.add(n); queue.push(n); }
-const unreachable = PLACES.filter(p => !seen.has(p.id)).map(p => p.id);
+const unreachable = PLACES.filter(p => !seen.has(p.id) && !closedGate.has(p.id)).map(p => p.id);
+// Satellite image pixels of a z18 tile point: the image is tiles x 187310-187325, y 109300-109315 at 256 px
+// (geography/satellite/venue-map.json), and satelliteReference.fit takes those pixels to world X/Z.
+const { x: fitX, z: fitZ } = site.satelliteReference.fit;
 const result = {
-  source: 'Built by scripts/build-venue-walkways.cjs from venue-site-detail.json walkways.paths (inside the property) and mapMask.roads (footpaths outside it). Steps across the property line are only possible through a gate.',
+  source: 'Built by scripts/build-venue-walkways.cjs from venue-site-detail.json walkways.paths (inside the property) and mapMask.roads (footpaths outside it). Steps across the property line are only possible through a gate. Inside, edges are the ITPO app\'s route-map.json connections drawn along the walkways.',
   coordinateFrame: 'Venue world X/Z metres (the three.js scene x/z)',
   placeSources: 'Gates and halls: venue-navigation.json. Hangars, amphitheatres, CC, ITPO Admin Block: architectural model. The CC is attached at its route-map.json forecourt. Metro: traced station. Bus stop and parkings: route-map.json position relative to the nearest gate (the ITPO map is not to scale, so these are approximate). Gate access and outside flags: route-map.json.',
   attachments: attach,
   joins,
+  appEdges: { corridorMetres: CORRIDOR, straight, tracedLinks },
+  // The property line (venue-site-detail.json propertyBoundary in world X/Z), for telling inside from outside.
+  fence: boundary.map(p => [+p[0].toFixed(1), +p[1].toFixed(1)]),
+  satellite: { zoom: 18, tileOrigin: [187310, 109300], tileSize: 256, fit: { x: fitX, z: fitZ } },
   nodes, edges,
 };
 fs.writeFileSync(path.join(root, 'src/assets/venue/venue-walkways.json'), JSON.stringify(result));
 const far = attach.filter(a => a.metres > 40).map(a => `${a.place}${a.inside ? '' : ' (outside)'} ${a.metres} m`);
-console.log(JSON.stringify({ nodes: nodes.length, junctions: junctionId.size, edges: edges.length, joins: joins.length, longAttachments: far }));
+console.log(JSON.stringify({ nodes: nodes.length, junctions: junctionId.size, edges: edges.length, joins: joins.length, longAttachments: far, appStraight: straight, tracedLinks }));
 if (unreachable.length) { console.error('Unreachable from Gate 1: ' + unreachable.join(', ')); process.exit(1); }

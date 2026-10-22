@@ -171,3 +171,34 @@ export const canEndAt = (nodeId: string, gateAccess: Record<string, GateAccess>)
 export const canPassThrough = (nodeId: string, gateAccess: Record<string, GateAccess>) => gateAccess[nodeId] !== 'closed';
 
 export const GATE_ACCESS_SUFFIX: Record<GateAccess, string> = { both: '', entry: ' (Entry only)', exit: ' (Exit only)', closed: ' (Closed)' };
+
+/** One row of src/assets/venue/venue-gates.json, the one place gate status is kept. */
+export interface VenueGate { id: string; label: string; use: string[]; entry: boolean; exit: boolean; note: string; }
+
+/** The gate rows of venue-gates.json; malformed rows are dropped. */
+export function parseVenueGates(raw: unknown): VenueGate[] {
+  const rows = isRecord(raw) && Array.isArray(raw['gates']) ? raw['gates'] : [];
+  return rows.filter(isRecord).filter(row => typeof row['id'] === 'string' && typeof row['entry'] === 'boolean' && typeof row['exit'] === 'boolean')
+    .map(row => ({ id: row['id'] as string, label: typeof row['label'] === 'string' ? row['label'] : row['id'] as string,
+      use: Array.isArray(row['use']) ? row['use'].filter((use): use is string => typeof use === 'string') : [],
+      entry: row['entry'] as boolean, exit: row['exit'] as boolean, note: typeof row['note'] === 'string' ? row['note'] : '' }));
+}
+
+export const gateAccessOf = (gate: VenueGate): GateAccess => gate.entry && gate.exit ? 'both' : gate.entry ? 'entry' : gate.exit ? 'exit' : 'closed';
+
+/**
+ * The `gates` overrides for visitor routes. Only pedestrian gates are walked through; a VIP, cargo or office gate
+ * counts as closed, so it can still start or end a route picked by name but is never the way in or out.
+ */
+export function visitorGateOverrides(gates: VenueGate[]): PathOverrides {
+  return { gates: Object.fromEntries(gates.map(gate => [gate.id, { access: gate.use.includes('pedestrian') ? gateAccessOf(gate) : 'closed' }])) };
+}
+
+const GATE_USE_LABEL: Record<string, string> = { vip: 'VIP', cargo: 'Cargo', office: 'Office' };
+/** A gate's picker suffix: its access, or who a non-pedestrian gate is for, e.g. " (VIP & Cargo)". */
+export function gateSuffix(gate: VenueGate | undefined): string {
+  if (!gate) return '';
+  const access = gateAccessOf(gate);
+  if (access === 'closed' || gate.use.includes('pedestrian')) return GATE_ACCESS_SUFFIX[access];
+  return ` (${gate.use.map(use => GATE_USE_LABEL[use] ?? use).join(' & ')})`;
+}

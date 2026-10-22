@@ -27,6 +27,8 @@ export type JourneyResult = { journey: Journey } | { problem: JourneyProblem };
 export interface PlanContext {
   locations: NavigationLocation[];
   adjacency: Adjacency;
+  /** Only the edges between venue nodes: a route with both ends inside keeps to them when it can. */
+  insideAdjacency?: Adjacency;
   nodeMap: Record<string, MapNode>;
   gateAccess: Record<string, GateAccess>;
 }
@@ -42,7 +44,7 @@ function candidatesFor(selection: LocationSelection, locations: NavigationLocati
  * gives the shortest route; gates that cannot be used that way round are skipped, and a gate picked
  * explicitly the wrong way round is reported instead.
  */
-export function planJourney(source: LocationSelection, destination: LocationSelection, { locations, adjacency, nodeMap, gateAccess }: PlanContext): JourneyResult {
+export function planJourney(source: LocationSelection, destination: LocationSelection, { locations, adjacency, insideAdjacency, nodeMap, gateAccess }: PlanContext): JourneyResult {
   const explicitStart = source.pointId !== CLOSEST_POINT, explicitEnd = destination.pointId !== CLOSEST_POINT;
   if (explicitStart && explicitEnd && source.pointId === destination.pointId) return { problem: { reason: 'same' } };
   if (explicitStart && nodeMap[source.pointId] && !canStartAt(source.pointId, gateAccess)) return { problem: { reason: 'exitOnlyStart', node: nodeMap[source.pointId] } };
@@ -52,7 +54,9 @@ export function planJourney(source: LocationSelection, destination: LocationSele
   let best: { path: string[]; totalDistance: number } | null = null;
   for (const startId of starts) for (const endId of ends) {
     if (startId === endId) continue;
-    const route = findShortestPath(startId, endId, adjacency, nodeMap, gateAccess);
+    // Inside to inside never leaves the fence, unless the app's own edge does (Gate 5C is only reached from outside).
+    const inside = !nodeMap[startId]?.outside && !nodeMap[endId]?.outside;
+    const route = (inside && insideAdjacency && findShortestPath(startId, endId, insideAdjacency, nodeMap, gateAccess)) || findShortestPath(startId, endId, adjacency, nodeMap, gateAccess);
     if (route && (!best || route.totalDistance < best.totalDistance)) best = route;
   }
   if (!best) {

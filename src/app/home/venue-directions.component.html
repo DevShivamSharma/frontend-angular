@@ -7,6 +7,16 @@
   </div>
 } @else {
   <ng-container *ngTemplateOutlet="field; context: { role: 'source', noun: 'source', Noun: 'Source', selection: source(), other: destination() }" />
+  @if (locating(); as locating) {
+    @if (locating.state === 'finding') { <p class="walk-hint" role="status">Finding your location…</p> }
+    @else if (locating.state === 'ask') {
+      <div class="directions-ask" role="group" aria-labelledby="directions-ask-label">
+        <span id="directions-ask-label">Are you inside the venue?</span>
+        <button type="button" (click)="answer(true)">Yes, inside</button>
+        <button type="button" (click)="answer(false)">No, outside</button>
+      </div>
+    } @else if (locating.state === 'error') { <p class="walk-error" role="alert">{{ locating.message }}</p> }
+  }
   <div class="directions-swap">
     <button type="button" (click)="swap()" [disabled]="!source() && !destination()" aria-label="Swap source and destination">⇅ Swap</button>
     <button type="button" (click)="clear()" [disabled]="!source() && !destination()" aria-label="Clear source and destination">Clear</button>
@@ -32,6 +42,7 @@
   <!-- [selected] on each option, not [value] on the select: the options render after the select's value is bound. -->
   <select [id]="'directions-' + role" (change)="setSelection(role, $any($event.target).value)">
     <option value="" disabled [selected]="!selection">Choose {{ noun }}</option>
+    @if (role === 'source') { <option [value]="myLocation" [selected]="selectionValue(selection) === myLocation">Use my location</option> }
     @for (place of pickerOptions(other); track place.value) {
       @if (place.points.length) {
         <optgroup [label]="place.label">
