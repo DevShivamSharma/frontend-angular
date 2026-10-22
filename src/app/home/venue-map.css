@@ -80,7 +80,7 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 /* Past the image's edges the map carries on out of focus, rather than a black band. */
 .map-viewport::before{content:"";position:absolute;inset:-40px;background:var(--backdrop) center/cover;filter:blur(24px) brightness(.6);pointer-events:none}
 
-:host(:not(.overlay)) .map-hint{top:auto;bottom:96px;background:#323232;color:#fff;box-shadow:var(--lift)}
+:host(:not(.overlay)) .map-hint{top:auto;bottom:200px;background:#323232;color:#fff;box-shadow:var(--lift)}
 .map-tools{right:12px;bottom:24px;gap:10px}
 .map-tools button{width:48px;height:48px;border-radius:50%;color:#3c4043;box-shadow:var(--lift)}
 .map-tools svg{width:22px;height:22px}

@@ -12,7 +12,7 @@
     <button type="button" (click)="clear()" [disabled]="!source() && !destination()" aria-label="Clear source and destination">Clear</button>
   </div>
   <ng-container *ngTemplateOutlet="field; context: { role: 'destination', noun: 'destination', Noun: 'Destination', selection: destination(), other: source() }" />
-  <button type="button" class="walk-primary directions-submit" [disabled]="!canSubmit()" (click)="submit()" aria-label="Submit to show the route">Submit</button>
+  <button type="button" class="walk-primary directions-submit" [disabled]="!canSubmit()" (click)="submit()">Show route</button>
   @if (problem(); as problem) { <p class="walk-error" role="alert">{{ problemMessage(problem) }}</p> }
   @if (journey(); as journey) { <p class="directions-result" role="status">{{ summary(journey) }}</p> }
 }
@@ -28,19 +28,17 @@
 }
 
 <ng-template #field let-role="role" let-noun="noun" let-Noun="Noun" let-selection="selection" let-other="other">
-  <label class="walk-room-label" [for]="'directions-' + role">{{ location(selection) ? Noun : 'Select ' + noun }}</label>
+  <label class="walk-room-label" [for]="'directions-' + role">{{ Noun }}</label>
   <!-- [selected] on each option, not [value] on the select: the options render after the select's value is bound. -->
-  <select [id]="'directions-' + role" (change)="setLocation(role, $any($event.target).value)">
-    <option value="" disabled [selected]="!selection">Select {{ noun }}</option>
-    @for (option of locationOptions(other); track option.value) { <option [value]="option.value" [selected]="option.value === selection?.locationId">{{ option.label }}</option> }
-  </select>
-  @if (location(selection); as place) {
-    @if (pointOptions(selection, other).length) {
-      <label class="walk-room-label" [for]="'directions-' + role + '-point'">{{ Noun }} {{ pointNoun(place).toLowerCase() }}</label>
-      <select [id]="'directions-' + role + '-point'" (change)="setPoint(role, $any($event.target).value)">
-        <option [value]="closest" [selected]="selection.pointId === closest">Closest {{ pointNoun(place).toLowerCase() }}</option>
-        @for (option of pointOptions(selection, other); track option.value) { <option [value]="option.value" [selected]="option.value === selection.pointId">{{ option.label }}</option> }
-      </select>
+  <select [id]="'directions-' + role" (change)="setSelection(role, $any($event.target).value)">
+    <option value="" disabled [selected]="!selection">Choose {{ noun }}</option>
+    @for (place of pickerOptions(other); track place.value) {
+      @if (place.points.length) {
+        <optgroup [label]="place.label">
+          <option [value]="place.value" [selected]="place.value === selectionValue(selection)">{{ place.closest }}</option>
+          @for (point of place.points; track point.value) { <option [value]="point.value" [selected]="point.value === selectionValue(selection)">{{ point.label }}</option> }
+        </optgroup>
+      } @else { <option [value]="place.value" [selected]="place.value === selectionValue(selection)">{{ place.label }}</option> }
     }
-  }
+  </select>
 </ng-template>

@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnI
 import { venueAsset } from './venue.models';
 import { GATE_ACCESS_SUFFIX, MapGraph, parseMapGraph, resolveGateAccess } from './venue-route-graph';
 import { buildAdjacency } from './venue-route-pathfinding';
-import { CLOSEST_POINT, LocationSelection, NAVIGATION_LOCATIONS, NavigationLocation, availableLocations, defaultSelection, findLocation, selectionForNode } from './venue-route-locations';
+import { LocationSelection, NAVIGATION_LOCATIONS, NavigationLocation, availableLocations, defaultSelection, findLocation, selectionForNode } from './venue-route-locations';
 import { Journey, JourneyProblem, planJourney, problemMessage, walkingMeters, walkingMinutes } from './venue-route-journey';
 import { Point, journeyPolyline } from './venue-route-geometry';
 
@@ -12,9 +12,9 @@ const byTitle = (a: string, b: string) => a.localeCompare(b, undefined, { numeri
 const pointNoun = (location: NavigationLocation) => location.title.replace(/s$/i, '');
 
 /**
- * Source / Destination route planner, re-created from the ITPO app's CampusNavigationScreen. A group
- * (Gates, Halls, ...) reveals a second picker for its point; Submit shows the walk, after which the form
- * folds into a one-line summary. Changing either end hides the route until it is submitted again.
+ * Source / Destination route planner, re-created from the ITPO app's CampusNavigationScreen. One picker per
+ * end: a group (Gates, Halls, ...) is an option group led by its closest point, so a phone needs one tap per end.
+ * Show route draws the walk and folds the form into a one-line summary; changing either end hides the route.
  */
 @Component({ selector: 'section[appVenueDirections]', standalone: true, imports: [NgTemplateOutlet], templateUrl: './venue-directions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush, host: { class: 'venue-interior-actions venue-directions', 'aria-label': 'Walking directions' } })
@@ -73,23 +73,26 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     return this.locations().filter(item => !(item.id === taken?.id && item.nodeIds.length === 1))
       .map(item => ({ value: item.id, label: item.title })).sort((a, b) => byTitle(a.label, b.label));
   }
-  location(selection: LocationSelection | undefined) { return findLocation(selection?.locationId, this.locations()); }
-  pointNoun(location: NavigationLocation) { return pointNoun(location); }
   pointOptions(selection: LocationSelection | undefined, other: LocationSelection | undefined) {
-    const location = this.location(selection), g = this.graph();
+    const location = findLocation(selection?.locationId, this.locations()), g = this.graph();
     if (!location || !g || location.nodeIds.length < 2) return [];
     const takenByOther = other?.locationId === location.id ? other.pointId : undefined;
     return location.nodeIds.filter(id => id !== takenByOther)
       .map(id => ({ value: id, label: g.nodeMap[id].label + GATE_ACCESS_SUFFIX[this.gateAccess()[id] ?? 'both'] }))
       .sort((a, b) => byTitle(a.label, b.label));
   }
-  setLocation(role: 'source' | 'destination', id: string): void {
-    const location = findLocation(id, this.locations()), field = role === 'source' ? this.source : this.destination;
-    if (location && location.id !== field()?.locationId) { field.set(defaultSelection(location)); this.hideRoute(); }
+  /** A picker option's value is "location|point". */
+  pickerOptions(other: LocationSelection | undefined) {
+    return this.locationOptions(other).map(({ value, label }) => {
+      const location = findLocation(value, this.locations())!, first = defaultSelection(location);
+      return { label, value: this.selectionValue(first), closest: `Closest ${pointNoun(location).toLowerCase()}`,
+        points: this.pointOptions(first, other).map(point => ({ value: `${value}|${point.value}`, label: point.label })) };
+    });
   }
-  setPoint(role: 'source' | 'destination', pointId: string): void {
-    const field = role === 'source' ? this.source : this.destination, current = field();
-    if (current) { field.set({ locationId: current.locationId, pointId }); this.hideRoute(); }
+  selectionValue(selection: LocationSelection | undefined) { return selection ? `${selection.locationId}|${selection.pointId}` : ''; }
+  setSelection(role: 'source' | 'destination', value: string): void {
+    const [locationId, pointId] = value.split('|'), field = role === 'source' ? this.source : this.destination;
+    if (value !== this.selectionValue(field())) { field.set({ locationId, pointId }); this.hideRoute(); }
   }
   swap(): void { const a = this.source(); this.source.set(this.destination()); this.destination.set(a); this.hideRoute(); }
   clear(): void { this.source.set(undefined); this.destination.set(undefined); this.hideRoute(); }
@@ -104,5 +107,4 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   change(): void { this.folded.set(false); }
   private hideRoute(): void { if (this.submitted()) this.route.emit(null); this.submitted.set(null); }
   summary(journey: Journey) { return `${journey.start.label} → ${journey.end.label} · ~${walkingMeters(journey.totalMeters)} m · ~${walkingMinutes(journey.totalMeters)} min walk`; }
-  readonly closest = CLOSEST_POINT;
 }

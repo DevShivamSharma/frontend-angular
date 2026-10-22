@@ -106,7 +106,16 @@ export class VenueMapComponent implements OnInit, OnDestroy {
     if (this.group() && place.group !== this.group()) this.group.set('');
     if (this.mode === 'overlay') { this.picked.emit(place.id); return; }
     this.selected.set(place);
-    if (focus) this.focus(place);
+    if (focus) this.focus(place); else this.reveal(place);
+  }
+
+  /** Keep a tapped pin clear of the place sheet at the bottom and the search at the top. */
+  private reveal(place: MapPlace): void {
+    const map = this.map(), box = this.viewport()?.nativeElement.getBoundingClientRect();
+    if (!map || !box) return;
+    const [x, y] = this.pan(), top = box.height / 2 + y + (place.v / map.size[1] - .5) * box.width * map.size[1] / map.size[0] * this.zoom();
+    const shift = Math.max(0, 140 - top) - Math.max(0, top - (box.height - 240));
+    if (shift) this.setPan(x, y + shift);
   }
 
   /** Centre a place at a readable zoom. */
