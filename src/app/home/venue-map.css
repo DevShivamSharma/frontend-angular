@@ -128,15 +128,40 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .venue-directions button{min-height:40px;padding:0 16px;border:1px solid #dadce0;border-radius:20px;background:#fff;color:var(--blue);font-size:14px;font-weight:600}
 .venue-directions button:disabled{color:#9aa0a6;cursor:default}
 .directions-swap{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
-.directions-ask{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
-.directions-ask span{flex-basis:100%;font-weight:600}
+.directions-ask{display:grid;gap:10px}
+.directions-ask span{font-size:16px;font-weight:600}
+.venue-directions .directions-choice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:64px;padding:10px 16px;border-radius:14px;text-align:left;color:var(--text)}
+.directions-choice b{font-size:16px}
+.directions-choice small{font-size:13px;font-weight:400;color:var(--muted)}
+.venue-directions .directions-choice:active{background:#e8f0fe;border-color:var(--blue)}
 .directions-side{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px;font-weight:600}
-.venue-directions .directions-submit{width:100%;min-height:48px;margin-top:16px;border:0;border-radius:24px;background:var(--blue);color:#fff;font-size:15px}
-.venue-directions .directions-submit:disabled{background:#e8eaed;color:#9aa0a6}
-.directions-summary span{display:block;font-size:16px;font-weight:600;line-height:1.45}
-.venue-directions .directions-summary button{width:100%;margin-top:12px}
-.directions-result{margin:10px 0 0;font-weight:600;line-height:1.45}
-.walk-hint{margin:0;color:var(--muted)}
+.directions-result{margin:12px 0 0;font-weight:600;line-height:1.45}
+.venue-directions .directions-result button{min-height:32px;margin-left:6px}
+.directions-notice{margin:12px 0 0;padding:12px 14px;border-radius:12px;background:#fce8e6;color:#a50e0e;line-height:1.5}
+.directions-notice p{margin:0}
+.venue-directions .directions-notice button{margin-top:10px}
+.trip-time{display:flex;align-items:baseline;gap:10px;margin:0 0 14px}
+.trip-time b{font-size:26px;line-height:1;color:#188038}
+.trip-time span{font-size:15px;color:var(--muted)}
+.trip-steps{list-style:none;margin:0;padding:0}
+.trip-steps li{position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:0 0 16px 26px;font-size:15px}
+.trip-steps li:last-child{padding-bottom:0}
+.trip-steps li::before{content:"";position:absolute;left:4px;top:4px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--blue)}
+.trip-steps li:not(:last-child)::after{content:"";position:absolute;left:10px;top:19px;bottom:2px;width:2px;background:var(--blue);opacity:.4}
+.trip-steps .step-start::before{background:#10B981;border-color:#10B981}
+.trip-steps .step-end::before{background:#DC344B;border-color:#DC344B}
+.trip-steps .step-gate::before{border-radius:3px}
+.trip-steps span{font-weight:600;line-height:1.35}
+.trip-steps small{flex-shrink:0;font-size:13px;color:var(--muted)}
+.directions-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.venue-directions .directions-actions button{padding:0 8px}
+.venue-directions .directions-actions button:first-child{border-color:var(--blue);background:var(--blue);color:#fff}
+.directions-skeleton{display:grid;gap:10px}
+.directions-skeleton i{display:block;height:64px;border-radius:14px;background:linear-gradient(90deg,#f1f3f4 30%,#fafbfb 50%,#f1f3f4 70%) 0 0/300% 100%;animation:directions-shimmer 1.2s linear infinite}
+.directions-skeleton i:first-child{width:55%;height:20px;border-radius:6px}
+@keyframes directions-shimmer{to{background-position:-150% 0}}
+@media (prefers-reduced-motion:reduce){.directions-skeleton i{animation:none}}
+.walk-hint{margin:12px 0 0;color:var(--muted)}
 .walk-error{margin:8px 0 0;color:#c5221f;line-height:1.5}
 /* The key from the panel. */
 .directions-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 0;padding-top:12px;border-top:1px solid #e8eaed}

@@ -21,7 +21,8 @@ type Locating = { state: 'finding' } | { state: 'error'; message: string };
 /**
  * Source / Destination route planner, re-created from the ITPO app's CampusNavigationScreen. One picker per
  * end: a group (Gates, Halls, ...) is an option group led by its closest point, so a phone needs one tap per end.
- * Show route draws the walk and folds the form into a one-line summary; changing either end hides the route.
+ * The walk is drawn as soon as both ends are chosen, and the form folds into a trip card (time, the stops, Change /
+ * Reverse / End); changing either end re-plans it at once.
  */
 @Component({ selector: 'section[appVenueDirections]', standalone: true, imports: [NgTemplateOutlet], templateUrl: './venue-directions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush, host: { class: 'venue-interior-actions venue-directions', 'aria-label': 'Walking directions' } })
@@ -75,13 +76,30 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   });
   readonly journey = computed<Journey | null>(() => { const p = this.plan(); return p && 'journey' in p ? p.journey : null; });
   readonly problem = computed<JourneyProblem | null>(() => { const p = this.plan(); return p && 'problem' in p ? p.problem : null; });
+  /** The trip card's stops: start, the gate the walk crosses the fence at (from or to outside), destination; each with the metres to it. */
+  readonly steps = computed(() => {
+    const journey = this.journey(), g = this.routeGraph(), adjacency = this.adjacency();
+    if (!journey || !g) return [];
+    const crossing = journey.start.outside || journey.end.outside, path = journey.path;
+    const steps: { kind: 'start' | 'gate' | 'end'; label: string; meters: number }[] = [{ kind: 'start', label: journey.start.label, meters: 0 }];
+    let walked = 0;
+    for (let i = 1; i < path.length; i++) {
+      walked += adjacency[path[i - 1]]?.find(entry => entry.nodeId === path[i])?.distance ?? 0;
+      const node = g.nodeMap[path[i]], last = i === path.length - 1;
+      if (!last && !(crossing && node.category === 'gate')) continue;
+      steps.push({ kind: last ? 'end' : 'gate', label: last ? node.label : `${journey.start.outside ? 'Enter at' : 'Leave by'} ${node.label}`, meters: walkingMeters(walked) });
+      walked = 0;
+    }
+    return steps;
+  });
   /** My location counts as chosen only once it is placed. */
   private readonly placed = (selection: LocationSelection | undefined) => !!selection && (this.selectionValue(selection) !== MY_LOCATION || !!this.me());
-  readonly canSubmit = computed(() => this.placed(this.source()) && this.placed(this.destination()) && !this.isSubmitted());
   readonly problemMessage = problemMessage;
   readonly myLocation = MY_LOCATION;
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void { void this.load(); }
+  async load(): Promise<void> {
+    this.error.set('');
     try {
       const get = async (path: string) => { const response = await fetch(venueAsset(path)); if (!response.ok) throw new Error(path); return response.json(); };
       const [walkways, gates] = await Promise.all([get('venue-walkways.json'), get('venue-gates.json')]);
@@ -89,7 +107,7 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
       this.gates.set(parseVenueGates(gates));
       this.graph.set(parseMapGraph(walkways));
       this.applyDestinationRequest();
-    } catch { this.error.set('Walking routes could not load. Reload to retry.'); }
+    } catch { this.error.set('Walking routes could not load. Check your connection and retry.'); }
   }
   ngOnChanges(changes: SimpleChanges): void {
     // Leaving route mode starts over: the next Directions asks again where the visitor is.
@@ -99,7 +117,7 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   private applyDestinationRequest(): void {
     if (!this.destinationNode || !this.graph()) return;
     const selection = selectionForNode(this.destinationNode, this.locations());
-    if (selection) { this.destination.set(selection); this.folded.set(false); this.hideRoute(); }
+    if (selection) { this.destination.set(selection); this.folded.set(false); this.replan(); }
   }
 
   locationOptions(other: LocationSelection | undefined, locations: NavigationLocation[]) {
@@ -128,14 +146,16 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   setSelection(role: 'source' | 'destination', value: string): void {
     const [locationId, pointId] = value.split('|'), field = role === 'source' ? this.source : this.destination;
     if (value === this.selectionValue(field())) return;
-    field.set({ locationId, pointId }); this.hideRoute();
+    field.set({ locationId, pointId });
     if (role === 'source') { this.me.set(null); this.locating.set(null); if (value === MY_LOCATION) this.locate(); }
+    this.replan();
   }
   /** A new answer keeps the Source only when it is on that side; My location is placed again. */
   setSide(side: Side): void {
     this.side.set(side);
     const source = this.source();
-    if (source && (this.selectionValue(source) === MY_LOCATION || !this.fits(source, side))) { this.source.set(undefined); this.me.set(null); this.locating.set(null); this.hideRoute(); }
+    if (source && (this.selectionValue(source) === MY_LOCATION || !this.fits(source, side))) { this.source.set(undefined); this.me.set(null); this.locating.set(null); }
+    this.replan();
   }
   private fits(selection: LocationSelection, side: Side): boolean {
     if (this.selectionValue(selection) === MY_LOCATION) return true;
@@ -144,21 +164,29 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   }
   /** Swapping can put a place from the other side in Source; the answer then follows it. */
   swap(): void {
-    const a = this.source(), side = this.side(); this.source.set(this.destination()); this.destination.set(a); this.hideRoute();
+    const a = this.source(), side = this.side(); this.source.set(this.destination()); this.destination.set(a);
     const source = this.source();
     if (source && side && !this.fits(source, side)) this.side.set(side === 'inside' ? 'outside' : 'inside');
+    this.replan();
   }
-  clear(): void { this.source.set(undefined); this.destination.set(undefined); this.me.set(null); this.locating.set(null); this.hideRoute(); }
-  submit(): void {
-    const a = this.source(), b = this.destination(), g = this.routeGraph();
-    if (!a || !b || !g || !this.canSubmit()) return;
+  clear(): void { this.source.set(undefined); this.destination.set(undefined); this.me.set(null); this.locating.set(null); this.folded.set(false); this.replan(); }
+  /**
+   * Re-plans after any change: draws the walk and folds into the trip card once both ends are chosen, otherwise takes
+   * the old walk off the map. A new route replaces the old one in a single emit, so the 3D camera does not leave and
+   * re-enter route mode in between.
+   */
+  private replan(): void {
+    const shown = !!this.submitted(), a = this.source(), b = this.destination(), g = this.routeGraph();
+    this.submitted.set(null);
+    if (!a || !b || !g || !this.placed(a) || !this.placed(b)) { if (shown) this.route.emit(null); return; }
     this.submitted.set({ source: a, destination: b });
     const journey = this.journey();
     if (journey) { this.route.emit(journeyPolyline(journey.path, this.adjacency(), g.nodeMap)); this.folded.set(true); }
-    else this.route.emit(null);
+    else { this.folded.set(false); if (shown) this.route.emit(null); }
   }
   change(): void { this.folded.set(false); }
-  private hideRoute(): void { if (this.submitted()) this.route.emit(null); this.submitted.set(null); }
+  minutes(journey: Journey) { return walkingMinutes(journey.totalMeters); }
+  meters(journey: Journey) { return walkingMeters(journey.totalMeters); }
   summary(journey: Journey) {
     // A walk from or to outside names the gate it goes through: "Metro → Gate 10 → Hall 14".
     const gates = journey.start.outside || journey.end.outside ? journey.via.filter(node => node.category === 'gate') : [];
@@ -193,5 +221,6 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     const node: MapNode = { id: 'me', label: 'My location', category: 'junction', x: at.x, z: at.z, ...(inside ? {} : { outside: true }) };
     this.me.set({ node, edge: { id: `me-${nearest.id}`, from: 'me', to: nearest.id, active: true, direction: 'two-way', kind: 'link', points: [[at.x, at.z], [nearest.x, nearest.z]] } });
     this.locating.set(null);
+    this.replan();
   }
 }

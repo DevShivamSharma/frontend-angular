@@ -1,33 +1,46 @@
-@if (error()) { <p class="walk-error" role="alert">{{ error() }}</p> }
-@else if (!graph()) { <p class="walk-hint">Loading walking routes…</p> }
-@else if (folded() && journey(); as journey) {
-  <div class="directions-summary" role="status">
-    <span>{{ summary(journey) }}</span>
-    <button type="button" (click)="change()" [attr.aria-label]="'Route from ' + journey.start.label + ' to ' + journey.end.label + '. Change source or destination'">Change</button>
+@if (error()) {
+  <div class="directions-notice" role="alert"><p>{{ error() }}</p><button type="button" (click)="load()">Retry</button></div>
+} @else if (!graph()) {
+  <!-- Shaped like the question that follows, so the panel does not jump when the routes arrive. -->
+  <div class="directions-skeleton" role="status" aria-label="Loading walking routes"><i></i><i></i><i></i></div>
+} @else if (folded() && journey(); as journey) {
+  <div class="directions-summary" role="status" [attr.aria-label]="summary(journey)">
+    <p class="trip-time"><b>{{ minutes(journey) }} min</b><span>{{ meters(journey) }} m walk</span></p>
+    <ol class="trip-steps">
+      @for (step of steps(); track $index) {
+        <li [class]="'step-' + step.kind"><span>{{ step.label }}</span>@if (step.meters) { <small>~{{ step.meters }} m</small> }</li>
+      }
+    </ol>
+    <div class="directions-actions">
+      <button type="button" (click)="change()" [attr.aria-label]="'Change source or destination of the route from ' + journey.start.label + ' to ' + journey.end.label">Change</button>
+      <button type="button" (click)="swap()" aria-label="Reverse the route">⇅ Reverse</button>
+      <button type="button" (click)="clear()" aria-label="End the route">End</button>
+    </div>
   </div>
 } @else if (!side()) {
   <!-- Asked first: the answer decides which places Source offers. -->
   <div class="directions-ask" role="group" aria-labelledby="directions-side-label">
     <span id="directions-side-label">Where are you now?</span>
-    <button type="button" (click)="setSide('inside')">Inside the venue</button>
-    <button type="button" (click)="setSide('outside')">Outside the venue</button>
+    <button type="button" class="directions-choice" (click)="setSide('inside')"><b>Inside the venue</b><small>Halls, gates, Convention Centre</small></button>
+    <button type="button" class="directions-choice" (click)="setSide('outside')"><b>Outside the venue</b><small>Metro, bus stop, parking</small></button>
   </div>
 } @else {
   <p class="directions-side">{{ side() === 'inside' ? 'Inside' : 'Outside' }} the venue
     <button type="button" (click)="side.set(null)" aria-label="Change whether you are inside or outside the venue">Change</button></p>
-  <ng-container *ngTemplateOutlet="field; context: { role: 'source', noun: 'source', Noun: 'Source', selection: source(), other: destination() }" />
+  <ng-container *ngTemplateOutlet="field; context: { role: 'source', noun: 'source', Noun: 'From', selection: source(), other: destination() }" />
   @if (locating(); as locating) {
-    @if (locating.state === 'finding') { <p class="walk-hint" role="status">Finding your location…</p> }
+    @if (locating.state === 'finding') { <p class="walk-hint directions-finding" role="status">Finding your location…</p> }
     @else if (locating.state === 'error') { <p class="walk-error" role="alert">{{ locating.message }}</p> }
   }
   <div class="directions-swap">
     <button type="button" (click)="swap()" [disabled]="!source() && !destination()" aria-label="Swap source and destination">⇅ Swap</button>
     <button type="button" (click)="clear()" [disabled]="!source() && !destination()" aria-label="Clear source and destination">Clear</button>
   </div>
-  <ng-container *ngTemplateOutlet="field; context: { role: 'destination', noun: 'destination', Noun: 'Destination', selection: destination(), other: source() }" />
-  <button type="button" class="walk-primary directions-submit" [disabled]="!canSubmit()" (click)="submit()">Show route</button>
-  @if (problem(); as problem) { <p class="walk-error" role="alert">{{ problemMessage(problem) }}</p> }
-  @if (journey(); as journey) { <p class="directions-result" role="status">{{ summary(journey) }}</p> }
+  <ng-container *ngTemplateOutlet="field; context: { role: 'destination', noun: 'destination', Noun: 'To', selection: destination(), other: source() }" />
+  <!-- The route shows as soon as both ends are chosen; this says what is still missing. -->
+  @if (problem(); as problem) { <div class="directions-notice" role="alert"><p>{{ problemMessage(problem) }}</p></div> }
+  @else if (journey(); as journey) { <p class="directions-result" role="status">{{ summary(journey) }} <button type="button" (click)="folded.set(true)">Show</button></p> }
+  @else if (!source() || !destination()) { <p class="walk-hint">{{ !source() ? 'Choose where you start.' : 'Choose where you are going.' }} The route appears on the map.</p> }
 }
 
 @if (graph() && journey()) {

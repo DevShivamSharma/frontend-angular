@@ -1,12 +1,42 @@
 .venue-directions .walk-room-label:first-child{margin-top:0}
 .sub-menu .venue-directions .directions-swap{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
-.sub-menu .venue-directions .directions-submit{width:100%;margin-top:12px}
-.sub-menu .venue-directions .directions-ask{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
-.directions-ask span{grid-column:1/-1;font-weight:600}
-.directions-side{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;font-weight:600}
-.directions-summary span{display:block;font-weight:600;line-height:1.45}
-.sub-menu .venue-directions .directions-summary button{width:100%;margin-top:10px}
+/* Where are you now: two large choices, each saying what it offers. */
+.sub-menu .venue-directions .directions-ask{display:grid;gap:6px}
+.sub-menu .directions-ask span{font-size:12px;font-weight:600;margin-bottom:2px}
+.sub-menu .venue-directions .directions-choice{flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:10px 12px;background:#fff;border-color:#c9d0cb}
+.sub-menu .venue-directions .directions-choice:hover{background:#fff;border-color:#9a623f;box-shadow:inset 3px 0 #9a623f}
+.directions-choice b{font-size:12px}
+.directions-choice small{font-size:10px;color:#5d6762}
+.directions-side{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;font-size:11px;font-weight:600}
+.sub-menu .venue-directions .directions-side button{min-height:28px;padding:4px 10px;background:#fff}
 .directions-result{margin:10px 0 0;font-weight:600;line-height:1.45}
+.sub-menu .venue-directions .directions-result button{display:inline-flex;min-height:26px;margin-left:4px;padding:2px 10px}
+.directions-notice{margin:10px 0 0;padding:9px 10px;border-left:3px solid #b3261e;background:#fbeceb;color:#7a1f19;font-size:11px;line-height:1.5}
+.directions-notice p{margin:0}
+.sub-menu .venue-directions .directions-notice button{width:100%;margin-top:8px;background:#fff}
+/* Trip card: time first, then the stops on a line from the green start to the red destination. */
+.trip-time{display:flex;align-items:baseline;gap:8px;margin:0 0 10px}
+.trip-time b{font-size:20px;line-height:1;color:#0b5cad}
+.sub-menu .trip-time span{font-size:11px;color:#505b59}
+.trip-steps{list-style:none;margin:0;padding:0}
+.trip-steps li{position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:0 0 12px 20px}
+.trip-steps li:last-child{padding-bottom:0}
+.trip-steps li::before{content:"";position:absolute;left:3px;top:3px;width:8px;height:8px;border-radius:50%;background:#fff;border:2px solid #0A81FF}
+.trip-steps li:not(:last-child)::after{content:"";position:absolute;left:8px;top:15px;bottom:1px;width:2px;background:#0A81FF;opacity:.45}
+.trip-steps .step-start::before{background:#10B981;border-color:#10B981}
+.trip-steps .step-end::before{background:#DC344B;border-color:#DC344B}
+.trip-steps .step-gate::before{border-radius:2px}
+.sub-menu .trip-steps span{font-size:12px;font-weight:600;line-height:1.35}
+.trip-steps small{flex-shrink:0;font-size:10px;color:#5d6762}
+/* The panel is narrow: Change takes the full row, Reverse and End share the next. */
+.sub-menu .venue-directions .directions-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+.sub-menu .venue-directions .directions-actions button:first-child{grid-column:1/-1;background:#353c36;color:#fff;border-color:#353c36}
+/* Loading: bars in the shape of the question that follows. */
+.directions-skeleton{display:grid;gap:6px}
+.directions-skeleton i{display:block;height:46px;background:linear-gradient(90deg,#e4e8e2 30%,#f4f6f3 50%,#e4e8e2 70%) 0 0/300% 100%;animation:directions-shimmer 1.2s linear infinite}
+.directions-skeleton i:first-child{width:55%;height:14px}
+@keyframes directions-shimmer{to{background-position:-150% 0}}
+@media (prefers-reduced-motion:reduce){.directions-skeleton i{animation:none}}
 .directions-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin:12px 0 0;padding-top:10px;border-top:1px solid #d7dbd9}
 .sub-menu .directions-legend span{display:flex;align-items:center;gap:6px;font-size:10px;line-height:1.3;color:#505b59}
 .directions-legend i{flex-shrink:0;display:inline-block;width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #0003}
