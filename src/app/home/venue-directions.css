@@ -31,6 +31,15 @@
 /* The panel is narrow: Change takes the full row, Reverse and End share the next. */
 .sub-menu .venue-directions .directions-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
 .sub-menu .venue-directions .directions-actions button:first-child{grid-column:1/-1;background:#353c36;color:#fff;border-color:#353c36}
+.sub-menu .venue-directions .directions-walk{width:100%;margin-top:6px}
+/* The same planner inside the visitor panel, folded behind "Walk to a place" so the panel stays clear of the walk pad. */
+.visitor-directions-toggle{margin-top:12px}
+.visitor-directions-toggle summary{display:flex;align-items:center;min-height:40px;padding:0 12px;background:#e1e5de;color:#304036;font-size:12px;font-weight:600;cursor:pointer}
+.visitor-directions-toggle summary:hover{background:#cdd6cb}
+.visitor-directions-toggle[open] summary{background:#353c36;color:#fff}
+.visitor-directions{margin:0 -18px;background:none}
+.visitor-panel:has(.visitor-directions-toggle[open]){max-height:calc(100dvh - 264px);overflow-y:auto}
+@media(max-width:700px){.visitor-directions{margin:0 -14px}}
 /* Loading: bars in the shape of the question that follows. */
 .directions-skeleton{display:grid;gap:6px}
 .directions-skeleton i{display:block;height:46px;background:linear-gradient(90deg,#e4e8e2 30%,#f4f6f3 50%,#e4e8e2 70%) 0 0/300% 100%;animation:directions-shimmer 1.2s linear infinite}

@@ -32,7 +32,13 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   /** A place to route to, e.g. from a hall's "Directions here"; `request` changes on every ask. */
   @Input() destinationNode = '';
   @Input() request = 0;
+  /** The 3D explorer can hand the route to the visitor ("Walk it as a visitor"); the phone map cannot. */
+  @Input() canWalk = false;
+  /** In visitor mode: where the visitor stands (world x, y, z). The route then starts there, with no Source picker. */
+  @Input() visitorAt: number[] | null = null;
   @Output() readonly route = new EventEmitter<Point[] | null>();
+  /** The walk for the visitor to follow, and the place it leads to. */
+  @Output() readonly walk = new EventEmitter<{ points: Point[]; label: string }>();
   readonly graph = signal<MapGraph | null>(null);
   readonly error = signal('');
   readonly source = signal<LocationSelection | undefined>(undefined);
@@ -113,6 +119,8 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     // Leaving route mode starts over: the next Directions asks again where the visitor is.
     if (changes['active'] && !this.active && this.submitted()) { this.submitted.set(null); this.folded.set(false); this.side.set(null); }
     if (changes['request'] && this.request) this.applyDestinationRequest();
+    // In visitor mode the route always starts where the visitor stands (placed afresh on each plan, see replan).
+    if (changes['visitorAt'] && this.visitorAt && this.selectionValue(this.source()) !== MY_LOCATION) this.source.set({ locationId: 'me', pointId: 'me' });
   }
   private applyDestinationRequest(): void {
     if (!this.destinationNode || !this.graph()) return;
@@ -169,13 +177,17 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     if (source && side && !this.fits(source, side)) this.side.set(side === 'inside' ? 'outside' : 'inside');
     this.replan();
   }
-  clear(): void { this.source.set(undefined); this.destination.set(undefined); this.me.set(null); this.locating.set(null); this.folded.set(false); this.replan(); }
+  clear(): void {
+    this.source.set(this.visitorAt ? { locationId: 'me', pointId: 'me' } : undefined); this.destination.set(undefined);
+    this.me.set(null); this.locating.set(null); this.folded.set(false); this.replan();
+  }
   /**
    * Re-plans after any change: draws the walk and folds into the trip card once both ends are chosen, otherwise takes
    * the old walk off the map. A new route replaces the old one in a single emit, so the 3D camera does not leave and
    * re-enter route mode in between.
    */
   private replan(): void {
+    if (this.visitorAt) this.positionMe({ x: this.visitorAt[0], z: this.visitorAt[2] }, undefined, 'Where you stand');
     const shown = !!this.submitted(), a = this.source(), b = this.destination(), g = this.routeGraph();
     this.submitted.set(null);
     if (!a || !b || !g || !this.placed(a) || !this.placed(b)) { if (shown) this.route.emit(null); return; }
@@ -209,18 +221,34 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   }
   /** My location joins the nearest walkway junction on the visitor's side of the fence. */
   private placeMe(at: Point, inside: boolean): void {
+    if (!this.positionMe(at, inside, 'My location')) {
+      this.locating.set({ state: 'error', message: 'You seem to be away from Bharat Mandapam. Pick a source instead.' }); return;
+    }
+    this.locating.set(null);
+    this.replan();
+  }
+  /**
+   * The `me` node at `at`, linked to the nearest walkway junction on the given side of the fence; with no side given
+   * (the 3D visitor), the nearest junction says which side it is. False when no walkway is near.
+   */
+  private positionMe(at: Point, inside: boolean | undefined, label: string): boolean {
     const g = this.graph();
-    if (!g) return;
+    if (!g) return false;
     const linked = new Set(g.edges.flatMap(edge => [edge.from, edge.to]));
     let nearest: MapNode | undefined, metres = Infinity;
     for (const node of g.nodes) {
       const d = Math.hypot(node.x - at.x, node.z - at.z);
-      if (node.category === 'junction' && !node.outside === inside && linked.has(node.id) && d < metres) { nearest = node; metres = d; }
+      if (node.category === 'junction' && (inside === undefined || !node.outside === inside) && linked.has(node.id) && d < metres) { nearest = node; metres = d; }
     }
-    if (!nearest || metres > MAX_LINK_METRES) { this.locating.set({ state: 'error', message: 'You seem to be away from Bharat Mandapam. Pick a source instead.' }); return; }
-    const node: MapNode = { id: 'me', label: 'My location', category: 'junction', x: at.x, z: at.z, ...(inside ? {} : { outside: true }) };
+    if (!nearest || metres > MAX_LINK_METRES) return false;
+    const node: MapNode = { id: 'me', label, category: 'junction', x: at.x, z: at.z, ...((inside ?? !nearest.outside) ? {} : { outside: true }) };
     this.me.set({ node, edge: { id: `me-${nearest.id}`, from: 'me', to: nearest.id, active: true, direction: 'two-way', kind: 'link', points: [[at.x, at.z], [nearest.x, nearest.z]] } });
-    this.locating.set(null);
-    this.replan();
+    return true;
+  }
+  /** "Walk it as a visitor" / "Walk there": the drawn route, for the visitor to follow. A visitor's walk starts where they stand now. */
+  walkRoute(): void {
+    if (this.visitorAt) this.replan();
+    const journey = this.journey(), g = this.routeGraph();
+    if (journey && g) this.walk.emit({ points: journeyPolyline(journey.path, this.adjacency(), g.nodeMap), label: journey.end.label });
   }
 }

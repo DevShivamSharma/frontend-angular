@@ -11,12 +11,27 @@
         <li [class]="'step-' + step.kind"><span>{{ step.label }}</span>@if (step.meters) { <small>~{{ step.meters }} m</small> }</li>
       }
     </ol>
-    <div class="directions-actions">
-      <button type="button" (click)="change()" [attr.aria-label]="'Change source or destination of the route from ' + journey.start.label + ' to ' + journey.end.label">Change</button>
-      <button type="button" (click)="swap()" aria-label="Reverse the route">⇅ Reverse</button>
-      <button type="button" (click)="clear()" aria-label="End the route">End</button>
-    </div>
+    @if (visitorAt) {
+      <!-- Visitor mode: the visitor walks it from where they stand. -->
+      <div class="directions-actions">
+        <button type="button" (click)="walkRoute()" [attr.aria-label]="'Walk to ' + journey.end.label">Walk there</button>
+        <button type="button" (click)="change()" aria-label="Choose another destination">Change</button>
+        <button type="button" (click)="clear()" aria-label="End the route">End</button>
+      </div>
+    } @else {
+      <div class="directions-actions">
+        <button type="button" (click)="change()" [attr.aria-label]="'Change source or destination of the route from ' + journey.start.label + ' to ' + journey.end.label">Change</button>
+        <button type="button" (click)="swap()" aria-label="Reverse the route">⇅ Reverse</button>
+        <button type="button" (click)="clear()" aria-label="End the route">End</button>
+      </div>
+      @if (canWalk) { <button type="button" class="walk-primary directions-walk" (click)="walkRoute()">Walk it as a visitor</button> }
+    }
   </div>
+} @else if (visitorAt) {
+  <p class="directions-side">From where you stand</p>
+  <ng-container *ngTemplateOutlet="field; context: { role: 'destination', noun: 'destination', Noun: 'To', selection: destination(), other: source() }" />
+  @if (problem(); as problem) { <div class="directions-notice" role="alert"><p>{{ problemMessage(problem) }}</p></div> }
+  @else if (!destination()) { <p class="walk-hint">Choose where to go; your visitor walks the route.</p> }
 } @else if (!side()) {
   <!-- Asked first: the answer decides which places Source offers. -->
   <div class="directions-ask" role="group" aria-labelledby="directions-side-label">
@@ -43,7 +58,7 @@
   @else if (!source() || !destination()) { <p class="walk-hint">{{ !source() ? 'Choose where you start.' : 'Choose where you are going.' }} The route appears on the map.</p> }
 }
 
-@if (graph() && journey()) {
+@if (graph() && journey() && !visitorAt) {
   <!-- The key for what the route draws on the map, in the track's colours (venue-route-track.ts). -->
   <p class="legend-key directions-legend" aria-label="Map key">
     <span><i class="k-start"></i>Start</span>

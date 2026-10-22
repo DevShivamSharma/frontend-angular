@@ -55,6 +55,8 @@ export function createVenueVisitor(options: {
   let savedCamera: { position: T.Vector3; quaternion: T.Quaternion; fov: number; near: number } | undefined;
   let actionHint = '';
   let autoRoute: T.Vector3[] = [], waypoint = 0, autoSpeed = 0;
+  /** Set while walking a Directions route (followRoute): the place it leads to. */
+  let routeLabel = '';
   let jumpOffset = 0, jumpVelocity = 0, jumping = false;
   const jumpGravity = 20;
 
@@ -78,7 +80,7 @@ export function createVenueVisitor(options: {
       fast, transitioning: !!floorChange, autoWalking: autoRoute.length > 0, jumping, position: position.toArray(), heading: yaw,
       nearbyEntrance: near ? { id: near.hall.id, label: near.hall.level ? 'Convention Centre' : near.hall.label } : undefined,
       entrance: destination?.position.toArray(),
-      hint: floorChange ? 'Changing floor…' : autoRoute.length ? `Moving to ${destination?.hall.label}. Use Stop or movement controls to take over.` : actionHint || (hall ? 'Explore inside. Walk back through the entrance to return to campus.'
+      hint: floorChange ? 'Changing floor…' : autoRoute.length ? `Moving to ${routeLabel || destination?.hall.label}. Use Stop or movement controls to take over.` : actionHint || (hall ? 'Explore inside. Walk back through the entrance to return to campus.'
         : near ? ''
         : 'W A S D to walk, Space to jump; drag to look around.') };
   }
@@ -89,7 +91,21 @@ export function createVenueVisitor(options: {
   function clearInput() { keys.clear(); touches.clear(); pointer = undefined; last = 0; }
   function cancelAutoWalk(message = 'Auto-walk stopped. You can move manually or select Go to hall again.') {
     if (!autoRoute.length) return;
-    autoRoute = []; waypoint = 0; actionHint = message; publish(); invalidate();
+    autoRoute = []; waypoint = 0; routeLabel = ''; actionHint = message; publish(); invalidate();
+  }
+  /**
+   * Walk a Directions route (world x/z, start first) from its start. It follows the traced walkways the route was
+   * planned on, out of the gates and along the road footpaths too, so the campus collision is not applied to it.
+   */
+  function followRoute(points: { x: number; z: number }[], label: string) {
+    if (points.length < 2 || floorChange || jumping) return;
+    if (!active) start();
+    cancelAutoWalk(''); clearInput(); setHall();
+    const path = points.map(p => new T.Vector3(p.x, 0, p.z));
+    path.forEach(p => p.y = visitorGroundHeight(nav, p));
+    position.copy(path[0]); yaw = avatarYaw = Math.atan2(path[1].x - path[0].x, path[1].z - path[0].z);
+    autoRoute = path; waypoint = 1; autoSpeed = 0; routeLabel = label; actionHint = '';
+    updateLocation(); updateCamera(0, true); publish(); canvas.focus({ preventScroll: true }); invalidate();
   }
   function goToDestination() {
     if (!active || floorChange || jumping) return;
@@ -156,14 +172,14 @@ export function createVenueVisitor(options: {
       const distance = Math.hypot(dx, dz);
       if (distance < .001) {
         if (++waypoint === autoRoute.length) {
-          const label = nav.portals.find(p => p.hall.id === targetId)?.hall.label ?? 'the hall';
+          const label = routeLabel || (nav.portals.find(p => p.hall.id === targetId)?.hall.label ?? 'the hall');
           cancelAutoWalk(`Arrived at ${label}. You can explore with the movement controls.`);
         }
         continue;
       }
       const step = Math.min(.12, remaining, distance);
       trial.copy(position); trial.x += dx / distance * step; trial.z += dz / distance * step;
-      if (!allowed(trial)) { cancelAutoWalk('The route is blocked. Move to an open area and try again.'); break; }
+      if (!routeLabel && !allowed(trial)) { cancelAutoWalk('The route is blocked. Move to an open area and try again.'); break; }
       position.copy(trial); updateLocation(); travelled += step; remaining -= step;
     }
     return travelled;
@@ -281,7 +297,7 @@ export function createVenueVisitor(options: {
   canvas.tabIndex = 0;
   canvas.setAttribute('aria-label', '3D Bharat Mandapam. In visitor mode, W A S D to walk, arrow keys to turn, drag to look, Space to jump, Shift to walk faster, Escape to exit.');
   return {
-    start, stop, goToDestination, enterNearby, jump,
+    start, stop, goToDestination, enterNearby, jump, followRoute,
     stopAutoWalk() { cancelAutoWalk(); canvas.focus({ preventScroll: true }); },
     get active() { return active; },
     get position() { return position; },

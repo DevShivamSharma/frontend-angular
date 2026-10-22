@@ -198,6 +198,11 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
       this.zone.runOutsideAngular(() => this.viewer?.showRoute(points));
     } else if (this.routeActive()) this.zone.runOutsideAngular(() => this.viewer?.clearRoute());
   }
+  /** A Directions route walked by the visitor, from the planner or from the visitor panel. */
+  walkRoute({ points, label }: { points: Point[]; label: string }): void {
+    this.closeDetails(); this.group.set(null);
+    this.zone.runOutsideAngular(() => this.viewer?.walkRoute(points, label));
+  }
   /** "Directions here" from a hall's or the CC's options: open the planner with it as the destination. */
   directionsTo(id: string): void {
     this.group.set('directions'); this.collapsed.set(false);

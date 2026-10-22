@@ -39,7 +39,7 @@ import { createVenueMapPins } from './venue-map-pins';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
 interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; routeEnded?:()=>void; initialAppearanceFailed?:()=>void; }
-export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setRain:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; setPaused:(paused:boolean)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; startVisitor:()=>void; stopVisitor:()=>void; visitorInput:(input:VisitorInput,down:boolean)=>void; visitorStep:(input:VisitorInput)=>void; visitorDestination:(id:string)=>void; visitorGo:()=>void; visitorEnter:()=>void; visitorJump:()=>void; visitorStopAutoWalk:()=>void; visitorFaster:()=>void; visitorRestart:()=>void; visitorFloor:(level:number)=>void; showRoute:(points:Point[])=>void; clearRoute:()=>void; readonly isGlobe:boolean; dispose:()=>void; }
+export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setRain:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; setPaused:(paused:boolean)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; startVisitor:()=>void; stopVisitor:()=>void; visitorInput:(input:VisitorInput,down:boolean)=>void; visitorStep:(input:VisitorInput)=>void; visitorDestination:(id:string)=>void; visitorGo:()=>void; visitorEnter:()=>void; visitorJump:()=>void; visitorStopAutoWalk:()=>void; visitorFaster:()=>void; visitorRestart:()=>void; visitorFloor:(level:number)=>void; showRoute:(points:Point[])=>void; clearRoute:()=>void; walkRoute:(points:Point[],label:string)=>void; readonly isGlobe:boolean; dispose:()=>void; }
 /** Render camera motion and visible fountain water with consistent scene shading. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement, pinLayer?: HTMLElement): VenueViewer {
     const lifetime = new AbortController();
@@ -56,10 +56,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
     let roomCommand=(_id:string,_room:string)=>{};
     let visitor:ReturnType<typeof createVenueVisitor>|undefined;
     let startVisitorCommand=()=>{},stopVisitorCommand=()=>{};
-    let showRouteCommand=(_points:Point[])=>{},clearRouteCommand=()=>{};
+    let showRouteCommand=(_points:Point[])=>{},clearRouteCommand=()=>{},walkRouteCommand=(_points:Point[],_label:string)=>{};
     let exportCommand=async(_id:string):Promise<ArrayBuffer>=>{throw new Error('Interiors are still loading');};
     const ready = initializeVenue();
-    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setRain:r=>rainCommand(r), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), setPaused:p=>{paused=p;if(p)pauseFrames();else resumeFrames();}, enterHall:(id,guided)=>enterCommand(id,guided),pauseTour:()=>pauseCommand(),leaveInterior:()=>leaveCommand(),walk:(f,t)=>walkCommand(f,t),exportHall:id=>exportCommand(id),visitRoom:(id,room)=>roomCommand(id,room),startVisitor:()=>startVisitorCommand(),stopVisitor:()=>stopVisitorCommand(),visitorInput:(i,d)=>visitor?.input(i,d),visitorStep:i=>visitor?.step(i),visitorDestination:id=>visitor?.destination(id),visitorGo:()=>visitor?.goToDestination(),visitorEnter:()=>visitor?.enterNearby(),visitorJump:()=>visitor?.jump(),visitorStopAutoWalk:()=>visitor?.stopAutoWalk(),visitorFaster:()=>visitor?.faster(),visitorRestart:()=>visitor?.restart(),visitorFloor:n=>visitor?.floor(n),showRoute:points=>showRouteCommand(points),clearRoute:()=>clearRouteCommand(),get isGlobe(){return isGlobe();}, dispose };
+    return { ready, view:id=>viewCommand(id), selectLevel:n=>levelCommand(n), goGlobe:()=>globeCommand(), zoom:f=>zoomCommand(f), setDaylight:d=>lightCommand(d), setRain:r=>rainCommand(r), setAppearance:mode=>appearanceCommand(mode), setScenery:s=>sceneryCommand(s), setPaused:p=>{paused=p;if(p)pauseFrames();else resumeFrames();}, enterHall:(id,guided)=>enterCommand(id,guided),pauseTour:()=>pauseCommand(),leaveInterior:()=>leaveCommand(),walk:(f,t)=>walkCommand(f,t),exportHall:id=>exportCommand(id),visitRoom:(id,room)=>roomCommand(id,room),startVisitor:()=>startVisitorCommand(),stopVisitor:()=>stopVisitorCommand(),visitorInput:(i,d)=>visitor?.input(i,d),visitorStep:i=>visitor?.step(i),visitorDestination:id=>visitor?.destination(id),visitorGo:()=>visitor?.goToDestination(),visitorEnter:()=>visitor?.enterNearby(),visitorJump:()=>visitor?.jump(),visitorStopAutoWalk:()=>visitor?.stopAutoWalk(),visitorFaster:()=>visitor?.faster(),visitorRestart:()=>visitor?.restart(),visitorFloor:n=>visitor?.floor(n),showRoute:points=>showRouteCommand(points),clearRoute:()=>clearRouteCommand(),walkRoute:(points,label)=>walkRouteCommand(points,label),get isGlobe(){return isGlobe();}, dispose };
     function dispose() {
         if (signal.aborted) return;
         lifetime.abort();
@@ -71,7 +71,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         viewCommand = levelCommand = globeCommand = zoomCommand = lightCommand = rainCommand = noop;
         sceneryCommand = enterCommand = pauseCommand = leaveCommand = walkCommand = roomCommand = noop;
         startVisitorCommand = stopVisitorCommand = clearRouteCommand = noop;
-        showRouteCommand = noop;
+        showRouteCommand = walkRouteCommand = noop;
         appearanceCommand = async () => {};
         isGlobe = () => false;
         exportCommand = async () => { throw new Error('Viewer has been disposed'); };
@@ -508,6 +508,12 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             controls.enabled=false;visitor?.start();renderer.shadowMap.needsUpdate=true;invalidate();
         };
         stopVisitorCommand=()=>{pendingInterior=undefined;visitor?.stop();view('overview');events.status('Bharat Mandapam');};
+        // A Directions route walked by the visitor: route mode gives way to the visitor's own camera.
+        walkRouteCommand=(points,label)=>{
+            if(globe?.isGlobe||globe?.transitioning){view('overview');pendingInterior=()=>walkRouteCommand(points,label);events.status('Returning to the venue…');return;}
+            if(!visitor?.active)startVisitorCommand();
+            visitor?.followRoute(points,label);
+        };
         // Selection must restore the finished baseline, including before the first palette switch.
         for (const mesh of pickMeshes) {
             const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];

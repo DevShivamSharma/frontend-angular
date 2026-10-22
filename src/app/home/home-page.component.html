@@ -47,7 +47,7 @@
 <button class="section-row" id="gates-group" [attr.aria-expanded]="group() === 'gates'" (click)="toggleGroup('gates')" aria-controls="gate-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V5h18v16M7 21V9h10v12M3 5V2m18 3V2"/></svg><span>Gates</span><b>›</b></button>
 <div id="gate-menu" class="sub-menu" [hidden]="group() !== 'gates'">@for (destination of gates(); track destination.id) {<button [attr.data-view]="destination.id" [class.active]="activeView() === destination.id" (click)="view(destination.id, false)"><span>{{ destination.label }}</span><span>›</span></button>}</div>
 <button class="section-row" id="directions-group" [class.active]="routeActive()" [attr.aria-expanded]="group() === 'directions'" (click)="toggleGroup('directions')" aria-controls="directions-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12-14a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 17V9a3 3 0 0 1 3-3h4m5 3v8a3 3 0 0 1-3 3h-4"/></svg><span>Directions</span><b>›</b></button>
-<div id="directions-menu" class="sub-menu" [hidden]="group() !== 'directions'"><section appVenueDirections [active]="routeActive()" [destinationNode]="directionsTarget()" [request]="directionsRequest()" (route)="showRoute($event)"></section></div>
+<div id="directions-menu" class="sub-menu" [hidden]="group() !== 'directions'"><section appVenueDirections [active]="routeActive()" [destinationNode]="directionsTarget()" [request]="directionsRequest()" [canWalk]="visitorReady()" (route)="showRoute($event)" (walk)="walkRoute($event)"></section></div>
 </nav>
 <aside appVenueDetails [id]="detailId()" [detail]="details()[detailId()]" [visible]="detailsVisible()" [selection]="selection()" (close)="closeDetails()" (levelChange)="selectLevel($event)" (openPlan)="plan().open($event)"></aside>
 </div>
@@ -188,6 +188,12 @@
         </div>
         </div>
       } @else { <p>Interiors are unavailable. You can still explore the campus.</p> }
+    <!-- Wayfinding on foot: the Directions planner from where the visitor stands; outdoors only. -->
+    @if (!visitor().hall) {
+      <details class="visitor-directions-toggle"><summary>Walk to a place</summary>
+        <div class="sub-menu visitor-directions"><section appVenueDirections [visitorAt]="visitor().position" (walk)="walkRoute($event)"></section></div>
+      </details>
+    }
     @if (visitor().hall.startsWith('cc-level')) {
       <div class="visitor-floors" role="group" aria-label="Convention Centre floors">
         @for (level of [1, 2, 3]; track level) {

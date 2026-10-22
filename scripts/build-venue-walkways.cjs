@@ -320,6 +320,11 @@ for (const e of edges) { (adjacency[e.from] ??= []).push(e.to); (adjacency[e.to]
 const seen = new Set(['gate1']), queue = ['gate1'];
 while (queue.length) for (const n of adjacency[queue.pop()] ?? []) if (!seen.has(n)) { seen.add(n); queue.push(n); }
 const unreachable = PLACES.filter(p => !seen.has(p.id) && !closedGate.has(p.id)).map(p => p.id);
+// Junctions no route can reach (OSM pieces left over at the radius) would strand a "my location" or visitor start
+// linked to them, so the graph keeps only what Gate 1 reaches, plus the unlinked closed gates.
+const stranded = nodes.filter(n => n.category === 'junction' && !seen.has(n.id)).length;
+nodes.splice(0, nodes.length, ...nodes.filter(n => n.category !== 'junction' || seen.has(n.id)));
+edges.splice(0, edges.length, ...edges.filter(e => seen.has(e.from) && seen.has(e.to)));
 // Satellite image pixels of a z18 tile point: the image is tiles x 187310-187325, y 109300-109315 at 256 px
 // (geography/satellite/venue-map.json), and satelliteReference.fit takes those pixels to world X/Z.
 const { x: fitX, z: fitZ } = site.satelliteReference.fit;
@@ -335,5 +340,5 @@ const result = {
 };
 fs.writeFileSync(path.join(root, 'src/assets/venue/venue-walkways.json'), JSON.stringify(result));
 const far = attach.filter(a => a.metres > 40).map(a => `${a.place}${a.inside ? '' : ' (outside)'} ${a.metres} m`);
-console.log(JSON.stringify({ nodes: nodes.length, junctions: junctionId.size, edges: edges.length, joins: joins.length, longAttachments: far, appStraight: straight, tracedLinks }));
+console.log(JSON.stringify({ nodes: nodes.length, junctions: junctionId.size, edges: edges.length, joins: joins.length, longAttachments: far, appStraight: straight, tracedLinks, strandedJunctions: stranded }));
 if (unreachable.length) { console.error('Unreachable from Gate 1: ' + unreachable.join(', ')); process.exit(1); }
