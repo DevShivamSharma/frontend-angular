@@ -171,16 +171,20 @@ def plant(point, radius=3, height=7, bush=False):
         o.rotation_euler.z=(idx*.73)%6.28
     return prefix
 
-# Ground follows the photographed planting parcels; there is no image-sized slab.
-for i,ring in enumerate(ref['outsidePlanting']):
+# Ground follows the tree cover traced on the photo (road-connections.json treeCover); there is no image-sized slab.
+tree_cover=[t['points'] for t in road_network['treeCover']]
+for i,ring in enumerate(tree_cover):
     prism(f'SITE_nearby_planted_ground_{i:02d}',ring,-.16,-.06,M['ground'])
 road_world=[]
 R={}
 for key in ['road','walk','path','white','kerb','turf','dark','light']:
     R[key]=M[key].copy(); R[key].name='SITE_ROAD '+M[key].name.removeprefix('SITE ')
+# Same finish as the rest of the asphalt; the class in the name lets Color → Map shade arterial and local roads.
+for key,label in [('roadArterial','arterial'),('roadLocal','local')]:
+    R[key]=M['road'].copy(); R[key].name=f'SITE_ROAD weathered asphalt {label}'
 # Internal service roads reuse the asphalt material and walkways get one paving
 # material, so both batch with the existing road surfaces at runtime.
-for key,mat,lo,hi in [('asphalt','road',.025,.035),('footpaths','walk',.03,.11),('kerbs','kerb',.10,.16),('medians','turf',.04,.20),('edgePaint','white',.041,.045),('serviceRoads','road',.03,.05),('walkways','path',.04,.06)]:
+for key,mat,lo,hi in [('asphalt','road',.025,.035),('asphaltArterial','roadArterial',.025,.035),('asphaltLocal','roadLocal',.025,.035),('footpaths','walk',.03,.11),('kerbs','kerb',.10,.16),('medians','turf',.04,.20),('edgePaint','white',.041,.045),('serviceRoads','road',.03,.05),('walkways','path',.04,.06)]:
     for i,poly in enumerate(road_network['surfaces'][key]):
         prism(f'SITE_ROAD_{key}_{i:03d}',poly[0],lo,hi,R[mat],poly[1:])
 
@@ -287,17 +291,14 @@ def clear_outside(p):
     if inside(px,parking['outline']):return False
     return not any(any(dist_segment(p,a,b)<width+2.5 for a,b in zip(points,points[1:])) for points,width in road_world)
 
-for zi,ring in enumerate(ref['outsidePlanting']):
+for zi,ring in enumerate(tree_cover):
     minx=min(p[0] for p in ring); maxx=max(p[0] for p in ring); miny=min(p[1] for p in ring);maxy=max(p[1] for p in ring)
-    # Uneven canopy clusters and natural openings, without an orchard grid.
-    anchors=[(random.uniform(minx,maxx),random.uniform(miny,maxy)) for _ in range(12)]
+    # The ring is photographed canopy, so it is filled at random spacing, without an orchard grid.
     accepted=[]
-    for attempt in range(int((maxx-minx)*(maxy-miny)/22)):
+    for attempt in range(int((maxx-minx)*(maxy-miny)/22)+1):
         q=(random.uniform(minx,maxx),random.uniform(miny,maxy));p=V(q)
         if not inside(q,ring) or not clear_outside(p):continue
-        cluster=min(math.dist(q,a) for a in anchors)
-        if cluster>34 and random.random()<.75:continue
-        if any((p-a).length<8.5 for a in accepted):continue
+        if any((p-a).length<9.5 for a in accepted):continue
         accepted.append(p)
         plant(p,random.uniform(4.4,7.5),random.uniform(6.5,13))
 
@@ -353,6 +354,25 @@ for key,count in edge_counts.items():
             plant(hit,.75,.55,True);border_count+=1;break
 inventory.append({'id':'property-lawn-edge-shrubs','phase':2,'type':'planting','count':border_count,'status':'Inferred low planting on existing grass boundaries; individual bushes not surveyed'})
 
+# Lawn, plaza, parking and fountain-pond surfaces traced on the photo, one joined mesh per type.
+# The viewer shows them only in Color with the Map scenery, just above the campus ground.
+phase3=bpy.data.collections.new('03 MAP — venue ground surfaces'); bpy.context.scene.collection.children.link(phase3)
+collection=phase3
+S={'lawn':material('SITE_SURFACE lawn',(.21,.45,.10)),'plaza':material('SITE_SURFACE plaza',(.69,.62,.52)),
+   'parking':material('SITE_SURFACE parking',(.32,.33,.31)),'water':material('SITE_SURFACE water',(.08,.31,.58),.2)}
+for kind,mat in S.items():
+    parts=[]
+    for surface in road_network['groundSurfaces']:
+        if surface['type']!=kind:continue
+        o=prism(f'SITE_SURFACE_{kind}_{surface["id"]}',surface['points'],.015,.03,mat); created.remove(o); parts.append(o)
+    if not parts:continue
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in parts:o.select_set(True)
+    bpy.context.view_layer.objects.active=parts[0]
+    if len(parts)>1:bpy.ops.object.join()
+    parts[0].name=f'SITE_SURFACE_{kind}'; parts[0]['phase']=3; created.append(parts[0])
+    inventory.append({'id':f'ground-surface-{kind}','phase':3,'type':'surface','count':len(parts),'status':'Traced on the z18/z19 photo; shown only in Color → Map'})
+
 # Consolidate static construction by material; retain linked foliage as GLB instances.
 # Export the added collections only, leaving every hall/hangar source object untouched.
 bpy.ops.object.select_all(action='DESELECT')
@@ -367,7 +387,7 @@ runpy.run_path(str(ROOT/'scripts/frame-venue-surroundings.py'))
 bpy.ops.wm.save_as_mainfile(filepath=str(blend_path))
 bpy.ops.export_scene.gltf(filepath=str(ASSETS/'venue-site-detail.glb'),export_format='GLB',use_selection=True,export_extras=True,export_cameras=False,export_lights=False,export_yup=True,export_apply=True)
 report={'source':ref['source'],'status':ref['status'],'sourceModelSha256':source_hash,'affine':{'x':AX,'z':AZ},'anchorResidualsMetres':{a['id']:round(math.dist(world(a['pixel']),a['world']),3) for a in ref['anchors']},'propertyBoundary':ref['propertyBoundary'],'referenceExtent':[1918,820],
- 'mapMask':{'polygons':ref['outsidePlanting']+[b['p'] for b in ref['buildings']]+[parking['outline']],'roads':road_network['roads'],'bounds':road_network['bounds']},
+ 'mapMask':{'polygons':tree_cover+[b['p'] for b in ref['buildings']]+[parking['outline']],'roads':road_network['roads'],'bounds':road_network['bounds']},
  'roadNetwork':{'source':road_network['source'],'status':road_network['status'],'topology':road_network['topology'],'fadeEnds':[world(e['p']) for e in road_network['topology']['openEnds']]},
  'walkways':{'source':road_network['source'],'status':'Internal service roads and main pedestrian walkways, traced along the walkable centre and joined at junctions. Points are reference-image pixels like mapMask.roads.','paths':road_network['walkways'],'topology':road_network['walkwayTopology']},
  'satelliteReference':{'image':satellite['image'],'imageSize':satellite['imageSize'],'fit':satellite['fit'],'fitAnchors':satellite['fitAnchors'],'excludedAnchors':satellite['excludedAnchors']},

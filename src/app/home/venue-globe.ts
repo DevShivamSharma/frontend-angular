@@ -14,7 +14,9 @@ type Mode = 'venue' | 'globe';
 interface Pose { position: T.Vector3; target: T.Vector3; }
 interface Flight { time: number; duration: number; from: T.Vector3; targetFrom: T.Vector3; to: T.Vector3; target: T.Vector3; fromAltitude: number; toAltitude: number; direction: T.Vector3; rotation: T.Quaternion; destination: Mode; }
 type Kind = 'road' | 'building' | 'water' | 'park';
-interface Geography { features: { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][] }[]; }
+/** c: road class or park 'trees', b: bridge (venue-map-context.json only). */
+interface Feature { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][]; c?: string; b?: 1; }
+interface Geography { features: Feature[]; }
 interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onAtmosphereChange?: (spaceMix: number) => void; onLocalMapReady?: () => void; onSatelliteReady?: () => void; markerElement?: HTMLElement; }
 
 export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onAtmosphereChange,onLocalMapReady,onSatelliteReady,markerElement}: GlobeOptions) {
@@ -32,12 +34,25 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   groundGroup.position.y = 6.6;
   const mapFeatures = new T.Group();
   groundGroup.add(mapFeatures);
+  // Color → Map draws venue-map-context.json: the same OSM data registered to the venue through the
+  // satellite fit, with road classes. delhi-context.json is geographic (the model is turned ~91° from it).
+  const sceneryFeatures = new T.Group();
+  sceneryFeatures.name = 'OpenStreetMap context registered to the venue';
+  sceneryFeatures.visible = false;
+  groundGroup.add(sceneryFeatures);
   const satellite = createVenueSatellite(asset, renderer, signal);
   groundGroup.add(satellite.group);
   let appearanceMode: VenueAppearance = 'natural', scenery: VenueScenery = 'satellite', satelliteReady = false;
+  let sceneryState: 'idle' | 'loading' | 'ready' = 'idle';
   function showContext() {
+    const mapScenery = appearanceMode === 'color' && scenery === 'map';
+    if (mapScenery && sceneryState === 'idle') loadSceneryFeatures();
     satellite.group.visible = appearanceMode === 'color' && scenery === 'satellite' && satelliteReady;
-    mapFeatures.visible = !satellite.group.visible;
+    sceneryFeatures.visible = mapScenery && sceneryState === 'ready';
+    mapFeatures.visible = !satellite.group.visible && !sceneryFeatures.visible;
+    // The ground under the map follows its palette; Natural and Color → Satellite keep theirs.
+    mapGround.set(sceneryFeatures.visible ? sceneryPalette.ground : mapPalettes[appearanceMode].ground);
+    groundMaterial.color.copy(mapGround);
   }
   const lat=28.6185*Math.PI/180,lon=77.2440*Math.PI/180;
   const east=new T.Vector3(-Math.sin(lon),0,-Math.cos(lon));
@@ -139,6 +154,35 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     natural: { ground: '#858b80', road: '#b6baad', building: '#959b8c', water: '#719095', park: '#71876b' },
     color: { ground: '#b5bc99', road: '#e2dbc5', building: '#b9af99', water: '#5b9fac', park: '#719f57' }
   };
+  // Color → Map: arterial roads darkest and widest, local and service lighter, parks lawn green,
+  // woods a darker green, water blue, close to the site layer's own asphalt, lawn and tree-cover finishes.
+  const sceneryPalette = { ground: '#c5c9b6', building: '#ada594', water: '#5f9fcf', park: '#86b864', trees: '#4c7a3a',
+    arterial: '#5c6165', local: '#8c9092', service: '#a6a6a0', path: '#cdbfa5' };
+  const sceneryMaterials = new Map<string, T.MeshBasicMaterial>();
+  const sceneryKey = (f: Feature) => f.k === 'road' ? (f.b ? 'bridge-' : '') + (f.c ?? 'local') : f.k === 'park' && f.c === 'trees' ? 'trees' : f.k;
+  function sceneryMaterial(key: string) {
+    let material = sceneryMaterials.get(key);
+    if (!material) {
+      material = mapMaterial(sceneryPalette[key.replace('bridge-', '') as keyof typeof sceneryPalette]);
+      sceneryMaterials.set(key, material);
+    }
+    return material;
+  }
+  function loadSceneryFeatures() {
+    sceneryState = 'loading';
+    fetch(asset('geography/venue-map-context.json'), { signal }).then(r => { if (!r.ok) throw Error(String(r.status)); return r.json(); }).then((data: Geography) => {
+      if (signal.aborted) return;
+      // Paths under local roads under arterials; flyovers over the roads they cross; woods over parks.
+      const height = (f: Feature) => f.k === 'road' ? (f.b ? -6.5 : f.c === 'path' ? -6.62 : f.c === 'arterial' ? -6.58 : -6.6) : f.k === 'park' && f.c === 'trees' ? -6.88 : undefined;
+      addFeatureMeshes(data.features, ['path', 'service', 'local', 'arterial', 'bridge-arterial', 'bridge-local', 'bridge-service', 'bridge-path', 'building', 'water', 'park', 'trees'],
+        sceneryKey, sceneryMaterial, sceneryFeatures, 'OSM venue map ', height);
+      sceneryState = 'ready';
+      showContext(); onInvalidate();
+    }).catch(error => {
+      sceneryState = 'idle';
+      if (!signal.aborted) console.warn('Venue map context unavailable; keeping the local map.', error);
+    });
+  }
   function setAppearance(appearance: VenueAppearance) {
     appearanceMode = appearance;
     showContext();
@@ -151,9 +195,8 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       onInvalidate();
     });
     const palette = mapPalettes[appearance];
-    // Reuse all map geometry and the shader's shared fade colour. Updating this
-    // once per explicit switch also covers geography/Earth textures arriving late.
-    mapGround.set(palette.ground); groundMaterial.color.copy(mapGround);
+    // Reuse all map geometry and the shader's shared fade colour (set in showContext). Updating
+    // this once per explicit switch also covers geography/Earth textures arriving late.
     for (const kind of Object.keys(contextMaterials) as Kind[]) contextMaterials[kind].color.set(palette[kind]);
     earthSaturation.value = appearance === 'color' ? 1 : .36;
     if (appearance === 'color') localBackground.set('#b9c9cd'); else localBackground.copy(naturalBackground);
@@ -166,29 +209,34 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   }
   // Keep the existing OSM coordinates and road widths. Fade distant data into the
   // ground spatially, never by switching quality after an interaction stops.
-  fetch(asset('geography/delhi-context.json'),{signal}).then(r=>{if(!r.ok)throw Error(String(r.status));return r.json();}).then((data:Geography)=>{if(signal.aborted)return;
-    const bins:Record<Kind,T.BufferGeometry[]>={road:[],building:[],water:[],park:[]};
-    for(const f of data.features){
+  /** One merged, flat mesh per key, added in `order`; `height` overrides the per-kind level. */
+  function addFeatureMeshes(features: Feature[], order: string[], key: (f: Feature) => string, material: (key: string) => T.Material,
+    target: T.Group, name: string, height: (f: Feature) => number | undefined = () => undefined) {
+    const bins = new Map<string, T.BufferGeometry[]>(order.map(k => [k, []]));
+    for(const f of features){
       let geometry;
       if(f.k==='road' && f.p.length === 2){
         const [a,b]=f.p,dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);if(length<.2)continue;
-        geometry=new T.PlaneGeometry(f.w ?? 8,length);geometry.rotateX(-Math.PI/2);geometry.rotateY(Math.atan2(dx,dz));geometry.translate((a[0]+b[0])/2,-6.6,(a[1]+b[1])/2);
+        geometry=new T.PlaneGeometry(f.w ?? 8,length);geometry.rotateX(-Math.PI/2);geometry.rotateY(Math.atan2(dx,dz));geometry.translate((a[0]+b[0])/2,height(f)??-6.6,(a[1]+b[1])/2);
       }else{
         const shape=new T.Shape(f.p.map(p=>new T.Vector2(p[0],-p[1])));
         // Nearby features are clipped offline against the real campus outline.
         // Preserve interior rings so a park cannot fill the excluded campus.
         for (const hole of f.holes ?? []) shape.holes.push(new T.Path(hole.map(p=>new T.Vector2(p[0],-p[1]))));
         geometry=new T.ShapeGeometry(shape);
-        geometry.rotateX(-Math.PI/2);geometry.translate(0,f.k==='building'?-6.3:f.k==='road'?-6.6:f.k==='water'?-6.8:-6.9,0);
+        geometry.rotateX(-Math.PI/2);geometry.translate(0,height(f)??(f.k==='building'?-6.3:f.k==='road'?-6.6:f.k==='water'?-6.8:-6.9),0);
       }
       if(geometry.index){const indexed=geometry;geometry=geometry.toNonIndexed();indexed.dispose();}
-      bins[f.k].push(geometry);
+      bins.get(key(f))?.push(geometry);
     }
-    for(const [kind,geometries]of Object.entries(bins))if(geometries.length){
+    for(const [k,geometries]of bins)if(geometries.length){
       const combined=mergeGeometries(geometries,false);geometries.forEach(g=>g.dispose());if(!combined)continue;
-      const mesh=new T.Mesh(combined,contextMaterials[kind as Kind]);mesh.name='OSM Delhi '+kind;mapFeatures.add(mesh);
+      const mesh=new T.Mesh(combined,material(k));mesh.name=name+k;target.add(mesh);
     }
-    if (bins.road.length) onLocalMapReady?.();
+  }
+  fetch(asset('geography/delhi-context.json'),{signal}).then(r=>{if(!r.ok)throw Error(String(r.status));return r.json();}).then((data:Geography)=>{if(signal.aborted)return;
+    addFeatureMeshes(data.features,['road','building','water','park'],f=>f.k,k=>contextMaterials[k as Kind],mapFeatures,'OSM Delhi ');
+    if (data.features.some(f=>f.k==='road')) onLocalMapReady?.();
     onInvalidate();
   }).catch(error=>{if(!signal.aborted)console.warn('Delhi context unavailable',error);});
   const updateMarker = markerElement

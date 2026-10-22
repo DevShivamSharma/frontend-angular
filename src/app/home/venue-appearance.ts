@@ -7,6 +7,19 @@ export type VenueAppearance = 'natural' | 'color';
 /** Ground context shown under the Color appearance. */
 export type VenueScenery = 'satellite' | 'map';
 
+/** Color → Map finishes of the surroundings layer, by material name (venue-site-detail.glb; the
+ * asphalt keeps the Gate 9 texture, tinted by road class). Natural and Color → Satellite keep theirs. */
+const MAP_FINISHES: [RegExp, string][] = [
+    [/SITE_ROAD weathered asphalt arterial$/, '#8f959a'],
+    [/SITE_ROAD weathered asphalt local$/, '#c3c6c8'],
+    [/SITE_ROAD weathered asphalt$/, '#dcdbd5'],
+    [/^SITE_ROAD clipped groundcover$/, '#5d8f3e'],
+    [/^SITE_ROAD warm concrete footpaths$/, '#d6cfc0'],
+    [/^SITE_ROAD pale kerb stone$/, '#ebe8df'],
+    [/^SITE_ROAD pale sandstone walkways$/, '#e1d1b2'],
+    [/^SITE surrounding planted ground$/, '#2e5226']
+];
+
 /** The supplied palette has materials/textures only. Never attach a second scene.
  * Keep material instances stable for selection, clipping and the static batches.
  */
@@ -89,18 +102,21 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
         ownedMaterials.forEach(material => material.dispose()); ownedMaterials.clear();
     }
     return {
-        async apply(mode: VenueAppearance) {
+        async apply(mode: VenueAppearance, scenery: VenueScenery = 'satellite') {
             signal.throwIfAborted();
             const palette = mode === 'color' ? await (pending ??= loadPalette().catch(error => {
                 pending = undefined; throw error;
             })) : null;
             signal.throwIfAborted();
+            const map = mode === 'color' && scenery === 'map';
             for (const [material, natural] of surfaces) {
                 const source = palette?.get(natural.name) ?? natural;
                 const { vertexColors, flatShading, clippingPlanes, side } = material;
                 material.copy(source);
                 Object.assign(material, { vertexColors, flatShading, clippingPlanes, side });
                 architecture.apply(material, mode === 'natural', architecture.finishOf(natural));
+                const finish = map && MAP_FINISHES.find(([name]) => name.test(natural.name));
+                if (finish) material.color.set(finish[1]);
                 material.needsUpdate = true;
             }
         },

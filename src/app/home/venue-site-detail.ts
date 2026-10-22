@@ -59,6 +59,21 @@ export async function prepareVenueSiteDetail(root: T.Group, asset: (path: string
   return registration;
 }
 
+/** The lawn, plaza, parking and fountain-pond surfaces show only in Color → Map. Take them out before
+ * batching; the viewer attaches the group to the scene for that scenery and detaches it otherwise
+ * (never `visible`, which the ambient-occlusion pass restores). */
+export function takeMapSurfaces(root: T.Group): T.Group {
+  const group = new T.Group();
+  group.name = 'SITE_SURFACE venue ground surfaces (Color → Map)';
+  const surfaces: T.Mesh[] = [];
+  root.traverse(object => { if (object instanceof T.Mesh && object.name.startsWith('SITE_SURFACE_')) surfaces.push(object); });
+  // attach() keeps each mesh where it is relative to root, so the group can later sit directly under root.
+  root.add(group); root.updateMatrixWorld(true);
+  for (const mesh of surfaces) { group.attach(mesh); mesh.receiveShadow = true; }
+  group.removeFromParent();
+  return group;
+}
+
 /** Roads cross the photo boundary continuously and taper only at outer open ends. */
 export function prepareSiteDetailRendering(root: T.Group, registration: SiteRegistration) {
   const { x, z } = registration.affine, d = x[0] * z[1] - x[1] * z[0];

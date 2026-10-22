@@ -1,6 +1,7 @@
 {
   "source": "User supplied 1918 × 820 aerial view with red property outline, 2026-10-12",
   "status": "Visual reconstruction; not a measured survey. Heights, concealed surfaces and individual planting are approximate.",
+  "removedBuildings": "2026-10-22: residential-01 to residential-18 removed. They were a grid of identical blocks from the AI render; the z18 photo shows scattered bungalows there, which the OSM building footprints of the Color → Map context draw.",
   "anchors": [
     {"id":"cc","pixel":[604,269],"world":[-340,132]},
     {"id":"hall14","pixel":[794,211],"world":[-223.601,4.908]},
@@ -20,25 +21,7 @@
     {"id":"southwest-institution-south-wing","h":10,"p":[[112,472],[139,478],[161,517],[185,536],[213,551],[202,575],[172,556],[149,543],[133,520]]},
     {"id":"southwest-institution-east-wing","h":13,"p":[[295,465],[323,465],[349,477],[376,484],[399,512],[384,535],[358,521],[349,508],[322,498],[303,488]]},
     {"id":"southwest-institution-corner","h":9,"p":[[213,614],[246,590],[274,614],[295,653],[277,682],[249,665],[234,640]]},
-    {"id":"north-edge-service-block","h":7,"p":[[1574,102],[1667,99],[1673,129],[1650,151],[1589,143]]},
-    {"id":"residential-01","h":7,"p":[[347,637],[371,620],[383,638],[357,653]]},
-    {"id":"residential-02","h":7,"p":[[391,625],[413,611],[429,630],[402,647]]},
-    {"id":"residential-03","h":8,"p":[[443,637],[469,618],[486,639],[458,655]]},
-    {"id":"residential-04","h":7,"p":[[490,646],[516,634],[527,655],[501,668]]},
-    {"id":"residential-05","h":8,"p":[[537,666],[568,658],[581,678],[550,687]]},
-    {"id":"residential-06","h":7,"p":[[581,687],[613,677],[626,699],[594,708]]},
-    {"id":"residential-07","h":8,"p":[[633,706],[660,700],[669,723],[641,731]]},
-    {"id":"residential-08","h":7,"p":[[693,721],[726,713],[734,735],[702,743]]},
-    {"id":"residential-09","h":7,"p":[[751,750],[780,740],[787,764],[760,774]]},
-    {"id":"residential-10","h":8,"p":[[326,713],[350,687],[363,708],[340,729]]},
-    {"id":"residential-11","h":7,"p":[[381,706],[405,694],[417,719],[393,731]]},
-    {"id":"residential-12","h":8,"p":[[435,729],[461,720],[470,743],[445,751]]},
-    {"id":"residential-13","h":7,"p":[[491,748],[519,740],[529,764],[500,773]]},
-    {"id":"residential-14","h":7,"p":[[554,759],[581,750],[590,775],[564,783]]},
-    {"id":"residential-15","h":8,"p":[[615,779],[645,771],[652,794],[622,804]]},
-    {"id":"residential-16","h":7,"p":[[690,788],[719,782],[727,807],[697,815]]},
-    {"id":"residential-17","h":7,"p":[[372,785],[398,765],[409,787],[385,805]]},
-    {"id":"residential-18","h":8,"p":[[443,794],[472,785],[481,813],[451,820]]}
+    {"id":"north-edge-service-block","h":7,"p":[[1574,102],[1667,99],[1673,129],[1650,151],[1589,143]]}
   ],
   "outsidePlanting": [
     [[0,0],[390,0],[338,31],[181,59],[57,116],[0,130]],

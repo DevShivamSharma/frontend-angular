@@ -53,6 +53,12 @@ const junctions=roadNetwork.junctions.map(j=>({p:j.p,radius:j.radius,roads:j.lin
 const circle=(p,r)=>[Array.from({length:25},(_,i)=>[p[0]+Math.cos(i*Math.PI/12)*r,p[1]+Math.sin(i*Math.PI/12)*r])];
 function corridor(points,width){const r=width/2,parts=points.map(p=>circle(p,r));for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],d=sub(b,a),len=Math.hypot(...d),n=[-d[1]/len*r,d[0]/len*r];parts.push([[a.map((v,k)=>v+n[k]),b.map((v,k)=>v+n[k]),b.map((v,k)=>v-n[k]),a.map((v,k)=>v-n[k]),a.map((v,k)=>v+n[k])]]);}return clip.union(...parts);}
 const asphalt=clip.union(...lines.map((l,i)=>corridor(l,roads[i].width)));
+// Asphalt split by road class (arterial over local over the rest) so Color → Map can shade the hierarchy.
+const ofClass=c=>lines.flatMap((l,i)=>(roads[i].class??'local')===c?[corridor(l,roads[i].width)]:[]);
+const union=parts=>parts.length?clip.union(...parts):[];
+const asphaltArterial=union(ofClass('arterial'));
+const asphaltLocal=clip.difference(union(ofClass('local')),asphaltArterial);
+const asphaltOther=clip.difference(asphalt,asphaltArterial,asphaltLocal);
 const apron=clip.union(...lines.map((l,i)=>corridor(l,roads[i].width+6)));
 const footpaths=clip.difference(apron,asphalt);
 const mouths=junctions.length?clip.union(...junctions.map(j=>circle(j.p,j.radius))):[];
@@ -79,8 +85,11 @@ const openEnds=(net,items,key)=>net.nodes.filter(n=>n.edges.length===1).map(n=>(
 const roadAt=p=>roads.find((r,i)=>lines[i].some((b,j)=>j&&project(p,lines[i][j-1],b).distance<.2))?.id;
 const walkwayEnds=walkNetwork.nodes.filter(n=>n.edges.length===1).map(n=>({p:pixel(n.p),walkway:[...n.lines].map(i=>walkways[i].id),joinsRoad:roadAt(n.p)??null}));
 const result={source:connections.source,status:connections.status,roads,walkways,bounds,junctions:junctions.map(j=>({...j,p:pixel(j.p)})),
-  surfaces:{asphalt:toPixels(asphalt),footpaths:toPixels(footpaths),kerbs:toPixels(kerbs),medians:toPixels(medians),edgePaint:toPixels(edgePaint),serviceRoads:toPixels(serviceRoads),walkways:toPixels(walkPaving)},
+  surfaces:{asphalt:toPixels(asphaltOther),asphaltArterial:toPixels(asphaltArterial),asphaltLocal:toPixels(asphaltLocal),footpaths:toPixels(footpaths),kerbs:toPixels(kerbs),medians:toPixels(medians),edgePaint:toPixels(edgePaint),serviceRoads:toPixels(serviceRoads),walkways:toPixels(walkPaving)},
   topology:{components:roadNetwork.components.length,junctions:junctions.length,segments:roadNetwork.edges.length,openEnds:openEnds(roadNetwork,roads,'road')},
-  walkwayTopology:{components:walkNetwork.components.length,junctions:walkNetwork.junctions.length,segments:walkNetwork.edges.length,openEnds:walkwayEnds}};
+  walkwayTopology:{components:walkNetwork.components.length,junctions:walkNetwork.junctions.length,segments:walkNetwork.edges.length,openEnds:walkwayEnds},
+  // Photo-traced areas (z18 pixels in the source) in reference pixels like everything else here.
+  treeCover:(connections.treeCover??[]).map(t=>({id:t.id,points:t.points.map(p=>pixel(fromSatellite(p)))})),
+  groundSurfaces:(connections.surfaces??[]).map(s=>({id:s.id,type:s.type,points:s.points.map(p=>pixel(fromSatellite(p)))}))};
 fs.writeFileSync(path.join(work,'roads-prepared.json'),JSON.stringify(result));
-console.log(JSON.stringify({roads:roads.length,...result.topology,openEnds:result.topology.openEnds.length,walkways:walkways.length,walkwayComponents:result.walkwayTopology.components,walkwayRoadJoins:walkwayEnds.filter(e=>e.joinsRoad).length,walkwayDeadEnds:walkwayEnds.filter(e=>!e.joinsRoad).length}));
+console.log(JSON.stringify({roads:roads.length,...result.topology,openEnds:result.topology.openEnds.length,walkways:walkways.length,treeCover:result.treeCover.length,groundSurfaces:result.groundSurfaces.length,walkwayComponents:result.walkwayTopology.components,walkwayRoadJoins:walkwayEnds.filter(e=>e.joinsRoad).length,walkwayDeadEnds:walkwayEnds.filter(e=>!e.joinsRoad).length}));

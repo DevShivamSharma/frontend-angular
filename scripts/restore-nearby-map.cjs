@@ -116,4 +116,4 @@ if (require.main === module) {
   fs.writeFileSync(asset, JSON.stringify(output));
   console.log(JSON.stringify({ total: output.features.length, nearby: output.nearby.counts, bytes: fs.statSync(asset).size }));
 }
-module.exports = { campusFootprint, restoreContext, polygon, nearSquare };
+module.exports = { campusFootprint, restoreContext, polygon, nearSquare, kind, roadWidth };
