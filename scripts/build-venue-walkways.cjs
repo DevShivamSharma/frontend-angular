@@ -28,9 +28,17 @@ const inside = p => {
 };
 
 // 1. Lines: walkways (service roads and paths) inside the venue, road footpaths outside it.
+// mapMask.roads holds only the drawn roads; the walks between the metro, the bus stop and Gates 9 and 10 run on
+// OSM service roads and footpaths (a footbridge at the metro), taken from the registered OSM within NEAR_OSM metres
+// of a gate; the metro, bus stop and parkings all lie within that. Their world X/Z is already the venue frame.
+const osm = JSON.parse(fs.readFileSync(path.join(root, 'src/assets/venue/geography/venue-map-context.json'), 'utf8'));
+const NEAR_OSM = 300;
+const gateCentres = navigation.filter(d => d.gate).map(d => authored(...d.center));
 const lines = [
   ...site.walkways.paths.map(w => ({ kind: w.type, points: w.points.map(world) })),
   ...site.mapMask.roads.map(r => ({ kind: 'road', points: r.points.map(world) })),
+  ...osm.features.filter(f => f.k === 'road' && (f.c === 'path' || (f.c === 'service' && !f.b)) && f.p.every(p => !inside(p)) &&
+    f.p.some(p => gateCentres.some(g => dist(p, g) <= NEAR_OSM))).map(f => ({ kind: 'road', osm: true, points: f.p })),
 ];
 // Walkway ends within 6 m of another line join it, as in prepare-venue-roads.cjs.
 for (const line of lines) {
@@ -66,12 +74,18 @@ for (const s of segments) {
     const road = lines[s.li].kind === 'road';
     const a = pointAt(lerp(s.a, s.b, s.cuts[k-1]), road), b = pointAt(lerp(s.a, s.b, s.cuts[k]), road);
     if (a === b) continue;
-    const id = steps.length; steps.push({ a, b, kind: lines[s.li].kind }); points[a].links.push(id); points[b].links.push(id);
+    const id = steps.length; steps.push({ a, b, kind: lines[s.li].kind, osm: lines[s.li].osm }); points[a].links.push(id); points[b].links.push(id);
   }
 }
 
 // No walking through the fence: a step between a venue point and an outside point is only possible through a gate.
 steps.forEach(s => { if (inVenue(s.a) !== inVenue(s.b)) s.dropped = true; });
+for (const pt of points) pt.links = pt.links.filter(l => !steps[l].dropped);
+// OSM pieces that reach no drawn road (parking aisles, lanes cut off at the radius) would strand a place attached there.
+const onRoads = new Set(), queue0 = [];
+steps.forEach(s => { if (!s.dropped && s.kind === 'road' && !s.osm) for (const i of [s.a, s.b]) if (!onRoads.has(i)) { onRoads.add(i); queue0.push(i); } });
+while (queue0.length) for (const l of points[queue0.pop()].links) for (const i of [steps[l].a, steps[l].b]) if (!onRoads.has(i)) { onRoads.add(i); queue0.push(i); }
+steps.forEach(s => { if (s.osm && !onRoads.has(s.a)) s.dropped = true; });
 for (const pt of points) pt.links = pt.links.filter(l => !steps[l].dropped);
 
 // 3. Named places. Gates and halls from venue-navigation.json; other places from the model or,
@@ -266,7 +280,7 @@ for (const place of PLACES) {
 
 // 4. Collapse chains of plain points outside into edges that keep their polyline; inside, the app's edges above.
 const keep = new Set([...Object.values(placeNode), ...Object.values(appPoint)]);
-points.forEach((pt, i) => { if (pt.links.length !== 2 && !inVenue(i)) keep.add(i); });
+points.forEach((pt, i) => { if (pt.links.length && pt.links.length !== 2 && !inVenue(i)) keep.add(i); });
 const junctionId = new Map();
 for (const i of keep) {
   const id = `j${junctionId.size + 1}`; junctionId.set(i, id);

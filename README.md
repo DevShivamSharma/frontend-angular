@@ -60,7 +60,9 @@ and browser coverage is in `e2e/visitor-auto-walk.spec.ts`.
 
 The **Directions** panel (and the phone map's Directions sheet) routes over
 `src/assets/venue/venue-walkways.json`, built by `node scripts/build-venue-walkways.cjs`.
-Outside the fence a route follows the traced road footpaths; inside it takes only the
+Outside the fence a route follows the traced road footpaths, plus the OSM service roads and
+footpaths within 300 m of a gate (the metro and bus stop walks to Gates 9 and 10 run on these,
+from `geography/venue-map-context.json`); inside it takes only the
 ITPO app's connections (`docs/reference/campus-navigation-rn/route-map.json`), each drawn
 along the traced walkways. A route with both ends inside never leaves the fence.
 
