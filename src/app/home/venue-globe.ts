@@ -183,10 +183,13 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       if (!signal.aborted) console.warn('Venue map context unavailable; keeping the local map.', error);
     });
   }
-  function setAppearance(appearance: VenueAppearance) {
-    appearanceMode = appearance;
-    showContext();
-    if (appearance === 'color' && !satelliteReady) void satellite.load().then(loaded => {
+  // The satellite photos load only once Color → Satellite is shown; Color → Map never needs them.
+  let satelliteLoading = false;
+  function loadSatellite() {
+    if (appearanceMode !== 'color' || scenery !== 'satellite' || satelliteReady || satelliteLoading) return;
+    satelliteLoading = true;
+    void satellite.load().then(loaded => {
+      satelliteLoading = false;
       if (!loaded || signal.aborted) return;
       satelliteReady = true;
       showContext();
@@ -194,6 +197,11 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       onLocalMapReady?.();
       onInvalidate();
     });
+  }
+  function setAppearance(appearance: VenueAppearance) {
+    appearanceMode = appearance;
+    showContext();
+    loadSatellite();
     const palette = mapPalettes[appearance];
     // Reuse all map geometry and the shader's shared fade colour (set in showContext). Updating
     // this once per explicit switch also covers geography/Earth textures arriving late.
@@ -205,6 +213,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   function setScenery(next: VenueScenery) {
     scenery = next;
     showContext();
+    loadSatellite();
     onInvalidate();
   }
   // Keep the existing OSM coordinates and road widths. Fade distant data into the

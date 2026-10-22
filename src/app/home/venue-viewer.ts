@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createGlobeContext } from './venue-globe';
 import { createVenueRenderLoop } from './venue-render-loop';
@@ -17,7 +18,7 @@ import { prepareReferenceConcourse, prepareCoveredConcourseFloor } from './venue
 import { prepareReferenceCanopies } from './venue-reference-canopy';
 import { prepareGroundPhotoDetails, preparePhotoEntrances } from './venue-ground-photos';
 import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
-import { createVenueAppearance, VenueAppearance, VenueScenery } from './venue-appearance';
+import { COLOUR_MATERIALS, createVenueAppearance, INITIAL_APPEARANCE, INITIAL_SCENERY, VenueAppearance, VenueScenery } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
 import { createVenueInteriors, InteriorState } from './venue-interiors';
 import { createVisitorNavigation } from './visitor-navigation';
@@ -37,7 +38,7 @@ import { delhiTime, isVenueDaylight } from './venue-clock';
 import { createVenueMapPins } from './venue-map-pins';
 type VenueMesh = T.Mesh<T.BufferGeometry, T.MeshStandardMaterial | T.MeshStandardMaterial[]>;
 interface Tween { start:number; duration:number; a:T.Vector3; b:T.Vector3; p:T.Vector3; t:T.Vector3; }
-interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; routeEnded?:()=>void; }
+interface ViewerEvents { progress:(fraction:number)=>void; selected:(id:string,level:number)=>void; modeChanged:(mode:'venue'|'globe')=>void; status:(text:string)=>void; geographyReady:(ready:boolean)=>void; satelliteReady?:()=>void; interiorState?:(state:InteriorState)=>void; interiorsReady?:(halls:{id:string;label:string;rooms?:{id:string;label:string}[]}[],error?:string)=>void; visitorState?:(state:VisitorState)=>void; visitorReady?:(destinations:{id:string;label:string}[])=>void; routeEnded?:()=>void; initialAppearanceFailed?:()=>void; }
 export interface VenueViewer { ready:Promise<VenueInformation>; view:(id:string)=>void; selectLevel:(level:number)=>void; goGlobe:()=>void; zoom:(factor:number)=>void; setDaylight:(enabled:boolean)=>void; setRain:(enabled:boolean)=>void; setAppearance:(mode:VenueAppearance)=>Promise<void>; setScenery:(scenery:VenueScenery)=>void; setPaused:(paused:boolean)=>void; enterHall:(id:string,guided?:boolean)=>void; pauseTour:()=>void; leaveInterior:()=>void; walk:(forward:number,turn?:number)=>void; exportHall:(id:string)=>Promise<ArrayBuffer>; visitRoom:(id:string,room:string)=>void; startVisitor:()=>void; stopVisitor:()=>void; visitorInput:(input:VisitorInput,down:boolean)=>void; visitorStep:(input:VisitorInput)=>void; visitorDestination:(id:string)=>void; visitorGo:()=>void; visitorEnter:()=>void; visitorJump:()=>void; visitorStopAutoWalk:()=>void; visitorFaster:()=>void; visitorRestart:()=>void; visitorFloor:(level:number)=>void; showRoute:(points:Point[])=>void; clearRoute:()=>void; readonly isGlobe:boolean; dispose:()=>void; }
 /** Render camera motion and visible fountain water with consistent scene shading. */
 export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: () => Promise<VenueInformation>, events: ViewerEvents, markerElement?: HTMLElement, pinLayer?: HTMLElement): VenueViewer {
@@ -141,7 +142,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
         let prepared = false, localMapReady = false;
-        let mapSurfaces: T.Group | undefined, scenery: VenueScenery = 'satellite', appearanceMode: VenueAppearance = 'natural';
+        let mapSurfaces: T.Group | undefined, scenery: VenueScenery = INITIAL_SCENERY, appearanceMode: VenueAppearance = 'natural';
         let siteRegistration: SiteRegistration | undefined;
         let gate9: Awaited<ReturnType<typeof prepareGate9>> | undefined;
         let pendingInterior: (()=>void) | undefined;
@@ -182,6 +183,13 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             emissive: T.Color;
             emissiveIntensity: number;
         }[]>();
+        // The model download starts at once, alongside the information and the globe, instead of after them.
+        // The meshopt copy (scripts/compress-venue-models.mjs, lossless) is a third smaller; the export is the fallback.
+        const loadModel = (path: string) => new Promise<GLTF>((resolve, reject) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(asset(path), resolve, p => { if (p.total)
+            events.progress(p.loaded / p.total * .95); }, reject));
+        const modelLoad = loadModel('IITF_2026_ARCHITECTURAL.meshopt.glb?v=outputs-20260927').catch(() => loadModel('IITF_2026_ARCHITECTURAL.glb?v=outputs-20260927'));
+        modelLoad.catch(() => {});   // awaited below; this only keeps an early failure from reporting as unhandled
+        preloadVenueAssets(asset, signal);
         const information = await loadInformation();
         signal.throwIfAborted();
         const { destinations } = information;
@@ -322,11 +330,11 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                     renderer.shadowMap.needsUpdate = true;
                 }});
             sceneryCommand = next => { scenery = next; globe?.setScenery(next); };
+            globe.setScenery(scenery);
             events.geographyReady(true);
         } catch(error) { if(!signal.aborted)console.warn('Geographic context unavailable',error);events.geographyReady(false); }
         signal.throwIfAborted();
-        const g = await new Promise<GLTF>((resolve, reject) => new GLTFLoader().load(asset('IITF_2026_ARCHITECTURAL.glb?v=outputs-20260927'), resolve, p => { if (p.total)
-            events.progress(p.loaded / p.total * .95); }, reject));
+        const g = await modelLoad;
         if (signal.aborted) {
             disposeScene(g.scene);
             signal.throwIfAborted();
@@ -531,6 +539,10 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             scenery = next; globe?.setScenery(next);
             if (appearanceMode === 'color') void appearanceCommand('color').catch(error => console.warn('Map finishes unavailable', error));
         };
+        // Open on the initial appearance before the welcome screen lifts. Without the palette the venue stays Natural.
+        if (INITIAL_APPEARANCE !== 'natural') await appearanceCommand(INITIAL_APPEARANCE).catch(error => {
+            signal.throwIfAborted(); console.warn('Color materials unavailable; opening in Natural.', error); events.initialAppearanceFailed?.();
+        });
         events.status('Bharat Mandapam');
         lightCommand(isVenueDaylight(delhiTime()));
         const detailView = new URLSearchParams(location.search).get('view');
@@ -706,6 +718,18 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         invalidate();
         return information;
     }
+}
+/**
+ * The load awaits these one after another (site detail, Gate 9, interiors, guards, then the Color palette and map);
+ * preloading fetches them all from the start, and each loader's own fetch() takes the preloaded response (same
+ * URL, same-origin CORS mode). The links go when the viewer does.
+ */
+function preloadVenueAssets(asset: (path: string) => string, signal: AbortSignal): void {
+    const paths = ['venue-site-detail.glb', 'venue-site-detail.json', 'gate9-detail.glb', 'gate9-detail.json', 'characters/security-guard.glb',
+        ...(INITIAL_APPEARANCE === 'color' ? [COLOUR_MATERIALS] : []), ...(INITIAL_SCENERY === 'map' ? ['geography/venue-map-context.json'] : [])];
+    const links = paths.map(path => Object.assign(document.createElement('link'), { rel: 'preload', as: 'fetch', crossOrigin: 'anonymous', href: asset(path) }));
+    document.head.append(...links);
+    signal.addEventListener('abort', () => links.forEach(link => link.remove()), { once: true });
 }
 /** Release shared textures once, including uniforms and shadow render targets. */
 function disposeScene(scene: T.Object3D): void {

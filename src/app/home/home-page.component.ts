@@ -8,7 +8,7 @@ import { VenueDetailsComponent } from './venue-details.component';
 import { FloorPlanDialogComponent } from './floor-plan-dialog.component';
 import { Destination, VenueDetail, VenueInformation } from './venue.models';
 import { VenueViewer, createVenueViewer } from './venue-viewer';
-import { VenueAppearance, VenueScenery } from './venue-appearance';
+import { INITIAL_APPEARANCE, INITIAL_SCENERY, VenueAppearance, VenueScenery } from './venue-appearance';
 import { delhiTime, isVenueDaylight, isValidVenueTime } from './venue-clock';
 import { InteriorState } from './venue-interiors';
 import { INITIAL_VISITOR_STATE, VisitorInput, VisitorState } from './venue-visitor';
@@ -64,9 +64,10 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly timeControlsOpen = signal(false);
   readonly daylight = signal(isVenueDaylight(this.venueTime()));
   readonly raining = signal(false);
-  readonly appearance = signal<VenueAppearance>('natural');
+  // The viewer opens on the same INITIAL_APPEARANCE / INITIAL_SCENERY.
+  readonly appearance = signal<VenueAppearance>(INITIAL_APPEARANCE);
   readonly appearanceBusy = signal(false);
-  readonly scenery = signal<VenueScenery>('satellite');
+  readonly scenery = signal<VenueScenery>(INITIAL_SCENERY);
   readonly appearanceError = signal('');
   readonly globeActive = signal(false);
   readonly globeAvailable = signal(true);
@@ -107,6 +108,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
           interiorsReady:(halls,error)=>this.zone.run(()=>{this.interiorHalls.set(halls);this.interiorError.set(error??'');}),
           visitorReady:destinations=>this.zone.run(()=>{this.visitorDestinations.set(destinations);this.visitorReady.set(true);}),
           routeEnded:()=>this.zone.run(()=>this.routeActive.set(false)),
+          initialAppearanceFailed:()=>this.zone.run(()=>{this.appearance.set('natural');this.appearanceError.set('Color materials could not load. Select Color to retry.');}),
           visitorState:state=>this.zone.run(()=>{
             if(this.destroyed)return;
             const wasActive=this.visitor().active;

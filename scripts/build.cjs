@@ -4,6 +4,9 @@ const { join } = require('node:path');
 // Only this public API URL is included in the browser bundle.
 const apiBaseUrl = process.env.API_BASE_URL?.trim() || '/api';
 const cliPath = join(__dirname, '..', 'node_modules', '@angular', 'cli', 'bin', 'ng.js');
+// The explorer loads a meshopt copy of the architectural model; it is generated, not committed.
+const models = spawnSync(process.execPath, [join(__dirname, 'compress-venue-models.mjs')], { stdio: 'inherit', cwd: join(__dirname, '..') });
+if (models.status !== 0) process.exit(models.status ?? 1);
 const result = spawnSync(process.execPath, [
   cliPath,
   'build',

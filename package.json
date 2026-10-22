@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "node scripts/compress-venue-models.mjs && ng serve",
     "build": "node scripts/build.cjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
