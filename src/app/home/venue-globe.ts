@@ -146,7 +146,8 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   }
   const contextMaterials = {
     road: mapMaterial('#b6baad'),
-    building: mapMaterial('#959b8c'),
+    // Extruded like the Map scenery's buildings (see sceneryMaterial).
+    building: Object.assign(mapMaterial('#959b8c'), { vertexColors: true, transparent: false }),
     water: mapMaterial('#719095'),
     park: mapMaterial('#71876b')
   };
@@ -248,7 +249,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
         // Preserve interior rings so a park cannot fill the excluded campus.
         for (const hole of f.holes ?? []) shape.holes.push(new T.Path(hole.map(p=>new T.Vector2(p[0],-p[1]))));
         if(f.k==='building'&&f.h){
-          // Color → Map buildings stand to their height from the map ground.
+          // Buildings stand to their height from the map ground (h: scripts/restore-nearby-map.cjs).
           geometry=new T.ExtrudeGeometry(shape,{depth:f.h,bevelEnabled:false});
           geometry.rotateX(-Math.PI/2);geometry.translate(0,-6.9,0);shadeBuilding(geometry);
         }else{

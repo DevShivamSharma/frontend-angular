@@ -40,6 +40,27 @@ function kind(tags) {
   return null;
 }
 
+// Building heights `h` (metres) for the 3D buildings of both map sceneries. OSM `height`, else `building:levels` at
+// 3.5 m a storey; then the landmarks below; else by OSM type and footprint (the neighbourhood is mostly 2-4 storeys).
+// Only the Supreme Court dome (27.6 m, sci.gov.in) and Purana Qila's walls and gates (about 18 m) are published
+// figures; the other landmark heights are estimates from their storey counts and should be replaced when surveyed.
+const LANDMARKS = [
+  [/^Supreme Court of India$/, 27.6], [/Darwaza|Sher Shah Suri Gate/, 18], [/Qila-i-Khuna Mosque/, 20], [/Sher Mandal/, 15],
+  [/Indira Gandhi Arena/, 30], [/Delhi Secretariat/, 36], [/Indraprastha Bhawan|Doordarshan Bhawan/, 36],
+  [/Indian Coast Guard headquarters/, 18], [/Patiala House Court/, 14], [/Supreme Court Metro Station/, 16], [/Matka Peer/, 8],
+];
+const TYPE_HEIGHT = { house: 8, detached: 8, residential: 11, roof: 5, shed: 5, parking: 9, industrial: 9, ruins: 6, stadium: 20, mosque: 14,
+  transportation: 9, bridge: 6 };
+const footprintArea = ring => Math.abs(ring.reduce((s, p, i) => { const q = ring[(i + 1) % ring.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
+const byFootprint = ring => { const a = footprintArea(ring); return a < 120 ? 5 : a < 400 ? 8 : a < 1500 ? 11 : a < 4000 ? 15 : 18; };
+function buildingHeight(tags, ring) {
+  const height = parseFloat(tags.height), levels = parseFloat(tags['building:levels']);
+  if (height > 0) return round(height);
+  if (levels > 0) return round(levels * 3.5 + 1);
+  const landmark = LANDMARKS.find(([name]) => name.test(tags.name ?? ''));
+  return landmark ? landmark[1] : TYPE_HEIGHT[tags.building] ?? byFootprint(ring);
+}
+
 function roadWidth(tags) {
   const specified = Number(tags.width);
   if (Number.isFinite(specified) && specified > 0) return Math.min(40, specified);
@@ -66,7 +87,8 @@ function restoreContext(context, raw, footprint) {
     // Cheap rejection keeps all untouched distant outlines byte-for-byte.
     if (f.p.every(([x]) => x < -extent - 25) || f.p.every(([x]) => x > extent + 25) ||
         f.p.every(([, z]) => z < -extent - 25) || f.p.every(([, z]) => z > extent + 25)) {
-      features.push(f); continue;
+      // Distant outlines have no tags left; a building stands by its footprint.
+      features.push(f.k === 'building' && f.h === undefined ? { ...f, h: byFootprint(f.p) } : f); continue;
     }
     const shape = polygon(f);
     if (shape) append(f, clip.difference(shape, nearSquare));
@@ -87,7 +109,8 @@ function restoreContext(context, raw, footprint) {
       }
     } else {
       if (points.length < 4 || points[0][0] !== points.at(-1)[0] || points[0][1] !== points.at(-1)[1]) continue;
-      pieces.push([points]);
+      // A multipolygon (read-osm-map.py) keeps its courtyards.
+      pieces.push([points, ...(way.holes ?? []).map(hole => hole.map(project))]);
     }
     for (const shape of pieces) {
       const clipped = clip.intersection(shape, nearSquare);
@@ -95,7 +118,7 @@ function restoreContext(context, raw, footprint) {
       const outside = clip.difference(clipped, footprint);
       if (outside.length) {
         counts[k]++;
-        append({ k, p: [], osmWay: way.id }, outside);
+        append({ k, p: [], osmWay: way.id, ...(k === 'building' ? { h: buildingHeight(way.tags, points) } : {}) }, outside);
       }
     }
   }
@@ -116,4 +139,4 @@ if (require.main === module) {
   fs.writeFileSync(asset, JSON.stringify(output));
   console.log(JSON.stringify({ total: output.features.length, nearby: output.nearby.counts, bytes: fs.statSync(asset).size }));
 }
-module.exports = { campusFootprint, restoreContext, polygon, nearSquare, kind, roadWidth };
+module.exports = { campusFootprint, restoreContext, polygon, nearSquare, kind, roadWidth, buildingHeight, byFootprint };
