@@ -5,6 +5,7 @@ import { parseMapGraph } from './venue-route-graph';
 import { NAVIGATION_LOCATIONS, availableLocations } from './venue-route-locations';
 import { Point, RouteGeometry, buildRouteGeometry, positionAtDistance, roundCorners } from './venue-route-geometry';
 import { VenueDirectionsComponent } from './venue-directions.component';
+import { LABEL_RANK } from './venue-map-pins';
 
 /** A pin: a walkways-graph point (venue-walkways.json) in its picker group, with its spot on the map image. */
 export interface MapPlace { id: string; label: string; group: string; x: number; y: number; z: number; u: number; v: number; }
@@ -15,7 +16,6 @@ const PIN_HEIGHT: Record<string, number> = { halls: 26, conventionCentre: 50 };
 const MAX_ZOOM = 6;
 /** Chip order of the ITPO app's map; other groups follow. */
 const CHIP_ORDER = ['halls', 'gates', 'conventionCentre', 'amphitheatres', 'parking'];
-const LABEL_RANK: Record<string, number> = { halls: 1, conventionCentre: 1, gates: 2, amphitheatres: 3, parking: 3 };
 
 /**
  * The venue map in the ITPO app's style: search, group chips, pins with labels, details on tap.

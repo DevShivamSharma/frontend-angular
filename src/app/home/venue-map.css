@@ -176,7 +176,8 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 :host(.overlay) .map-search{flex:0 0 220px;height:40px;box-shadow:none;background:#f1f3f8}
 :host(.overlay) .map-search input{font-size:14px}
 :host(.overlay) .map-results{top:auto;bottom:48px}
-:host(.overlay) .map-chips{flex:1;margin:0;padding:0}
+/* The chips row scrolls; its right edge fades so the chips past it read as more to scroll to. */
+:host(.overlay) .map-chips{flex:1;margin:0;padding:0 24px 0 0;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),#0000);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),#0000)}
 :host(.overlay) .map-chips button{min-height:36px;padding:6px 12px;font-size:13px}
 :host(.overlay) .map-labels{left:auto;right:14px;bottom:auto;top:310px;min-height:40px;padding:0 12px;font-size:13px;pointer-events:auto}
 .map-pin-layer{position:absolute;inset:0;overflow:hidden}
@@ -185,4 +186,8 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 .map-pin-layer .pin-head{left:-11px;width:22px;height:22px}
 .map-pin-layer .pin-head::after{inset:6px}
 .map-pin-layer .pin-label{font-size:12px}
+/* A label that would cover a more important one waits for hover or keyboard focus on its pin (venue-map-pins.ts). */
+.map-pin-layer .map-pin.label-hidden .pin-label{visibility:hidden}
+.map-pin-layer .map-pin.label-hidden:is(:hover,:focus-visible){z-index:2}
+.map-pin-layer .map-pin.label-hidden:is(:hover,:focus-visible) .pin-label{visibility:visible}
 @media(max-width:1100px){:host(.overlay) .map-head{width:calc(100% - 300px);left:auto;right:80px;transform:none}:host(.overlay) .map-search{display:none}}
