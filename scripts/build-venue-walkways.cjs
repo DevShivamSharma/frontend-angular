@@ -316,8 +316,6 @@ const result = {
   attachments: attach,
   joins,
   appEdges: { corridorMetres: CORRIDOR, straight, tracedLinks },
-  // The property line (venue-site-detail.json propertyBoundary in world X/Z), for telling inside from outside.
-  fence: boundary.map(p => [+p[0].toFixed(1), +p[1].toFixed(1)]),
   satellite: { zoom: 18, tileOrigin: [187310, 109300], tileSize: 256, fit: { x: fitX, z: fitZ } },
   nodes, edges,
 };

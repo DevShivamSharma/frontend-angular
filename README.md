@@ -67,8 +67,10 @@ along the traced walkways. A route with both ends inside never leaves the fence.
 Gate status lives in `src/assets/venue/venue-gates.json` (from the official layout, as on
 07-11-25). Visitors go in and out only through pedestrian gates (3, 4, 6, 10; Gate 8 is exit
 only); VIP, cargo and office gates can be picked as a start or end but are never walked
-through. **Use my location** asks for the browser's location only when picked, keeps it on
-the device, and asks "Are you inside the venue?" when the fix is vague or near the fence.
+through. Directions first asks whether the visitor is inside or outside the venue, and
+Source then offers only the places on that side (gates on both). **Use my location** asks
+for the browser's location only when picked, keeps it on the device, and places it on the
+side the visitor chose.
 
 Known gaps: the app has no edges for Gates 7 and 8, so each is joined to the app's network
 by its nearest traced walk (about 225 m and 345 m). Gate 5C's only app edge is outside, so

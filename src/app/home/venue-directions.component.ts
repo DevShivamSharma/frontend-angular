@@ -3,21 +3,20 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnI
 import { venueAsset } from './venue.models';
 import { MapEdge, MapGraph, MapNode, VenueGate, createMapGraph, gateSuffix, parseMapGraph, parseVenueGates, resolveGateAccess, visitorGateOverrides } from './venue-route-graph';
 import { buildAdjacency } from './venue-route-pathfinding';
-import { LocationSelection, NAVIGATION_LOCATIONS, NavigationLocation, availableLocations, defaultSelection, findLocation, selectionForNode } from './venue-route-locations';
+import { CLOSEST_POINT, LocationSelection, NAVIGATION_LOCATIONS, NavigationLocation, availableLocations, defaultSelection, findLocation, selectionForNode } from './venue-route-locations';
 import { Journey, JourneyProblem, planJourney, problemMessage, walkingMeters, walkingMinutes } from './venue-route-journey';
-import { Point, SatelliteFit, fenceTest, journeyPolyline, worldFromLatLon } from './venue-route-geometry';
+import { Point, SatelliteFit, journeyPolyline, worldFromLatLon } from './venue-route-geometry';
 
 const byTitle = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 /** "Gate" for Gates: the group's title, singular. */
 const pointNoun = (location: NavigationLocation) => location.title.replace(/s$/i, '');
 /** The Source option for the visitor's own position, and the graph node it becomes. */
 const MY_LOCATION = 'me|me';
-/** A fix less sure than this, or this close to the fence, asks the visitor which side they are on. */
-const SURE_FIX_METRES = 50, FENCE_DOUBT_METRES = 30;
 /** Further than this from every walkway, a fix is not at the venue and is not routed from. */
 const MAX_LINK_METRES = 1500;
 
-type Locating = { state: 'finding' } | { state: 'ask'; at: Point } | { state: 'error'; message: string };
+type Side = 'inside' | 'outside';
+type Locating = { state: 'finding' } | { state: 'error'; message: string };
 
 /**
  * Source / Destination route planner, re-created from the ITPO app's CampusNavigationScreen. One picker per
@@ -39,9 +38,8 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   readonly destination = signal<LocationSelection | undefined>(undefined);
   private readonly submitted = signal<{ source: LocationSelection; destination: LocationSelection } | null>(null);
   readonly folded = signal(false);
-  /** venue-gates.json rows, and the fence and satellite fit from venue-walkways.json for "Use my location". */
+  /** venue-gates.json rows, and the satellite fit from venue-walkways.json for "Use my location". */
   private readonly gates = signal<VenueGate[]>([]);
-  private fence: [number, number][] = [];
   private satellite?: SatelliteFit;
   /** The visitor's position as a graph node with its link onto the nearest walkway on their side of the fence. */
   private readonly me = signal<{ node: MapNode; edge: MapEdge } | null>(null);
@@ -57,6 +55,14 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     return g ? buildAdjacency(g.edges.filter(edge => !g.nodeMap[edge.from].outside && !g.nodeMap[edge.to].outside), this.gateAccess(), g.nodeMap) : {};
   });
   readonly locations = computed(() => { const g = this.graph(); return g ? availableLocations(g.nodeMap, NAVIGATION_LOCATIONS) : []; });
+  /** Where the visitor said they are, asked before anything else; null until answered. */
+  readonly side = signal<Side | null>(null);
+  /** Source offers only the places on the visitor's side; gates stand on the fence, so on both. */
+  private readonly onSide = (id: string, side: Side) => { const node = this.graph()?.nodeMap[id]; return !!node && (node.category === 'gate' || !node.outside === (side === 'inside')); };
+  readonly sourceLocations = computed(() => {
+    const side = this.side();
+    return side ? this.locations().map(location => ({ ...location, nodeIds: location.nodeIds.filter(id => this.onSide(id, side)) })).filter(location => location.nodeIds.length) : [];
+  });
   readonly isSubmitted = computed(() => {
     const s = this.submitted(), a = this.source(), b = this.destination();
     return !!s && !!a && !!b && s.source.locationId === a.locationId && s.source.pointId === a.pointId &&
@@ -79,7 +85,6 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     try {
       const get = async (path: string) => { const response = await fetch(venueAsset(path)); if (!response.ok) throw new Error(path); return response.json(); };
       const [walkways, gates] = await Promise.all([get('venue-walkways.json'), get('venue-gates.json')]);
-      this.fence = walkways.fence ?? [];
       this.satellite = walkways.satellite;
       this.gates.set(parseVenueGates(gates));
       this.graph.set(parseMapGraph(walkways));
@@ -87,7 +92,8 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     } catch { this.error.set('Walking routes could not load. Reload to retry.'); }
   }
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['active'] && !this.active && this.submitted()) { this.submitted.set(null); this.folded.set(false); }
+    // Leaving route mode starts over: the next Directions asks again where the visitor is.
+    if (changes['active'] && !this.active && this.submitted()) { this.submitted.set(null); this.folded.set(false); this.side.set(null); }
     if (changes['request'] && this.request) this.applyDestinationRequest();
   }
   private applyDestinationRequest(): void {
@@ -96,14 +102,14 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     if (selection) { this.destination.set(selection); this.folded.set(false); this.hideRoute(); }
   }
 
-  locationOptions(other: LocationSelection | undefined) {
+  locationOptions(other: LocationSelection | undefined, locations: NavigationLocation[]) {
     // A single-point location picked on the other side is not offered here; groups stay.
     const taken = findLocation(other?.locationId, this.locations());
-    return this.locations().filter(item => !(item.id === taken?.id && item.nodeIds.length === 1))
+    return locations.filter(item => !(item.id === taken?.id && item.nodeIds.length === 1))
       .map(item => ({ value: item.id, label: item.title })).sort((a, b) => byTitle(a.label, b.label));
   }
-  pointOptions(selection: LocationSelection | undefined, other: LocationSelection | undefined) {
-    const location = findLocation(selection?.locationId, this.locations()), g = this.graph();
+  pointOptions(selection: LocationSelection | undefined, other: LocationSelection | undefined, locations: NavigationLocation[]) {
+    const location = findLocation(selection?.locationId, locations), g = this.graph();
     if (!location || !g || location.nodeIds.length < 2) return [];
     const takenByOther = other?.locationId === location.id ? other.pointId : undefined;
     return location.nodeIds.filter(id => id !== takenByOther)
@@ -111,11 +117,11 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
       .sort((a, b) => byTitle(a.label, b.label));
   }
   /** A picker option's value is "location|point". */
-  pickerOptions(other: LocationSelection | undefined) {
-    return this.locationOptions(other).map(({ value, label }) => {
-      const location = findLocation(value, this.locations())!, first = defaultSelection(location);
+  pickerOptions(other: LocationSelection | undefined, locations: NavigationLocation[]) {
+    return this.locationOptions(other, locations).map(({ value, label }) => {
+      const location = findLocation(value, locations)!, first = defaultSelection(location);
       return { label, value: this.selectionValue(first), closest: `Closest ${pointNoun(location).toLowerCase()}`,
-        points: this.pointOptions(first, other).map(point => ({ value: `${value}|${point.value}`, label: point.label })) };
+        points: this.pointOptions(first, other, locations).map(point => ({ value: `${value}|${point.value}`, label: point.label })) };
     });
   }
   selectionValue(selection: LocationSelection | undefined) { return selection ? `${selection.locationId}|${selection.pointId}` : ''; }
@@ -125,7 +131,23 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     field.set({ locationId, pointId }); this.hideRoute();
     if (role === 'source') { this.me.set(null); this.locating.set(null); if (value === MY_LOCATION) this.locate(); }
   }
-  swap(): void { const a = this.source(); this.source.set(this.destination()); this.destination.set(a); this.hideRoute(); }
+  /** A new answer keeps the Source only when it is on that side; My location is placed again. */
+  setSide(side: Side): void {
+    this.side.set(side);
+    const source = this.source();
+    if (source && (this.selectionValue(source) === MY_LOCATION || !this.fits(source, side))) { this.source.set(undefined); this.me.set(null); this.locating.set(null); this.hideRoute(); }
+  }
+  private fits(selection: LocationSelection, side: Side): boolean {
+    if (this.selectionValue(selection) === MY_LOCATION) return true;
+    const location = findLocation(selection.locationId, this.locations());
+    return !!location && (selection.pointId === CLOSEST_POINT ? location.nodeIds.some(id => this.onSide(id, side)) : this.onSide(selection.pointId, side));
+  }
+  /** Swapping can put a place from the other side in Source; the answer then follows it. */
+  swap(): void {
+    const a = this.source(), side = this.side(); this.source.set(this.destination()); this.destination.set(a); this.hideRoute();
+    const source = this.source();
+    if (source && side && !this.fits(source, side)) this.side.set(side === 'inside' ? 'outside' : 'inside');
+  }
   clear(): void { this.source.set(undefined); this.destination.set(undefined); this.me.set(null); this.locating.set(null); this.hideRoute(); }
   submit(): void {
     const a = this.source(), b = this.destination(), g = this.routeGraph();
@@ -143,21 +165,20 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     return `${[journey.start, ...gates, journey.end].map(node => node.label).join(' → ')} · ~${walkingMeters(journey.totalMeters)} m · ~${walkingMinutes(journey.totalMeters)} min walk`;
   }
 
-  /** Asked only when "Use my location" is picked; the position stays on this device and is never sent anywhere. */
+  /**
+   * Asked only when "Use my location" is picked; the position stays on this device and is never sent anywhere.
+   * The visitor's own answer says which side of the fence it is on, so a vague fix by the fence cannot misplace it.
+   */
   private locate(): void {
     const satellite = this.satellite;
-    if (!navigator.geolocation || !satellite || !this.fence.length) { this.locating.set({ state: 'error', message: 'This browser cannot share your location. Pick a source instead.' }); return; }
+    if (!navigator.geolocation || !satellite) { this.locating.set({ state: 'error', message: 'This browser cannot share your location. Pick a source instead.' }); return; }
     this.locating.set({ state: 'finding' });
     navigator.geolocation.getCurrentPosition(({ coords }) => {
       if (this.selectionValue(this.source()) !== MY_LOCATION) return;
-      const at = worldFromLatLon(coords.latitude, coords.longitude, satellite), fence = fenceTest(at, this.fence);
-      if (coords.accuracy > SURE_FIX_METRES || fence.metres < FENCE_DOUBT_METRES) this.locating.set({ state: 'ask', at });
-      else this.placeMe(at, fence.inside);
+      this.placeMe(worldFromLatLon(coords.latitude, coords.longitude, satellite), this.side() !== 'outside');
     }, () => this.locating.set({ state: 'error', message: 'Your location is off or was not allowed. Pick a source instead.' }),
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   }
-  /** The answer to "Are you inside the venue?". */
-  answer(inside: boolean): void { const locating = this.locating(); if (locating?.state === 'ask') this.placeMe(locating.at, inside); }
   /** My location joins the nearest walkway junction on the visitor's side of the fence. */
   private placeMe(at: Point, inside: boolean): void {
     const g = this.graph();

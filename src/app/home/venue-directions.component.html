@@ -5,17 +5,20 @@
     <span>{{ summary(journey) }}</span>
     <button type="button" (click)="change()" [attr.aria-label]="'Route from ' + journey.start.label + ' to ' + journey.end.label + '. Change source or destination'">Change</button>
   </div>
+} @else if (!side()) {
+  <!-- Asked first: the answer decides which places Source offers. -->
+  <div class="directions-ask" role="group" aria-labelledby="directions-side-label">
+    <span id="directions-side-label">Where are you now?</span>
+    <button type="button" (click)="setSide('inside')">Inside the venue</button>
+    <button type="button" (click)="setSide('outside')">Outside the venue</button>
+  </div>
 } @else {
+  <p class="directions-side">{{ side() === 'inside' ? 'Inside' : 'Outside' }} the venue
+    <button type="button" (click)="side.set(null)" aria-label="Change whether you are inside or outside the venue">Change</button></p>
   <ng-container *ngTemplateOutlet="field; context: { role: 'source', noun: 'source', Noun: 'Source', selection: source(), other: destination() }" />
   @if (locating(); as locating) {
     @if (locating.state === 'finding') { <p class="walk-hint" role="status">Finding your location…</p> }
-    @else if (locating.state === 'ask') {
-      <div class="directions-ask" role="group" aria-labelledby="directions-ask-label">
-        <span id="directions-ask-label">Are you inside the venue?</span>
-        <button type="button" (click)="answer(true)">Yes, inside</button>
-        <button type="button" (click)="answer(false)">No, outside</button>
-      </div>
-    } @else if (locating.state === 'error') { <p class="walk-error" role="alert">{{ locating.message }}</p> }
+    @else if (locating.state === 'error') { <p class="walk-error" role="alert">{{ locating.message }}</p> }
   }
   <div class="directions-swap">
     <button type="button" (click)="swap()" [disabled]="!source() && !destination()" aria-label="Swap source and destination">⇅ Swap</button>
@@ -43,7 +46,7 @@
   <select [id]="'directions-' + role" (change)="setSelection(role, $any($event.target).value)">
     <option value="" disabled [selected]="!selection">Choose {{ noun }}</option>
     @if (role === 'source') { <option [value]="myLocation" [selected]="selectionValue(selection) === myLocation">Use my location</option> }
-    @for (place of pickerOptions(other); track place.value) {
+    @for (place of pickerOptions(other, role === 'source' ? sourceLocations() : locations()); track place.value) {
       @if (place.points.length) {
         <optgroup [label]="place.label">
           <option [value]="place.value" [selected]="place.value === selectionValue(selection)">{{ place.closest }}</option>

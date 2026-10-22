@@ -36,18 +36,6 @@ export function worldFromLatLon(lat: number, lon: number, { zoom, tileOrigin, ti
   return { x: fit.x[0] * px + fit.x[1] * py + fit.x[2], z: fit.z[0] * px + fit.z[1] * py + fit.z[2] };
 }
 
-/** Whether a point is inside the fence polygon (even-odd rule), and its distance in metres to the fence line. */
-export function fenceTest({ x, z }: Point, fence: [number, number][]): { inside: boolean; metres: number } {
-  let inside = false, metres = Infinity;
-  for (let i = 0, j = fence.length - 1; i < fence.length; j = i++) {
-    const [ax, az] = fence[i], [bx, bz] = fence[j], dx = bx - ax, dz = bz - az, l = dx * dx + dz * dz;
-    if ((az > z) !== (bz > z) && x < dx * (z - az) / dz + ax) inside = !inside;
-    const t = l ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)) : 0;
-    metres = Math.min(metres, Math.hypot(x - ax - t * dx, z - az - t * dz));
-  }
-  return { inside, metres };
-}
-
 /** Annotate a polyline with cumulative distances; zero-length segments are dropped. */
 export function buildRouteGeometry(points: Point[]): RouteGeometry {
   const segments: RouteSegment[] = [], kept: Point[] = [];
