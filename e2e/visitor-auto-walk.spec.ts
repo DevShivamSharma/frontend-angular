@@ -4,7 +4,7 @@ import { setMaxListeners } from 'node:events';
 import { measureInteriorHalls, worldToHall, walkable } from '../src/app/home/venue-interiors';
 import { measureCCLevels } from '../src/app/home/cc-interiors';
 import { createVisitorNavigation, campusWalkable } from '../src/app/home/visitor-navigation';
-import { findVisitorPath, visitorSegmentClear } from '../src/app/home/visitor-routing';
+import { findVisitorPath, visitorSegmentClear, walkableRoute } from '../src/app/home/visitor-routing';
 import { createVenueVisitor, INITIAL_VISITOR_STATE, VisitorState } from '../src/app/home/venue-visitor';
 import { referenceVenueGeometry } from './venue-reference-fixture';
 
@@ -22,6 +22,21 @@ test('routing goes around thin obstacles, rejects sealed destinations and keeps 
   for (let i = 1; i < path.length; i++) expect(visitorSegmentClear(path[i - 1], path[i], allowed)).toBe(true);
   expect(findVisitorPath(start, goal, bounds, p => Math.abs(p.x) >= .3)).toBeNull();
   expect(findVisitorPath(start, new T.Vector3(), bounds, allowed)).toBeNull();
+});
+
+test('a Directions route goes round a building the walkway cuts through and keeps the line outside the campus', () => {
+  // A square hall at the origin; the traced walkway runs straight through it and on past the collision bounds.
+  const nav = { portals: [], hazards: [], bounds: new T.Box2(new T.Vector2(-50, -50), new T.Vector2(50, 50)),
+    spawn: new T.Vector3(-40, 0, 0), heading: 0, buildings: [{ id: 'hall', polygon: [[-10, -10], [10, -10], [10, 10], [-10, 10]] as [number, number][] }] };
+  const drawn = [[-30, 0], [0, 0], [30, 0], [80, 0], [120, 0]].map(([x, z]) => new T.Vector3(x, 0, z));
+  const route = walkableRoute(nav, new Map(), drawn)!;
+  expect(route[0]).toEqual(drawn[0]);
+  expect(route.slice(-2)).toEqual(drawn.slice(-2));
+  expect(route.some(p => Math.abs(p.x) < 10.5 && Math.abs(p.z) < 10.5)).toBe(false);
+  expect(route.some(p => Math.abs(p.z) > 10)).toBe(true);
+  const clear = (p: T.Vector3) => !(Math.abs(p.x) < 10.6 && Math.abs(p.z) < 10.6);
+  for (let i = 1; i < route.length; i++) if (nav.bounds.containsPoint(new T.Vector2(route[i].x, route[i].z))) expect(visitorSegmentClear(route[i - 1], route[i], clear)).toBe(true);
+  expect(walkableRoute(nav, new Map(), [new T.Vector3(0, 0, 0), new T.Vector3(5, 0, 0)])).toBeNull();
 });
 
 test('avatar auto-walk reaches every actual hall, can travel between halls and stops on interruption', () => {

@@ -4,7 +4,7 @@ import { createVisitorPortals } from './visitor-portals';
 import { VisitorNavigation, VisitorPortal, campusWalkable, inDoorway, portalCoordinates, slideVisitor, visitorHallWalkable, visitorGroundHeight } from './visitor-navigation';
 import { VISITOR_RADIUS } from './visitor-collision';
 import { InteriorHall, InteriorObstacle, hallToWorld } from './venue-interiors';
-import { findVisitorPath, planVisitorRoute } from './visitor-routing';
+import { findVisitorPath, planVisitorRoute, walkableRoute } from './visitor-routing';
 
 export interface VisitorState {
   active: boolean;
@@ -94,14 +94,18 @@ export function createVenueVisitor(options: {
     autoRoute = []; waypoint = 0; routeLabel = ''; actionHint = message; publish(); invalidate();
   }
   /**
-   * Walk a Directions route (world x/z, start first) from its start. It follows the traced walkways the route was
-   * planned on, out of the gates and along the road footpaths too, so the campus collision is not applied to it.
+   * Walk a Directions route (world x/z, start first) from its start. Inside the campus it is first made walkable
+   * (walkableRoute: round the buildings the traced walkways cut through, in at the destination's doorway); out of
+   * the gates and along the road footpaths there is no collision data, so the drawn line is followed as it is and
+   * the campus collision is not applied while walking it.
    */
-  function followRoute(points: { x: number; z: number }[], label: string) {
+  function followRoute(points: { x: number; z: number }[], label: string, destinationId = '') {
     if (points.length < 2 || floorChange || jumping) return;
     if (!active) start();
     cancelAutoWalk(''); clearInput(); setHall();
-    const path = points.map(p => new T.Vector3(p.x, 0, p.z));
+    const door = nav.portals.find(p => (p.hall.level ? 'cc' : p.hall.id) === destinationId);
+    const path = walkableRoute(nav, options.obstacles, points.map(p => new T.Vector3(p.x, 0, p.z)), door);
+    if (!path) { actionHint = 'No clear route there. Move to an open area and try again.'; publish(); invalidate(); return; }
     path.forEach(p => p.y = visitorGroundHeight(nav, p));
     position.copy(path[0]); yaw = avatarYaw = Math.atan2(path[1].x - path[0].x, path[1].z - path[0].z);
     autoRoute = path; waypoint = 1; autoSpeed = 0; routeLabel = label; actionHint = '';

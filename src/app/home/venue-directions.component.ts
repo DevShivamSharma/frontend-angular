@@ -40,7 +40,7 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   @Input() visitorAt: number[] | null = null;
   @Output() readonly route = new EventEmitter<Point[] | null>();
   /** The walk for the visitor to follow, and the place it leads to. */
-  @Output() readonly walk = new EventEmitter<{ points: Point[]; label: string }>();
+  @Output() readonly walk = new EventEmitter<{ points: Point[]; label: string; destination: string }>();
   readonly graph = signal<MapGraph | null>(null);
   readonly error = signal('');
   readonly source = signal<LocationSelection | undefined>(undefined);
@@ -257,6 +257,6 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   walkRoute(): void {
     if (this.visitorAt) this.replan();
     const journey = this.journey(), g = this.routeGraph();
-    if (journey && g) this.walk.emit({ points: journeyPolyline(journey.path, this.adjacency(), g.nodeMap), label: journey.end.label });
+    if (journey && g) this.walk.emit({ points: journeyPolyline(journey.path, this.adjacency(), g.nodeMap), label: journey.end.label, destination: journey.end.id });
   }
 }

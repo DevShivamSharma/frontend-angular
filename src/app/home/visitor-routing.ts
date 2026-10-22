@@ -18,7 +18,7 @@ export function visitorSegmentClear(a: T.Vector3, b: T.Vector3, allowed: Allowed
 }
 
 /** Bounded A* on the collision map. Runs on request, never in the render loop. */
-export function findVisitorPath(start: T.Vector3, goal: T.Vector3, bounds: T.Box2, allowed: Allowed, step = 2): T.Vector3[] | null {
+export function findVisitorPath(start: T.Vector3, goal: T.Vector3, bounds: T.Box2, allowed: Allowed, step = 2, limit = 60000): T.Vector3[] | null {
   if (!allowed(start) || !allowed(goal)) return null;
   if (visitorSegmentClear(start, goal, allowed)) return [start.clone(), goal.clone()];
   interface Node { x: number; z: number; point: T.Vector3; cost: number; score: number; parent?: Node; }
@@ -49,7 +49,7 @@ export function findVisitorPath(start: T.Vector3, goal: T.Vector3, bounds: T.Box
   push({ x: 0, z: 0, point: start.clone(), cost: 0, score: groundDistance(start, goal) });
   costs.set('0,0', 0);
   const directions = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
-  for (let visited = 0; heap.length && visited < 60000; visited++) {
+  for (let visited = 0; heap.length && visited < limit; visited++) {
     const node = pop();
     if (node.cost !== costs.get(`${node.x},${node.z}`)) continue;
     if (groundDistance(node.point, goal) <= step * 2 && visitorSegmentClear(node.point, goal, allowed)) {
@@ -84,6 +84,51 @@ export function findVisitorPath(start: T.Vector3, goal: T.Vector3, bounds: T.Box
   return null;
 }
 
+/** Outdoor A* collision: do not take shortcuts through another hall's open doorway.
+ * Precompute the same convex half-planes and body clearance used by campus
+ * collision. A* samples these many times; avoid allocating vectors, looking up
+ * portals or recalculating every edge length for each sample. */
+function campusAllowed(nav: VisitorNavigation): Allowed {
+  const footprints = [...nav.buildings.map(b => b.polygon), ...nav.hazards]
+    .filter(p => p.length >= 3).map(polygon => polygon.map((a, i) => {
+      const b = polygon[(i + 1) % polygon.length], dx = b[0] - a[0], dz = b[1] - a[1];
+      return { x: -dz, z: dx, offset: dz * a[0] - dx * a[1] + VISITOR_RADIUS * Math.hypot(dx, dz) };
+    }));
+  return p => p.x >= nav.bounds.min.x && p.x <= nav.bounds.max.x &&
+    p.z >= nav.bounds.min.y && p.z <= nav.bounds.max.y &&
+    !footprints.some(edges => edges.every(edge => edge.x * p.x + edge.z * p.z + edge.offset >= 0)) && visitorBodyClear(nav, p);
+}
+
+/**
+ * A Directions route the visitor can walk. The drawn walkways were traced from the air and run through hall
+ * roofs and walls, so inside the campus collision bounds a point in a building is left out and a segment that
+ * crosses one is re-routed with the same A* as Go to hall; outside the bounds (roads, the metro) there is no
+ * collision data and the drawn line is kept. With a destination doorway the walk ends inside it, as Go to hall does.
+ */
+export function walkableRoute(nav: VisitorNavigation, obstacles: Map<string, InteriorObstacle[]>, points: T.Vector3[],
+  destination?: VisitorPortal): T.Vector3[] | null {
+  const outdoors = campusAllowed(nav);
+  const inBounds = (p: T.Vector3) => nav.bounds.containsPoint(new T.Vector2(p.x, p.z));
+  const route: T.Vector3[] = [];
+  for (const point of points) {
+    if (inBounds(point) && !outdoors(point)) continue;
+    const last = route[route.length - 1];
+    if (last && inBounds(last) && inBounds(point) && !visitorSegmentClear(last, point, outdoors)) {
+      // Searched from the new point back: a point the trace put inside a glazed pavilion or a fenced yard
+      // is sealed in and the search runs out at once, and the point is left out like one in a hall.
+      const detour = findVisitorPath(point, last, nav.bounds, outdoors, 2, 8000);
+      if (detour) route.push(...detour.reverse().slice(1));
+      continue;
+    }
+    route.push(point);
+  }
+  if (destination && route.length) {
+    const tail = planVisitorRoute(nav, obstacles, undefined, route[route.length - 1], destination);
+    if (tail) route.push(...tail.slice(1));
+  }
+  return route.length >= 2 ? route : null;
+}
+
 /** Join an indoor exit, the outdoor route, and the destination's real doorway. */
 export function planVisitorRoute(nav: VisitorNavigation, obstacles: Map<string, InteriorObstacle[]>,
   currentHall: InteriorHall | undefined, start: T.Vector3, destination: VisitorPortal): T.Vector3[] | null {
@@ -113,18 +158,7 @@ export function planVisitorRoute(nav: VisitorNavigation, obstacles: Map<string, 
     const door = nav.portals.find(p => inDoorway(p, start));
     if (door && !append(exterior(door), point => campusWalkable(nav, point), 1)) return null;
   }
-  // Do not take shortcuts through another hall's open doorway.
-  // Precompute the same convex half-planes and body clearance used by campus
-  // collision. A* samples these many times; avoid allocating vectors, looking up
-  // portals or recalculating every edge length for each sample.
-  const footprints = [...nav.buildings.map(b => b.polygon), ...nav.hazards]
-    .filter(p => p.length >= 3).map(polygon => polygon.map((a, i) => {
-      const b = polygon[(i + 1) % polygon.length], dx = b[0] - a[0], dz = b[1] - a[1];
-      return { x: -dz, z: dx, offset: dz * a[0] - dx * a[1] + VISITOR_RADIUS * Math.hypot(dx, dz) };
-    }));
-  const outdoors: Allowed = p => p.x >= nav.bounds.min.x && p.x <= nav.bounds.max.x &&
-    p.z >= nav.bounds.min.y && p.z <= nav.bounds.max.y &&
-    !footprints.some(edges => edges.every(edge => edge.x * p.x + edge.z * p.z + edge.offset >= 0)) && visitorBodyClear(nav, p);
+  const outdoors = campusAllowed(nav);
   if (!append(exterior(destination), outdoors, 4) && !append(exterior(destination), outdoors, 2)) return null;
   if (!append(interior(destination), doorway(destination), 1)) return null;
   return route;

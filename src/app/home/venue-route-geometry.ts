@@ -23,6 +23,10 @@ export function journeyPolyline(path: string[], adjacency: Adjacency, nodeMap: R
     if (entry.edge.from !== from) points = points.reverse();
     for (const p of points) if (!out.length || Math.hypot(p.x - out[out.length - 1].x, p.z - out[out.length - 1].z) > 1e-3) out.push(p);
   }
+  // Where an edge runs past a junction without stopping there (j66-j24 passes j25), the node path goes out along a
+  // spur and back over the same line. Cut every such loop: from a point back to where the line last touched it.
+  for (let i = 0; i < out.length; i++) for (let j = out.length - 1; j > i + 1; j--)
+    if (Math.hypot(out[j].x - out[i].x, out[j].z - out[i].z) < 1) { out.splice(i + 1, j - i); break; }
   return out;
 }
 
