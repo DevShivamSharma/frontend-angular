@@ -46,7 +46,10 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
             if (material.userData['architecturalCategory'] === 'paved_ground') {
                 naturalPaving ??= createPavingTexture(null, anisotropy);
                 material.map = naturalPaving;
-                material.color.setRGB(.20, .218, .213);
+                // The texture carries the stone; this sets its brightness, a touch warm as in the photo.
+                material.color.setRGB(.63, .6, .55);
+                // The 1 px joints read as shallow grooves up close; the Color palette has no bump map.
+                material.bumpMap = naturalPaving; material.bumpScale = .02;
                 renderer.initTexture(naturalPaving);
             }
             architecture.apply(material, true);

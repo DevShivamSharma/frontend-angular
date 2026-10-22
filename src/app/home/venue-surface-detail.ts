@@ -76,39 +76,73 @@ export function prepareVenueSurfaceDetail(root: T.Group): void {
 }
 
 /** A cached, mipmapped stone atlas. Color mode retains the supplied Kota image
- * inside the same coursing; Natural uses quiet neutral stone. Created once per
- * palette, uploaded before display and owned by the appearance controller.
+ * inside the same coursing; Natural draws the campus's own paving as the z19
+ * satellite shows it. Created once per palette, uploaded before display and
+ * owned by the appearance controller.
  */
 export function createPavingTexture(source: T.Texture | null, anisotropy: number): T.CanvasTexture {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1024;
     const ctx = canvas.getContext('2d')!;
     const image = source?.image as CanvasImageSource | undefined;
-    // Eight-metre bays keep a readable rhythm at overview distance. Fine joints
-    // remain subtle up close and mipmaps prevent shimmering as the camera moves.
-    ctx.fillStyle = image ? '#a9a298' : '#b7bcb6'; ctx.fillRect(0, 0, 1024, 1024);
-    for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) {
-        const x = column * 256, y = row * 256;
-        if (image) {
+    if (image) {
+        // Eight-metre bays keep a readable rhythm at overview distance.
+        ctx.fillStyle = '#a9a298'; ctx.fillRect(0, 0, 1024, 1024);
+        for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) {
+            const x = column * 256, y = row * 256;
             ctx.drawImage(image, x + 5, y + 5, 246, 246);
             ctx.fillStyle = `rgba(245,238,221,${.025 + ((row * 3 + column) % 4) * .025})`;
             ctx.fillRect(x + 5, y + 5, 246, 246);
-        } else {
-            for (let r = 0; r < 8; r++) for (let c = -1; c < 4; c++) {
-                const shade = 204 + ((row * 19 + column * 13 + r * 7 + c * 3 + 10) % 5) * 3;
-                ctx.fillStyle = `rgb(${shade},${shade + 2},${shade - 2})`;
-                const left = Math.max(x + 5, x + c * 64 + (r % 2) * 32 + 1);
-                const right = Math.min(x + 251, x + c * 64 + (r % 2) * 32 + 63);
-                if (right > left) ctx.fillRect(left, y + r * 31 + 5, right - left, 29);
-            }
         }
-    }
-    // A restrained inset border every 32 m breaks up the largest open plazas.
-    ctx.strokeStyle = image ? '#8b8175' : '#969e96'; ctx.lineWidth = 9;
-    ctx.strokeRect(17, 17, 990, 990);
+        // A restrained inset border every 32 m breaks up the largest open plazas.
+        ctx.strokeStyle = '#8b8175'; ctx.lineWidth = 9;
+        ctx.strokeRect(17, 17, 990, 990);
+    } else drawNaturalPaving(ctx);
     const texture = new T.CanvasTexture(canvas);
     texture.name = image ? 'Plaza stone / supplied Kota' : 'Plaza stone / natural';
     texture.colorSpace = T.SRGBColorSpace;
     texture.wrapS = texture.wrapT = T.RepeatWrapping;
     texture.anisotropy = anisotropy;
     return texture;
+}
+
+/** The campus paving as the z19 photo shows it: pale warm granite in 0.6 m squares, a faded red
+ * sandstone band on a 32 m grid (the central plaza's lattice) and soft weathering, so the repeat
+ * doesn't read as a pattern. 32 px a metre; the band runs along two edges and meets its repeat.
+ */
+function drawNaturalPaving(ctx: CanvasRenderingContext2D): void {
+    let seed = 7;
+    const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+    const band = 40, tiles = 50, size = (1024 - band) / tiles;
+    const cell = (x: number, y: number, w: number, h: number) => {
+        const left = Math.round(x), top = Math.round(y);
+        ctx.fillRect(left + 1, top + 1, Math.round(x + w) - left - 1, Math.round(y + h) - top - 1);
+    };
+    // The joint colour shows through the 1 px gap each stone leaves.
+    ctx.fillStyle = '#a49b8c'; ctx.fillRect(0, 0, 1024, 1024);
+    for (let row = 0; row < tiles; row++) for (let column = 0; column < tiles; column++) {
+        const tone = 198 + random() * 16, warm = random() * 6;
+        ctx.fillStyle = `rgb(${tone + warm | 0},${tone - 4 | 0},${tone - 16 - warm | 0})`;
+        cell(band + column * size, band + row * size, size, size);
+    }
+    // Two courses of sandstone slabs in the band.
+    ctx.fillStyle = '#8e6a5b'; ctx.fillRect(0, 0, 1024, band); ctx.fillRect(0, 0, band, 1024);
+    for (let i = 0; i < 1024 / size; i++) for (const course of [0, band / 2]) {
+        for (const vertical of [false, true]) {
+            const tone = 172 + random() * 18;
+            ctx.fillStyle = `rgb(${tone | 0},${tone * .7 | 0},${tone * .58 | 0})`;
+            if (vertical) { if (i * size >= band) cell(course, i * size, band / 2, size); }
+            else cell(i * size, course, size, band / 2);
+        }
+    }
+    // Weathering: wide, faint patches drawn again across each edge so the tile stays seamless.
+    for (let i = 0; i < 46; i++) {
+        const x = random() * 1024, y = random() * 1024, r = 40 + random() * 150, dark = random() < .6;
+        for (const dx of [-1024, 0, 1024]) for (const dy of [-1024, 0, 1024]) {
+            if (x + dx + r < 0 || x + dx - r > 1024 || y + dy + r < 0 || y + dy - r > 1024) continue;
+            const gradient = ctx.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
+            gradient.addColorStop(0, dark ? 'rgba(92,82,66,.075)' : 'rgba(255,250,238,.07)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient; ctx.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+        }
+    }
 }
