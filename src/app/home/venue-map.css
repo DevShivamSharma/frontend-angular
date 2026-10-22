@@ -179,7 +179,8 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 /* The chips row scrolls; its right edge fades so the chips past it read as more to scroll to. */
 :host(.overlay) .map-chips{flex:1;margin:0;padding:0 24px 0 0;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),#0000);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),#0000)}
 :host(.overlay) .map-chips button{min-height:36px;padding:6px 12px;font-size:13px}
-:host(.overlay) .map-labels{left:auto;right:14px;bottom:auto;top:310px;min-height:40px;padding:0 12px;font-size:13px;pointer-events:auto}
+:host(.overlay) .map-labels{position:static;flex-shrink:0;min-height:36px;padding:0 12px;gap:6px;border-radius:18px;box-shadow:none;background:#eef0ec;color:#1d2321;font-size:13px;pointer-events:auto}
+:host(.overlay) .map-labels input{width:16px;height:16px}
 .map-pin-layer{position:absolute;inset:0;overflow:hidden}
 .map-pin-layer .map-pin{left:0;top:0;pointer-events:auto}
 .map-pin-layer .map-pin:not(.on-screen){visibility:hidden}

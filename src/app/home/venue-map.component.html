@@ -5,7 +5,7 @@
   }
   <div class="map-search">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
-    <input type="search" placeholder="Search halls, gates, facilities…" aria-label="Search halls, gates and facilities"
+    <input type="search" [placeholder]="mode === 'overlay' ? 'Search places…' : 'Search halls, gates, facilities…'" aria-label="Search halls, gates and facilities"
       [value]="query()" (input)="query.set($any($event.target).value)" (keydown.enter)="results()[0] && select(results()[0], true)" />
     @if (results().length) {
       <ul class="map-results" role="listbox" aria-label="Search results">
@@ -23,6 +23,10 @@
       <button type="button" [attr.data-group]="item.id" [attr.aria-pressed]="group() === item.id" (click)="showGroup(item.id)">{{ item.title }}</button>
     }
   </div>
+  <!-- Over the 3D view the labels toggle sits with the other map filters, clear of the right-hand view controls. -->
+  @if (mode === 'overlay') {
+    <label class="map-labels"><input type="checkbox" [checked]="labels()" (change)="labels.set($any($event.target).checked)" /> Labels</label>
+  }
 </header>
 
 <!-- The directions sign, as on Google Maps: a turn arrow in a diamond. -->
@@ -102,6 +106,6 @@
     <section appVenueDirections [active]="directions()" [destinationNode]="target()" [request]="request()" (route)="showRoute($event)"></section>
   </section>
 }
-@if (mode === 'overlay' || (!selected() && !directions())) {
+@if (mode === 'image' && !selected() && !directions()) {
 <label class="map-labels"><input type="checkbox" [checked]="labels()" (change)="labels.set($any($event.target).checked)" /> Show labels</label>
 }
