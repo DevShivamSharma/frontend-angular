@@ -2,6 +2,7 @@ import { isDevMode } from '@angular/core';
 import { Routes } from '@angular/router';
 
 import { organisationGuard, platformThemeGuard } from './core/org/org.guards';
+import { environment } from '../environments/environment';
 
 const invalidLink = () =>
   import('./features/invalid-link/invalid-link-page.component').then(
@@ -9,14 +10,18 @@ const invalidLink = () =>
   );
 
 /**
- * One domain for every organisation: `/<org>/...` is that organisation's app in its own look,
- * `/admin` is the platform console, and anything that names no organisation (the bare domain
- * included) is the invalid-link page, which lists nothing.
+ * ITPO's app: the bare domain opens `/itpo`, ITPO's app in its own look. `/admin` is the
+ * platform console; a path naming no organisation is the invalid-link page, which lists nothing.
  */
 export const routes: Routes = [
   {
+    // The app is ITPO's: the bare domain opens it.
     path: '',
     pathMatch: 'full',
+    redirectTo: environment.organisation,
+  },
+  {
+    path: 'dev-login',
     title: () => (isDevMode() ? 'Quick sign-in' : 'Invalid link'),
     canActivate: [platformThemeGuard],
     // A development build offers quick sign-in here (only if the server allows it); a

@@ -5,5 +5,7 @@
  */
 export const environment = {
   production: false,
+  /** The organisation this app is: ITPO. The bare domain opens it. */
+  organisation: 'itpo',
   apiBaseUrl: '/api',
 };

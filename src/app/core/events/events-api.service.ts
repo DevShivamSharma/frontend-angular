@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../api/api-base.token';
+import type { CategoryRef } from '../categories/categories.models';
 import type { RuleId } from '../rules/rules.models';
 import type {
   EventDetailView,
@@ -13,6 +14,7 @@ import type {
   EventPeople,
   EventView,
 } from './events.models';
+import type { ItpoEventDetailView, ItpoEventView, ItpoHallView } from './itpo-events.models';
 
 /** An organisation's events, their halls with each hall's rules, and their organisers. */
 @Injectable({ providedIn: 'root' })
@@ -121,5 +123,62 @@ export class EventsApi {
 
   revokeInvitation(slug: string, id: string, invitationId: string): Observable<void> {
     return this.http.delete<void>(`${this.base(slug)}/${id}/invitations/${invitationId}`);
+  }
+
+  // ---- ITPO's own events ----------------------------------------------------------------
+
+  private itpo(slug: string): string {
+    return `${this.api}/orgs/${encodeURIComponent(slug)}/itpo`;
+  }
+
+  /** ITPO's events of one kind; an organiser gets only their organisation's. */
+  itpoEvents(slug: string, kind: EventKind, q = ''): Observable<ItpoEventView[]> {
+    return this.http.get<ItpoEventView[]>(`${this.itpo(slug)}/events`, {
+      params: q.trim() ? { kind, q: q.trim() } : { kind },
+    });
+  }
+
+  itpoEvent(slug: string, id: string): Observable<ItpoEventDetailView> {
+    return this.http.get<ItpoEventDetailView>(`${this.itpo(slug)}/events/${id}`);
+  }
+
+  /** Brings the ITPO event here for planning; our event's id. */
+  openItpoEvent(slug: string, id: string): Observable<{ eventId: string }> {
+    return this.http.post<{ eventId: string }>(`${this.itpo(slug)}/events/${id}/open`, {});
+  }
+
+  itpoHalls(slug: string): Observable<ItpoHallView[]> {
+    return this.http.get<ItpoHallView[]>(`${this.itpo(slug)}/halls`);
+  }
+
+  /** Adds an ITPO hall to an internal ITPO event, as SelfCare does. */
+  addItpoHall(
+    slug: string,
+    id: string,
+    hallId: string,
+    forStallFnb: boolean,
+  ): Observable<ItpoEventDetailView> {
+    return this.http.post<ItpoEventDetailView>(`${this.itpo(slug)}/events/${id}/halls`, {
+      hallId,
+      forStallFnb,
+    });
+  }
+
+  /** The categories an ITPO event's halls may sell (our event's id). */
+  itpoCategoryOptions(slug: string, eventId: string): Observable<CategoryRef[]> {
+    return this.http.get<CategoryRef[]>(`${this.itpo(slug)}/mirrored/${eventId}/categories`);
+  }
+
+  /** What a hall of an internal ITPO event sells, here and in ITPO. */
+  setItpoHallCategories(
+    slug: string,
+    eventId: string,
+    hallId: string,
+    categoryIds: string[],
+  ): Observable<void> {
+    return this.http.put<void>(
+      `${this.itpo(slug)}/mirrored/${eventId}/halls/${hallId}/categories`,
+      { categoryIds },
+    );
   }
 }

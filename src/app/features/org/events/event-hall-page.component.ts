@@ -116,10 +116,15 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
 
         <section class="panel">
           <h2 class="section-title">Stall categories</h2>
-          @if (canManage()) {
+          @if (canManage() && (!d.event.venueEventId || d.event.kind === 'internal')) {
             <p class="muted small">
-              What stalls on this hall are sold as. The planner offers only these. Add categories
-              under Categories.
+              @if (d.event.venueEventId) {
+                What stalls on this hall are sold as, from the event's categories in ITPO; saved to
+                ITPO's hall list too. The planner offers only these.
+              } @else {
+                What stalls on this hall are sold as. The planner offers only these. Add categories
+                under Categories.
+              }
             </p>
             <div class="row">
               <p-multiselect
@@ -145,6 +150,9 @@ const GROUPS: Array<{ key: RuleGroup; label: string }> = [
               </button>
             </div>
           } @else if (d.categories.length) {
+            @if (d.event.venueEventId) {
+              <p class="muted small">The categories of the organiser's booking in ITPO.</p>
+            }
             <p class="chips">
               @for (c of d.categories; track c.id) {
                 <span class="status-chip">{{ c.name }}</span>
@@ -389,7 +397,14 @@ export class EventHallPageComponent {
       ]);
       this.show(detail);
       this.catalogue.set(catalogue);
-      if (this.canManage() && !this.allCategories().length) {
+      if (this.canManage() && detail.event.venueEventId) {
+        // An ITPO event's halls sell the event's own categories, as SelfCare offers them.
+        if (detail.event.kind === 'internal') {
+          this.allCategories.set(
+            await firstValueFrom(this.api.itpoCategoryOptions(this.slug(), detail.event.id)),
+          );
+        }
+      } else if (this.canManage() && !this.allCategories().length) {
         this.allCategories.set(await firstValueFrom(this.categoriesApi.list(this.slug())));
       }
     } catch {
@@ -410,6 +425,19 @@ export class EventHallPageComponent {
     if (!d) return;
     this.busy.set(true);
     try {
+      if (d.event.venueEventId) {
+        await firstValueFrom(
+          this.api.setItpoHallCategories(
+            this.slug(),
+            d.event.id,
+            d.hall.hallId,
+            this.selectedCategories(),
+          ),
+        );
+        this.show(await firstValueFrom(this.api.hall(this.slug(), d.event.id, d.hall.hallId)));
+        this.notifier.success('Categories saved, in ITPO too.');
+        return;
+      }
       this.show(
         await firstValueFrom(
           this.api.setHallCategories(

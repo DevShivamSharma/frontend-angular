@@ -35,6 +35,7 @@ import { CopyLinkComponent } from '../../../shared/copy-link.component';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { AddHallsDialogComponent, AddHallsData } from './add-halls-dialog.component';
+import { ItpoAddHallData, ItpoAddHallDialogComponent } from './itpo-add-hall-dialog.component';
 import { StatTileComponent } from '../../../shared/stat-tile.component';
 import { daysBetween, formatDay, formatDays } from './event-dates';
 import { EventExhibitorsComponent } from './event-exhibitors.component';
@@ -97,12 +98,12 @@ import { SelectModule } from 'primeng/select';
               >{{ statusLabel(e.status) }}</span
             >
           </span>
-          @if (canSeeBookings()) {
+          @if (canSeeBookings() && !fromItpo()) {
             <a pButton [outlined]="true" [routerLink]="['bookings']"
               ><app-icon name="confirmation_number" />Bookings</a
             >
           }
-          @if (e.status === 'scheduled' || e.status === 'completed') {
+          @if ((e.status === 'scheduled' || e.status === 'completed') && !fromItpo()) {
             <button
               pButton
               [outlined]="true"
@@ -112,7 +113,7 @@ import { SelectModule } from 'primeng/select';
               <app-icon name="link" />Copy public link
             </button>
           }
-          @if (canManage() && !eventScoped()) {
+          @if (canManage() && !eventScoped() && !fromItpo()) {
             @switch (e.status) {
               @case ('draft') {
                 <button pButton (click)="schedule(e)" [disabled]="busy()">
@@ -129,7 +130,7 @@ import { SelectModule } from 'primeng/select';
               }
             }
           }
-          @if (canManage()) {
+          @if (canManage() && !fromItpo()) {
             <button pButton [outlined]="true" (click)="edit(e)">
               <app-icon name="edit" />Edit
             </button>
@@ -169,7 +170,7 @@ import { SelectModule } from 'primeng/select';
             icon="confirmation_number"
             label="Stalls are sold"
             [value]="e.bookingChannel === 'platform_portal' ? 'Here' : 'Your system'"
-            [caption]="e.venueEventId ? 'Id in your system: ' + e.venueEventId : 'No id in your system'"
+            [caption]="fromItpo() ? 'ITPO books and bills the stalls' : e.venueEventId ? 'Id in your system: ' + e.venueEventId : 'No id in your system'"
           />
         </div>
 
@@ -180,8 +181,10 @@ import { SelectModule } from 'primeng/select';
             <h2 class="section-title grow">
               Halls <span class="count">{{ e.halls.length }}</span>
             </h2>
-            @if (canManage()) {
-              <button pButton (click)="addHalls(e)"><app-icon name="add" />Add halls</button>
+            @if (canManage() && (!fromItpo() || e.kind === 'internal')) {
+              <button pButton (click)="fromItpo() ? addItpoHall(e) : addHalls(e)">
+                <app-icon name="add" />Add halls
+              </button>
             }
           </div>
           @if (!e.halls.length) {
@@ -234,7 +237,7 @@ import { SelectModule } from 'primeng/select';
                     <span class="open">Open <app-icon name="chevron_right" /></span>
                   </span>
                 </a>
-                @if (canManage()) {
+                @if (canManage() && !fromItpo()) {
                   <button
                     pButton
                     class="remove"
@@ -253,17 +256,17 @@ import { SelectModule } from 'primeng/select';
           </ul>
         </section>
 
-        @if (canSeeSettlement() && e.bookingChannel === 'platform_portal' && e.status !== 'draft') {
+        @if (canSeeSettlement() && e.bookingChannel === 'platform_portal' && e.status !== 'draft' && !fromItpo()) {
           <app-event-settlement [event]="e" />
         }
         </div>
 
         <aside class="side">
-        @if (canSeeBookings()) {
+        @if (canSeeBookings() && !fromItpo()) {
           <app-event-exhibitors [event]="e" />
         }
 
-        @if (e.kind === 'external' && canManage()) {
+        @if (e.kind === 'external' && canManage() && !fromItpo()) {
           <section class="panel">
             <h2 class="section-title">Organiser access</h2>
             <p class="muted">
@@ -554,6 +557,11 @@ export class EventPageComponent {
   protected readonly canSeeBookings = computed(() => this.context.can('bookings.view'));
   protected readonly canSeeSettlement = computed(() => this.context.can('reports.view'));
   protected readonly event = signal<EventDetailView | null>(null);
+  /**
+   * An event of ITPO's, brought here from its records: ITPO keeps its details, dates and
+   * organiser, so only planning (and an internal event's halls) is done here.
+   */
+  protected readonly fromItpo = computed(() => !!this.event()?.venueEventId);
   protected readonly people = signal<EventPeople | null>(null);
   protected readonly roles = signal<AssignableRoleView[]>([]);
   protected readonly loading = signal(false);
@@ -590,7 +598,9 @@ export class EventPageComponent {
     try {
       const event = await firstValueFrom(this.api.event(this.slug(), id));
       this.event.set(event);
-      if (event.kind === 'external' && this.canManage()) await this.loadPeople(event.id);
+      if (event.kind === 'external' && this.canManage() && !event.venueEventId) {
+        await this.loadPeople(event.id);
+      }
     } catch {
       // The error interceptor has shown it.
     } finally {
@@ -677,6 +687,20 @@ export class EventPageComponent {
     } catch {
       // The error interceptor has shown it.
     }
+  }
+
+  /** Adds one of ITPO's halls to this internal ITPO event, then shows it. */
+  protected addItpoHall(event: EventDetailView): void {
+    const data: ItpoAddHallData = {
+      slug: this.slug(),
+      itpoEventId: event.venueEventId!,
+      eventName: event.name,
+    };
+    this.dialog.open<boolean>(ItpoAddHallDialogComponent, { data }).subscribe((added?: boolean) => {
+      if (!added) return;
+      this.notifier.success('Hall added.');
+      void this.load(event.id);
+    });
   }
 
   protected addHalls(event: EventDetailView): void {

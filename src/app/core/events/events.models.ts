@@ -85,6 +85,8 @@ export interface EventHallDetailView {
     audience: EventType;
     /** The company that booked the halls; external events only. */
     organiserName: string | null;
+    /** ITPO's id for an event brought here from ITPO. */
+    venueEventId: string | null;
   };
   hall: EventHallView;
   floor: HallFloor;

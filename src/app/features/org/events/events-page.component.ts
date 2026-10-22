@@ -11,33 +11,33 @@ import {
 import { ButtonModule } from 'primeng/button';
 import { IconComponent } from '../../../shared/icon.component';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { EventsApi } from '../../../core/events/events-api.service';
-import type { EventKind, EventView } from '../../../core/events/events.models';
+import type { EventKind } from '../../../core/events/events.models';
+import type { ItpoEventView } from '../../../core/events/itpo-events.models';
 import { OrgContextStore } from '../../../core/org/org.stores';
 import { EmptyStateComponent } from '../../../shared/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/page-header.component';
 import { daysBetween, EventPhase, eventPhase, formatDays, today } from './event-dates';
-import { EventDialogComponent, EventDialogData } from './event-dialog.component';
-import { AppDialog } from '../../../core/ui/app-dialog.service';
 
 const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: string }> = {
   internal: {
     heading: 'Internal events',
-    sub: 'Events your organisation runs itself, drawn by your own team.',
-    empty: 'Create an event, then add the halls it uses and the rules for each hall.',
+    sub: "ITPO's own events, from the Bharat Mandapam portal. Open one to add halls and plan its stalls.",
+    empty: 'Internal events are created in the Bharat Mandapam portal; they appear here.',
   },
   external: {
     heading: 'External events',
-    sub: 'Events of organisers who booked your halls. They draw their stalls on those halls only.',
-    empty: 'Create an event for an organiser’s booking, add its halls, then invite the organiser.',
+    sub: 'Events of organisers who booked ITPO’s halls. They plan their stalls; ITPO reviews them.',
+    empty: 'Organisers’ bookings appear here once made on the Bharat Mandapam portal.',
   },
   mine: {
     heading: 'My events',
-    sub: 'The events you were invited to, with the halls you plan stalls on.',
-    empty: 'You have no events yet. The venue adds you when your halls are ready.',
+    sub: 'Your bookings at Bharat Mandapam, with the halls you plan stalls on.',
+    empty: 'You have no bookings yet. Book halls on the Bharat Mandapam portal.',
   },
 };
 
@@ -45,7 +45,7 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
 @Component({
   selector: 'app-events-page',
   imports: [
-    RouterLink,
+    FormsModule,
     ButtonModule,
     IconComponent,
     ProgressBarModule,
@@ -56,9 +56,16 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
   template: `
     <div class="page">
       <app-page-header [heading]="copy().heading" [subheading]="copy().sub">
-        @if (canManage() && kind()) {
-          <button pButton (click)="create()"><app-icon name="add" />New event</button>
-        }
+        <span class="search">
+          <app-icon name="search" />
+          <input
+            type="search"
+            [ngModel]="query()"
+            (ngModelChange)="search($event)"
+            placeholder="Event, booking number or organiser"
+            aria-label="Search events"
+          />
+        </span>
       </app-page-header>
 
       @if (loading()) {
@@ -69,13 +76,9 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
         <div class="panel">
           <app-empty-state
             icon="event"
-            [heading]="'No ' + copy().heading.toLowerCase() + ' yet'"
+            [heading]="query() ? 'No events match' : 'No ' + copy().heading.toLowerCase() + ' yet'"
             [text]="copy().empty"
-          >
-            @if (canManage() && kind()) {
-              <button pButton (click)="create()">New event</button>
-            }
-          </app-empty-state>
+          />
         </div>
       }
 
@@ -83,15 +86,21 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
         @for (e of events(); track e.id) {
           @let phase = phaseOf(e);
           <li>
-            <a
+            <button
+              type="button"
               class="event-card"
-              [class]="'phase-' + phase + ' status-' + e.status"
-              [routerLink]="['/', slug(), 'events', e.id]"
+              [class]="'phase-' + phase + ' status-' + status(e)"
+              (click)="open(e)"
+              [disabled]="opening() === e.id"
             >
               <span class="top">
                 <span class="when" aria-hidden="true">
-                  <span class="mon">{{ month(e.startsOn) }}</span>
-                  <span class="day">{{ e.startsOn.slice(8, 10) }}</span>
+                  @if (e.startsOn) {
+                    <span class="mon">{{ month(e.startsOn) }}</span>
+                    <span class="day">{{ e.startsOn.slice(8, 10) }}</span>
+                  } @else {
+                    <span class="day">–</span>
+                  }
                 </span>
                 <span class="titles">
                   <span class="name">{{ e.name }}</span>
@@ -107,35 +116,63 @@ const COPY: Record<EventKind | 'mine', { heading: string; sub: string; empty: st
                 </span>
               </span>
               <span class="meta">
-                <span><app-icon name="event" />{{ days(e) }}</span>
+                @if (e.startsOn && e.endsOn) {
+                  <span><app-icon name="event" />{{ days(e) }}</span>
+                }
                 <span
-                  ><app-icon name="meeting_room" />{{ e.hallCount }}
-                  {{ e.hallCount === 1 ? 'hall' : 'halls' }}</span
+                  ><app-icon name="meeting_room" />{{ e.halls }}
+                  {{ e.halls === 1 ? 'hall' : 'halls' }}</span
                 >
-                <span class="tag">{{ e.audience }}</span>
-                @if (e.venueEventId) {
-                  <span class="id" [title]="'Venue system id ' + e.venueEventId"
-                    ><app-icon name="confirmation_number" />{{ e.venueEventId }}</span
+                @if (e.code) {
+                  <span class="id" [title]="'ITPO booking ' + e.code"
+                    ><app-icon name="confirmation_number" />{{ e.code }}</span
                   >
                 }
               </span>
               <span class="foot">
                 <span>{{
-                  e.hallCount
-                    ? 'Open halls and stall plans'
-                    : canManage()
-                      ? 'Add halls'
-                      : 'No halls yet'
+                  opening() === e.id
+                    ? 'Opening…'
+                    : e.halls
+                      ? 'Open halls and stall plans'
+                      : e.kind === 'internal' && canManage()
+                        ? 'Add halls'
+                        : 'No halls yet'
                 }}</span>
                 <app-icon name="arrow_forward" />
               </span>
-            </a>
+            </button>
           </li>
         }
       </ul>
     </div>
   `,
   styles: `
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 8px;
+      background: var(--app-surface-container-lowest);
+    }
+    .search input {
+      width: min(320px, 60vw);
+      height: 36px;
+      border: 0;
+      outline: 0;
+      background: none;
+      color: var(--app-on-surface);
+      font: var(--app-body-medium);
+    }
+    button.event-card {
+      width: 100%;
+      border: 0;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
     .cards {
       list-style: none;
       margin: 0;
@@ -319,15 +356,17 @@ export class EventsPageComponent {
   readonly kind = input<EventKind>();
 
   private readonly api = inject(EventsApi);
-  private readonly dialog = inject(AppDialog);
   private readonly router = inject(Router);
   private readonly context = inject(OrgContextStore);
 
   protected readonly slug = this.context.slug;
-  protected readonly events = signal<EventView[]>([]);
+  protected readonly events = signal<ItpoEventView[]>([]);
   protected readonly loading = signal(false);
+  protected readonly query = signal('');
+  protected readonly opening = signal<string | null>(null);
   protected readonly canManage = computed(() => this.context.can('events.manage'));
   protected readonly copy = computed(() => COPY[this.kind() ?? 'mine']);
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     // Only the route inputs restart the load: the request itself reads the session signal.
@@ -337,10 +376,13 @@ export class EventsPageComponent {
     });
   }
 
+  /** ITPO's events of the kind; an organiser's own list is their external events. */
   private async load(kind: EventKind | undefined): Promise<void> {
     this.loading.set(true);
     try {
-      this.events.set(await firstValueFrom(this.api.events(this.slug(), kind)));
+      this.events.set(
+        await firstValueFrom(this.api.itpoEvents(this.slug(), kind ?? 'external', this.query())),
+      );
     } catch {
       // The error interceptor has shown it.
     } finally {
@@ -348,17 +390,44 @@ export class EventsPageComponent {
     }
   }
 
-  private readonly today = today();
-
-  protected phaseOf(e: EventView): EventPhase {
-    return eventPhase(e, this.today);
+  protected search(q: string): void {
+    this.query.set(q);
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => void this.load(this.kind()), 300);
   }
 
-  protected phaseLabel(e: EventView, phase: EventPhase): string {
-    // A status the venue set says more than the calendar does.
-    if (e.status === 'cancelled') return 'Cancelled';
-    if (e.status === 'completed') return 'Completed';
-    if (e.status === 'draft') return 'Draft';
+  /** Brings the ITPO event here, then opens it. */
+  protected async open(e: ItpoEventView): Promise<void> {
+    this.opening.set(e.id);
+    try {
+      const { eventId } = await firstValueFrom(this.api.openItpoEvent(this.slug(), e.id));
+      await this.router.navigate(['/', this.slug(), 'events', eventId]);
+    } catch {
+      // The error interceptor has shown it.
+    } finally {
+      this.opening.set(null);
+    }
+  }
+
+  private readonly today = today();
+
+  protected phaseOf(e: ItpoEventView): EventPhase {
+    return e.startsOn && e.endsOn
+      ? eventPhase(
+          { startsOn: e.startsOn, endsOn: e.endsOn, buildUpOn: null, dismantleOn: null },
+          this.today,
+        )
+      : 'upcoming';
+  }
+
+  /** ITPO's own state of the event, for the card's colour. */
+  protected status(e: ItpoEventView): string {
+    return e.approvalStatus === 'Approved' ? 'scheduled' : 'draft';
+  }
+
+  protected phaseLabel(e: ItpoEventView, phase: EventPhase): string {
+    if (e.approvalStatus && e.approvalStatus !== 'Approved') return e.approvalStatus;
+    if (!e.startsOn) return 'No dates';
     if (phase !== 'upcoming') {
       return { 'build-up': 'Build-up', live: 'Live', dismantling: 'Dismantling', ended: 'Ended' }[
         phase
@@ -368,21 +437,11 @@ export class EventsPageComponent {
     return n === 1 ? 'Tomorrow' : n <= 60 ? `In ${n} days` : 'Upcoming';
   }
 
-  protected days(e: EventView): string {
-    return formatDays(e.startsOn, e.endsOn);
+  protected days(e: ItpoEventView): string {
+    return formatDays(e.startsOn!, e.endsOn!);
   }
 
   protected month(d: string): string {
     return new Date(`${d}T00:00:00Z`).toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' });
-  }
-
-  protected create(): void {
-    const kind = this.kind();
-    if (!kind) return;
-    const data: EventDialogData = { slug: this.slug(), kind };
-    this.dialog.open<EventView>(EventDialogComponent, { data }).subscribe((event?: EventView) => {
-      // Straight on to adding its halls.
-      if (event) void this.router.navigate(['/', this.slug(), 'events', event.id]);
-    });
   }
 }
