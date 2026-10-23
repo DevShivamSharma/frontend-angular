@@ -9,6 +9,8 @@
 :host([data-ui=maps]) .planner-link{top:16px;right:16px;display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:20px;background:#fff;color:var(--g-blue);font:500 14px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:var(--g-lift)}
 :host([data-ui=maps]) .planner-link:hover{background:var(--g-hover)}
 :host([data-ui=maps]) .view-control{top:16px;right:150px}
+/* The way back to Classic stays in view at the top right, beside 3D | Image, instead of down in the layers card. */
+:host([data-ui=maps]) .ui-switch{position:fixed;top:64px;right:150px;margin:0;z-index:5}
 :host([data-ui=maps]) .appearance-switch{width:auto;gap:2px;padding:4px;border-radius:20px;background:#fff;box-shadow:var(--g-lift)}
 :host([data-ui=maps]) .appearance-switch button{min-height:32px;padding:0 14px;border-radius:16px;font:500 13px Roboto,"Segoe UI",Arial,sans-serif;color:var(--g-muted)}
 :host([data-ui=maps]) .appearance-switch button:hover{background:var(--g-hover)}
@@ -87,5 +89,6 @@
   :host([data-ui=maps]) .appearance-control{left:auto;right:12px;bottom:auto;top:98px;text-align:right}
   :host([data-ui=maps]) .appearance-control .appearance-switch{margin-left:auto}
   :host([data-ui=maps]) .view-control{top:50px;right:12px}
+  :host([data-ui=maps]) .ui-switch{position:static;margin-bottom:6px}
   :host([data-ui=maps]) .planner-link{top:10px;right:12px;min-height:36px;padding:0 12px;font-size:13px}
 }
