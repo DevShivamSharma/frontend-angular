@@ -135,20 +135,29 @@ def beam(name,a,b,width,depth,mat):
     a=Vector(a);b=Vector(b); d=b-a
     return box(name,(a+b)/2,(d.length,width,depth),mat,math.atan2(d.y,d.x))
 def prism(name, pts, bottom, top, mat, holes=None):
-    # Blender's 2D curve fill keeps actual courtyard openings in the roofs.
-    cu=bpy.data.curves.new(name,'CURVE'); cu.dimensions='2D'; cu.resolution_u=1; cu.fill_mode='BOTH'; cu.extrude=(top-bottom)/2
-    rings=[pts]+(holes or [])
-    for ri,ring in enumerate(rings):
+    # Built straight from the rings: tessellated caps (courtyard holes kept) and one quad per edge. The earlier
+    # curve-to-mesh conversion ran an operator per building, and its scene-wide depsgraph update made the
+    # 600-odd OSM blocks take over an hour; this is milliseconds. Outer ring counter-clockwise, holes clockwise,
+    # so the side quads all face outwards; the caps are flipped by their signed area.
+    rings=[]
+    for ri,ring in enumerate([pts]+(holes or [])):
         points=[V(p) for p in ring]
+        points=[p for i,p in enumerate(points) if (p-points[i-1]).length>1e-6]  # drops closing duplicates and zero edges
+        if len(points)<3:continue
         area=sum(a.x*b.y-b.x*a.y for a,b in zip(points,points[1:]+points[:1]))
         if (area>0) != (ri==0): points.reverse()
-        spline=cu.splines.new('POLY'); spline.points.add(len(points)-1)
-        for q,p in zip(spline.points,points): q.co=(*p[:2],0,1)
-        spline.use_cyclic_u=True
-    o=bpy.data.objects.new(name,cu); collection.objects.link(o); o.location.z=(top+bottom)/2; o.data.materials.append(mat)
-    bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active=o; bpy.ops.object.convert(target='MESH')
-    created.append(o); o['phase']=1 if collection==phase1 else 2
-    return o
+        rings.append(points)
+    verts=[];faces=[];flat=[]
+    for ring in rings:
+        base=len(verts); n=len(ring)
+        verts+=[Vector((p.x,p.y,bottom)) for p in ring]+[Vector((p.x,p.y,top)) for p in ring]
+        faces+=[(base+i,base+(i+1)%n,base+n+(i+1)%n,base+n+i) for i in range(n)]
+        flat+=[(base+i,base+n+i) for i in range(n)]  # flat tessellation index -> (bottom vertex, top vertex)
+    for tri in tessellate_polygon([[(p.x,p.y) for p in ring] for ring in rings]) if rings else []:
+        a,b,c=(verts[flat[i][1]] for i in tri)
+        if (b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y)<0: tri=tri[::-1]
+        faces.append(tuple(flat[i][1] for i in tri)); faces.append(tuple(flat[i][0] for i in tri[::-1]))
+    return object_mesh(name,verts,faces,mat)
 def line_samples(points, spacing):
     carry=0
     for a,b in zip(points,points[1:]):
@@ -277,12 +286,16 @@ def offset_ring(ring, d):
         out.append((p[0]+m[0]*d,p[1]+m[1]*d))
     return out
 osm_footprints=[]
+property_world=[world(p) for p in ref['propertyBoundary']]
+property_x=[p[0] for p in property_world]; property_z=[p[1] for p in property_world]
 for index,feature in enumerate(context['features']):
     if feature['k']!='building':continue
     pts=[pixel(x,z) for x,z in offset_ring(feature['p'],.25)]; h=feature['h']
     cx=sum(p[0] for p in pts)/len(pts); cy=sum(p[1] for p in pts)/len(pts)
     wx,wz=world((cx,cy))
-    if math.hypot(wx,wz)>950 or abs(sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(feature['p'],feature['p'][1:]+feature['p'][:1])))/2<150:continue
+    # Distance from the property's bounding box, not the origin, so every side gets the same reach.
+    gap=math.hypot(max(min(property_x)-wx,0,wx-max(property_x)),max(min(property_z)-wz,0,wz-max(property_z)))
+    if gap>650 or abs(sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(feature['p'],feature['p'][1:]+feature['p'][:1])))/2<150:continue
     if inside((cx,cy),ref['propertyBoundary']) or any(inside(p,traced) for traced in building_world for p in pts[::3]+[(cx,cy)]):continue
     holes=[[pixel(x,z) for x,z in offset_ring(hole,-.25)] for hole in feature.get('holes',[])]
     name=f'osm-building-{index}'
@@ -292,7 +305,7 @@ for index,feature in enumerate(context['features']):
         vs=[V(p,h+.5) for p in ring]
         for a,b in zip(vs,vs[1:]+vs[:1]):beam('SITE_'+name+'_parapet',a,b,.26,.55,M['wall'])
     osm_footprints.append(pts)
-inventory.append({'id':'osm-footprint-buildings','phase':1,'type':'building','count':len(osm_footprints),'status':'OpenStreetMap footprints within 950 m, outside the property and the traced buildings; heights from building:levels or an 8 m default, façades from a repeating texture'})
+inventory.append({'id':'osm-footprint-buildings','phase':1,'type':'building','count':len(osm_footprints),'status':'OpenStreetMap footprints within 650 m of the property, outside it and the traced buildings; heights from building:levels or an 8 m default, façades from a repeating texture'})
 
 # Raised metro viaduct and station. All coordinates follow the visible aerial alignment.
 metro=ref['metro']; track=[V(p,metro['deckHeight']) for p in metro['track']]
