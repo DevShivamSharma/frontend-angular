@@ -175,7 +175,8 @@ export class PlanDeliveryStatusComponent {
 
   protected sendingTip(d: PlanDeliveryView): string {
     const parts = [`Attempt ${d.attempts}`];
-    if (d.lastError) parts.push(`Last try: ${d.lastError}`);
+    // The server's messages end with a full stop; the join adds its own.
+    if (d.lastError) parts.push(`Last try: ${d.lastError.replace(/\.$/, '')}`);
     if (d.status === 'pending' && d.nextAttemptAt) {
       parts.push(`Next try ${new Date(d.nextAttemptAt).toLocaleTimeString()}`);
     }

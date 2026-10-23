@@ -36,6 +36,7 @@ import {
   nudge,
   placeStalls,
   type QuarterTurn,
+  shrunkAlignment,
   type StallOverride,
   toPlanStall,
   twinNumbers,
@@ -479,10 +480,55 @@ const CHECK_ROUNDS = 4;
                   <button pButton type="button" size="small" [text]="true" (click)="fit()">
                     <app-icon name="fit_screen" />Fit again
                   </button>
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    [text]="true"
+                    (click)="shrink()"
+                    pTooltip="The whole drawing drawn smaller, until it fits this hall. Each stall keeps the drawing's area."
+                    tooltipPosition="bottom"
+                  >
+                    <app-icon name="zoom_out" />Fit to hall
+                  </button>
+                  @if (method() === 'shrunk') {
+                    <span class="pad" role="group" aria-label="Drawing size">
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        [text]="true"
+                        (click)="sizeBy(-0.01)"
+                        [disabled]="shrunkPercent() <= 50"
+                        aria-label="Smaller"
+                        pTooltip="1 % smaller"
+                        tooltipPosition="bottom"
+                      >
+                        <app-icon name="zoom_out" />
+                      </button>
+                      <span class="small">{{ shrunkPercent() }} %</span>
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        [text]="true"
+                        (click)="sizeBy(0.01)"
+                        [disabled]="shrunkPercent() >= 100"
+                        aria-label="Bigger"
+                        pTooltip="1 % bigger: stalls past the floor are left out"
+                        tooltipPosition="bottom"
+                      >
+                        <app-icon name="zoom_in" />
+                      </button>
+                    </span>
+                  }
                 </div>
                 <p class="muted small">
                   @if (method() === 'registered') {
                     Placed where the drawing's grid matches the hall's grid: as drawn.
+                  } @else if (method() === 'shrunk') {
+                    Drawn at {{ shrunkPercent() }} % to fit the hall: each stall keeps the drawing's
+                    area ("Actual" on the plan).
                   } @else {
                     Fitted on the open floor: check the position, turn or move it if needed.
                   }
@@ -514,6 +560,36 @@ const CHECK_ROUNDS = 4;
                   <li><span class="key hand"></span>Draw by hand</li>
                   <li><span class="key bad"></span>Off the floor or breaks a rule</li>
                 </ul>
+                @if (toCheck().length) {
+                  <section class="to-check" aria-label="Stalls to check">
+                    <strong class="small">{{ plural(toCheck().length, 'stall') }} to check</strong>
+                    <ul>
+                      @for (c of toCheck(); track c.p.stall.key) {
+                        <li [class.on]="picked() === c.p.stall.key">
+                          <button
+                            pButton
+                            type="button"
+                            size="small"
+                            [text]="true"
+                            (click)="pick(c.p.stall.key)"
+                            pTooltip="Show it on the plan"
+                            tooltipPosition="left"
+                          >
+                            {{ c.p.stall.name }}
+                          </button>
+                          <input
+                            type="text"
+                            maxlength="60"
+                            [attr.aria-label]="'Number of ' + c.p.stall.name"
+                            [ngModel]="c.number"
+                            (change)="rename($event, c.p)"
+                          />
+                          <span class="small" [class.bad]="c.bad">{{ c.why }}</span>
+                        </li>
+                      }
+                    </ul>
+                  </section>
+                }
                 @if (byHand().length) {
                   <details>
                     <summary>{{ plural(byHand().length, 'stall') }} to draw by hand</summary>
@@ -804,6 +880,7 @@ const CHECK_ROUNDS = 4;
     }
     .pad {
       display: inline-flex;
+      align-items: center;
     }
     .small {
       font: var(--app-body-small);
@@ -875,6 +952,42 @@ const CHECK_ROUNDS = 4;
       gap: 8px;
       align-items: center;
     }
+    .to-check ul {
+      list-style: none;
+      margin: 6px 0 0;
+      padding: 0;
+      max-height: 240px;
+      overflow: auto;
+      display: grid;
+      gap: 4px;
+    }
+    .to-check li {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 110px;
+      gap: 0 6px;
+      align-items: center;
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+    .to-check li.on {
+      background: color-mix(in srgb, var(--app-primary) 12%, transparent);
+    }
+    .to-check li span {
+      grid-column: 1 / -1;
+      padding-left: 8px;
+      color: var(--app-on-surface-variant);
+    }
+    .to-check li span.bad {
+      color: var(--app-error);
+    }
+    .to-check input {
+      padding: 4px 8px;
+      border: 1px solid var(--app-outline-variant);
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      font: var(--app-body-medium);
+    }
     .dxf {
       margin-right: auto;
     }
@@ -891,6 +1004,10 @@ export class DrawingImportDialogComponent {
   protected readonly result = signal<DrawingImportResult | null>(null);
   protected readonly alignment = signal<Alignment | null>(null);
   protected readonly method = signal<FitMethod>('fitted');
+  /** Fit to hall's scale, as a percentage. */
+  protected readonly shrunkPercent = computed(() =>
+    Math.round((this.alignment()?.scale ?? 1) * 100),
+  );
   protected readonly replace = signal(false);
   protected readonly downloading = signal(false);
   /** Stalls changed on their own, by drawing key; kept through a new alignment or fit. */
@@ -961,7 +1078,7 @@ export class DrawingImportDialogComponent {
           `${p.stall.name} is in the drawing twice: this one comes in as ${twin}. Check the number with the venue.`,
         );
       }
-      return { key: p.stall.key, stall, notes, twin };
+      return { key: p.stall.key, stall, notes, twin, auto };
     });
     return { stalls, replacing: this.replace() ? plan.stalls.map((s) => s.id) : [] };
   });
@@ -980,6 +1097,25 @@ export class DrawingImportDialogComponent {
   protected readonly offFloor = computed(
     () => this.placed().filter((p) => p.rect && !p.onFloor).length,
   );
+  /**
+   * Stalls with something to look at (red, left out by the import, no number, a repeated
+   * number), each with the number it comes in with, to give it one right there.
+   */
+  protected readonly toCheck = computed(() => {
+    const made = new Map(this.importable().map((s) => [s.key, s]));
+    return this.placed()
+      .filter((p) => !this.excluded().has(p.stall.key))
+      .flatMap((p) => {
+        const m = made.get(p.stall.key);
+        const why = this.whyOf(p);
+        const reason =
+          why[0] ??
+          (m?.auto ? 'No number in the drawing' : m?.twin ? 'In the drawing twice' : null);
+        if (!reason) return [];
+        const number = this.overrides().get(p.stall.key)?.name ?? m?.auto ?? m?.twin;
+        return [{ p, why: reason, bad: why.length > 0, number: number ?? p.stall.name }];
+      });
+  });
   protected readonly problems = computed(() => {
     const r = this.result();
     if (!r) return [];
@@ -1202,6 +1338,11 @@ export class DrawingImportDialogComponent {
     const a = this.alignment();
     if (!r || !floor || !a) return;
     const rotation = ((a.rotation + quarter) % 360) as QuarterTurn;
+    // Fit to hall stays on through a turn: fitted again in the new turn.
+    if (this.method() === 'shrunk') {
+      this.shrinkTo(rotation);
+      return;
+    }
     this.alignment.set(
       centredAlignment(
         r,
@@ -1211,6 +1352,36 @@ export class DrawingImportDialogComponent {
       ),
     );
     this.method.set('fitted');
+  }
+
+  /** Fit to hall, in the turn the drawing has now. */
+  protected shrink(): void {
+    const a = this.alignment();
+    if (a) this.shrinkTo(a.rotation);
+  }
+
+  /** Fit to hall's size made smaller or bigger by a step, never past the drawing's own size. */
+  protected sizeBy(by: number): void {
+    const a = this.alignment();
+    if (!a) return;
+    const size = Math.round(Math.min(1, Math.max(0.5, (a.scale ?? 1) + by)) * 100) / 100;
+    this.shrinkTo(a.rotation, size);
+  }
+
+  private shrinkTo(rotation: QuarterTurn, size?: number): void {
+    const r = this.result();
+    const floor = this.floor();
+    if (!r || !floor) return;
+    this.alignment.set(
+      shrunkAlignment(
+        r,
+        r.groups.map((g) => g.group),
+        floor,
+        rotation,
+        size,
+      ),
+    );
+    this.method.set('shrunk');
   }
 
   protected move(dx: number, dz: number): void {
@@ -1265,12 +1436,20 @@ export class DrawingImportDialogComponent {
     this.change((o) => ({ ...o, [side]: v }));
   }
 
-  /** A new number for the picked stall; its drawn number, or nothing, puts the drawn one back. */
-  protected rename(e: Event): void {
-    const p = this.pickedStall();
+  /**
+   * A new number for a stall (the picked one, or one of the list to check); its drawn number, or
+   * nothing, puts the drawn one back.
+   */
+  protected rename(
+    e: Event,
+    p: ReturnType<DrawingImportDialogComponent['placed']>[number] | null = this.pickedStall(),
+  ): void {
     if (!p) return;
     const name = (e.target as HTMLInputElement).value.trim();
-    this.change((o) => ({ ...o, name: name && name !== p.stall.name ? name : undefined }));
+    const given = name && name !== p.stall.name ? name : undefined;
+    // A number given to an outline the server doubted says it is a stall.
+    const isStall = given && this.doubted(p) ? true : undefined;
+    this.change((o) => ({ ...o, name: given, isStall: isStall ?? o.isStall }), p.stall.key);
   }
 
   /** The number a stall comes in with: given by hand, numbered on as a repeat, or as drawn. */
@@ -1320,8 +1499,10 @@ export class DrawingImportDialogComponent {
   }
 
   /** Changes the picked stall's override; one that changes nothing is dropped. */
-  private change(fn: (o: StallOverride) => StallOverride): void {
-    const key = this.picked();
+  private change(
+    fn: (o: StallOverride) => StallOverride,
+    key: string | null = this.picked(),
+  ): void {
     if (!key) return;
     const next = new Map(this.overrides());
     const o = fn(next.get(key) ?? { dx: 0, dz: 0 });

@@ -11,6 +11,7 @@ import {
   overrideText,
   placeStalls,
   rectOf,
+  shrunkAlignment,
   toPlanStall,
   turn,
   twinNumbers,
@@ -144,6 +145,26 @@ describe('importing stalls from a CAD plan', () => {
     const o = autoFit(result, ['8'], floor).alignment.offsets['8'];
     expect(Number.isInteger(o.x)).toBeTrue();
     expect(Number.isInteger(o.z)).toBeTrue();
+  });
+
+  it('fits a drawing bigger than the hall onto it, each stall sold at its drawn area', () => {
+    // 80 m of stalls on a 40 × 30 hall: half size, all on the floor.
+    const result = drawing([
+      stall('A', rect(0, 0, 40, 6)),
+      stall('B', rect(40, 0, 40, 6), { labels: { area: 250, dims: null, texts: [] } }),
+    ]);
+    const a = shrunkAlignment(result, ['8'], floor, 0);
+    expect(a.scale).toBe(0.5);
+    const placed = placeStalls(result, ['8'], a, floor);
+    expect(placed.every((p) => p.onFloor)).toBeTrue();
+    const by = (key: string) => toPlanStall(placed.find((p) => p.stall.key === key)!, [], []);
+    expect(by('A').width).toBe(20);
+    expect(by('A').labelArea).toBe(240);
+    expect(by('B').labelArea).toBe(250);
+    // A drawing that fits already keeps its size.
+    expect(shrunkAlignment(drawing([stall('A', rect(0, 0, 3, 3))]), ['8'], floor, 0).scale).toBe(
+      1,
+    );
   });
 
   describe('as whole cells', () => {

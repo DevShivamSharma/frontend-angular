@@ -35,10 +35,15 @@ export interface Alignment {
   rotation: QuarterTurn;
   /** Shift of each group, hall metres. */
   offsets: Record<string, DrawingPoint>;
+  /** The drawing drawn smaller to fit a hall it is bigger than (Fit to hall); 1 when absent. */
+  scale?: number;
 }
 
-/** How a fit was found: the drawing's own grid on the hall's, or the best search. */
-export type FitMethod = 'registered' | 'fitted';
+/**
+ * How a fit was found: the drawing's own grid on the hall's, the best search, or the whole
+ * drawing shrunk onto the hall.
+ */
+export type FitMethod = 'registered' | 'fitted' | 'shrunk';
 
 export interface FitResult {
   alignment: Alignment;
@@ -115,9 +120,10 @@ export function turn(p: DrawingPoint, rotation: QuarterTurn): DrawingPoint {
 /** A stall's outline in hall metres under an alignment. */
 export function placeOutline(stall: DrawingStall, alignment: Alignment): DrawingPoint[] {
   const o = alignment.offsets[stall.group] ?? { x: 0, z: 0 };
+  const k = alignment.scale ?? 1;
   return ring(stall.outline).map((p) => {
     const t = turn(p, alignment.rotation);
-    return { x: clean(t.x + o.x), z: clean(t.z + o.z) };
+    return { x: clean(t.x * k + o.x), z: clean(t.z * k + o.z) };
   });
 }
 
@@ -155,11 +161,62 @@ export function centredAlignment(
 /** Moves every group of an alignment by the same step: the review's nudge. */
 export function nudge(alignment: Alignment, dx: number, dz: number): Alignment {
   return {
-    rotation: alignment.rotation,
+    ...alignment,
     offsets: Object.fromEntries(
       Object.entries(alignment.offsets).map(([g, o]) => [
         g,
         { x: clean(o.x + dx), z: clean(o.z + dz) },
+      ]),
+    ),
+  };
+}
+
+/**
+ * Fit to hall: the whole drawing drawn smaller, in one scale so its layout keeps its shape, until
+ * it fits the hall's main floor, and centred on it. For a drawing of a bigger hall than this one
+ * (the venue's floor and the event's plan disagree). A drawing that fits already is kept at 1.
+ * `size` is the user's own scale instead (the review's smaller / bigger), still centred.
+ */
+export function shrunkAlignment(
+  result: DrawingImportResult,
+  groups: ReadonlyArray<string>,
+  floor: PlannerFloor,
+  rotation: QuarterTurn,
+  size?: number,
+): Alignment {
+  const frame = frameOffsets(result, groups);
+  const turned = Object.fromEntries(groups.map((g) => [g, turn(frame[g], rotation)]));
+  // Only stalls: a kiosk or a named area drawn far off would shrink the rest for nothing.
+  const pts = result.stalls
+    .filter((s) => groups.includes(s.group) && !notAStall(s))
+    .flatMap((s) =>
+      s.outline.map((p) => {
+        const t = turn(p, rotation);
+        return { x: t.x + turned[s.group].x, z: t.z + turned[s.group].z };
+      }),
+    );
+  if (!pts.length) return { rotation, offsets: turned };
+  // The main floor, not an annex or foyer drawn apart from it.
+  const hb =
+    floor.floor
+      .map((poly) => bounds(poly[0].map(([x, z]) => ({ x, z }))))
+      .sort((a, b) => area(b) - area(a))[0] ?? floorBounds(floor);
+  const sb = bounds(pts);
+  // Down to the whole per cent, so it stays inside.
+  const fits = Math.min(
+    (hb.maxX - hb.minX) / (sb.maxX - sb.minX),
+    (hb.maxZ - hb.minZ) / (sb.maxZ - sb.minZ),
+  );
+  const scale = size ?? Math.min(1, Math.floor(fits * 100) / 100);
+  const dx = (hb.minX + hb.maxX) / 2 - (scale * (sb.minX + sb.maxX)) / 2;
+  const dz = (hb.minZ + hb.maxZ) / 2 - (scale * (sb.minZ + sb.maxZ)) / 2;
+  return {
+    rotation,
+    scale,
+    offsets: Object.fromEntries(
+      groups.map((g) => [
+        g,
+        { x: clean(turned[g].x * scale + dx), z: clean(turned[g].z * scale + dz) },
       ]),
     ),
   };
@@ -537,6 +594,8 @@ export interface PlacedStall {
   onFloor: boolean;
   /** Why it is not brought in, or null. */
   skip: string | null;
+  /** The alignment's scale: below 1 the stall is drawn smaller than the drawing has it. */
+  scale?: number;
 }
 
 /** Every stall of the chosen halls of the drawing, placed. */
@@ -570,7 +629,15 @@ export function placeStalls(
             : !onFloor
               ? 'Off the hall floor: on a wall or outside the hall'
               : null;
-      return { stall, outline, rect, cutCells: shape?.cutCells ?? [], onFloor, skip };
+      return {
+        stall,
+        outline,
+        rect,
+        cutCells: shape?.cutCells ?? [],
+        onFloor,
+        skip,
+        scale: alignment.scale ?? 1,
+      };
     });
 }
 
@@ -902,7 +969,9 @@ export function toPlanStall(
   const open = openSidesOf(stall, placed.outline);
   // The drawing writes more than it draws (no room on the grid): sold at what it writes.
   const cells = stallArea({ width: r.width, depth: r.height, cutCells: placed.cutCells });
-  const written = stall.labels.area;
+  // Shrunk to fit the hall: still sold at the drawing's size, written or drawn.
+  const k = placed.scale ?? 1;
+  const written = stall.labels.area ?? (k < 1 ? round05(cells / (k * k)) : null);
   return {
     id: newId(),
     zoneId: zoneAt(centre(r), zones)?.id ?? null,
@@ -914,7 +983,7 @@ export function toPlanStall(
     depth: r.height,
     openSides: open.length ? open : ['bottom'],
     cutCells: placed.cutCells,
-    labelArea: written !== null && written - cells > 1 ? written : null,
+    labelArea: written !== null && (k < 1 || written - cells > 1) ? written : null,
     scheme: 'shell',
     categoryIds,
     isPremium: stall.category === 'premium',
