@@ -7,7 +7,7 @@
     <span class="venue-marker-tooltip" id="venue-marker-tooltip" role="tooltip">Bharat Mandapam</span>
   </button>
 </div>
-<section appVenueMap mode="overlay" [hidden]="visitor().active || interior().walking || globeActive() || venueView() === 'image'" [inert]="!loading.ready()" (picked)="pickPlace($event)"></section>
+<section appVenueMap mode="overlay" [attr.data-ui]="uiSkin()" [hidden]="visitor().active || interior().walking || globeActive() || venueView() === 'image'" [inert]="!loading.ready()" (picked)="pickPlace($event)"></section>
 <!-- Image view: the 2D map phones get, in place of the canvas; the 3D viewer stays loaded and paused. -->
 @if (venueView() === 'image') {
   <section appVenueMap mode="image" [initialPlace]="place()" [initialRoute]="route()" (picked)="imagePicked($event)"></section>
@@ -115,6 +115,10 @@
 <a class="planner-link" [hidden]="visitor().active || venueView() === 'image'" [inert]="!loading.ready()" routerLink="/planner">Stall planner ↗</a>
 
 <div class="appearance-control" [hidden]="visitor().active || venueView() === 'image'" [inert]="!loading.ready()">
+  <div class="appearance-switch ui-switch" role="group" aria-label="Controls style">
+    <button type="button" data-ui-skin="classic" [attr.aria-pressed]="uiSkin() === 'classic'" (click)="setUiSkin('classic')">Classic</button>
+    <button type="button" data-ui-skin="maps" [attr.aria-pressed]="uiSkin() === 'maps'" (click)="setUiSkin('maps')">Maps</button>
+  </div>
   <div class="appearance-switch" role="group" aria-label="Model appearance" [attr.aria-busy]="appearanceBusy()">
     <button type="button" data-appearance="natural" [attr.aria-pressed]="appearance() === 'natural'" [disabled]="appearanceBusy()" (click)="setAppearance('natural')">Natural</button>
     <button type="button" data-appearance="color" [attr.aria-pressed]="appearance() === 'color'" [disabled]="appearanceBusy()" (click)="setAppearance('color')">Color</button>

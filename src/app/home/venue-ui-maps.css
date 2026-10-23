@@ -1,0 +1,91 @@
+/* "Maps" skin: the 3D explorer's chrome in the Google Maps manner — white cards with the Maps shadow, one blue
+   accent, search and the place list top-left, layers bottom-left, round tools bottom-right. Switched by the
+   Classic | Maps control (home-page data-ui); the Classic rules in the other files stay untouched. The 2D phone
+   map already draws itself this way (venue-map.css), so the two views match. */
+:host([data-ui=maps]){--g-blue:#1a73e8;--g-text:#3c4043;--g-muted:#5f6368;--g-fill:#f1f3f4;--g-hover:#f8f9fa;--g-active:#e8f0fe;--g-line:#dadce0;--g-lift:0 1px 2px #3c40434d,0 2px 6px 2px #3c404326;font-family:Roboto,"Segoe UI",Arial,sans-serif;color:var(--g-text)}
+:host([data-ui=maps]) .identity{display:none}
+
+/* Top right: the planner link and the 3D / Image switch as white pills. */
+:host([data-ui=maps]) .planner-link{top:16px;right:16px;display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:20px;background:#fff;color:var(--g-blue);font:500 14px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .planner-link:hover{background:var(--g-hover)}
+:host([data-ui=maps]) .view-control{top:16px;right:150px}
+:host([data-ui=maps]) .appearance-switch{width:auto;gap:2px;padding:4px;border-radius:20px;background:#fff;box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .appearance-switch button{min-height:32px;padding:0 14px;border-radius:16px;font:500 13px Roboto,"Segoe UI",Arial,sans-serif;color:var(--g-muted)}
+:host([data-ui=maps]) .appearance-switch button:hover{background:var(--g-hover)}
+:host([data-ui=maps]) .appearance-switch button[aria-pressed=true]{background:var(--g-active);color:var(--g-blue)}
+:host([data-ui=maps]) .appearance-switch button:focus-visible,:host([data-ui=maps]) .venue-time-control :focus-visible{outline-color:var(--g-blue)}
+:host([data-ui=maps]) .visit-launch{background:#fff;color:var(--g-text);border-radius:20px;box-shadow:var(--g-lift);font:500 14px Roboto,"Segoe UI",Arial,sans-serif}
+:host([data-ui=maps]) .visit-launch svg{color:var(--g-blue)}
+
+/* Left: the place list under the search box, one white card; the details card opens beside it. */
+:host([data-ui=maps]) .navigation{left:16px;top:160px;transform:none;width:400px;max-height:calc(100dvh - 370px)}
+:host([data-ui=maps]) #menu{max-height:calc(100dvh - 370px);padding:8px 0;border-radius:8px;background:#fff;box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .collapse-menu{top:8px;right:8px;z-index:1;width:32px;height:32px;border-radius:50%;background:#fff;color:var(--g-muted);font-size:20px;line-height:30px;box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .navigation.collapsed{transform:translateX(-424px)}
+:host([data-ui=maps]) .navigation.collapsed .collapse-menu{right:-56px;top:0;width:40px;height:40px}
+:host([data-ui=maps]) .section-row{min-height:48px;padding:0 48px 0 20px;gap:16px;border:0;background:#fff;font:400 14px/1 Roboto,"Segoe UI",Arial,sans-serif;color:var(--g-text)}
+:host([data-ui=maps]) .section-row svg{color:var(--g-muted)}
+:host([data-ui=maps]) .section-row b{color:var(--g-muted)}
+:host([data-ui=maps]) .section-row:hover{background:var(--g-hover)}
+:host([data-ui=maps]) .section-row.active,:host([data-ui=maps]) .section-row[aria-expanded=true]{background:var(--g-active);color:var(--g-blue)}
+:host([data-ui=maps]) .section-row.active svg,:host([data-ui=maps]) .section-row[aria-expanded=true] svg{color:var(--g-blue)}
+:host([data-ui=maps]) .sub-menu{margin:0;padding:4px 8px 8px;background:#fff}
+:host([data-ui=maps]) .sub-menu button{min-height:40px;padding:8px 12px 8px 48px;border:0;border-radius:8px;background:#fff;font-size:13px;color:var(--g-text)}
+:host([data-ui=maps]) .sub-menu button:hover{background:var(--g-hover)}
+:host([data-ui=maps]) .sub-menu button.active{background:var(--g-active);color:var(--g-blue)}
+:host([data-ui=maps]) .sub-menu span{color:var(--g-muted)}
+:host([data-ui=maps]) .detail-panel{left:408px;width:360px;border-radius:8px;background:#fff;box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .detail-heading{padding:14px 12px 14px 20px;border-bottom:1px solid var(--g-line);background:#fff;color:var(--g-text)}
+:host([data-ui=maps]) .detail-heading h2{font-size:18px;font-weight:500}
+:host([data-ui=maps]) .detail-heading button{width:32px;height:32px;background:var(--g-fill);color:var(--g-muted)}
+:host([data-ui=maps]) .detail-body{padding:16px 20px}
+:host([data-ui=maps]) .kicker{color:var(--g-muted);font-size:11px;letter-spacing:.3px;text-transform:none}
+:host([data-ui=maps]) .detail-body p{font-size:13px;color:var(--g-muted)}
+:host([data-ui=maps]) .detail-body dl{padding:4px 12px;border-radius:8px;background:var(--g-fill)}
+:host([data-ui=maps]) .detail-body dl div{border-color:var(--g-line)}
+:host([data-ui=maps]) .detail-body dt{font-size:11px;color:var(--g-muted)}
+:host([data-ui=maps]) .detail-body dd{font-size:13px;color:var(--g-text)}
+:host([data-ui=maps]) .level-link,:host([data-ui=maps]) .plan-card{border-radius:8px;background:var(--g-fill);border:0;font-size:13px}
+
+/* Bottom left: the layers card — appearance, scenery, time — where Maps keeps its layers. */
+:host([data-ui=maps]) .appearance-control{top:auto;right:auto;left:16px;bottom:40px;max-width:none;text-align:left}
+:host([data-ui=maps]) .appearance-control .appearance-switch{margin-left:0}
+:host([data-ui=maps]) .scenery-switch{margin:6px 0 0}
+:host([data-ui=maps]) #appearance-status{border-radius:8px;background:#fff;color:var(--g-text);font-size:12px;box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .venue-time-control{width:auto;min-width:220px;margin:8px 0 0;border-radius:8px;background:#fff;color:var(--g-text);box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .venue-time-toggle{border-radius:8px;font:400 13px Roboto,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
+:host([data-ui=maps]) .venue-time-toggle small{color:var(--g-muted)}
+:host([data-ui=maps]) .venue-time-toggle:hover{background:var(--g-hover)}
+:host([data-ui=maps]) .venue-time-live{border-radius:16px;background:var(--g-blue)}
+:host([data-ui=maps]) .venue-time-live:hover{background:#1967d2}
+:host([data-ui=maps]) #venue-time-options{border-top-color:var(--g-line)}
+:host([data-ui=maps]) #venue-time-options label span,:host([data-ui=maps]) #venue-time-help{color:var(--g-muted)}
+:host([data-ui=maps]) #venue-demo-time{border-radius:8px;border-color:var(--g-line);background:#fff;color:var(--g-text);accent-color:var(--g-blue)}
+:host([data-ui=maps]) .venue-time-presets button{border-radius:16px;background:var(--g-fill);color:var(--g-text)}
+:host([data-ui=maps]) .venue-time-presets button:hover{background:#e8eaed}
+:host([data-ui=maps]) .venue-time-presets button[aria-pressed=true]{background:var(--g-active);color:var(--g-blue)}
+
+/* Bottom right: round white tools, the zoom pair joined as on Maps. */
+:host([data-ui=maps]) .map-tools{right:16px;bottom:88px;gap:8px}
+:host([data-ui=maps]) .map-tools button{width:40px;height:40px;border-radius:50%;background:#fff;color:var(--g-muted);font-size:22px;font-weight:300;box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .map-tools button:hover{background:var(--g-hover);color:var(--g-text)}
+:host([data-ui=maps]) .map-tools button.active{background:var(--g-active);color:var(--g-blue)}
+:host([data-ui=maps]) .map-tools svg{width:20px;height:20px}
+:host([data-ui=maps]) .tool-gap{height:8px}
+:host([data-ui=maps]) #zoom-in{border-radius:8px 8px 0 0;box-shadow:0 1px 2px #3c40434d,0 -1px 4px 1px #3c404326}
+:host([data-ui=maps]) #zoom-out{margin-top:-8px;border-top:1px solid var(--g-line);border-radius:0 0 8px 8px;box-shadow:0 2px 2px #3c40434d,0 2px 6px 2px #3c404326}
+
+/* Bottom edge: status and credits as plain text on the map. */
+:host([data-ui=maps]) footer{left:16px;right:16px;bottom:8px;justify-content:flex-end;font:11px/1.4 Roboto,"Segoe UI",Arial,sans-serif;color:var(--g-muted);text-shadow:0 0 3px #fff,0 0 3px #fff}
+:host([data-ui=maps]) footer span:not(:empty){padding:0;background:none}
+:host([data-ui=maps]) #geo-credit{right:16px;bottom:24px;padding:0;background:none;color:var(--g-muted);text-shadow:0 0 3px #fff,0 0 3px #fff}
+
+@media(max-width:700px){
+  :host([data-ui=maps]) .navigation{left:12px;top:auto;bottom:56px;width:min(300px,calc(100vw - 80px));max-height:60dvh}
+  :host([data-ui=maps]) .navigation.collapsed{transform:translateX(-320px)}
+  :host([data-ui=maps]) .detail-panel{left:0;width:min(310px,calc(100vw - 64px))}
+  :host([data-ui=maps]) .appearance-control{left:auto;right:12px;bottom:auto;top:98px;text-align:right}
+  :host([data-ui=maps]) .appearance-control .appearance-switch{margin-left:auto}
+  :host([data-ui=maps]) .view-control{top:50px;right:12px}
+  :host([data-ui=maps]) .planner-link{top:10px;right:12px;min-height:36px;padding:0 12px;font-size:13px}
+}

@@ -20,13 +20,19 @@ const VENUE_VIEW_KEY = 'venue-explorer-view';
 function storedVenueView(): '3d' | 'image' {
   try { return localStorage.getItem(VENUE_VIEW_KEY) === 'image' ? 'image' : '3d'; } catch { return '3d'; }
 }
+/** Chrome skin: the venue's own (classic) or the Google Maps manner (venue-ui-maps.css); remembered per browser. */
+const UI_SKIN_KEY = 'venue-explorer-ui';
+function storedUiSkin(): 'classic' | 'maps' {
+  try { return localStorage.getItem(UI_SKIN_KEY) === 'maps' ? 'maps' : 'classic'; } catch { return 'classic'; }
+}
 
 @Component({
   selector: 'app-home-page', standalone: true,
   imports: [RouterLink, NgTemplateOutlet, VenueLoadingComponent, VenueDetailsComponent, FloorPlanDialogComponent, VenueDirectionsComponent, VenueMapComponent],
   providers: [VenueDataService],
   templateUrl: './home-page.component.html',
-  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-time.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css', './venue-visitor-controls.css', './venue-visitor.css', './venue-directions.css'],
+  styleUrls: ['./home-page.component.css', './home-page.component-2.css', './venue-appearance.css', './venue-time.css', './venue-gallery.css', './venue-loading.css', './venue-loading-2.css', './venue-globe-marker.css', './venue-interiors.css', './venue-visitor-controls.css', './venue-visitor.css', './venue-directions.css', './venue-ui-maps.css'],
+  host: { '[attr.data-ui]': 'uiSkin()' },
   encapsulation: ViewEncapsulation.ShadowDom,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -86,6 +92,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly visitorDestinations = signal<{id:string;label:string}[]>([]);
   /** 3D explorer or the 2D image map phones use; remembered per browser. */
   readonly venueView = signal<'3d' | 'image'>(storedVenueView());
+  readonly uiSkin = signal<'classic' | 'maps'>(storedUiSkin());
   /** The place last picked in either view (walkways-graph ids, which halls and gates share), so the other view opens on it. */
   readonly place = signal('');
   /** The 3D walking route, drawn on the image map when switching to it. */
@@ -239,6 +246,10 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   }
   /** A place picked on the image map is shown in 3D when switching back. */
   imagePicked(id: string): void { this.place.set(id); this.placeFromImage = true; }
+  setUiSkin(skin: 'classic' | 'maps'): void {
+    this.uiSkin.set(skin);
+    try { localStorage.setItem(UI_SKIN_KEY, skin); } catch { /* storage blocked: the choice lasts this visit */ }
+  }
   setVenueView(view: '3d' | 'image'): void {
     if (view === this.venueView()) return;
     this.venueView.set(view);

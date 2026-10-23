@@ -12,3 +12,5 @@
 .appearance-switch button:focus-visible{outline:2px solid #9a623f;outline-offset:2px}
 #appearance-status{margin:6px 0 0;padding:8px 10px;background:#f3f0ea;color:#353c36;font-size:11px;line-height:1.5;text-align:left}
 @media(max-width:700px){.appearance-control{right:10px;top:98px}.view-control{right:10px;top:50px}.appearance-switch{width:180px}.appearance-switch button{min-height:38px;padding:7px 10px}}
+/* The Classic | Maps skin switch sits above the appearance switches with the same spacing as the scenery row. */
+.ui-switch{margin-bottom:6px}
