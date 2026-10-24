@@ -1,0 +1,59 @@
+<p-dialog
+  [header]="'Categories of ' + (hall()?.name ?? 'the hall')"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!saving()"
+  [style]="{ width: '34rem', maxWidth: '96vw' }"
+>
+  @if (failed()) {
+    <p class="problem" role="alert">
+      The categories could not be loaded. Close this and try again.
+    </p>
+  } @else {
+    <label class="label" for="hall-categories">Categories this hall sells</label>
+    <p-multiselect
+      inputId="hall-categories"
+      [options]="options()"
+      [formControl]="picker"
+      optionLabel="name"
+      optionValue="id"
+      [filter]="true"
+      filterBy="name"
+      [loading]="loading()"
+      placeholder="Choose categories"
+      display="chip"
+      appendTo="body"
+      styleClass="picker"
+      (onChange)="choose($event.value)"
+    />
+    @if (!loading() && !options().length) {
+      <p class="text-muted note">
+        This event has no categories to offer. Set its product category first: Edit event, then
+        Format and organiser.
+      </p>
+    } @else {
+      <p class="text-muted note">
+        These are the categories of the event’s product category. Stalls of this hall can use only
+        the ones chosen here.
+      </p>
+    }
+  }
+
+  <ng-template #footer>
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Save categories"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="saving() || loading() || failed() || unchanged()"
+      (onClick)="save()"
+    />
+  </ng-template>
+</p-dialog>

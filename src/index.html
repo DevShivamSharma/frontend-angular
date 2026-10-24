@@ -2,14 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Venue platform</title>
+    <title>ITPO Stall Planning Portal</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
+    <script>
+      // The chosen theme before the first paint, so a dark page never flashes light.
+      (function () {
+        try {
+          var mode = localStorage.getItem('ems.theme');
+          var dark =
+            mode === 'dark' ||
+            ((mode === null || mode === 'system') &&
+              matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="theme-color" content="#c8283f" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- The organisation's own font is added at runtime by ThemeService. -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"

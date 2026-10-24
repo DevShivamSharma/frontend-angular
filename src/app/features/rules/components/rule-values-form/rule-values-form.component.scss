@@ -1,0 +1,25 @@
+:host {
+  display: block;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+
+  label {
+    display: flex;
+    flex-direction: column;
+    font-weight: 500;
+  }
+
+  label span {
+    font-size: 0.875rem;
+    font-weight: 400;
+  }
+}
+
+:host ::ng-deep p-inputnumber,
+:host ::ng-deep .p-inputnumber {
+  width: 100%;
+}

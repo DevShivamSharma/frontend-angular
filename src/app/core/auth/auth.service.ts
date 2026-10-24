@@ -1,140 +1,138 @@
-import { HttpClient } from '@angular/common/http';
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import {
+  Observable,
+  catchError,
+  finalize,
+  firstValueFrom,
+  map,
+  of,
+  shareReplay,
+  tap,
+  throwError,
+} from 'rxjs';
 
-import { API_BASE_URL } from '../api/api-base.token';
-import type { Me, MembershipSummary, Session, UserView } from '../api/api.models';
-import { quiet } from '../api/error-toast.interceptor';
-import { httpStatus } from '../api/http-error';
-
-/** Refresh this long before the access token expires, so requests rarely meet a 401. */
-const REFRESH_LEAD_MS = 60_000;
+import { NotifierService } from '../notification/notifier.service';
+import { AuthApiService } from './auth-api.service';
+import { LoginCredentials, SessionUser, StoredSession } from './auth.models';
+import { TokenStorage } from './token-storage';
 
 /**
- * The signed-in user. The access token lives in memory only; the refresh token is an httpOnly
- * cookie the browser sends to /api/auth, so a reload restores the session without exposing a
- * long-lived secret to scripts.
+ * The signed-in session: who it is, the tokens, and signing in, refreshing and out. It decides
+ * nothing about what a user may see (the guards do) and knows nothing about HTTP details (the
+ * API service does).
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http = inject(HttpClient);
-  private readonly api = inject(API_BASE_URL);
+  private readonly api = inject(AuthApiService);
+  private readonly storage = inject(TokenStorage);
+  private readonly router = inject(Router);
+  private readonly notifier = inject(NotifierService);
 
-  private readonly session = signal<Session | null>(null);
-  private readonly membershipList = signal<MembershipSummary[]>([]);
-  private refreshing: Promise<boolean> | null = null;
-  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly tokens = signal<StoredSession | null>(this.storage.read());
+  private readonly currentUser = signal<SessionUser | null>(null);
+  private refreshing$: Observable<string> | null = null;
 
-  readonly user = computed<UserView | null>(() => this.session()?.user ?? null);
-  readonly signedIn = computed(() => this.session() !== null);
-  readonly memberships = this.membershipList.asReadonly();
+  readonly user = this.currentUser.asReadonly();
+  readonly accessToken = computed(() => this.tokens()?.accessToken ?? null);
+  readonly hasSession = computed(() => this.tokens() !== null);
+  readonly isAuthenticated = computed(() => this.currentUser() !== null);
+  readonly isStaff = computed(() => this.currentUser()?.type === 'itpo_staff');
+  /** What to call the signed-in user: an organiser by their organisation, ITPO staff by name. */
+  readonly displayName = computed(() => {
+    const user = this.currentUser();
+    return user ? (user.organisationName ?? user.name) : '';
+  });
 
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.clearTimer());
-  }
-
-  accessToken(): string | null {
-    return this.session()?.accessToken ?? null;
-  }
-
-  /** At startup: picks the session back up from the refresh cookie, if there is one. */
+  /** At start-up: picks the saved session up again, and drops it if the server no longer knows it. */
   async restore(): Promise<void> {
-    await this.refresh();
+    if (!this.hasSession()) {
+      return;
+    }
+    try {
+      this.currentUser.set(await firstValueFrom(this.api.me()));
+    } catch {
+      this.clear();
+    }
   }
 
-  async login(email: string, password: string): Promise<UserView> {
-    const session = await firstValueFrom(
-      this.http.post<Session>(`${this.api}/auth/login`, { email, password }),
+  login(credentials: LoginCredentials): Observable<SessionUser> {
+    return this.api.login(credentials).pipe(
+      tap((response) => {
+        this.store({
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+          tokenExpires: response.tokenExpires,
+        });
+        this.currentUser.set(response.user);
+      }),
+      map((response) => response.user),
     );
-    await this.start(session);
-    return session.user;
   }
 
-  /** Local development only: signs in as a quick-login account, without its password. */
-  async devLogin(email: string): Promise<UserView> {
-    const session = await firstValueFrom(
-      this.http.post<Session>(`${this.api}/auth/dev-login`, { email }),
+  /** Ends the session here and, as far as it can, on the server. */
+  logout(): Observable<void> {
+    const request$ = this.hasSession()
+      ? this.api.logout().pipe(catchError(() => of(null)))
+      : of(null);
+    return request$.pipe(
+      tap(() => this.clear()),
+      map(() => undefined),
+      finalize(() => void this.router.navigate(['/login'])),
     );
-    await this.start(session);
-    return session.user;
-  }
-
-  /** Accepts an invitation, signs in, and returns the slug of the organisation joined. */
-  async acceptInvitation(
-    token: string,
-    body: { name?: string; password: string },
-  ): Promise<string> {
-    const session = await firstValueFrom(
-      this.http.post<Session & { organisationSlug: string }>(
-        `${this.api}/auth/invitations/${encodeURIComponent(token)}/accept`,
-        body,
-      ),
-    );
-    await this.start(session);
-    return session.organisationSlug;
   }
 
   /**
-   * Swaps the refresh cookie for a new access token. Concurrent callers share one request. A
-   * 409 means another tab refreshed at the same moment; the cookie is already newer, so retry.
+   * A new access token for the same session. Several requests failing at once share one refresh.
+   * A refresh that fails ends the session.
    */
-  refresh(): Promise<boolean> {
-    this.refreshing ??= this.doRefresh().finally(() => (this.refreshing = null));
-    return this.refreshing;
+  refresh(): Observable<string> {
+    if (this.refreshing$) {
+      return this.refreshing$;
+    }
+    const refreshToken = this.tokens()?.refreshToken;
+    if (!refreshToken) {
+      return throwError(() => new Error('No session to refresh.'));
+    }
+
+    this.refreshing$ = this.api.refresh(refreshToken).pipe(
+      tap((response) => {
+        this.store({
+          accessToken: response.accessToken,
+          refreshToken,
+          tokenExpires: response.tokenExpires,
+        });
+        this.currentUser.set(response.user);
+      }),
+      map((response) => response.accessToken),
+      finalize(() => (this.refreshing$ = null)),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    return this.refreshing$;
   }
 
-  async logout(): Promise<void> {
-    this.end();
-    await firstValueFrom(this.http.post<void>(`${this.api}/auth/logout`, {}, quiet())).catch(
-      () => undefined,
+  /** The session is over (it expired, or was replaced by a sign-in elsewhere): back to the sign-in page. */
+  expire(): void {
+    if (!this.hasSession()) {
+      return;
+    }
+    const returnUrl = this.router.url;
+    this.clear();
+    this.notifier.info('You have been signed out', 'Please sign in again to continue.');
+    void this.router.navigate(
+      ['/login'],
+      returnUrl.startsWith('/login') ? {} : { queryParams: { returnUrl } },
     );
   }
 
-  /** Forgets the session locally, as when the server says it ended. */
-  end(): void {
-    this.clearTimer();
-    this.session.set(null);
-    this.membershipList.set([]);
+  private store(session: StoredSession): void {
+    this.tokens.set(session);
+    this.storage.write(session);
   }
 
-  async reloadMemberships(): Promise<void> {
-    const me = await firstValueFrom(this.http.get<Me>(`${this.api}/auth/me`, quiet()));
-    this.membershipList.set(me.memberships);
-  }
-
-  private async doRefresh(attempt = 0): Promise<boolean> {
-    try {
-      const session = await firstValueFrom(
-        this.http.post<Session>(`${this.api}/auth/refresh`, {}, quiet()),
-      );
-      await this.start(session);
-      return true;
-    } catch (error) {
-      if (httpStatus(error) === 409 && attempt === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        return this.doRefresh(1);
-      }
-      this.end();
-      return false;
-    }
-  }
-
-  private async start(session: Session): Promise<void> {
-    this.session.set(session);
-    this.scheduleRefresh(session.expiresIn);
-    await this.reloadMemberships().catch(() => this.membershipList.set([]));
-  }
-
-  private scheduleRefresh(expiresInSeconds: number): void {
-    this.clearTimer();
-    const delay = Math.max(expiresInSeconds * 1000 - REFRESH_LEAD_MS, 10_000);
-    this.refreshTimer = setTimeout(() => void this.refresh(), delay);
-  }
-
-  private clearTimer(): void {
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
-      this.refreshTimer = null;
-    }
+  private clear(): void {
+    this.tokens.set(null);
+    this.currentUser.set(null);
+    this.storage.clear();
   }
 }

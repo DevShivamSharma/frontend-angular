@@ -1,0 +1,115 @@
+<div #host class="host" [class]="'tool-' + tool()" tabindex="-1"></div>
+<div class="overlay" aria-hidden="true">
+  @for (c of chips(); track $index) {
+    <span class="chip" [class]="c.kind" [style.left.px]="c.x" [style.top.px]="c.y">{{
+      c.text
+    }}</span>
+  }
+</div>
+@if (cellMenu(); as m) {
+  <div
+    class="cell-box"
+    aria-hidden="true"
+    [style.left.px]="m.box.x"
+    [style.top.px]="m.box.y"
+    [style.width.px]="m.box.width"
+    [style.height.px]="m.box.height"
+  ></div>
+  <div class="cell-menu" role="menu" [style.left.px]="m.x" [style.top.px]="m.y">
+    <button type="button" role="menuitem" class="cut" (click)="applyCellMenu()">
+      {{ m.cut ? 'Cut this cell' : 'Put cell back' }}
+    </button>
+    <button type="button" role="menuitem" (click)="closeCellMenu()">Cancel</button>
+  </div>
+}
+@if (hint()) {
+  <p class="hint">{{ hint() }}</p>
+}
+<details class="legend" open>
+  <summary>Legend</summary>
+  @if (hallLegend().length) {
+    <h4>Hall</h4>
+    <ul>
+      @for (l of hallLegend(); track $index) {
+        <li>
+          <span class="swatch" [style.background]="l.color">{{ l.code }}</span
+          >{{ l.label }}
+        </li>
+      }
+    </ul>
+  }
+  <h4>Plan</h4>
+  <ul>
+    @for (l of planLegend; track l.label) {
+      <li>
+        <span
+          class="swatch"
+          [class.line]="l.line"
+          [style.background]="l.line ? null : l.color"
+          [style.border-color]="l.border ?? l.color"
+        ></span
+        >{{ l.label }}
+      </li>
+    }
+  </ul>
+</details>
+<div class="cube-wrap">
+  @if (is3d()) {
+    <div class="cube">
+      <!-- The wheel: drag it round to turn the view; N follows the hall's north. -->
+      <div
+        class="ring"
+        [style.transform]="'rotate(' + ringAngle() + 'deg)'"
+        (pointerdown)="ringDown($event)"
+        title="Drag to turn the view"
+      >
+        <span class="n">N</span>
+        <span class="cardinal e">E</span>
+        <span class="cardinal s">S</span>
+        <span class="cardinal w">W</span>
+      </div>
+      @for (f of faces; track f.id) {
+        <button
+          type="button"
+          class="face"
+          [class]="'face ' + f.id"
+          [class.on]="face() === f.id"
+          [attr.aria-pressed]="face() === f.id"
+          [attr.data-tour]="f.id === 'top' ? 'cube-top' : null"
+          (click)="setFace(f.id)"
+          [title]="f.title"
+        >
+          {{ f.label }}
+        </button>
+      }
+    </div>
+  }
+  <div class="views">
+    <button type="button" class="home" (click)="home()" title="Back to the whole hall">
+      <i class="pi pi-home"></i> Home
+    </button>
+    <div class="dims" role="group" aria-label="2D or 3D" data-tour="view-switch">
+      <button
+        type="button"
+        [class.on]="!is3d()"
+        [attr.aria-pressed]="!is3d()"
+        (click)="setFace('top')"
+        title="The plan from above, to draw on"
+      >
+        2D
+      </button>
+      <button
+        type="button"
+        [class.on]="is3d()"
+        [attr.aria-pressed]="is3d()"
+        (click)="enter3d()"
+        title="The hall in 3D, to look round"
+      >
+        3D
+      </button>
+    </div>
+  </div>
+</div>
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}

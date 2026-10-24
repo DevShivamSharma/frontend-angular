@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.toolbar__search {
+  flex: 0 1 26rem;
+}
+
+:host ::ng-deep .toolbar__search input {
+  width: 100%;
+}

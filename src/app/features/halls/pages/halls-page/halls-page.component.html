@@ -1,0 +1,95 @@
+<div class="page">
+  <app-page-header title="Halls" subtitle="The halls ITPO has, as listed in SelfCare.">
+    <a actions class="p-button" routerLink="/halls/new">
+      <i class="pi pi-plus" aria-hidden="true"></i>
+      Create hall
+    </a>
+  </app-page-header>
+
+  <section class="card card--flush" aria-label="Halls">
+    <div class="toolbar">
+      <p-iconfield class="toolbar__search">
+        <p-inputicon class="pi pi-search" />
+        <input
+          pInputText
+          type="search"
+          [formControl]="search"
+          placeholder="Search halls by name"
+          aria-label="Search halls by name"
+        />
+      </p-iconfield>
+      <span class="text-muted toolbar__count" aria-live="polite">
+        @if (!loading() && !failed()) {
+          {{ total() }} {{ total() === 1 ? 'hall' : 'halls' }}
+        }
+      </span>
+    </div>
+
+    @if (failed()) {
+      <app-empty-state
+        icon="pi-exclamation-triangle"
+        title="The halls could not be loaded"
+        message="Check your connection and try again."
+      >
+        <p-button label="Try again" icon="pi pi-refresh" (onClick)="retry()" />
+      </app-empty-state>
+    } @else {
+      @if (loading()) {
+        <app-card-skeleton [count]="6" [media]="true" />
+      } @else if (halls().length) {
+        <ul class="card-grid">
+          @for (hall of halls(); track hall.id) {
+            <li class="item-card item-card--media">
+              <img
+                class="item-card__media"
+                [src]="thumbnail(hall) ?? placeholder"
+                alt=""
+                loading="lazy"
+                appImageFallback
+              />
+              <div class="item-card__body">
+                <h2 class="item-card__title">
+                  <a [routerLink]="['/halls', hall.id]">{{ hall.name }}</a>
+                </h2>
+                <p class="item-card__meta">
+                  {{ hall.hallCategory?.name || 'No category' }}
+                  @if (hall.hallAreaCapacity !== null && hall.hallAreaCapacity !== undefined) {
+                    · {{ hall.hallAreaCapacity }} sqm
+                  }
+                </p>
+                <div class="item-card__tags">
+                  <p-tag
+                    [value]="hall.isActive ? 'Enabled' : 'Disabled'"
+                    [severity]="hall.isActive ? 'success' : 'secondary'"
+                  />
+                  @if (hall.isVipLounge) {
+                    <p-tag value="VIP lounge" severity="info" />
+                  }
+                  @if (hall.isAvailableForFnB) {
+                    <p-tag value="F&B" severity="secondary" />
+                  }
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+        <p-paginator
+          class="list-footer"
+          [first]="first()"
+          [rows]="pageSize"
+          [totalRecords]="total()"
+          [showCurrentPageReport]="false"
+          (onPageChange)="onPage($event)"
+        />
+      } @else {
+        <app-empty-state
+          icon="pi-building"
+          [title]="isSearching() ? 'No hall matches your search' : 'No halls yet'"
+          [message]="
+            isSearching() ? 'Try a different name.' : 'Create the first hall to see it here.'
+          "
+        />
+      }
+    }
+  </section>
+</div>

@@ -1,0 +1,340 @@
+<header class="dialog-title head">
+  <span class="badge" aria-hidden="true"><app-icon name="auto_awesome" /></span>
+  <span>
+    Auto-booths
+    <small class="muted">Fill {{ region().name }} with booths</small>
+  </span>
+</header>
+<div class="dialog-content grid">
+  <div class="col">
+    <label class="lbl" for="ab-fill">Fill</label>
+    <p-select
+      inputId="ab-fill"
+      [options]="data.regions"
+      optionLabel="label"
+      optionValue="id"
+      [ngModel]="regionId()"
+      (ngModelChange)="regionId.set($event)"
+      appendTo="body"
+    />
+    <span class="lbl">Layout</span>
+    <p-selectbutton
+      [options]="layouts"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      [ngModel]="layout()"
+      (ngModelChange)="layout.set($event)"
+      ariaLabel="Layout"
+    />
+    <p class="muted small">
+      @if (layout() === 'rows') {
+        Lines of booths side by side, two lines back to back, an aisle between them and a
+        cross-aisle every few booths. Every open side faces an aisle.
+      } @else {
+        Every booth on its own, with an aisle all round it.
+      }
+    </p>
+    <span class="lbl">Booth size (m)</span>
+    <p-selectbutton
+      [options]="sizes"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      [ngModel]="size()"
+      (ngModelChange)="pickSize($event)"
+      ariaLabel="Booth size"
+    />
+    <div class="pair">
+      <label
+        >Width
+        <p-inputnumber
+          [ngModel]="width()"
+          (ngModelChange)="custom('w', $event)"
+          [min]="0.5"
+          [max]="100"
+          [maxFractionDigits]="2"
+          [showButtons]="false"
+        />
+      </label>
+      <label
+        >Depth
+        <p-inputnumber
+          [ngModel]="depth()"
+          (ngModelChange)="custom('d', $event)"
+          [min]="0.5"
+          [max]="100"
+          [maxFractionDigits]="2"
+        />
+      </label>
+      <label
+        >Aisle (m)
+        <p-inputnumber
+          [ngModel]="aisle()"
+          (ngModelChange)="aisle.set($event ?? 0)"
+          [min]="0"
+          [max]="50"
+          [maxFractionDigits]="2"
+        />
+      </label>
+      <label
+        >Margin from the edge (m)
+        <p-inputnumber
+          [ngModel]="margin()"
+          (ngModelChange)="margin.set($event ?? 0)"
+          [min]="0"
+          [max]="50"
+          [maxFractionDigits]="2"
+        />
+      </label>
+      @if (layout() === 'rows') {
+        <label
+          >Cross-aisle after (booths)
+          <p-inputnumber
+            [ngModel]="crossEvery()"
+            (ngModelChange)="crossEvery.set($event)"
+            [min]="0"
+            [max]="200"
+            [placeholder]="'' + autoCross()"
+          />
+        </label>
+      }
+    </div>
+    <p class="muted small">
+      Rows start on the grid, {{ margin() }} m in from the edge; what is left over is shared on both
+      sides.
+      @if (wallRule()) {
+        The hall's rules keep {{ wallRule() }} m from the walls.
+      }
+    </p>
+    @if (margin() < wallRule()) {
+      <p class="warn small">
+        <app-icon name="warning" /> Less than the {{ wallRule() }} m the rules keep from the walls:
+        booths along them cannot be added.
+      </p>
+    }
+    @if (layout() === 'rows') {
+      <label class="check">
+        <p-checkbox [binary]="true" [ngModel]="corners()" (ngModelChange)="corners.set($event)" />
+        Line ends open on two sides (corner booths)
+      </label>
+      <label class="check">
+        <p-checkbox
+          [binary]="true"
+          [ngModel]="wallLines()"
+          (ngModelChange)="wallLines.set($event)"
+        />
+        A line along each side wall, facing in
+      </label>
+      @if (corners() && cornerCategory()) {
+        <p class="muted small">Corner booths also get the {{ cornerCategory()!.name }} category.</p>
+      }
+    }
+    <div class="or"><span>or</span></div>
+    <label
+      >Booths
+      <p-inputnumber
+        [ngModel]="count()"
+        (ngModelChange)="count.set($event)"
+        [min]="1"
+        [max]="3000"
+        placeholder="as many as fit"
+      />
+    </label>
+    <p class="muted small">
+      Type how many you want and exactly that many are made, filling from the top-left. Leave it
+      blank to fill the area. Every booth is this size; room at the edge that cannot fit one is left
+      as aisle.
+    </p>
+    @if (aisle() < data.passage) {
+      <p class="warn small">
+        <app-icon name="warning" /> The rules ask for {{ data.passage }} m in front of an open side;
+        booths whose open side faces a narrower aisle cannot be added.
+      </p>
+    }
+  </div>
+
+  <div class="col">
+    <fieldset class="pillars">
+      <legend>Pillars</legend>
+      <label
+        >Keep booths clear of pillars by (m)
+        <p-inputnumber
+          [ngModel]="pillarClear()"
+          (ngModelChange)="pillarClear.set($event ?? 0)"
+          [min]="pillarRule ?? 0"
+          [max]="10"
+          [maxFractionDigits]="2"
+        />
+      </label>
+      <label class="check">
+        <p-checkbox [binary]="true" [ngModel]="shift()" (ngModelChange)="shift.set($event)" />
+        Shift the grid to sit between the pillars
+      </label>
+      <label class="check">
+        <p-checkbox
+          [binary]="true"
+          [ngModel]="sellPillar()"
+          (ngModelChange)="sellPillar.set($event)"
+          [disabled]="pillarRule !== null"
+        />
+        Sell the stands that have a pillar in them
+      </label>
+      @if (pillarRule !== null) {
+        <p class="muted small">
+          @if (pillarRule) {
+            This hall's Pillars rule keeps booths {{ pillarRule }} m clear of every pillar.
+          } @else {
+            This hall's Pillars rule keeps booths off every pillar; next to one is fine.
+          }
+        </p>
+      }
+      <p class="muted small">
+        Off, those places are skipped. Emergency exits are always kept clear.
+      </p>
+    </fieldset>
+    <div class="pair">
+      <label
+        >Number prefix
+        <input
+          pInputText
+          [ngModel]="prefix()"
+          (ngModelChange)="prefix.set($event)"
+          maxlength="40"
+          placeholder="e.g. B-"
+        />
+      </label>
+      <label
+        >Numbering
+        <p-select
+          [options]="numberings"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="numbering()"
+          (ngModelChange)="numbering.set($event)"
+          appendTo="body"
+        />
+      </label>
+      @if (numbering() === 'numbers' || numbering() === 'letters') {
+        <label
+          >Start at
+          <input
+            pInputText
+            [ngModel]="startAt()"
+            (ngModelChange)="startAt.set($event)"
+            maxlength="6"
+            placeholder="next free"
+          />
+        </label>
+      }
+      <label
+        >Scheme
+        <p-select
+          [options]="schemes"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="scheme()"
+          (ngModelChange)="scheme.set($event)"
+          appendTo="body"
+        />
+      </label>
+    </div>
+    <label
+      >Categories
+      <p-multiselect
+        [options]="categories()"
+        optionLabel="name"
+        optionValue="id"
+        [ngModel]="categoryIds()"
+        (ngModelChange)="categoryIds.set($event)"
+        placeholder="None"
+        display="chip"
+        appendTo="body"
+      />
+    </label>
+    <p class="note small">
+      A booth can be in several categories. Only the categories this hall sells are offered; change
+      any booth later in Properties.
+    </p>
+  </div>
+
+  <aside class="col summary">
+    <h3><app-icon name="grid_view" /> What this makes</h3>
+    <dl>
+      <dt>Here already</dt>
+      <dd>{{ already() }}</dd>
+      <dt>Room for more</dt>
+      <dd>{{ candidates().length }}</dd>
+      <dt>Cannot be placed</dt>
+      <dd [class.bad]="bad().size">{{ checking() ? '…' : bad().size }}</dd>
+      <dt>Each</dt>
+      <dd>{{ width() }} × {{ depth() }} m · {{ width() * depth() | number: '1.0-2' }} m²</dd>
+      <dt>Sellable area</dt>
+      <dd>{{ chosen().length * width() * depth() | number: '1.0-0' }} m²</dd>
+      @if (layout() === 'rows') {
+        <dt>Corner booths</dt>
+        <dd>{{ cornerCount() }}</dd>
+      }
+      @if (utilisation(); as u) {
+        <dt>Floor used</dt>
+        <dd [class.bad]="u.over">{{ u.used | number: '1.0-0' }}% of {{ u.limit }}%</dd>
+      }
+    </dl>
+    <svg
+      class="preview"
+      [attr.viewBox]="viewBox()"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      [attr.aria-label]="chosen().length + ' booths to add'"
+    >
+      <polygon [attr.points]="regionPoints()" class="region" />
+      @for (b of blocked(); track $index) {
+        <rect
+          [attr.x]="b.x"
+          [attr.y]="b.y"
+          [attr.width]="b.width"
+          [attr.height]="b.height"
+          class="blocked"
+        />
+      }
+      @for (s of existing(); track s.id) {
+        <rect
+          [attr.x]="s.x"
+          [attr.y]="s.y"
+          [attr.width]="s.width"
+          [attr.height]="s.depth"
+          class="existing"
+        />
+      }
+      @for (c of candidates(); track c.id) {
+        <rect
+          [attr.x]="c.x"
+          [attr.y]="c.y"
+          [attr.width]="c.width"
+          [attr.height]="c.height"
+          class="cand"
+          [class.corner]="c.meta?.corner"
+          [class.bad]="bad().has(c.id)"
+          [class.off]="excluded().has(c.id)"
+          (click)="toggle(c.id)"
+        >
+          <title>
+            {{
+              bad().get(c.id) ??
+                (excluded().has(c.id) ? 'Left out — click to add' : 'Click to leave out')
+            }}
+          </title>
+        </rect>
+      }
+    </svg>
+    <p class="muted small">
+      Click a place to leave it out or add it back. Red places break a rule; hover for which.
+    </p>
+  </aside>
+</div>
+<div class="dialog-actions">
+  <button pButton [text]="true" type="button" (click)="ref.close()">Cancel</button>
+  <button pButton type="button" (click)="add()" [disabled]="!chosen().length || checking()">
+    Add {{ chosen().length }} {{ chosen().length === 1 ? 'booth' : 'booths' }}
+  </button>
+</div>

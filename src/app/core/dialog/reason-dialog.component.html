@@ -1,0 +1,27 @@
+<h2 class="dialog-title">{{ data.title }}</h2>
+<div class="dialog-content">
+  <p class="message">{{ data.message }}</p>
+  <label class="label" for="reason">{{ data.reasonLabel }}</label>
+  <textarea pTextarea id="reason" [formControl]="reason" rows="3" autofocus></textarea>
+  @if (reason.invalid && reason.touched) {
+    <p class="error" role="alert">At least 3 characters.</p>
+  }
+</div>
+<div class="dialog-actions">
+  <button
+    pButton
+    type="button"
+    [label]="data.cancelLabel ?? 'Cancel'"
+    [text]="true"
+    severity="secondary"
+    (click)="ref.close()"
+  ></button>
+  <button
+    pButton
+    type="button"
+    [label]="data.confirmLabel"
+    [severity]="data.destructive ? 'danger' : 'primary'"
+    [disabled]="reason.invalid"
+    (click)="confirm()"
+  ></button>
+</div>

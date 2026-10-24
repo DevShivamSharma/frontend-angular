@@ -1,58 +1,152 @@
-import { isDevMode } from '@angular/core';
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 
-import { organisationGuard, platformThemeGuard } from './core/org/org.guards';
-import { environment } from '../environments/environment';
+import { AuthService } from './core/auth/auth.service';
+import { authGuard, guestGuard, staffGuard } from './core/auth/auth.guard';
+import { unsavedChangesGuard } from './shared/guards/unsaved-changes.guard';
 
-const invalidLink = () =>
-  import('./features/invalid-link/invalid-link-page.component').then(
-    (m) => m.InvalidLinkPageComponent,
-  );
-
-/**
- * ITPO's app: the bare domain opens `/itpo`, ITPO's app in its own look. `/admin` is the
- * platform console; a path naming no organisation is the invalid-link page, which lists nothing.
- */
 export const routes: Routes = [
   {
-    // The app is ITPO's: the bare domain opens it.
-    path: '',
-    pathMatch: 'full',
-    redirectTo: environment.organisation,
-  },
-  {
-    path: 'dev-login',
-    title: () => (isDevMode() ? 'Quick sign-in' : 'Invalid link'),
-    canActivate: [platformThemeGuard],
-    // A development build offers quick sign-in here (only if the server allows it); a
-    // production build never ships that page.
+    path: 'login',
+    title: 'Sign in',
+    canActivate: [guestGuard],
     loadComponent: () =>
-      isDevMode()
-        ? import('./features/dev-login/dev-login-page.component').then(
-            (m) => m.DevLoginPageComponent,
-          )
-        : invalidLink(),
+      import('./features/auth/login/login-page.component').then((m) => m.LoginPageComponent),
   },
   {
-    path: 'invalid-link',
-    title: 'Invalid link',
-    canActivate: [platformThemeGuard],
-    loadComponent: invalidLink,
+    path: '',
+    canActivate: [authGuard],
+    loadComponent: () => import('./layout/shell/shell.component').then((m) => m.ShellComponent),
+    children: [
+      // ITPO staff start at the halls, an organiser at their events.
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: () => (inject(AuthService).isStaff() ? 'halls' : 'external-events'),
+      },
+
+      // ITPO staff only.
+      {
+        path: '',
+        canActivateChild: [staffGuard],
+        children: [
+          {
+            path: 'halls',
+            title: 'Halls',
+            loadComponent: () =>
+              import('./features/halls/pages/halls-page/halls-page.component').then(
+                (m) => m.HallsPageComponent,
+              ),
+          },
+          {
+            path: 'halls/new',
+            title: 'Create hall',
+            canDeactivate: [unsavedChangesGuard],
+            loadComponent: () =>
+              import('./features/halls/pages/hall-create-page/hall-create-page.component').then(
+                (m) => m.HallCreatePageComponent,
+              ),
+          },
+          {
+            path: 'events',
+            title: 'Internal events',
+            data: { kind: 'internal' },
+            loadComponent: () =>
+              import('./features/events/pages/events-page/events-page.component').then(
+                (m) => m.EventsPageComponent,
+              ),
+          },
+          {
+            path: 'halls/:hallId',
+            title: 'Hall',
+            loadComponent: () =>
+              import('./features/halls/pages/hall-detail-page/hall-detail-page.component').then(
+                (m) => m.HallDetailPageComponent,
+              ),
+          },
+          {
+            path: 'events/:eventId/halls/:hallId/planner',
+            title: 'Stall planner',
+            canDeactivate: [unsavedChangesGuard],
+            loadComponent: () =>
+              import('./features/planner/pages/planner-page/planner-page.component').then(
+                (m) => m.PlannerPageComponent,
+              ),
+          },
+          {
+            path: 'events/new',
+            title: 'Create event',
+            canDeactivate: [unsavedChangesGuard],
+            loadComponent: () =>
+              import('./features/events/pages/event-create-page/event-create-page.component').then(
+                (m) => m.EventCreatePageComponent,
+              ),
+          },
+          {
+            path: 'events/:eventId/edit',
+            title: 'Edit event',
+            canDeactivate: [unsavedChangesGuard],
+            loadComponent: () =>
+              import('./features/events/pages/event-edit-page/event-edit-page.component').then(
+                (m) => m.EventEditPageComponent,
+              ),
+          },
+          {
+            path: 'categories',
+            title: 'Categories',
+            loadComponent: () =>
+              import('./features/categories/pages/categories-page/categories-page.component').then(
+                (m) => m.CategoriesPageComponent,
+              ),
+          },
+          {
+            path: 'rules',
+            title: 'Planning rules',
+            loadComponent: () =>
+              import('./features/rules/pages/rules-page/rules-page.component').then(
+                (m) => m.RulesPageComponent,
+              ),
+          },
+        ],
+      },
+
+      // Everyone signed in: staff see every external event, an organiser only their own. After the staff
+      // routes, so that `events/new` is not read as an event id.
+      {
+        path: 'external-events/:eventId/halls/:hallId/planner',
+        title: 'Stall planner',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/planner/pages/planner-page/planner-page.component').then(
+            (m) => m.PlannerPageComponent,
+          ),
+      },
+      {
+        path: 'external-events/:eventId',
+        title: 'Event',
+        loadComponent: () =>
+          import('./features/events/pages/event-detail-page/event-detail-page.component').then(
+            (m) => m.EventDetailPageComponent,
+          ),
+      },
+      {
+        path: 'external-events',
+        title: 'External events',
+        data: { kind: 'external' },
+        loadComponent: () =>
+          import('./features/events/pages/events-page/events-page.component').then(
+            (m) => m.EventsPageComponent,
+          ),
+      },
+      {
+        path: 'events/:eventId',
+        title: 'Event',
+        loadComponent: () =>
+          import('./features/events/pages/event-detail-page/event-detail-page.component').then(
+            (m) => m.EventDetailPageComponent,
+          ),
+      },
+    ],
   },
-  {
-    path: 'admin',
-    canActivate: [platformThemeGuard],
-    loadChildren: () => import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
-  },
-  {
-    path: ':org',
-    canActivate: [organisationGuard],
-    loadChildren: () => import('./features/org/org.routes').then((m) => m.ORG_ROUTES),
-  },
-  {
-    path: '**',
-    title: 'Invalid link',
-    canActivate: [platformThemeGuard],
-    loadComponent: invalidLink,
-  },
+  { path: '**', redirectTo: '' },
 ];

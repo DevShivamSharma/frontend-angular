@@ -1,0 +1,255 @@
+@if (store.view(); as v) {
+  <div class="review-page">
+    <header class="bar">
+      <a class="back" [routerLink]="back()" aria-label="Back to the hall">
+        <app-icon name="arrow_back" />
+      </a>
+      <div class="title">
+        <h1>Review: {{ v.hall.hall.name }}</h1>
+        <p class="muted">
+          {{ v.hall.event.name }} · drawn by {{ organiser() }}
+          @if (v.plan.revision) {
+            · version {{ v.plan.revision }}
+          }
+        </p>
+      </div>
+      <span class="status" [class]="status().tone" role="status">
+        <app-icon [name]="status().icon" />{{ status().label }}
+      </span>
+      @if (v.canApprove) {
+        <div class="actions">
+          <button
+            type="button"
+            class="btn quiet"
+            (click)="sendBack()"
+            [disabled]="store.busy()"
+            pTooltip="Send the plan back to the organiser, saying what to change"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="close" />Send back
+          </button>
+          <button
+            type="button"
+            class="btn approve"
+            (click)="approve()"
+            [disabled]="store.busy() || breaks().length > 0"
+            [pTooltip]="
+              breaks().length
+                ? 'The plan breaks a rule of the hall: send it back'
+                : 'Approve the plan; the organiser then publishes it and gets an email'
+            "
+            tooltipPosition="bottom"
+          >
+            <app-icon name="check_circle" />Approve
+          </button>
+        </div>
+      }
+    </header>
+
+    <div class="body">
+      <div class="stage">
+        @if (v.plan.revision) {
+          <div class="tools" role="toolbar" aria-label="Look at the plan">
+            @for (t of tools; track t.id) {
+              <button
+                type="button"
+                class="icon"
+                [class.on]="tool() === t.id"
+                [attr.aria-pressed]="tool() === t.id"
+                (click)="tool.set(t.id)"
+                [pTooltip]="t.label"
+                tooltipPosition="bottom"
+              >
+                <app-icon [name]="t.icon" /><span class="sr">{{ t.label }}</span>
+              </button>
+            }
+            <span class="divider"></span>
+            <button
+              type="button"
+              class="icon"
+              (click)="canvas.zoomBy(1.25)"
+              pTooltip="Zoom in"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="zoom_in" /><span class="sr">Zoom in</span>
+            </button>
+            <button
+              type="button"
+              class="icon"
+              (click)="canvas.zoomBy(0.8)"
+              pTooltip="Zoom out"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="zoom_out" /><span class="sr">Zoom out</span>
+            </button>
+            <button
+              type="button"
+              class="icon"
+              (click)="canvas.fit()"
+              pTooltip="The whole hall"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="fit_screen" /><span class="sr">The whole hall</span>
+            </button>
+            <span class="divider"></span>
+            <button
+              type="button"
+              class="icon"
+              [class.on]="showLabels()"
+              [attr.aria-pressed]="showLabels()"
+              (click)="showLabels.set(!showLabels())"
+              pTooltip="Stall numbers"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="label" /><span class="sr">Stall numbers</span>
+            </button>
+            <button
+              type="button"
+              class="icon"
+              [class.on]="showGrid()"
+              [attr.aria-pressed]="showGrid()"
+              (click)="showGrid.set(!showGrid())"
+              pTooltip="Grid"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="grid_on" /><span class="sr">Grid</span>
+            </button>
+          </div>
+          <app-planner-canvas
+            #canvas
+            class="canvas"
+            [floor]="v.hall.floor"
+            [plan]="store.plan()"
+            [selection]="store.selection()"
+            [tool]="tool()"
+            [categoryColors]="categoryColors()"
+            [readonly]="true"
+            [showGrid]="showGrid()"
+            [showLabels]="showLabels()"
+            (pick)="store.select($event)"
+          />
+        } @else {
+          <div class="empty">
+            <app-icon name="hourglass_empty" />
+            <p>{{ organiser() }} has not saved a stall plan for this hall yet.</p>
+          </div>
+        }
+      </div>
+
+      <aside class="side" aria-label="About the plan">
+        @if (v.plan.review; as r) {
+          <section class="card">
+            <h2>Approval</h2>
+            <p class="small">
+              {{ r.submittedBy ?? 'The organiser' }} sent version {{ r.revision }} on
+              {{ r.submittedAt | date: 'd MMM y, HH:mm' }}.
+            </p>
+            @if (r.reviewedAt) {
+              <p class="small">
+                {{ r.reviewedBy ?? 'The venue' }}
+                {{ r.status === 'approved' ? 'approved it' : 'sent it back' }} on
+                {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}.
+              </p>
+            }
+            @if (r.note) {
+              <blockquote>{{ r.note }}</blockquote>
+            }
+            @if (r.status !== 'submitted' && v.plan.revision > r.revision) {
+              <p class="small muted">
+                Saved again since (version {{ v.plan.revision }}), not sent yet.
+              </p>
+            }
+          </section>
+        }
+
+        @if (v.plan.revision) {
+          <section class="card">
+            <h2>Rules of the hall</h2>
+            @if (v.findings === null) {
+              <p class="small muted">Checked when the plan is opened.</p>
+            } @else if (breaks().length) {
+              <p class="small bad">
+                <app-icon name="warning" />The plan breaks {{ breaks().length }}
+                {{ breaks().length === 1 ? 'rule' : 'rules' }} now:
+              </p>
+              <ul class="findings">
+                @for (f of breaks(); track $index) {
+                  <li>
+                    <button type="button" class="link" (click)="show(f.ids)">
+                      {{ f.message }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="small good">
+                <app-icon name="check_circle" />It keeps every rule of the hall.
+              </p>
+            }
+          </section>
+
+          <section class="card">
+            <h2>What it holds</h2>
+            <dl class="stats">
+              <dt>Stalls</dt>
+              <dd>{{ summary().stalls | number }}</dd>
+              <dt>For sale</dt>
+              <dd>{{ summary().forSale | number }}</dd>
+              <dt>Area for sale</dt>
+              <dd>{{ summary().area | number: '1.0-0' }} m²</dd>
+              <dt>Premium</dt>
+              <dd>{{ summary().premium | number }}</dd>
+              <dt>Corner (2+ open sides)</dt>
+              <dd>{{ summary().corner | number }}</dd>
+              <dt>Blocked</dt>
+              <dd>{{ summary().blocked | number }}</dd>
+              <dt>Zones</dt>
+              <dd>{{ summary().zones | number }}</dd>
+              @if (summary().seats) {
+                <dt>Seats</dt>
+                <dd>{{ summary().seats | number }}</dd>
+              }
+              @if (store.pricing()) {
+                <dt>Value (excl. GST)</dt>
+                <dd>{{ rupees(store.planValue()) }}</dd>
+                <dt>Without a price</dt>
+                <dd>{{ store.unpriced().length | number }}</dd>
+              }
+            </dl>
+          </section>
+
+          <section class="card">
+            <h2>Selected stall</h2>
+            @if (picked(); as s) {
+              <dl class="stats">
+                <dt>Number</dt>
+                <dd>{{ s.label }}</dd>
+                <dt>Size</dt>
+                <dd>
+                  {{ s.width | number: '1.0-2' }} × {{ s.depth | number: '1.0-2' }} m ({{
+                    s.area | number: '1.0-1'
+                  }}
+                  m²)
+                </dd>
+                <dt>Open sides</dt>
+                <dd>{{ s.sides }}</dd>
+                <dt>Categories</dt>
+                <dd>{{ s.categories || '—' }}</dd>
+                @if (s.flags) {
+                  <dt>Marked</dt>
+                  <dd>{{ s.flags }}</dd>
+                }
+                @if (store.pricing()) {
+                  <dt>Price</dt>
+                  <dd [title]="s.reckoning">{{ s.price }}</dd>
+                }
+              </dl>
+            } @else {
+              <p class="small muted">Click a stall on the plan to read it here.</p>
+            }
+          </section>
+        }
+      </aside>
+    </div>
+  </div>
+}

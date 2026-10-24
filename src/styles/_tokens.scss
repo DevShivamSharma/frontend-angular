@@ -1,0 +1,77 @@
+/*
+ * Design tokens. One neutral scale for the surfaces and text, the ITPO red for what is primary,
+ * and PrimeNG's own variables for the rest, so light and dark change together: `data-theme` on
+ * the page (set by ThemeService) switches both.
+ */
+:root {
+  --app-font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --app-font-heading: var(--app-font-body);
+
+  // Type scale: the app is dense, so the base is 14 px.
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  --app-bg: #f6f6f7;
+  --app-surface: #ffffff;
+  --app-surface-2: #fafafb;
+  --app-surface-hover: #f4f4f5;
+  --app-border: #e8e8ec;
+  --app-border-strong: #d4d4da;
+  --app-text: #18181b;
+  --app-muted: #6b6b76;
+  --app-brand: #c8283f;
+  --app-brand-soft: color-mix(in srgb, var(--app-brand) 9%, transparent);
+  --app-ring: color-mix(in srgb, var(--app-brand) 24%, transparent);
+  --app-danger: #d92d20;
+  --app-success: #16803c;
+  --app-warning: #b45309;
+
+  --app-radius: 14px;
+  --app-radius-md: 10px;
+  --app-radius-sm: 8px;
+  --app-shadow: 0 1px 2px rgb(16 16 24 / 4%);
+  --app-shadow-lg: 0 12px 32px -8px rgb(16 16 24 / 18%), 0 2px 6px rgb(16 16 24 / 6%);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --control-height: 2.375rem;
+  --app-sidebar-width: 14.5rem;
+  --app-sidebar-collapsed-width: 4.25rem;
+  --app-topbar-height: 3.5rem;
+}
+
+:root[data-theme='dark'] {
+  --app-bg: #09090b;
+  --app-surface: #121214;
+  --app-surface-2: #17171a;
+  --app-surface-hover: #1c1c20;
+  --app-border: #26262b;
+  --app-border-strong: #3a3a42;
+  --app-text: #f4f4f5;
+  --app-muted: #a1a1aa;
+  --app-brand: #f0647a;
+  --app-brand-soft: color-mix(in srgb, var(--app-brand) 14%, transparent);
+  --app-ring: color-mix(in srgb, var(--app-brand) 34%, transparent);
+  --app-danger: #f87168;
+  --app-success: #4ade80;
+  --app-warning: #fbbf24;
+  --app-shadow: none;
+  --app-shadow-lg: 0 16px 40px -8px rgb(0 0 0 / 70%), 0 0 0 1px rgb(255 255 255 / 4%);
+}
+
+// Fingers need more room than a pointer: controls grow on touch screens.
+@media (pointer: coarse) {
+  :root {
+    --control-height: 2.75rem;
+  }
+}

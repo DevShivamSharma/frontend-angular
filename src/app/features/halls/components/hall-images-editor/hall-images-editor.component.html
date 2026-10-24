@@ -1,0 +1,53 @@
+<div class="rows">
+  @for (group of images().controls; track group; let i = $index) {
+    <div class="row" [formGroup]="group">
+      <app-form-field
+        class="row__url"
+        [label]="'Picture ' + (i + 1) + ' address'"
+        [inputId]="'hall-image-' + i"
+        [control]="group.controls.url"
+      >
+        <input
+          pInputText
+          type="url"
+          [id]="'hall-image-' + i"
+          formControlName="url"
+          [maxlength]="maxLength"
+          placeholder="https://… (the S3 address of the picture)"
+          autocomplete="off"
+        />
+      </app-form-field>
+
+      <div class="row__cover">
+        <p-toggleswitch
+          [inputId]="'hall-image-cover-' + i"
+          formControlName="cover"
+          (onChange)="setCover(i)"
+        />
+        <label [for]="'hall-image-cover-' + i">Cover</label>
+      </div>
+
+      <p-button
+        icon="pi pi-trash"
+        severity="danger"
+        [text]="true"
+        [rounded]="true"
+        [ariaLabel]="'Remove picture ' + (i + 1)"
+        (onClick)="remove(i)"
+      />
+    </div>
+  } @empty {
+    <p class="text-muted">No pictures yet. They are optional.</p>
+  }
+
+  @if (images().length < max) {
+    <p-button
+      class="add"
+      label="Add a picture"
+      icon="pi pi-plus"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="add()"
+    />
+  }
+</div>

@@ -1,0 +1,33 @@
+<div class="form-grid" [formGroup]="form()">
+  @for (field of fields(); track field.key) {
+    <app-form-field
+      [label]="field.label"
+      [inputId]="field.id"
+      [hint]="field.hint"
+      [control]="field.control"
+    >
+      <p-inputnumber
+        [inputId]="field.id"
+        [formControl]="field.control"
+        [min]="field.min"
+        [max]="field.max"
+        [suffix]="field.suffix"
+        [step]="field.step"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="2"
+        [showButtons]="true"
+        buttonLayout="horizontal"
+        incrementButtonIcon="pi pi-plus"
+        decrementButtonIcon="pi pi-minus"
+      />
+    </app-form-field>
+  }
+
+  <div class="toggle-row form-grid__full">
+    <p-toggleswitch inputId="value-foyer" formControlName="foyerConstruction" />
+    <label for="value-foyer">
+      Stalls may stand in foyers
+      <span class="text-muted">Allows building in a foyer's constructible area.</span>
+    </label>
+  </div>
+</div>

@@ -1,0 +1,26 @@
+<div class="shapes" role="radiogroup" aria-label="Hall shape">
+  @for (shape of thumbnails(); track shape.id) {
+    <label class="shape" [title]="shape.example">
+      <input
+        class="visually-hidden"
+        type="radio"
+        name="hall-shape"
+        [value]="shape.id"
+        [checked]="shape.id === selectedId()"
+        (change)="selected.emit(shape.id)"
+      />
+      <svg
+        class="shape__thumb"
+        [attr.viewBox]="'0 0 ' + thumbWidth + ' ' + thumbHeight"
+        aria-hidden="true"
+      >
+        @if (shape.points; as points) {
+          <polygon [attr.points]="points" />
+        } @else {
+          <path d="M10 30 L18 10 L34 16 L46 8 L48 30 Z" class="shape__custom" />
+        }
+      </svg>
+      <span class="shape__label">{{ shape.label }}</span>
+    </label>
+  }
+</div>

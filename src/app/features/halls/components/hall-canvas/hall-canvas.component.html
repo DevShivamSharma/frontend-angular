@@ -1,0 +1,68 @@
+<svg
+  class="canvas"
+  [class.canvas--editable]="editable()"
+  [attr.viewBox]="viewBox()"
+  preserveAspectRatio="xMidYMid meet"
+  role="img"
+  [attr.aria-label]="label()"
+  (click)="place($event)"
+>
+  <g class="canvas__grid" aria-hidden="true">
+    @for (x of verticalLines(); track x) {
+      <line
+        [attr.x1]="x"
+        [attr.x2]="x"
+        [attr.y1]="box().y"
+        [attr.y2]="box().y + box().h"
+        vector-effect="non-scaling-stroke"
+      />
+    }
+    @for (y of horizontalLines(); track y) {
+      <line
+        [attr.x1]="box().x"
+        [attr.x2]="box().x + box().w"
+        [attr.y1]="y"
+        [attr.y2]="y"
+        vector-effect="non-scaling-stroke"
+      />
+    }
+  </g>
+
+  @if (points(); as outline) {
+    <polygon class="canvas__hall" [attr.points]="outline" vector-effect="non-scaling-stroke" />
+  }
+
+  @if (size(); as measured) {
+    <text
+      class="canvas__dimension"
+      [attr.x]="measured.width / 2"
+      [attr.y]="measured.depth + fontSize() * 1.8"
+      [attr.font-size]="fontSize()"
+      text-anchor="middle"
+    >
+      {{ measured.width }} m
+    </text>
+    <text
+      class="canvas__dimension"
+      [attr.x]="measured.width + fontSize() * 0.8"
+      [attr.y]="measured.depth / 2"
+      [attr.font-size]="fontSize()"
+      text-anchor="start"
+    >
+      {{ measured.depth }} m
+    </text>
+  }
+
+  @for (corner of corners(); track $index) {
+    <g class="canvas__corner">
+      <circle [attr.cx]="corner[0]" [attr.cy]="corner[1]" [attr.r]="markerRadius()" />
+      <text
+        [attr.x]="corner[0] + markerRadius() * 1.6"
+        [attr.y]="corner[1] - markerRadius() * 1.6"
+        [attr.font-size]="fontSize()"
+      >
+        {{ $index + 1 }}
+      </text>
+    </g>
+  }
+</svg>

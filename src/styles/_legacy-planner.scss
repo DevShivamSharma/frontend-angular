@@ -1,0 +1,292 @@
+/*
+ * What the stall planner, ported from the platform it first lived in, expects: that platform's
+ * colour and type tokens (here mapped to this app's own), the helper classes of its templates
+ * (inside `.legacy`, so they do not touch the rest of the app), and the look of its dialogs.
+ */
+:root {
+  --app-font-family: var(--app-font-body);
+
+  --app-headline-small: 600 1.5rem/2rem var(--app-font-family);
+  --app-title-large: 600 1.25rem/1.75rem var(--app-font-family);
+  --app-title-medium: 600 1rem/1.5rem var(--app-font-family);
+  --app-title-small: 600 0.875rem/1.25rem var(--app-font-family);
+  --app-body-large: 400 1rem/1.5rem var(--app-font-family);
+  --app-body-medium: 400 0.875rem/1.25rem var(--app-font-family);
+  --app-body-small: 400 0.75rem/1rem var(--app-font-family);
+  --app-label-large: 500 0.875rem/1.25rem var(--app-font-family);
+  --app-label-medium: 500 0.75rem/1rem var(--app-font-family);
+  --app-label-small: 500 0.6875rem/1rem var(--app-font-family);
+
+  --app-level1: var(--app-shadow);
+  --app-level2: 0 2px 6px rgb(16 16 24 / 8%), 0 8px 24px rgb(16 16 24 / 8%);
+  --app-level3: var(--app-shadow-lg);
+
+  --app-on-surface: var(--app-text);
+  --app-on-surface-variant: var(--app-muted);
+  --app-outline: var(--app-border-strong);
+  --app-outline-variant: var(--app-border);
+  --app-primary: var(--app-brand);
+  --app-on-primary: #fff;
+  --app-primary-container: var(--app-brand-soft);
+  --app-on-primary-container: var(--app-brand);
+  --app-secondary-container: var(--app-surface-hover);
+  --app-tertiary: var(--app-success);
+  --app-error: var(--app-danger);
+  --app-surface-container-lowest: var(--app-surface);
+  --app-surface-container-low: var(--app-surface-2);
+  --app-surface-container: var(--app-surface-2);
+  --app-surface-container-high: var(--app-surface-hover);
+  --app-surface-container-highest: var(--app-surface-hover);
+  --app-secondary-container: var(--app-surface-hover);
+  --app-on-secondary-container: var(--app-text);
+  --app-error-container: color-mix(in srgb, var(--app-danger) 14%, transparent);
+  --app-on-error-container: var(--app-danger);
+}
+
+.legacy,
+.p-dynamicdialog {
+  /* ---- Layout helpers shared by pages --------------------------------------- */
+
+  /* A raised surface for a group of content: a table, a list, a form section. */
+  .panel {
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid var(--app-outline-variant);
+    background: var(--app-surface-container-lowest);
+    box-shadow: var(--app-level1);
+    min-width: 0;
+  }
+
+  .panel-flush {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .page-narrow {
+    max-width: 760px;
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+
+  .muted {
+    color: var(--app-on-surface-variant);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0 16px;
+  }
+
+  .section-title {
+    font: var(--app-title-medium);
+    margin: 8px 0 12px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .empty-state {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--app-on-surface-variant);
+  }
+
+  /* A self-contained card: content, then actions at the bottom. */
+  .card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    border: 1px solid var(--app-outline-variant);
+    background: var(--app-surface-container-lowest);
+    box-shadow: var(--app-level1);
+    min-width: 0;
+    transition:
+      box-shadow 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .card-body {
+    padding: 20px 20px 8px;
+    flex: 1;
+  }
+
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 12px 12px;
+
+    &.end {
+      justify-content: flex-end;
+    }
+  }
+
+  /* ---- Forms ------------------------------------------------------------------ */
+
+  /* A labelled control (app-field), with its hint or error below; fields keep a gap between. */
+  .field {
+    display: grid;
+    /* Rows keep their own height when a neighbour's hint makes the line taller. */
+    align-content: start;
+    gap: 6px;
+    margin-bottom: 16px;
+    min-width: 0;
+
+    > * {
+      min-width: 0;
+    }
+
+    .p-multiselect-label-container {
+      min-width: 0;
+    }
+
+    &.inline-field {
+      margin-bottom: 0;
+    }
+
+    > label {
+      font: var(--app-label-large);
+      color: var(--app-on-surface);
+    }
+
+    .p-inputtext,
+    .p-select,
+    .p-multiselect,
+    .p-autocomplete,
+    .p-inputnumber,
+    .p-inputgroup,
+    .p-datepicker,
+    textarea {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  .field-hint {
+    font: var(--app-body-small);
+    color: var(--app-on-surface-variant);
+  }
+
+  .field-error {
+    font: var(--app-body-small);
+    color: var(--app-error);
+  }
+
+  /* A checkbox, radio or switch with its label beside it. */
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font: var(--app-body-medium);
+
+    label {
+      cursor: pointer;
+    }
+  }
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font: var(--app-label-medium);
+  background: var(--app-secondary-container);
+  color: var(--app-on-secondary-container);
+  white-space: nowrap;
+
+  &.is-positive {
+    background: var(--app-primary-container);
+    color: var(--app-on-primary-container);
+  }
+
+  &.is-warning {
+    background: var(--app-error-container);
+    color: var(--app-on-error-container);
+  }
+
+  &.is-neutral {
+    background: var(--app-surface-container-highest);
+    color: var(--app-on-surface-variant);
+  }
+}
+
+/* ---- Dialogs (opened through AppDialog) ------------------------------------- */
+
+.p-dynamicdialog .p-dialog-content {
+  padding: 0;
+}
+
+.dialog-title {
+  font: var(--app-title-large);
+  margin: 0;
+  padding: 20px 24px 8px;
+}
+
+.dialog-content {
+  padding: 8px 24px 16px;
+  max-height: calc(100dvh - 220px);
+  overflow: auto;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 24px 20px;
+}
+
+/* ---- Menus (in a p-popover) ------------------------------------------------- */
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--app-on-surface);
+  font: var(--app-body-medium);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: color-mix(in srgb, var(--app-on-surface) 8%, transparent);
+  }
+
+  &:disabled {
+    cursor: default;
+    color: var(--app-on-surface-variant);
+  }
+
+  &.is-danger {
+    color: var(--app-error);
+  }
+
+  app-icon {
+    width: 18px;
+    color: var(--app-on-surface-variant);
+  }
+}

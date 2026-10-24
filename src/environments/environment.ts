@@ -1,9 +1,12 @@
-/** Production API base URL, supplied by the build or served through /api. */
-declare const APP_API_BASE_URL: string | undefined;
-
+/** Production environment: every API is reached on the web app's own origin (gateway / reverse proxy). */
 export const environment = {
   production: true,
-  /** The organisation this app is: ITPO. The bare domain opens it. */
-  organisation: 'itpo',
-  apiBaseUrl: typeof APP_API_BASE_URL !== 'undefined' ? APP_API_BASE_URL : '/api',
+  /** This portal's API (the EMS backend). */
+  apiBaseUrl: '/ems/itpo/api/v1',
+  /** ITPO's admin service: hall list, hall categories. */
+  itpoAdminApiUrl: '/admin/itpo/api/v1',
+  /** ITPO's user service: event list and event halls, organisations. */
+  itpoUserApiUrl: '/user/itpo/api/v1',
+  /** ITPO's stall service: a hall's layout. */
+  itpoStallApiUrl: '/stall/itpo/api/v1',
 };

@@ -1,0 +1,236 @@
+:host {
+  display: block;
+  height: 100%;
+}
+.review-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--app-surface);
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--app-outline-variant);
+  background: var(--app-surface-container-lowest);
+}
+.back {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  color: var(--app-on-surface);
+}
+.back:hover {
+  background: var(--app-surface-container);
+}
+.title {
+  flex: 1;
+  min-width: 0;
+}
+h1 {
+  margin: 0;
+  font: var(--app-title-medium);
+}
+.muted {
+  margin: 0;
+  color: var(--app-on-surface-variant);
+  font: var(--app-body-small);
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font: var(--app-label-medium);
+  background: var(--app-surface-container);
+  color: var(--app-on-surface);
+}
+.status.wait {
+  background: light-dark(#e0f2fe, #0c4a6e);
+  color: light-dark(#0c4a6e, #e0f2fe);
+}
+.status.good {
+  background: light-dark(#dcfce7, #14532d);
+  color: light-dark(#14532d, #dcfce7);
+}
+.status.bad {
+  background: light-dark(#fee2e2, #7f1d1d);
+  color: light-dark(#7f1d1d, #fee2e2);
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 4px;
+  font: var(--app-label-medium);
+  cursor: pointer;
+}
+.btn.quiet {
+  background: var(--app-surface-container);
+  color: var(--app-on-surface);
+}
+.btn.approve {
+  background: #16a34a;
+  color: #fff;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+.stage {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--app-outline-variant);
+  background: var(--app-surface-container-lowest);
+}
+.icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--app-on-surface);
+  cursor: pointer;
+}
+.icon:hover {
+  background: var(--app-surface-container);
+}
+.icon.on {
+  background: var(--app-on-surface);
+  color: var(--app-surface);
+}
+.divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: var(--app-outline-variant);
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.canvas {
+  flex: 1;
+  min-height: 0;
+}
+.empty {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  color: var(--app-on-surface-variant);
+}
+.side {
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  border-left: 1px solid var(--app-outline-variant);
+  background: var(--app-surface-container-lowest);
+}
+.card {
+  padding: 12px;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 8px;
+}
+h2 {
+  margin: 0 0 8px;
+  font: var(--app-label-large);
+}
+.small {
+  margin: 0 0 6px;
+  font: var(--app-body-small);
+}
+.good,
+.bad {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.good {
+  color: light-dark(#15803d, #4ade80);
+}
+.bad {
+  color: var(--app-error);
+}
+blockquote {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--app-error);
+  background: var(--app-surface-container);
+  font: var(--app-body-small);
+}
+.findings {
+  margin: 0;
+  padding-left: 18px;
+  font: var(--app-body-small);
+}
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.stats {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 12px;
+  margin: 0;
+  font: var(--app-body-small);
+}
+.stats dt {
+  color: var(--app-on-surface-variant);
+}
+.stats dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(360px, 1fr) auto;
+  }
+  .side {
+    border-left: 0;
+    border-top: 1px solid var(--app-outline-variant);
+  }
+}

@@ -1,0 +1,58 @@
+:host {
+  display: block;
+}
+
+.canvas {
+  display: block;
+  width: min(100%, calc(70vh * var(--aspect, 1)));
+  margin: 0 auto;
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg);
+}
+
+.canvas--editable {
+  cursor: crosshair;
+}
+
+.floor {
+  fill: var(--app-surface);
+}
+
+.grid-line {
+  fill: none;
+  stroke: var(--app-border);
+  stroke-width: 0.05;
+}
+
+.wall {
+  fill: var(--app-bg);
+  stroke: var(--app-bg);
+  stroke-width: 0.05;
+}
+
+.pillar {
+  fill: #6b7280;
+  stroke: #374151;
+  stroke-width: 0.12;
+}
+
+.hover {
+  fill: color-mix(in srgb, var(--app-brand) 35%, transparent);
+  stroke: var(--app-brand);
+  stroke-width: 0.12;
+  pointer-events: none;
+}
+
+.frame {
+  fill: none;
+  stroke: var(--app-muted);
+  stroke-width: 0.2;
+}
+
+.chosen {
+  fill: none;
+  stroke: var(--app-brand);
+  stroke-width: 0.25;
+  stroke-dasharray: 0.8 0.5;
+  pointer-events: none;
+}

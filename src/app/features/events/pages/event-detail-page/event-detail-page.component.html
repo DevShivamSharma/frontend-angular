@@ -1,0 +1,77 @@
+<div class="page">
+  @if (store.failed()) {
+    <app-page-header title="Event" [backLink]="back().link" [backLabel]="back().label" />
+    <app-empty-state
+      icon="pi-exclamation-triangle"
+      title="The event could not be loaded"
+      message="It may not exist, or ITPO could not be reached."
+    >
+      <p-button label="Try again" icon="pi pi-refresh" (onClick)="store.load(eventId())" />
+    </app-empty-state>
+  } @else {
+    <app-page-header
+      [title]="store.summary()?.name ?? 'Event'"
+      [subtitle]="subtitle()"
+      [backLink]="back().link"
+      [backLabel]="back().label"
+    >
+      @if (store.canManage()) {
+        <a actions class="p-button p-button-outlined" [routerLink]="['/events', eventId(), 'edit']">
+          <i class="pi pi-pencil" aria-hidden="true"></i>
+          Edit event
+        </a>
+      }
+    </app-page-header>
+
+    @if (store.loading()) {
+      <div class="skeleton" role="status" aria-label="Loading the event">
+        <p-skeleton height="2.75rem" width="22rem" />
+        <p-skeleton height="12rem" />
+      </div>
+    } @else if (store.summary(); as event) {
+      <div class="chips" aria-label="Status">
+        <p-tag
+          [value]="event.kind === 'internal' ? 'Internal event' : 'External event'"
+          severity="secondary"
+          [rounded]="true"
+        />
+        @if (event.approvalStatus; as status) {
+          <p-tag [value]="'Approval: ' + status" [severity]="severity(status)" [rounded]="true" />
+        }
+        @if (event.bookingStatus; as status) {
+          <p-tag [value]="'Booking: ' + status" [severity]="severity(status)" [rounded]="true" />
+        }
+      </div>
+
+      <p-tabs [value]="tab()" (valueChange)="onTab($event)">
+        <p-tablist>
+          <p-tab value="details"
+            ><i class="pi pi-info-circle" aria-hidden="true"></i> Details</p-tab
+          >
+          <p-tab value="halls">
+            <i class="pi pi-building" aria-hidden="true"></i> Halls
+            @if (store.halls().length) {
+              <span class="count">{{ store.halls().length }}</span>
+            }
+          </p-tab>
+          <p-tab value="rules"
+            ><i class="pi pi-sliders-h" aria-hidden="true"></i> Planning rules</p-tab
+          >
+        </p-tablist>
+        <p-tabpanels>
+          <p-tabpanel value="details"><app-event-details-card [event]="event" /></p-tabpanel>
+          <p-tabpanel value="halls">
+            <app-event-halls-tab [store]="store" [readonly]="!store.canManage()" />
+          </p-tabpanel>
+          <p-tabpanel value="rules">
+            <app-event-rules-tab
+              [eventId]="eventId()"
+              [readonly]="!store.canManage() || store.summary()?.kind === 'internal'"
+              [internal]="store.summary()?.kind === 'internal'"
+            />
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
+    }
+  }
+</div>

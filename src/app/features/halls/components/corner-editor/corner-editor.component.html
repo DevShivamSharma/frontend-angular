@@ -1,0 +1,100 @@
+<div class="editor">
+  @if (corners().length) {
+    <div class="editor__table" role="table" aria-label="Corners of the outline, in metres">
+      <div class="editor__row editor__row--head" role="row">
+        <span role="columnheader">#</span>
+        <span role="columnheader">Across (x), m</span>
+        <span role="columnheader">Down (y), m</span>
+        <span role="columnheader" class="visually-hidden">Remove</span>
+      </div>
+      @for (corner of corners(); track $index) {
+        <div class="editor__row" role="row">
+          <span role="cell" class="editor__index">{{ $index + 1 }}</span>
+          <p-inputnumber
+            role="cell"
+            [ngModel]="corner[0]"
+            (ngModelChange)="change($index, 0, $event)"
+            [inputId]="'corner-x-' + $index"
+            [ariaLabel]="'Corner ' + ($index + 1) + ' across'"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            [min]="-limit"
+            [max]="limit"
+          />
+          <p-inputnumber
+            role="cell"
+            [ngModel]="corner[1]"
+            (ngModelChange)="change($index, 1, $event)"
+            [inputId]="'corner-y-' + $index"
+            [ariaLabel]="'Corner ' + ($index + 1) + ' down'"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            [min]="-limit"
+            [max]="limit"
+          />
+          <p-button
+            role="cell"
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            [ariaLabel]="'Remove corner ' + ($index + 1)"
+            (onClick)="remove($index)"
+          />
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="text-muted">
+      No corners yet. Click on the grid to place the first one, or add it here.
+    </p>
+  }
+
+  <div class="editor__actions">
+    <p-button
+      label="Add corner"
+      icon="pi pi-plus"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="corners().length >= maxCorners"
+      (onClick)="add()"
+    />
+    <p-button
+      label="Paste a list"
+      icon="pi pi-clipboard"
+      severity="secondary"
+      [text]="true"
+      (onClick)="pasting.set(!pasting())"
+    />
+    @if (corners().length) {
+      <p-button
+        label="Clear all"
+        icon="pi pi-times"
+        severity="secondary"
+        [text]="true"
+        (onClick)="clear()"
+      />
+    }
+  </div>
+
+  @if (pasting()) {
+    <div class="editor__paste">
+      <label for="corner-paste" class="editor__paste-label">Corners, one per line: "x, y"</label>
+      <textarea
+        pTextarea
+        id="corner-paste"
+        rows="5"
+        [ngModel]="pasteText()"
+        (ngModelChange)="pasteText.set($event)"
+        placeholder="0, 0&#10;40, 0&#10;40, 30&#10;0, 30"
+      ></textarea>
+      @if (pasteError(); as message) {
+        <p class="editor__error" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+        </p>
+      }
+      <div class="editor__actions">
+        <p-button label="Use these corners" (onClick)="applyPaste()" />
+      </div>
+    </div>
+  }
+</div>

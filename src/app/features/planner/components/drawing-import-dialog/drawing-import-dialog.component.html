@@ -1,0 +1,493 @@
+<header class="dialog-title head">
+  <span class="badge" aria-hidden="true"><app-icon name="file_import" /></span>
+  <span>
+    Import stalls from a CAD plan
+    <small class="muted">{{ data.file.name }} · {{ hallName() }}</small>
+  </span>
+</header>
+<div class="dialog-content">
+  @switch (state()) {
+    @case ('reading') {
+      <p class="reading" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        Reading the plan: its stall lines, grid and labels. A full hall takes a few seconds.
+      </p>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <app-icon name="error" />
+        <span>{{ error() }}</span>
+      </div>
+    }
+    @default {
+      @if (result(); as r) {
+        <p class="match" [class.warn]="!r.hall.matchedByName">
+          @if (r.hall.matchedByName) {
+            <app-icon name="check_circle" />
+            <span>
+              @if (r.hall.groups.length > 1) {
+                Halls {{ r.hall.groups.slice(0, -1).join(', ') }} and {{ r.hall.groups.at(-1) }} of
+                the drawing are {{ hallName() }}.
+              } @else {
+                Hall {{ r.hall.groups[0] }} of the drawing is {{ hallName() }}.
+              }
+              @if (otherHalls().length) {
+                The drawing's other halls ({{ otherHalls().join(', ') }}) are left out.
+              }
+            </span>
+          } @else {
+            <app-icon name="warning" />
+            <span>{{ r.issues[0] }}</span>
+          }
+        </p>
+        <div class="grid">
+          <div class="col">
+            <!-- A click on a stall picks it to change on its own; on the floor, lets it go.
+                     The wheel zooms, a drag moves the view. -->
+            <div class="stage">
+              <svg
+                #preview
+                class="preview"
+                [class.dragging]="dragging()"
+                [attr.viewBox]="viewBox()"
+                preserveAspectRatio="xMidYMid meet"
+                role="group"
+                tabindex="0"
+                [attr.aria-label]="
+                  'The drawing on ' +
+                  hallName() +
+                  '. Pick a stall to move it on its own; arrow keys move it, Escape lets it go.'
+                "
+                (click)="tap(null)"
+                (keydown)="key($event)"
+                (wheel)="wheel($event)"
+                (pointerdown)="dragStart($event)"
+                (pointermove)="dragMove($event)"
+                (pointerup)="dragEnd($event)"
+                (pointercancel)="dragEnd($event)"
+              >
+                <defs>
+                  <!-- The hall's 1 m grid (5 m lines stronger), on whole metres as in the planner. -->
+                  <pattern
+                    id="drawing-import-grid"
+                    width="5"
+                    height="5"
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <path
+                      class="grid-line"
+                      d="M 1 0 V 5 M 2 0 V 5 M 3 0 V 5 M 4 0 V 5 M 0 1 H 5 M 0 2 H 5 M 0 3 H 5 M 0 4 H 5"
+                    />
+                    <path class="grid-major" d="M 5 0 H 0 V 5" />
+                  </pattern>
+                </defs>
+                @for (ring of floorRings(); track $index) {
+                  <polygon class="floor" [attr.points]="ring" />
+                  <polygon class="floor-grid" [attr.points]="ring" />
+                }
+                @for (b of blocked(); track $index) {
+                  <rect
+                    class="blocked"
+                    [attr.x]="b.x"
+                    [attr.y]="b.y"
+                    [attr.width]="b.width"
+                    [attr.height]="b.height"
+                  />
+                }
+                @for (p of placed(); track p.stall.key) {
+                  <polygon
+                    [attr.points]="pointsOf(p.outline)"
+                    [class]="'stall ' + stateOf(p)"
+                    [class.picked]="picked() === p.stall.key"
+                    [class.changed]="overrides().has(p.stall.key)"
+                    role="button"
+                    tabindex="-1"
+                    [attr.aria-label]="p.stall.name"
+                    [attr.aria-pressed]="picked() === p.stall.key"
+                    (click)="tap(p.stall.key); $event.stopPropagation()"
+                  >
+                    <title>
+                      {{ p.stall.name }}{{ whyOf(p).length ? ' — ' + whyOf(p).join(' ') : '' }}
+                    </title>
+                  </polygon>
+                }
+                @if (pickedStall(); as p) {
+                  <text
+                    class="tag"
+                    [attr.x]="tagAt(p.outline).x"
+                    [attr.y]="tagAt(p.outline).z"
+                    [attr.font-size]="tagSize()"
+                  >
+                    {{ p.stall.name }}
+                  </text>
+                }
+              </svg>
+              <span class="zoom" role="group" aria-label="Zoom the drawing">
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  [text]="true"
+                  (click)="zoomBy(1.25)"
+                  [disabled]="zoom() >= MAX_ZOOM"
+                  aria-label="Zoom in"
+                  pTooltip="Zoom in"
+                >
+                  <app-icon name="zoom_in" />
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  [text]="true"
+                  (click)="zoomBy(0.8)"
+                  [disabled]="zoom() <= 1"
+                  aria-label="Zoom out"
+                  pTooltip="Zoom out"
+                >
+                  <app-icon name="zoom_out" />
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  [text]="true"
+                  (click)="resetView()"
+                  [disabled]="zoom() === 1"
+                  aria-label="Show the whole hall"
+                  pTooltip="Show the whole hall"
+                >
+                  <app-icon name="fit_screen" />
+                </button>
+              </span>
+            </div>
+            @if (pickedStall(); as p) {
+              <section class="one" [attr.aria-label]="'Change ' + p.stall.name + ' on its own'">
+                <header class="one-head">
+                  <strong>{{ p.stall.name }}</strong>
+                  <span class="muted small">
+                    @if (p.rect) {
+                      {{ p.rect.width | number: '1.0-2' }} × {{ p.rect.height | number: '1.0-2' }} m
+                    }
+                  </span>
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    [text]="true"
+                    class="close"
+                    (click)="pick(null)"
+                    aria-label="Done with this stall"
+                  >
+                    <app-icon name="close" />
+                  </button>
+                </header>
+                <div class="controls">
+                  <span class="pad" role="group" aria-label="Move this stall a metre">
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [text]="true"
+                      (click)="shift(0, -1)"
+                      aria-label="Move this stall up"
+                    >
+                      <app-icon name="arrow_upward" />
+                    </button>
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [text]="true"
+                      (click)="shift(-1, 0)"
+                      aria-label="Move this stall left"
+                    >
+                      <app-icon name="arrow_back" />
+                    </button>
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [text]="true"
+                      (click)="shift(1, 0)"
+                      aria-label="Move this stall right"
+                    >
+                      <app-icon name="arrow_forward" />
+                    </button>
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [text]="true"
+                      (click)="shift(0, 1)"
+                      aria-label="Move this stall down"
+                    >
+                      <app-icon name="arrow_downward" />
+                    </button>
+                  </span>
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    [outlined]="true"
+                    (click)="turnOne()"
+                    aria-label="Turn this stall a quarter clockwise"
+                  >
+                    <app-icon name="rotate" />Turn
+                  </button>
+                  @if (excluded().has(p.stall.key)) {
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [outlined]="true"
+                      (click)="leaveOut(false)"
+                    >
+                      Put it back
+                    </button>
+                  } @else {
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [outlined]="true"
+                      severity="danger"
+                      (click)="leaveOut(true)"
+                    >
+                      Leave out
+                    </button>
+                  }
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    [text]="true"
+                    (click)="resetOne()"
+                    [disabled]="!overrides().has(p.stall.key)"
+                  >
+                    Reset
+                  </button>
+                </div>
+                @if (p.rect && !p.cutCells.length) {
+                  <div class="size">
+                    <label>
+                      Width (m)
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        [ngModel]="p.rect.width"
+                        (change)="resize('width', $event)"
+                      />
+                    </label>
+                    <label>
+                      Depth (m)
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        [ngModel]="p.rect.height"
+                        (change)="resize('depth', $event)"
+                      />
+                    </label>
+                  </div>
+                } @else if (p.rect) {
+                  <p class="muted small">
+                    An L-shaped stall keeps its drawn size; resize it in the planner.
+                  </p>
+                }
+                @if (whyOf(p).length) {
+                  <ul class="why small" aria-label="Why it is not imported">
+                    @for (w of whyOf(p); track $index) {
+                      <li>{{ w }}</li>
+                    }
+                  </ul>
+                }
+                @if (doubted(p)) {
+                  @if (overrides().get(p.stall.key)?.isStall) {
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [outlined]="true"
+                      class="confirm"
+                      (click)="takeAsStall(false)"
+                    >
+                      Not a stall after all
+                    </button>
+                  } @else {
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      class="confirm"
+                      (click)="takeAsStall(true)"
+                    >
+                      <app-icon name="check" />It is a stall: import it
+                    </button>
+                  }
+                }
+                <label class="name">
+                  Number
+                  <input
+                    type="text"
+                    maxlength="60"
+                    [ngModel]="nameOf(p.stall.key, p.stall.name)"
+                    (change)="rename($event)"
+                  />
+                </label>
+                <p class="muted small">Arrow keys move it a metre, with Shift half a metre.</p>
+              </section>
+            }
+            <div class="controls">
+              <button
+                pButton
+                type="button"
+                size="small"
+                [outlined]="true"
+                (click)="turnBy(90)"
+                aria-label="Turn a quarter clockwise"
+              >
+                <app-icon name="rotate" />Turn
+              </button>
+              <span
+                class="pad"
+                role="group"
+                [attr.aria-label]="
+                  'Move the drawing ' + (step() === 1 ? 'a metre' : 'half a metre')
+                "
+              >
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  [text]="true"
+                  (click)="move(0, -step())"
+                  aria-label="Move up"
+                >
+                  <app-icon name="arrow_upward" />
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  [text]="true"
+                  (click)="move(-step(), 0)"
+                  aria-label="Move left"
+                >
+                  <app-icon name="arrow_back" />
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  [text]="true"
+                  (click)="move(step(), 0)"
+                  aria-label="Move right"
+                >
+                  <app-icon name="arrow_forward" />
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  [text]="true"
+                  (click)="move(0, step())"
+                  aria-label="Move down"
+                >
+                  <app-icon name="arrow_downward" />
+                </button>
+              </span>
+              <button pButton type="button" size="small" [text]="true" (click)="fit()">
+                <app-icon name="fit_screen" />Fit again
+              </button>
+            </div>
+            <p class="muted small">
+              @if (method() === 'registered') {
+                Placed where the drawing's grid matches the hall's grid: as drawn.
+              } @else {
+                Fitted on the open floor: check the position, turn or move it if needed.
+              }
+            </p>
+          </div>
+          <div class="col">
+            <dl class="stats">
+              <dt>In the drawing</dt>
+              <dd>{{ placed().length }}</dd>
+              <dt>To import</dt>
+              <dd class="ok">{{ importable().length - broken() | number }}</dd>
+              @if (broken()) {
+                <dt>Break a rule</dt>
+                <dd class="bad">{{ broken() }}</dd>
+              }
+              @if (checking()) {
+                <dt>Rules</dt>
+                <dd class="muted">checking…</dd>
+              }
+              <dt>Slanted: draw by hand</dt>
+              <dd>{{ byHand().length }}</dd>
+              <dt>No number: numbered S1, S2…</dt>
+              <dd>{{ unnumbered().length }}</dd>
+              <dt>Off the hall floor</dt>
+              <dd [class.bad]="offFloor()">{{ offFloor() }}</dd>
+            </dl>
+            <ul class="legend" aria-label="Colours">
+              <li><span class="key ok"></span>Imported</li>
+              <li><span class="key hand"></span>Draw by hand</li>
+              <li><span class="key bad"></span>Off the floor or breaks a rule</li>
+            </ul>
+            @if (byHand().length) {
+              <details>
+                <summary>{{ plural(byHand().length, 'stall') }} to draw by hand</summary>
+                <p class="small">{{ byHand().join(', ') }}</p>
+              </details>
+            }
+            @if (problems().length) {
+              <details>
+                <summary>{{ plural(problems().length, 'thing') }} the drawing raised</summary>
+                <ul class="small problems">
+                  @for (p of problems(); track $index) {
+                    <li [class.bad]="p.severity === 'error'">{{ p.text }}</li>
+                  }
+                </ul>
+              </details>
+            }
+            @if (store.plan().stalls.length) {
+              <label class="check">
+                <p-checkbox
+                  [binary]="true"
+                  [ngModel]="replace()"
+                  (ngModelChange)="replace.set($event)"
+                />
+                Replace the {{ store.plan().stalls.length }} booths in this hall
+              </label>
+            }
+          </div>
+        </div>
+      }
+    }
+  }
+</div>
+<div class="dialog-actions">
+  @if (state() === 'ready') {
+    <button
+      pButton
+      type="button"
+      [text]="true"
+      class="dxf"
+      (click)="downloadDxf()"
+      [disabled]="downloading()"
+    >
+      <app-icon name="download" />{{ downloading() ? 'Making DXF…' : 'Download as DXF' }}
+    </button>
+  }
+  <button pButton [text]="true" type="button" (click)="ref.close()">Cancel</button>
+  <button
+    pButton
+    type="button"
+    (click)="use()"
+    [disabled]="state() !== 'ready' || !importable().length || checking()"
+  >
+    Import {{ plural(importable().length - broken(), 'stall') }}
+  </button>
+</div>

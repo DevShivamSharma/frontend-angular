@@ -1,0 +1,68 @@
+<header class="dialog-title head">
+  <span class="badge" aria-hidden="true"><app-icon name="rule" /></span>
+  <span>
+    Rules for {{ data.hall.hall.name }}
+    <small class="muted"
+      >{{ data.hall.event.name }} · {{ data.hall.event.audience }} · set by the venue, for your
+      information</small
+    >
+  </span>
+</header>
+<div class="dialog-content body">
+  <p class="lead">
+    Every booth you draw is checked against these {{ onCount() }} rules. A change that breaks one is
+    not made, and the message says which rule.
+  </p>
+  @if (profile(); as p) {
+    <p class="profile"><b>Drawing:</b> {{ p }}</p>
+  }
+  @for (g of groups(); track g.key) {
+    <section>
+      <h3 class="group">{{ g.label }}</h3>
+      <ul class="rules">
+        @for (r of g.rules; track r.id) {
+          <li>
+            @if (r.waitingFor) {
+              <!-- On, but nothing to check yet: no tick. -->
+              <app-icon name="hourglass_empty" class="waiting" />
+            } @else {
+              <app-icon name="check_circle" class="on" />
+            }
+            <div class="rule">
+              <span class="name"
+                >{{ r.label }}
+                @if (r.reference) {
+                  <span class="ref">{{ r.reference }}</span>
+                }
+              </span>
+              @if (r.value) {
+                <span class="value">{{ r.value }}</span>
+              }
+              @if (r.description) {
+                <span class="muted small">{{ r.description }}</span>
+              }
+              @if (r.waitingFor) {
+                <span class="muted small"
+                  >Not checked yet. Takes effect with: {{ r.waitingFor }}</span
+                >
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  } @empty {
+    <p class="muted">No rules are on for this hall: booths are checked only for the floor.</p>
+  }
+  @if (off().length) {
+    <details class="off">
+      <summary>{{ off().length }} rules are off for this hall</summary>
+      <p class="muted small">{{ off().join(', ') }}</p>
+    </details>
+  }
+</div>
+<div class="dialog-actions">
+  <button pButton type="button" (click)="ref.close()">
+    <app-icon name="arrow_forward" />Start planning
+  </button>
+</div>

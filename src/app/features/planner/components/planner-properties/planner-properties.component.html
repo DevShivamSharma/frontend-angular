@@ -1,0 +1,339 @@
+@let ro = readonly();
+<!-- Made again after a refused change, so every field shows the plan as it is. -->
+@for (key of [store().refused()]; track key) {
+  @if (zone(); as z) {
+    <h3>Zone</h3>
+    <label
+      >Name
+      <input
+        pInputText
+        [ngModel]="z.name"
+        (change)="zoneName(z, $event)"
+        maxlength="80"
+        [disabled]="ro"
+      />
+    </label>
+    <label class="inline"
+      >Colour
+      <input type="color" [ngModel]="z.color" (change)="zoneColor(z, $event)" [disabled]="ro" />
+    </label>
+    <dl>
+      <dt>Length × breadth</dt>
+      <dd>{{ zoneBox().width | number: '1.0-2' }} × {{ zoneBox().height | number: '1.0-2' }} m</dd>
+      <dt>Area</dt>
+      <dd>{{ zoneArea() | number: '1.0-2' }} m²</dd>
+      <dt>Corners</dt>
+      <dd>{{ z.polygon.length }}</dd>
+      <dt>Stalls in it</dt>
+      <dd>{{ zoneStalls() }}</dd>
+      <dt>Seats in it</dt>
+      <dd>{{ zoneSeats() }}</dd>
+    </dl>
+    @if (!ro) {
+      <button pButton severity="danger" [outlined]="true" (click)="remove.emit()">
+        <app-icon name="delete" />Delete zone
+      </button>
+      <p class="muted small">Stalls and seats in the zone stay where they are.</p>
+    }
+  } @else if (stalls().length === 1) {
+    @let s = stalls()[0];
+    <h3>Stall {{ label(s) }}</h3>
+    <div class="pair">
+      <label
+        >Island / prefix
+        <input
+          pInputText
+          [ngModel]="s.islandNumber ?? ''"
+          (change)="text('islandNumber', $event, true)"
+          maxlength="40"
+          [disabled]="ro"
+        />
+      </label>
+      <label
+        >Number
+        <input
+          pInputText
+          [ngModel]="s.stallNumber"
+          (change)="text('stallNumber', $event, false)"
+          maxlength="20"
+          [disabled]="ro"
+        />
+      </label>
+      <label
+        >X (m)
+        <p-inputnumber
+          [ngModel]="s.x"
+          (onBlur)="num('x', $event, s.x)"
+          [maxFractionDigits]="3"
+          [disabled]="ro"
+        />
+      </label>
+      <label
+        >Y (m)
+        <p-inputnumber
+          [ngModel]="s.y"
+          (onBlur)="num('y', $event, s.y)"
+          [maxFractionDigits]="3"
+          [disabled]="ro"
+        />
+      </label>
+      <label
+        >Width (m)
+        <p-inputnumber
+          [ngModel]="s.width"
+          (onBlur)="num('width', $event, s.width)"
+          [min]="0.1"
+          [maxFractionDigits]="3"
+          [disabled]="ro"
+        />
+      </label>
+      <label
+        >Depth (m)
+        <p-inputnumber
+          [ngModel]="s.depth"
+          (onBlur)="num('depth', $event, s.depth)"
+          [min]="0.1"
+          [maxFractionDigits]="3"
+          [disabled]="ro"
+        />
+      </label>
+    </div>
+    <p class="muted small nums">
+      {{ stallArea(s) | number: '1.0-2' }} m²
+      @if (s.cutCells.length) {
+        · {{ s.cutCells.length }} {{ s.cutCells.length === 1 ? 'cell' : 'cells' }} cut
+        @if (!ro) {
+          <button type="button" class="cut-reset" (click)="patch.emit({ cutCells: [] })">
+            Put all back
+          </button>
+        }
+      }
+    </p>
+    @if (!ro && !s.cutCells.length) {
+      <p class="muted small">Click a cell of the selected stall to cut it out.</p>
+    }
+    <span class="lbl">Open sides</span>
+    <div class="sides" role="group" aria-label="Open sides" data-tour="open-sides">
+      @for (side of sideList; track side) {
+        <button
+          type="button"
+          class="side"
+          [class.on]="s.openSides.includes(side)"
+          [attr.aria-pressed]="s.openSides.includes(side)"
+          (click)="toggleSide(s, side)"
+          [disabled]="ro"
+        >
+          {{ side }}
+        </button>
+      }
+    </div>
+    <label
+      >Scheme
+      <p-select
+        [options]="schemes"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="s.scheme"
+        (ngModelChange)="patch.emit({ scheme: $event })"
+        [disabled]="ro"
+        appendTo="body"
+      />
+    </label>
+    <label data-tour="stall-categories"
+      >Categories
+      <p-multiselect
+        [options]="categoryOptions(s.categoryIds)"
+        optionLabel="name"
+        optionValue="id"
+        [ngModel]="s.categoryIds"
+        (ngModelChange)="patch.emit({ categoryIds: $event })"
+        placeholder="None"
+        display="chip"
+        [disabled]="ro"
+        appendTo="body"
+      />
+    </label>
+    @if (!store().categories().length) {
+      <p class="muted small">
+        This hall sells no categories yet; the venue chooses them on the hall page.
+      </p>
+    }
+    <fieldset class="flags">
+      <legend class="lbl">Flags</legend>
+      @for (f of flags; track f.key) {
+        <label class="check">
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="s[f.key]"
+            (ngModelChange)="flag(f.key, $event)"
+            [disabled]="ro"
+          />
+          {{ f.label }}
+        </label>
+      }
+    </fieldset>
+    <label
+      >Location
+      <input
+        pInputText
+        [ngModel]="s.location ?? ''"
+        (change)="text('location', $event, true)"
+        maxlength="200"
+        placeholder="e.g. Between Hall 5 and 6"
+        [disabled]="ro"
+      />
+    </label>
+    <label
+      >Description
+      <textarea
+        pTextarea
+        rows="2"
+        [ngModel]="s.description ?? ''"
+        (change)="text('description', $event, true)"
+        maxlength="500"
+        [disabled]="ro"
+      ></textarea>
+    </label>
+    @if (!ro) {
+      <button pButton severity="danger" [outlined]="true" (click)="remove.emit()">
+        <app-icon name="delete" />Delete stall
+      </button>
+    }
+  } @else if (stalls().length > 1) {
+    <h3>{{ stalls().length }} stalls</h3>
+    <dl>
+      <dt>Area</dt>
+      <dd>{{ stallsArea() | number: '1.0-1' }} m²</dd>
+    </dl>
+    <label
+      >Categories of all
+      <p-multiselect
+        [options]="categoryOptions([])"
+        optionLabel="name"
+        optionValue="id"
+        [ngModel]="sharedCategories()"
+        (ngModelChange)="patch.emit({ categoryIds: $event })"
+        placeholder="Mixed"
+        display="chip"
+        [disabled]="ro"
+        appendTo="body"
+      />
+    </label>
+    @if (!ro) {
+      <div class="lbl">
+        Move all a metre
+        <span class="pad" role="group" aria-label="Move the stalls a metre">
+          <button
+            pButton
+            type="button"
+            size="small"
+            [text]="true"
+            (click)="nudge.emit({ dx: 0, dy: -1 })"
+            aria-label="Move the stalls up"
+          >
+            <app-icon name="arrow_upward" />
+          </button>
+          <button
+            pButton
+            type="button"
+            size="small"
+            [text]="true"
+            (click)="nudge.emit({ dx: -1, dy: 0 })"
+            aria-label="Move the stalls left"
+          >
+            <app-icon name="arrow_back" />
+          </button>
+          <button
+            pButton
+            type="button"
+            size="small"
+            [text]="true"
+            (click)="nudge.emit({ dx: 1, dy: 0 })"
+            aria-label="Move the stalls right"
+          >
+            <app-icon name="arrow_forward" />
+          </button>
+          <button
+            pButton
+            type="button"
+            size="small"
+            [text]="true"
+            (click)="nudge.emit({ dx: 0, dy: 1 })"
+            aria-label="Move the stalls down"
+          >
+            <app-icon name="arrow_downward" />
+          </button>
+        </span>
+      </div>
+      <button pButton severity="danger" [outlined]="true" (click)="remove.emit()">
+        <app-icon name="delete" />Delete {{ stalls().length }} stalls
+      </button>
+    }
+  } @else if (seats().length) {
+    <h3>
+      {{
+        seats().length === 1
+          ? 'Seat ' + seats()[0].rowLabel + '-' + seats()[0].seatNumber
+          : seats().length + ' seats'
+      }}
+    </h3>
+    <dl>
+      <dt>Rows</dt>
+      <dd>{{ seatRows() }}</dd>
+    </dl>
+    <label
+      >Category
+      <p-select
+        [options]="categoryOptions([])"
+        optionLabel="name"
+        optionValue="id"
+        [ngModel]="sharedSeatCategory()"
+        (ngModelChange)="seatCategory.emit($event ?? null)"
+        [showClear]="true"
+        placeholder="None"
+        [disabled]="ro"
+        appendTo="body"
+      />
+    </label>
+    <p class="muted small">Drag a selected seat to move them all.</p>
+    @if (!ro) {
+      <button pButton severity="danger" [outlined]="true" (click)="remove.emit()">
+        <app-icon name="delete" />Delete
+        {{ seats().length === 1 ? 'seat' : seats().length + ' seats' }}
+      </button>
+    }
+  } @else if (objects().length) {
+    @let o = objects()[0];
+    <h3>
+      {{ objects().length === 1 ? objectNames[o.kind] : objects().length + ' drawings' }}
+    </h3>
+    @if (objects().length === 1) {
+      <label
+        >{{ o.kind === 'text' ? 'Text' : 'Label' }}
+        <input
+          pInputText
+          [ngModel]="o.text ?? ''"
+          (change)="objectText(o, $event)"
+          maxlength="120"
+          [disabled]="ro"
+        />
+      </label>
+    }
+    <label class="inline"
+      >Colour
+      <input type="color" [ngModel]="o.color" (change)="objectColor($event)" [disabled]="ro" />
+    </label>
+    <p class="muted small">Drawings are not sold and the rules do not check them.</p>
+    @if (!ro) {
+      <button pButton severity="danger" [outlined]="true" (click)="remove.emit()">
+        <app-icon name="delete" />Delete
+        {{ objects().length === 1 ? 'drawing' : objects().length + ' drawings' }}
+      </button>
+    }
+  } @else {
+    <h3>Properties</h3>
+    <p class="muted small">
+      Select a zone, stall, seat or drawing to see and change it. Drag on the floor to select many.
+    </p>
+  }
+}

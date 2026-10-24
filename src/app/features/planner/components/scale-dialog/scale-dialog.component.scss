@@ -1,0 +1,23 @@
+.head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.stack {
+  display: grid;
+  gap: 12px;
+  min-width: min(320px, 84vw);
+}
+label {
+  display: grid;
+  gap: 4px;
+  font: var(--app-label-medium);
+}
+:host ::ng-deep .p-inputnumber,
+:host ::ng-deep .p-inputnumber-input {
+  width: 100%;
+}
+.small {
+  margin: 0;
+  font: var(--app-body-small);
+}

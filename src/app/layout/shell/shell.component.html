@@ -1,0 +1,107 @@
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <p-button
+    class="topbar__menu"
+    icon="pi pi-bars"
+    [text]="true"
+    severity="secondary"
+    ariaLabel="Open navigation"
+    (onClick)="drawerOpen.set(true)"
+  />
+  <a class="topbar__brand" routerLink="/">
+    <img src="itpo-logo.svg" alt="" width="36" height="36" />
+    <span>Stall Planning Portal</span>
+  </a>
+
+  <div class="topbar__tools">
+    <p-button
+      [icon]="'pi ' + themeIcon()"
+      [text]="true"
+      [rounded]="true"
+      severity="secondary"
+      ariaLabel="Change the theme"
+      aria-haspopup="true"
+      (onClick)="themeMenuRef.toggle($event)"
+    />
+    <p-menu #themeMenuRef [model]="themeMenu()" [popup]="true" appendTo="body" />
+  </div>
+
+  <div class="topbar__user">
+    <p-button
+      [text]="true"
+      severity="secondary"
+      (onClick)="menu.toggle($event)"
+      ariaLabel="Account menu"
+      aria-haspopup="true"
+    >
+      <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+      <span class="topbar__name">{{ displayName() }}</span>
+      <i class="pi pi-chevron-down" aria-hidden="true"></i>
+    </p-button>
+    <p-menu #menu [model]="userMenu()" [popup]="true" appendTo="body" />
+  </div>
+</header>
+
+<ng-template #navigation let-compact="compact">
+  <nav aria-label="Main">
+    @for (group of navGroups(); track group.title) {
+      <p class="nav__heading" [class.visually-hidden]="compact">{{ group.title }}</p>
+      @if (compact) {
+        <hr class="nav__divider" />
+      }
+      <ul class="nav">
+        @for (item of group.items; track item.route) {
+          <li>
+            <a
+              class="nav__link"
+              [routerLink]="item.route"
+              routerLinkActive="nav__link--active"
+              ariaCurrentWhenActive="page"
+              [pTooltip]="compact ? item.label : ''"
+              tooltipPosition="right"
+              (click)="closeDrawer()"
+            >
+              <i class="pi" [class]="item.icon" aria-hidden="true"></i>
+              <span class="nav__label" [class.visually-hidden]="compact">{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </nav>
+</ng-template>
+
+<div class="frame" [class.frame--collapsed]="collapsed()">
+  <aside class="sidebar">
+    <ng-container
+      [ngTemplateOutlet]="navigation"
+      [ngTemplateOutletContext]="{ compact: collapsed() }"
+    />
+
+    <button
+      type="button"
+      class="sidebar__toggle"
+      (click)="toggleCollapsed()"
+      [attr.aria-expanded]="!collapsed()"
+      [attr.aria-label]="collapsed() ? 'Expand the sidebar' : 'Collapse the sidebar'"
+      [pTooltip]="collapsed() ? 'Expand the sidebar' : ''"
+      tooltipPosition="right"
+    >
+      <i
+        class="pi"
+        [class]="collapsed() ? 'pi-angle-double-right' : 'pi-angle-double-left'"
+        aria-hidden="true"
+      ></i>
+      <span [class.visually-hidden]="collapsed()">Collapse</span>
+    </button>
+  </aside>
+
+  <p-drawer [(visible)]="drawerOpen" position="left" header="Menu" styleClass="nav-drawer">
+    <ng-container [ngTemplateOutlet]="navigation" [ngTemplateOutletContext]="{ compact: false }" />
+  </p-drawer>
+
+  <main id="main" class="content" tabindex="-1">
+    <router-outlet />
+  </main>
+</div>

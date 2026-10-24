@@ -1,0 +1,277 @@
+<section class="card" aria-labelledby="layout-title">
+  <div class="head">
+    <h2 id="layout-title">Layout</h2>
+    @if (layout() && !editing()) {
+      <p-button
+        label="Edit layout"
+        icon="pi pi-pencil"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="startEdit()"
+      />
+    }
+  </div>
+
+  @if (loading()) {
+    <p-skeleton height="16rem" />
+  } @else if (failed()) {
+    <app-empty-state
+      icon="pi-exclamation-triangle"
+      title="The layout could not be loaded"
+      message="ITPO could not be reached."
+    >
+      <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
+    </app-empty-state>
+  } @else if (!layout()) {
+    <app-empty-state
+      icon="pi-th-large"
+      title="This hall has no layout yet"
+      message="ITPO has no floor grid saved for it."
+    />
+  } @else {
+    @if (editing()) {
+      <div class="tools" role="group" aria-label="Edit the layout">
+        <div class="tool">
+          <span class="tool__label" id="tool-label">What to change</span>
+          <p-selectbutton
+            [options]="toolOptions"
+            optionLabel="label"
+            optionValue="value"
+            [allowEmpty]="false"
+            [ngModel]="tool()"
+            (ngModelChange)="chooseTool($event)"
+            ariaLabelledBy="tool-label"
+          />
+        </div>
+
+        @if (tool() === 'pillar') {
+          <div class="tool">
+            <span class="tool__label" id="pillar-size-label">Pillar size</span>
+            <p-selectbutton
+              [options]="sizeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [allowEmpty]="false"
+              [ngModel]="pillarSize()"
+              (ngModelChange)="pillarSize.set($event)"
+              ariaLabelledBy="pillar-size-label"
+            />
+          </div>
+          @if (pillarCount()) {
+            <p-button
+              label="Clear pillars"
+              icon="pi pi-eraser"
+              severity="secondary"
+              [text]="true"
+              (onClick)="removeAllPillars()"
+            />
+          }
+        }
+      </div>
+
+      @if (tool() === 'pillar') {
+        <p class="hint text-muted">
+          Click a square to put a pillar there; click a pillar to take it away.
+        </p>
+      } @else {
+        <p class="hint text-muted">
+          Click a wall line to choose it, then move it with the arrows or the numbers, make it
+          longer or shorter, or remove it.
+        </p>
+        @if (selectedLine(); as line) {
+          <div class="tools line" role="group" aria-label="The chosen wall line">
+            <div class="tool">
+              <span class="tool__label" id="move-label">Move ({{ line.direction }} line)</span>
+              <span class="nudge" role="group" aria-labelledby="move-label">
+                <p-button
+                  icon="pi pi-arrow-left"
+                  severity="secondary"
+                  [outlined]="true"
+                  ariaLabel="Move left"
+                  (onClick)="nudge(-1, 0)"
+                />
+                <p-button
+                  icon="pi pi-arrow-up"
+                  severity="secondary"
+                  [outlined]="true"
+                  ariaLabel="Move up"
+                  (onClick)="nudge(0, -1)"
+                />
+                <p-button
+                  icon="pi pi-arrow-down"
+                  severity="secondary"
+                  [outlined]="true"
+                  ariaLabel="Move down"
+                  (onClick)="nudge(0, 1)"
+                />
+                <p-button
+                  icon="pi pi-arrow-right"
+                  severity="secondary"
+                  [outlined]="true"
+                  ariaLabel="Move right"
+                  (onClick)="nudge(1, 0)"
+                />
+              </span>
+            </div>
+            <div class="tool">
+              <label class="tool__label" for="line-x">Across (m)</label>
+              <p-inputnumber
+                inputId="line-x"
+                [ngModel]="line.x"
+                (ngModelChange)="changeLine({ x: $event })"
+                [min]="0"
+                [max]="maxGrid"
+                [step]="0.5"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="1"
+              />
+            </div>
+            <div class="tool">
+              <label class="tool__label" for="line-y">Down (m)</label>
+              <p-inputnumber
+                inputId="line-y"
+                [ngModel]="line.y"
+                (ngModelChange)="changeLine({ y: $event })"
+                [min]="0"
+                [max]="maxGrid"
+                [step]="0.5"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="1"
+              />
+            </div>
+            <div class="tool">
+              <label class="tool__label" for="line-length">Length (m)</label>
+              <p-inputnumber
+                inputId="line-length"
+                [ngModel]="line.length"
+                (ngModelChange)="changeLine({ length: $event })"
+                [min]="0.5"
+                [max]="maxGrid"
+                [step]="0.5"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="1"
+              />
+            </div>
+            <p-button
+              label="Remove line"
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              (onClick)="removeSelected()"
+            />
+          </div>
+        }
+      }
+
+      <fieldset class="grid-size">
+        <legend>Grid size</legend>
+        <div class="tools">
+          <div class="tool">
+            <label class="tool__label" for="layout-columns">Across (m)</label>
+            <p-inputnumber
+              inputId="layout-columns"
+              [ngModel]="columns()"
+              (ngModelChange)="resize($event, rows())"
+              [min]="1"
+              [max]="maxGrid"
+              [showButtons]="true"
+              buttonLayout="horizontal"
+            />
+          </div>
+          <div class="tool">
+            <span class="tool__label" id="width-side-label">Change width on the</span>
+            <p-selectbutton
+              [options]="widthSides"
+              optionLabel="label"
+              optionValue="value"
+              [allowEmpty]="false"
+              [ngModel]="side().horizontal"
+              (ngModelChange)="setSide({ horizontal: $event })"
+              ariaLabelledBy="width-side-label"
+            />
+          </div>
+          <div class="tool">
+            <label class="tool__label" for="layout-rows">Down (m)</label>
+            <p-inputnumber
+              inputId="layout-rows"
+              [ngModel]="rows()"
+              (ngModelChange)="resize(columns(), $event)"
+              [min]="1"
+              [max]="maxGrid"
+              [showButtons]="true"
+              buttonLayout="horizontal"
+            />
+          </div>
+          <div class="tool">
+            <span class="tool__label" id="height-side-label">Change height on the</span>
+            <p-selectbutton
+              [options]="heightSides"
+              optionLabel="label"
+              optionValue="value"
+              [allowEmpty]="false"
+              [ngModel]="side().vertical"
+              (ngModelChange)="setSide({ vertical: $event })"
+              ariaLabelledBy="height-side-label"
+            />
+          </div>
+        </div>
+        <p class="hint text-muted">
+          The walls on that side move with it, and the rest of the hall keeps its place. Making the
+          grid smaller cuts off pillars outside it.
+        </p>
+      </fieldset>
+    }
+
+    <app-layout-canvas
+      [columns]="shownColumns()"
+      [rows]="shownRows()"
+      [areas]="shownAreas()"
+      [editable]="editing()"
+      [pillarSize]="tool() === 'pillar' ? pillarSize() : 0"
+      [selected]="selected()"
+      [label]="'Layout of ' + hallName()"
+      (cellClicked)="place($event)"
+    />
+
+    <ul class="legend" aria-label="Legend">
+      <li><span class="swatch swatch--floor"></span> Floor</li>
+      <li><span class="swatch swatch--wall"></span> Wall or cut corner</li>
+      <li><span class="swatch swatch--pillar"></span> Pillar</li>
+    </ul>
+
+    <dl class="stats">
+      <div>
+        <dt>Grid</dt>
+        <dd>{{ shownColumns() }} × {{ shownRows() }} m</dd>
+      </div>
+      <div>
+        <dt>Pillars</dt>
+        <dd>{{ pillarCount() }}</dd>
+      </div>
+    </dl>
+
+    @if (editing()) {
+      <div class="actions">
+        <p class="text-muted note">
+          An event that already has this hall keeps the layout it was given.
+        </p>
+        <span class="actions__buttons">
+          <p-button
+            label="Cancel"
+            severity="secondary"
+            [text]="true"
+            [disabled]="saving()"
+            (onClick)="cancel()"
+          />
+          <p-button
+            label="Save layout"
+            icon="pi pi-check"
+            [loading]="saving()"
+            [disabled]="saving() || !changed()"
+            (onClick)="save()"
+          />
+        </span>
+      </div>
+    }
+  }
+</section>

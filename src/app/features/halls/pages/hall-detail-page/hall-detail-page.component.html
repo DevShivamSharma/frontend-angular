@@ -1,0 +1,154 @@
+<div class="page">
+  @if (failed()) {
+    <app-page-header title="Hall" backLink="/halls" backLabel="Halls" />
+    <app-empty-state
+      icon="pi-exclamation-triangle"
+      title="The hall could not be loaded"
+      message="It may not exist, or ITPO could not be reached."
+    >
+      <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
+    </app-empty-state>
+  } @else if (loading()) {
+    <app-page-header title="Hall" backLink="/halls" backLabel="Halls" />
+    <div class="skeleton" role="status" aria-label="Loading the hall">
+      <p-skeleton height="18rem" />
+      <p-skeleton height="12rem" />
+    </div>
+  } @else if (hall(); as hall) {
+    <app-page-header
+      [title]="hall.name"
+      [subtitle]="hall.hallCategory?.name"
+      backLink="/halls"
+      backLabel="Halls"
+    >
+      <p-button
+        actions
+        label="Add picture"
+        icon="pi pi-image"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="openAdd()"
+      />
+    </app-page-header>
+
+    <div class="chips" aria-label="Status">
+      <p-tag
+        [value]="hall.isActive ? 'Active' : 'Inactive'"
+        [severity]="hall.isActive ? 'success' : 'secondary'"
+        [rounded]="true"
+      />
+      @if (hall.isPopular) {
+        <p-tag value="Popular" severity="info" [rounded]="true" />
+      }
+      @if (hall.isVipLounge) {
+        <p-tag value="VIP lounge" severity="warn" [rounded]="true" />
+      }
+      @if (hall.isAvailableForFnB) {
+        <p-tag value="F&B" severity="secondary" [rounded]="true" />
+      }
+      @if (!hall.isAvailableForBooking) {
+        <p-tag value="Not open for booking" severity="danger" [rounded]="true" />
+      }
+    </div>
+
+    <div class="layout" [class.layout--single]="!hall.images.length">
+      @if (hall.images.length) {
+        <section class="card gallery" aria-label="Pictures">
+          <app-hall-gallery
+            [images]="hall.images"
+            [hallName]="hall.name"
+            [canRemove]="true"
+            (removed)="askRemove($event)"
+          />
+        </section>
+      }
+
+      <section class="card" aria-labelledby="facts-title">
+        <h2 id="facts-title">Details</h2>
+        <dl class="facts">
+          <div>
+            <dt>Category</dt>
+            <dd>{{ hall.hallCategory?.name ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Area capacity</dt>
+            <dd>
+              {{ hall.hallAreaCapacity !== null ? (hall.hallAreaCapacity | number) + ' sqm' : '—' }}
+            </dd>
+          </div>
+          <div>
+            <dt>Complimentary days</dt>
+            <dd>{{ hall.complementaryDays ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Display order</dt>
+            <dd>{{ hall.sortOrder ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Hall code</dt>
+            <dd>{{ hall.hallCode ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Hall in charge</dt>
+            <dd>{{ hall.hallIncharge ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Finance officer</dt>
+            <dd>{{ hall.financeOfficer ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Last updated</dt>
+            <dd>{{ hall.updatedAt ? (hall.updatedAt | date: 'd MMM y') : '—' }}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <app-hall-layout-panel [hallId]="hall.id" [hallName]="hall.name" />
+
+    @if (description()) {
+      <section class="card" aria-labelledby="about-title">
+        <h2 id="about-title">About the hall</h2>
+        <p class="about">{{ description() }}</p>
+      </section>
+    }
+
+    @if (hall.resources.length) {
+      <section class="card" aria-labelledby="resources-title">
+        <h2 id="resources-title">Resources</h2>
+        <ul class="resources">
+          @for (resource of hall.resources; track resource.name) {
+            <li>
+              <strong>{{ resource.name }}</strong>
+              <span class="text-muted">{{ resource.type }}</span>
+              @if (resource.description) {
+                <span>{{ resource.description }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (allFields().length) {
+      <details class="card more">
+        <summary>Everything ITPO keeps about this hall</summary>
+        <dl class="facts facts--wide">
+          @for (field of allFields(); track field.label) {
+            <div>
+              <dt>{{ field.label }}</dt>
+              <dd>{{ field.value }}</dd>
+            </div>
+          }
+        </dl>
+      </details>
+    }
+
+    <app-add-image-dialog
+      [saving]="saving()"
+      [hasCover]="hasCover()"
+      [failure]="addFailure()"
+      (added)="add($event)"
+    />
+  }
+</div>

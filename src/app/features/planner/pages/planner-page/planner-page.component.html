@@ -1,0 +1,930 @@
+@if (reviewMode()) {
+  <!-- The venue reviews an external event's plan: no drawing tools, no tour. -->
+  <app-plan-review [categoryColors]="categoryColors()" />
+} @else if (store.view(); as v) {
+  @let ro = !canEdit();
+  @let noStalls = !store.selectedStalls().length || ro || store.busy();
+  <div class="planner">
+    <app-tour-overlay />
+    <nav class="ribbon" aria-label="Tools">
+      <div class="group">
+        <div class="tools">
+          <button
+            data-tour="zone-tool"
+            type="button"
+            class="tool"
+            [class.on]="tool() === 'zone-rect'"
+            (click)="setTool('zone-rect')"
+            [attr.aria-pressed]="tool() === 'zone-rect'"
+            [disabled]="ro"
+            pTooltip="Zone (Z)"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="grid_view" /><span>Zone</span>
+          </button>
+        </div>
+      </div>
+      <div class="group" data-tour="fill-group">
+        <div class="tools">
+          <button
+            data-tour="booth-tool"
+            type="button"
+            class="tool"
+            [class.on]="tool() === 'booth'"
+            (click)="setTool('booth')"
+            [attr.aria-pressed]="tool() === 'booth'"
+            [disabled]="ro"
+            pTooltip="Booth (B)"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="storefront" /><span>Booth</span>
+          </button>
+          <button
+            type="button"
+            class="tool auto"
+            (click)="autoBooths()"
+            [disabled]="ro || store.busy()"
+            pTooltip="Auto-booths: fill the selected zone with booths"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="auto_awesome" /><span>Auto-booths</span>
+          </button>
+          <button
+            type="button"
+            class="tool"
+            (click)="importFile.click()"
+            [disabled]="ro || store.busy()"
+            pTooltip="Import this hall's stalls from a CAD plan (PDF or DXF)"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="upload_file" /><span>Import</span>
+          </button>
+          <input
+            #importFile
+            type="file"
+            accept=".pdf,.dxf,application/pdf,application/dxf,image/vnd.dxf"
+            hidden
+            (change)="importPlan($event)"
+          />
+          <button
+            type="button"
+            class="tool auto"
+            (click)="planHall()"
+            [disabled]="ro || store.busy()"
+            pTooltip="Lay out the whole hall or a zone: pick one of a few complete layouts"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="dashboard" /><span>Plan hall</span>
+          </button>
+          <button
+            type="button"
+            class="tool"
+            (click)="toBooth()"
+            [disabled]="ro || store.busy() || !canMakeBooth()"
+            pTooltip="Make a booth of the selected zone or rectangle"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="crop_free" /><span>To booth</span>
+          </button>
+          <button
+            type="button"
+            class="tool"
+            (click)="seats()"
+            [disabled]="ro || store.busy()"
+            pTooltip="Seats"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="event_seat" /><span>Seats</span>
+          </button>
+          <button
+            type="button"
+            class="tool auto seat"
+            (click)="autoSeats()"
+            [disabled]="ro || store.busy()"
+            pTooltip="Auto-seats: fill the selected zone with seats"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="auto_awesome" /><span>Auto-seats</span>
+          </button>
+        </div>
+      </div>
+      <div class="group">
+        <div class="tools">
+          <button
+            data-tour="select-tool"
+            type="button"
+            class="tool"
+            [class.on]="tool() === 'select'"
+            (click)="setTool('select')"
+            [attr.aria-pressed]="tool() === 'select'"
+            pTooltip="Select (V)"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="near_me" /><span>Select</span>
+          </button>
+          <button
+            type="button"
+            class="tool"
+            [class.on]="tool() === 'zone-poly'"
+            (click)="setTool('zone-poly')"
+            [attr.aria-pressed]="tool() === 'zone-poly'"
+            [disabled]="ro"
+            pTooltip="Polygon zone (P)"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="hexagon" /><span>Polygon</span>
+          </button>
+          <button
+            type="button"
+            class="tool"
+            [class.on]="tool() === 'text'"
+            (click)="setTool('text')"
+            [attr.aria-pressed]="tool() === 'text'"
+            [disabled]="ro"
+            pTooltip="Text on the plan (T)"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="object" /><span>Object</span>
+          </button>
+          @for (pair of drawTools; track $index) {
+            <div class="col">
+              @for (t of pair; track t.id) {
+                <button
+                  type="button"
+                  class="mini"
+                  [class.on]="tool() === t.id"
+                  (click)="setTool(t.id)"
+                  [attr.aria-pressed]="tool() === t.id"
+                  [disabled]="ro"
+                  [pTooltip]="t.tip"
+                  tooltipPosition="bottom"
+                >
+                  <app-icon [name]="t.icon" /><span>{{ t.label }}</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      <div class="group" data-tour="modify-group">
+        <div class="tools">
+          <button
+            type="button"
+            class="tool"
+            [class.on]="tool() === 'pan'"
+            (click)="setTool('pan')"
+            [attr.aria-pressed]="tool() === 'pan'"
+            pTooltip="Pan (H)"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="move" /><span>Pan</span>
+          </button>
+          <div class="col">
+            <button
+              data-tour="copy"
+              type="button"
+              class="mini"
+              (click)="copySelection()"
+              [disabled]="noStalls"
+              pTooltip="Copy the selected booths"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="content_copy" /><span>Copy</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              (click)="splitSelection()"
+              [disabled]="noStalls || store.selectedStalls().length !== 1"
+              pTooltip="Split the selected booth in two along its longer side"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="call_split" /><span>Split</span>
+            </button>
+            <button
+              type="button"
+              class="mini danger"
+              (click)="removeSelection()"
+              [disabled]="!store.selection() || ro || store.busy()"
+              pTooltip="Delete (Del)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="delete" /><span>Delete</span>
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="mini"
+              (click)="mergeSelection()"
+              [disabled]="noStalls || store.selectedStalls().length < 2"
+              pTooltip="Join the selected booths into one; together they must make a rectangle"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="call_merge" /><span>Merge</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              (click)="rotateSelection()"
+              [disabled]="noStalls"
+              pTooltip="Turn the selected booths a quarter"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="rotate" /><span>Rotate</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              (click)="rowOfBooths()"
+              [disabled]="ro || store.busy()"
+              pTooltip="Add booths side by side in a row"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="rows" /><span>Row</span>
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="mini"
+              (click)="mirrorSelection('y')"
+              [disabled]="noStalls"
+              pTooltip="Mirror the selected booths top to bottom"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="flip" class="turn" /><span>Mirror</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              [class.on]="tool() === 'mirror-line'"
+              (click)="setTool('mirror-line')"
+              [attr.aria-pressed]="tool() === 'mirror-line'"
+              [disabled]="noStalls"
+              pTooltip="Draw a line to mirror copies of the selected booths across"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="line" /><span>Mirror line</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              (click)="scaleSelection()"
+              [disabled]="noStalls"
+              pTooltip="Make the selected booths bigger or smaller"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="scale" /><span>Scale</span>
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="mini"
+              (click)="numberSelection()"
+              [disabled]="noStalls"
+              pTooltip="Number the selected booths from 1, row by row"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="numbers" /><span>Number</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              (click)="mirrorSelection('x')"
+              [disabled]="noStalls"
+              pTooltip="Mirror the selected booths left to right"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="flip" /><span>Mirror X</span>
+            </button>
+            <button
+              type="button"
+              class="mini danger"
+              (click)="removeAllStalls()"
+              [disabled]="!store.plan().stalls.length || ro || store.busy()"
+              pTooltip="Delete every booth on the plan"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="delete" /><span>Delete all</span>
+            </button>
+          </div>
+          <div class="col">
+            <button
+              data-tour="undo"
+              type="button"
+              class="mini"
+              (click)="store.undo()"
+              [disabled]="!store.canUndo() || ro || store.busy()"
+              pTooltip="Undo (Ctrl+Z)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="undo" /><span>Undo</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              (click)="store.redo()"
+              [disabled]="!store.canRedo() || ro || store.busy()"
+              pTooltip="Redo (Ctrl+Y)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="redo" /><span>Redo</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="group" data-tour="measure-group">
+        <div class="tools">
+          <div class="col">
+            <button
+              type="button"
+              class="mini"
+              [class.on]="tool() === 'measure-distance'"
+              (click)="setTool('measure-distance')"
+              [attr.aria-pressed]="tool() === 'measure-distance'"
+              pTooltip="Measure distance"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="measure" /><span>Distance</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              [class.on]="tool() === 'measure-area'"
+              (click)="setTool('measure-area')"
+              [attr.aria-pressed]="tool() === 'measure-area'"
+              pTooltip="Measure area"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="area" /><span>Area</span>
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="mini"
+              [class.on]="tool() === 'measure-angle'"
+              (click)="setTool('measure-angle')"
+              [attr.aria-pressed]="tool() === 'measure-angle'"
+              pTooltip="Measure angle"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="angle" /><span>Angle</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              [class.on]="tool() === 'measure-height'"
+              (click)="setTool('measure-height')"
+              [attr.aria-pressed]="tool() === 'measure-height'"
+              pTooltip="Measure height"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="height" /><span>Height</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="group">
+        <div class="tools">
+          <div class="col dense">
+            <button
+              type="button"
+              class="mini"
+              (click)="zoom(1.25)"
+              pTooltip="Zoom in"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="zoom_in" /><span>Zoom in</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              (click)="zoom(0.8)"
+              pTooltip="Zoom out"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="zoom_out" /><span>Zoom out</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              [class.on]="splitView()"
+              (click)="splitView.set(!splitView())"
+              [attr.aria-pressed]="splitView()"
+              pTooltip="A second view of the plan beside this one, to zoom on its own"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="split_view" /><span>Split view</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              [class.on]="tool() === 'zoom-window'"
+              (click)="setTool('zoom-window')"
+              [attr.aria-pressed]="tool() === 'zoom-window'"
+              pTooltip="Zoom to a window you drag"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="zoom_window" /><span>Zoom window</span>
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="mini toggle"
+              [class.on]="showGrid()"
+              (click)="showGrid.set(!showGrid())"
+              [attr.aria-pressed]="showGrid()"
+              pTooltip="Show the grid"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="grid_on" /><span>Grid</span>
+            </button>
+            <button
+              type="button"
+              class="mini toggle"
+              [class.on]="showLabels()"
+              (click)="showLabels.set(!showLabels())"
+              [attr.aria-pressed]="showLabels()"
+              pTooltip="Show booth labels"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="label" /><span>Labels</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="group">
+        <div class="tools">
+          <div class="col">
+            <button
+              type="button"
+              class="mini"
+              (click)="startTour()"
+              pTooltip="Help & guided tour"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="help" /><span>Help</span>
+            </button>
+            <button
+              type="button"
+              class="mini"
+              [class.on]="fullscreen()"
+              (click)="toggleFullscreen()"
+              [attr.aria-pressed]="fullscreen()"
+              pTooltip="Full screen"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="fullscreen" /><span>Full</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <span class="spacer"></span>
+      <div class="actions" data-tour="save-publish">
+        @if (canEdit()) {
+          <button
+            pButton
+            class="save"
+            [class.saved]="!store.dirty()"
+            (click)="save()"
+            [disabled]="store.busy() || !store.dirty()"
+            pTooltip="Save (Ctrl+S)"
+            tooltipPosition="bottom"
+          >
+            <app-icon [name]="store.dirty() ? 'save' : 'lock'" />{{
+              store.dirty() ? 'Save' : 'Saved'
+            }}
+          </button>
+        }
+        @if (v.canPublish) {
+          <button
+            type="button"
+            class="publish"
+            [class.done]="store.upToDate()"
+            (click)="publish()"
+            [disabled]="store.busy() || store.dirty() || !store.revision() || store.upToDate()"
+            [pTooltip]="publishTip()"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="check_circle" />{{ store.upToDate() ? 'Published' : 'Publish' }}
+          </button>
+        } @else if (v.canSubmit) {
+          <button
+            type="button"
+            class="publish"
+            (click)="submitPlan()"
+            [disabled]="
+              store.busy() ||
+              store.dirty() ||
+              !store.revision() ||
+              store.upToDate() ||
+              store.unpriced().length > 0
+            "
+            [pTooltip]="submitTip()"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="send" />Send for approval
+          </button>
+        } @else if (v.canWithdraw) {
+          <button
+            type="button"
+            class="publish quiet"
+            (click)="withdrawPlan()"
+            [disabled]="store.busy()"
+            pTooltip="Take the plan back to change it; it is no longer waiting for approval"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="undo" />Withdraw
+          </button>
+        }
+        @if (!v.canPublish && store.published(); as p) {
+          <span
+            class="published-note"
+            [pTooltip]="'Published ' + (p.at | date: 'd MMM y, HH:mm')"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="check_circle" />Published v{{ p.revision }}
+          </span>
+        }
+      </div>
+    </nav>
+    @if (ro) {
+      <p class="readonly" role="status">
+        <app-icon name="visibility" /> {{ v.readOnlyReason }} You are seeing the plan as it was last
+        saved.
+      </p>
+    }
+    @if (v.needsApproval && v.plan.review; as r) {
+      @if (r.status !== 'submitted') {
+        <p class="review" [class]="r.status" role="status">
+          @switch (r.status) {
+            @case ('approved') {
+              <app-icon name="check_circle" />
+              @if (store.published()?.revision === r.revision) {
+                {{ r.reviewedBy ?? 'The venue' }} approved version {{ r.revision }} on
+                {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}; it is published.
+              } @else if (store.revision() === r.revision) {
+                {{ r.reviewedBy ?? 'The venue' }} approved version {{ r.revision }} on
+                {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}. Publish it when you are ready.
+              } @else {
+                {{ r.reviewedBy ?? 'The venue' }} approved version {{ r.revision }} on
+                {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}; you saved again since, so send version
+                {{ store.revision() }} for approval.
+              }
+            }
+            @case ('rejected') {
+              <app-icon name="warning" />
+              <span>
+                {{ r.reviewedBy ?? 'The venue' }} sent version {{ r.revision }} back on
+                {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}: <b>{{ r.note }}</b>
+              </span>
+            }
+          }
+        </p>
+      }
+    }
+    @if (store.busy()) {
+      <p-progressbar mode="indeterminate" class="busy" />
+    }
+
+    <div class="body" [class.no-left]="!leftOpen()" [class.no-right]="!rightOpen()">
+      @if (leftOpen()) {
+        <aside class="side left" aria-label="Plan" data-tour="plan-panel">
+          <div class="side-head">
+            <h2>Plan</h2>
+            <button
+              type="button"
+              class="x"
+              (click)="leftOpen.set(false)"
+              aria-label="Close the plan panel"
+            >
+              <app-icon name="close" />
+            </button>
+          </div>
+          <div class="side-body">
+            <a class="back" [routerLink]="backLink()" pTooltip="Back to the hall">
+              <app-icon name="arrow_back" />
+              <span class="title">
+                <b>{{ v.hall.hall.name }}</b>
+                <span class="muted"
+                  >{{ v.hall.event.name }} · floor v{{ v.hall.hall.floorVersion }} ·
+                  {{ rulesOn() }} rules on</span
+                >
+              </span>
+            </a>
+
+            <section class="card">
+              <h3 class="card-title"><app-icon name="trending" />Sales overview</h3>
+              @if (!store.plan().stalls.length) {
+                <p class="small">
+                  No booths yet. Draw them with <b>Booth</b> (B), fill the hall with
+                  <b>Auto-booths</b>, or bring in a CAD drawing with <b>Import</b>.
+                </p>
+              } @else {
+                <p class="small">
+                  <b>{{ stats().total | number }}</b> booths,
+                  <b>{{ stats().saleable | number: '1.0-0' }} m²</b> to sell;
+                  <b>{{ stats().blocked | number }}</b> blocked.
+                </p>
+              }
+            </section>
+
+            <section class="card">
+              <button
+                type="button"
+                class="card-toggle"
+                (click)="zonesOpen.set(!zonesOpen())"
+                [attr.aria-expanded]="zonesOpen()"
+              >
+                <app-icon name="grid_view" /><span>Zones</span>
+                <span class="muted count">{{ store.plan().zones.length }}</span>
+                <app-icon name="expand_more" class="chev" [class.open]="zonesOpen()" />
+              </button>
+              @if (zonesOpen()) {
+                @if (!store.plan().zones.length) {
+                  <p class="muted small">No zones yet. Draw one with Zone or Polygon.</p>
+                }
+                <ul class="zones">
+                  @for (z of store.plan().zones; track z.id) {
+                    <li
+                      [class.on]="
+                        store.selection()?.kind === 'zone' && store.selection()?.ids?.[0] === z.id
+                      "
+                    >
+                      <button
+                        type="button"
+                        class="zone"
+                        (click)="store.select({ kind: 'zone', ids: [z.id] })"
+                      >
+                        <span class="swatch" [style.background]="z.color"></span>
+                        <span class="zname">{{ z.name }}</span>
+                        <span class="muted nums">{{ area(z) | number: '1.0-0' }} m²</span>
+                      </button>
+                      @if (canEdit()) {
+                        <button
+                          type="button"
+                          class="x"
+                          (click)="removeZone(z)"
+                          [attr.aria-label]="'Delete ' + z.name"
+                          pTooltip="Delete zone"
+                        >
+                          <app-icon name="close" />
+                        </button>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </section>
+
+            <section class="card">
+              <h3 class="card-title">
+                Model tree <span class="muted">({{ treeCount() | number }})</span>
+              </h3>
+              <label class="search">
+                <app-icon name="search" />
+                <input
+                  type="search"
+                  placeholder="Find in the model"
+                  [value]="treeQuery()"
+                  (input)="treeQuery.set($any($event.target).value)"
+                  aria-label="Find in the model"
+                />
+              </label>
+              @if (tree().items.length) {
+                <ul class="tree">
+                  @for (item of tree().items; track item.id) {
+                    <li>
+                      <button
+                        type="button"
+                        [class.on]="store.selection()?.ids?.includes(item.id)"
+                        (click)="store.select({ kind: item.kind, ids: [item.id] })"
+                      >
+                        @if (item.color) {
+                          <span class="swatch" [style.background]="item.color"></span>
+                        } @else {
+                          <app-icon name="storefront" />
+                        }
+                        <span class="zname">{{ item.label }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+                @if (tree().more > 0) {
+                  <p class="muted small">{{ tree().more | number }} more; search to find them.</p>
+                }
+              } @else if (treeQuery()) {
+                <p class="muted small">Nothing matches “{{ treeQuery() }}”.</p>
+              }
+            </section>
+
+            @if (store.categories().length) {
+              <section class="card">
+                <h3 class="card-title">Categories</h3>
+                <ul class="legend">
+                  @for (c of store.categories(); track c.id; let i = $index) {
+                    <li>
+                      <span class="swatch" [style.background]="colorOf(i)"></span>{{ c.name }}
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+
+            <section class="card">
+              <h3 class="card-title">Rules</h3>
+              <p class="muted small">
+                Every change is checked against the {{ rulesOn() }} rules on for this hall. A change
+                that breaks one is not made; the message says why.
+              </p>
+              <button
+                pButton
+                type="button"
+                size="small"
+                [outlined]="true"
+                class="see-rules"
+                (click)="showRules()"
+              >
+                <app-icon name="rule" />See the rules
+              </button>
+            </section>
+          </div>
+        </aside>
+      }
+
+      <div class="stage" [class.split]="splitView()">
+        <app-planner-canvas
+          #canvas
+          data-tour="canvas"
+          class="canvas"
+          [floor]="v.hall.floor"
+          [plan]="store.plan()"
+          [selection]="store.selection()"
+          [tool]="tool()"
+          [snapStep]="snapStep()"
+          [categoryColors]="categoryColors()"
+          [readonly]="ro"
+          [showGrid]="showGrid()"
+          [showLabels]="showLabels()"
+          (drawRect)="drawn($event)"
+          (drawPolygon)="zoneFromPolygon($event)"
+          (drawObject)="addObject($event)"
+          (mirrorLine)="mirrorAcross($event)"
+          (placeAt)="placeBooth($event)"
+          (pick)="picked($event)"
+          (move)="moved($event)"
+          (cutCell)="cutCell($event)"
+        />
+        @if (splitView()) {
+          <!-- The same plan again, to look at elsewhere: pan and zoom only. -->
+          <app-planner-canvas
+            class="canvas second"
+            [floor]="v.hall.floor"
+            [plan]="store.plan()"
+            [selection]="store.selection()"
+            tool="pan"
+            [categoryColors]="categoryColors()"
+            [readonly]="true"
+            [showGrid]="showGrid()"
+            [showLabels]="showLabels()"
+          />
+        }
+        @if (!leftOpen()) {
+          <button
+            type="button"
+            class="reopen left"
+            (click)="leftOpen.set(true)"
+            aria-label="Open the plan panel"
+          >
+            <app-icon name="left_panel_open" />
+          </button>
+        }
+        @if (!rightOpen()) {
+          <button
+            type="button"
+            class="reopen right"
+            (click)="rightOpen.set(true)"
+            aria-label="Open the properties panel"
+          >
+            <app-icon name="left_panel_close" />
+          </button>
+        }
+        <section class="tour" [class.closed]="!tourOpen()">
+          <button
+            type="button"
+            class="tour-head"
+            (click)="tourOpen.set(!tourOpen())"
+            [attr.aria-expanded]="tourOpen()"
+          >
+            <app-icon name="play" />
+            <b>Help &amp; guided tour</b>
+            <app-icon name="expand_more" class="chev" [class.open]="tourOpen()" />
+          </button>
+          @if (tourOpen()) {
+            <p class="small">
+              New here, or showing someone round? The guided tour takes you step by step: it lights
+              up one thing, you do it, and it moves on by itself.
+            </p>
+            <div class="tour-actions">
+              <button pButton type="button" (click)="startTour()">
+                <app-icon name="play" />Start the guided tour
+              </button>
+            </div>
+          }
+        </section>
+        @if (assistantOpen()) {
+          <app-planner-assistant
+            [eventId]="eventId()"
+            [hallId]="hallId()"
+            [ctx]="agentCtx"
+            (closed)="assistantOpen.set(false)"
+          />
+        } @else {
+          <button
+            type="button"
+            class="ai"
+            (click)="assistantOpen.set(true)"
+            pTooltip="Ask about this hall, typed or spoken"
+          >
+            <app-icon name="auto_awesome" />AI Assistant
+          </button>
+        }
+      </div>
+
+      @if (rightOpen()) {
+        <aside class="side right" aria-label="Properties">
+          <div class="side-head">
+            <h2>Properties</h2>
+            <button
+              type="button"
+              class="x"
+              (click)="rightOpen.set(false)"
+              aria-label="Close the properties panel"
+            >
+              <app-icon name="close" />
+            </button>
+          </div>
+          <div class="side-body">
+            <section class="card">
+              <app-planner-properties
+                [store]="store"
+                [readonly]="ro"
+                (patch)="patchStalls($event)"
+                (zonePatch)="patchZone($event)"
+                (seatCategory)="seatCategory($event)"
+                (objectPatch)="patchObjects($event)"
+                (remove)="removeSelection()"
+                (nudge)="nudgeSelection($event.dx, $event.dy)"
+              />
+            </section>
+            <section class="card">
+              <h3 class="card-title">Hall Statistics</h3>
+              <dl class="stats">
+                <dt>Total Booths</dt>
+                <dd>{{ stats().total | number }}</dd>
+                <dt>Available</dt>
+                <dd class="ok">{{ stats().available | number }}</dd>
+                <dt>Reserved</dt>
+                <dd class="bad">0</dd>
+                <dt>Booked</dt>
+                <dd class="bad">0</dd>
+                <dt>Blocked</dt>
+                <dd>{{ stats().blocked | number }}</dd>
+                <dt>Zones</dt>
+                <dd>{{ store.plan().zones.length }}</dd>
+                <dt>Seats</dt>
+                <dd>{{ store.plan().seats.length | number }}</dd>
+                <dt>Hall Size</dt>
+                <dd>
+                  {{ v.hall.hall.width | number: '1.0-1' }} ×
+                  {{ v.hall.hall.depth | number: '1.0-1' }} m
+                </dd>
+              </dl>
+              <dl class="stats total">
+                <dt>Total Saleable Area</dt>
+                <dd>{{ stats().saleable | number: '1.0-0' }} m²</dd>
+              </dl>
+            </section>
+          </div>
+        </aside>
+      }
+    </div>
+  </div>
+} @else if (loadError(); as message) {
+  <div class="load-error">
+    <app-empty-state
+      icon="pi-exclamation-triangle"
+      title="The planner could not be opened"
+      [message]="message"
+    >
+      <p-button label="Try again" icon="pi pi-refresh" (onClick)="retry()" />
+      <a class="p-button p-button-outlined" [routerLink]="errorBack()">Back to the event</a>
+    </app-empty-state>
+  </div>
+} @else {
+  <app-planner-skeleton />
+}

@@ -1,0 +1,90 @@
+<div class="groups">
+  <section class="card" aria-labelledby="group-about">
+    <h2 id="group-about">About</h2>
+    <dl class="facts">
+      <div>
+        <dt>Organisation</dt>
+        <dd>{{ event().organisation ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Event type</dt>
+        <dd>{{ event().eventType ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Co-organiser</dt>
+        <dd>{{ event().coOrganizer ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>File number</dt>
+        <dd>{{ event().fileNumber ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Booked on</dt>
+        <dd>{{ event().bookingDate ? (event().bookingDate | date: 'd MMM y, h:mm a') : '—' }}</dd>
+      </div>
+      <div>
+        <dt>Approved / rejected by</dt>
+        <dd>{{ event().decidedBy ?? '—' }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="group-when">
+    <h2 id="group-when">When</h2>
+    <dl class="facts">
+      <div>
+        <dt>Tenancy</dt>
+        <dd>
+          {{ event().startDate ? (event().startDate | date: 'd MMM y') : '—' }} –
+          {{ event().endDate ? (event().endDate | date: 'd MMM y') : '—' }}
+        </dd>
+      </div>
+      <div>
+        <dt>Event days</dt>
+        <dd>
+          {{ event().exhibitionStartDate ? (event().exhibitionStartDate | date: 'd MMM y') : '—' }}
+          –
+          {{ event().exhibitionEndDate ? (event().exhibitionEndDate | date: 'd MMM y') : '—' }}
+        </dd>
+      </div>
+      <div>
+        <dt>Open daily</dt>
+        <dd>{{ hours() ?? '—' }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="group-numbers">
+    <h2 id="group-numbers">Expected</h2>
+    <dl class="facts">
+      <div>
+        <dt>Visitors</dt>
+        <dd>{{ event().expectedVisitors !== null ? (event().expectedVisitors | number) : '—' }}</dd>
+      </div>
+      <div>
+        <dt>Exhibitors</dt>
+        <dd>
+          {{ event().expectedExhibitors !== null ? (event().expectedExhibitors | number) : '—' }}
+        </dd>
+      </div>
+      <div>
+        <dt>Business generated</dt>
+        <dd>
+          {{ event().businessGenerated !== null ? (event().businessGenerated | number) : '—' }}
+        </dd>
+      </div>
+    </dl>
+  </section>
+</div>
+
+@if (notes().length) {
+  <section class="card notes" aria-labelledby="group-notes">
+    <h2 id="group-notes">From the organiser</h2>
+    @for (note of notes(); track note.label) {
+      <div class="note">
+        <h3>{{ note.label }}</h3>
+        <p>{{ note.text }}</p>
+      </div>
+    }
+  </section>
+}

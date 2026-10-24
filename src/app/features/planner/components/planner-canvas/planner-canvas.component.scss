@@ -1,0 +1,325 @@
+:host {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: #eef2f6;
+}
+.host {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  outline: none;
+}
+.tool-pan {
+  cursor: grab;
+}
+.tool-zone-rect,
+.tool-zone-poly,
+.tool-booth,
+.tool-line,
+.tool-rect,
+.tool-circle,
+.tool-polyline,
+.tool-text,
+.tool-mirror-line,
+.tool-zoom-window,
+.tool-measure-distance,
+.tool-measure-area,
+.tool-measure-angle,
+.tool-measure-height {
+  cursor: crosshair;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font: 600 12px/1.4 var(--app-font-family, sans-serif);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+}
+.chip.length {
+  background: #ea580c;
+}
+.chip.area {
+  background: #6d28d9;
+}
+.chip.zone {
+  background: rgb(255 255 255 / 0.9);
+  color: #1e293b;
+  font-weight: 600;
+}
+.cell-box {
+  position: absolute;
+  border: 2px solid #0e7490;
+  background: rgb(14 116 144 / 0.18);
+  pointer-events: none;
+}
+.cell-menu {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+}
+.cell-menu button {
+  padding: 5px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #1e293b;
+  font: 600 13px/1.3 var(--app-font-family, sans-serif);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cell-menu button.cut {
+  border-color: #be123c;
+  background: #be123c;
+  color: #fff;
+}
+.cell-menu button:focus-visible {
+  outline: 2px solid #0e7490;
+  outline-offset: 2px;
+}
+.hint {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.92);
+  color: #334155;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+  pointer-events: none;
+}
+.legend {
+  position: absolute;
+  top: 44px;
+  left: 10px;
+  max-width: 210px;
+  max-height: calc(100% - 160px);
+  overflow: auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+  font: 12px/1.3 var(--app-font-family, sans-serif);
+  color: #1e293b;
+}
+.legend summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.legend h4 {
+  margin: 8px 0 4px;
+  font: 700 10px/1 var(--app-font-family, sans-serif);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.legend ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.swatch {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 1px solid rgb(0 0 0 / 0.2);
+  border-radius: 3px;
+  font-size: 8px;
+  color: #fff;
+}
+.swatch.line {
+  height: 0;
+  border-width: 2px 0 0;
+  border-style: dashed;
+  border-radius: 0;
+}
+.cube-wrap {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.cube {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px 44px 22px;
+  grid-template-rows: 22px 44px 22px;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid #cbd5e1;
+  background: rgb(255 255 255 / 0.9);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+  cursor: grab;
+  touch-action: none;
+}
+.ring:active {
+  cursor: grabbing;
+}
+.n,
+.cardinal {
+  position: absolute;
+  font: 700 9px/1 sans-serif;
+  color: #64748b;
+  pointer-events: none;
+}
+.n {
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #dc2626;
+}
+.cardinal.e {
+  right: 1px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.cardinal.s {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.cardinal.w {
+  left: 1px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.face {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font: 600 8px/1 sans-serif;
+  letter-spacing: 0.04em;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.face:hover,
+.face:focus-visible {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+.face.on {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #fff;
+}
+.face.back {
+  grid-area: 1 / 2;
+  width: 44px;
+  height: 16px;
+}
+.face.front {
+  grid-area: 3 / 2;
+  width: 44px;
+  height: 16px;
+}
+.face.left,
+.face.right {
+  width: 16px;
+  height: 44px;
+  writing-mode: vertical-rl;
+}
+.face.left {
+  grid-area: 2 / 1;
+  transform: rotate(180deg);
+}
+.face.right {
+  grid-area: 2 / 3;
+}
+.face.top {
+  grid-area: 2 / 2;
+  width: 44px;
+  height: 44px;
+  font-size: 10px;
+}
+.views {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+.home {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #1e293b;
+  font: 500 13px/1.2 var(--app-font-family, sans-serif);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+}
+.home:hover,
+.home:focus-visible {
+  background: #f1f5f9;
+}
+.dims {
+  display: flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+}
+.dims button {
+  min-width: 36px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #334155;
+  font: 600 12px/1.2 var(--app-font-family, sans-serif);
+  cursor: pointer;
+}
+.dims button.on {
+  background: #1e293b;
+  color: #fff;
+}
+.error {
+  position: absolute;
+  inset: auto 16px 16px 16px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 8px;
+}

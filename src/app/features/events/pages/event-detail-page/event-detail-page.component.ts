@@ -1,0 +1,102 @@
+import { formatDate } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  LOCALE_ID,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  input,
+  viewChild,
+} from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TabsModule } from 'primeng/tabs';
+import { TagModule } from 'primeng/tag';
+
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
+import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
+import { EventDetailsCardComponent } from '../../components/event-details-card/event-details-card.component';
+import { EventHallsTabComponent } from '../../components/event-halls-tab/event-halls-tab.component';
+import { EventRulesTabComponent } from '../../components/event-rules-tab/event-rules-tab.component';
+import { statusSeverity } from '../../domain/event-status';
+import { EventDetailStore } from '../../state/event-detail.store';
+
+/** One event: its details, its halls and its planning rules, each under its own tab. */
+@Component({
+  selector: 'app-event-detail-page',
+  imports: [
+    RouterLink,
+    ButtonModule,
+    SkeletonModule,
+    TabsModule,
+    TagModule,
+    EmptyStateComponent,
+    PageHeaderComponent,
+    EventDetailsCardComponent,
+    EventHallsTabComponent,
+    EventRulesTabComponent,
+  ],
+  providers: [EventDetailStore],
+  templateUrl: './event-detail-page.component.html',
+  styleUrl: './event-detail-page.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class EventDetailPageComponent implements OnInit {
+  /** From the route. */
+  readonly eventId = input.required<string>();
+  /** The tab shown, from the address so a reload or a shared link opens the same one. */
+  readonly tab = input('details', {
+    // The router sets an input to undefined when its query parameter is not in the address.
+    transform: (value: string | undefined) => value ?? 'details',
+  });
+
+  protected readonly store = inject(EventDetailStore);
+  private readonly locale = inject(LOCALE_ID);
+  private readonly router = inject(Router);
+  protected readonly severity = statusSeverity;
+
+  /** Back to the list the event belongs to. */
+  protected readonly back = computed(() =>
+    this.store.summary()?.kind === 'internal'
+      ? { link: '/events', label: 'Internal events' }
+      : { link: '/external-events', label: 'External events' },
+  );
+
+  /** Who it is for, its booking id and its dates: what tells one event from another. */
+  protected readonly subtitle = computed(() => {
+    const event = this.store.summary();
+    if (!event) {
+      return '';
+    }
+    const day = (date: string | null) => (date ? formatDate(date, 'd MMM y', this.locale) : null);
+    const dates = [day(event.startDate), day(event.endDate)].filter(Boolean).join(' – ');
+    return [event.organisation, event.bookingId, dates].filter(Boolean).join(' · ');
+  });
+  private readonly rulesTab = viewChild(EventRulesTabComponent);
+
+  constructor() {
+    // The rules are read when their tab is first shown, however it was reached.
+    effect(() => {
+      if (this.tab() === 'rules') {
+        this.rulesTab()?.ensureLoaded();
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    this.store.load(this.eventId());
+  }
+
+  protected onTab(value: string | number | undefined): void {
+    if (typeof value === 'string') {
+      void this.router.navigate([], {
+        queryParams: { tab: value === 'details' ? null : value },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+  }
+}

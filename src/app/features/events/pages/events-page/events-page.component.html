@@ -1,0 +1,112 @@
+<div class="page">
+  <app-page-header [title]="title()" [subtitle]="subtitle()">
+    @if (canCreate()) {
+      <a actions class="p-button" routerLink="/events/new">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        Create event
+      </a>
+    }
+  </app-page-header>
+
+  <section class="card card--flush" aria-label="Events">
+    <div class="toolbar">
+      <p-iconfield class="toolbar__search">
+        <p-inputicon class="pi pi-search" />
+        <input
+          pInputText
+          type="search"
+          [formControl]="search"
+          placeholder="Search by event name or booking ID"
+          aria-label="Search by event name or booking ID"
+        />
+      </p-iconfield>
+      <span class="text-muted" aria-live="polite">
+        @if (!loading() && !failed()) {
+          {{ total() }} {{ total() === 1 ? 'event' : 'events' }}
+        }
+      </span>
+    </div>
+
+    @if (failed()) {
+      <app-empty-state
+        icon="pi-exclamation-triangle"
+        title="The events could not be loaded"
+        message="Check your connection and try again."
+      >
+        <p-button label="Try again" icon="pi pi-refresh" (onClick)="retry()" />
+      </app-empty-state>
+    } @else {
+      @if (loading()) {
+        <app-card-skeleton [count]="6" />
+      } @else if (events().length) {
+        <ul class="card-grid">
+          @for (event of events(); track event.id) {
+            <li class="item-card item-card--cover">
+              <img
+                class="item-card__cover"
+                [src]="placeholder"
+                alt=""
+                loading="lazy"
+                appImageFallback
+              />
+              <h2 class="item-card__title">
+                <a [routerLink]="[base(), event.id]">{{ event.name }}</a>
+              </h2>
+              <p class="item-card__meta">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
+                {{ event.endDate ? (event.endDate | date: 'd MMM y') : '—' }}
+              </p>
+              @if (event.bookingId) {
+                <p class="item-card__meta">
+                  <i class="pi pi-hashtag" aria-hidden="true"></i>
+                  {{ event.bookingId }}
+                </p>
+              }
+              @if (isStaff() && event.organisation) {
+                <p class="item-card__meta">
+                  <i class="pi pi-building" aria-hidden="true"></i>
+                  {{ event.organisation }}
+                </p>
+              }
+              <div class="item-card__tags">
+                @if (event.bookingStatus) {
+                  <p-tag
+                    [value]="'Booking: ' + event.bookingStatus"
+                    [severity]="severity(event.bookingStatus)"
+                  />
+                }
+                @if (event.approvalStatus) {
+                  <p-tag
+                    [value]="'Approval: ' + event.approvalStatus"
+                    [severity]="severity(event.approvalStatus)"
+                  />
+                }
+              </div>
+            </li>
+          }
+        </ul>
+        <p-paginator
+          class="list-footer"
+          [first]="first()"
+          [rows]="pageSize"
+          [totalRecords]="total()"
+          [showCurrentPageReport]="false"
+          (onPageChange)="onPage($event)"
+        />
+      } @else {
+        <app-empty-state
+          icon="pi-calendar"
+          [title]="search.value ? 'No events match your search' : 'No events yet'"
+          [message]="
+            search.value
+              ? 'Try a different name or booking ID.'
+              : kind() === 'internal'
+                ? 'Create the first one to start planning.'
+                : 'Events booked by organisations will show here.'
+          "
+        />
+      }
+    }
+  </section>
+</div>

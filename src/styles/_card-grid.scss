@@ -1,0 +1,142 @@
+/* Lists shown as cards: a grid of `.item-card`s, each one a link (its title's ::after covers it). */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-4);
+  list-style: none;
+}
+
+.item-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--app-border-strong);
+    box-shadow: var(--app-shadow);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+
+    a {
+      color: inherit;
+      text-decoration: none;
+
+      /* The whole card is the link. */
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+      }
+
+      &:focus-visible {
+        outline: none;
+      }
+
+      &:focus-visible::after {
+        outline: 2px solid var(--app-brand);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    color: var(--app-muted);
+    font-size: 0.875rem;
+
+    .pi {
+      flex: none;
+      font-size: 0.875rem;
+    }
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: auto;
+    padding-top: var(--space-2);
+  }
+}
+
+/* A card with a picture beside its text. */
+.item-card--media {
+  flex-direction: row;
+  gap: var(--space-4);
+  min-height: 8.75rem;
+  padding: 0;
+  overflow: hidden;
+
+  .item-card__media {
+    flex: 0 0 7.5rem;
+    width: 7.5rem;
+    object-fit: cover;
+    background: var(--app-surface-2);
+  }
+
+  .item-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-4) var(--space-4) var(--space-4) 0;
+  }
+
+  .item-card__placeholder {
+    display: grid;
+    place-items: center;
+    color: var(--app-muted);
+    font-size: 1.5rem;
+  }
+}
+
+.list-footer {
+  border-top: 1px solid var(--app-border);
+}
+
+/* A card with a wide picture on top (an event). */
+.item-card--cover {
+  padding: 0;
+  overflow: hidden;
+
+  .item-card__cover {
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    object-fit: cover;
+    background: var(--app-surface-2);
+  }
+
+  > :not(.item-card__cover) {
+    margin-inline: var(--space-4);
+  }
+
+  > .item-card__title {
+    margin-top: var(--space-2);
+  }
+
+  > .item-card__tags {
+    padding-bottom: var(--space-4);
+  }
+}

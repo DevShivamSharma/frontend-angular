@@ -1,0 +1,74 @@
+:host {
+  display: block;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.editor__table {
+  display: flex;
+  flex-direction: column;
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+}
+
+.editor__row {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+
+  & + & {
+    border-top: 1px solid var(--app-border);
+  }
+}
+
+.editor__row--head {
+  position: sticky;
+  top: 0;
+  background: var(--app-surface);
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.editor__index {
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.editor__paste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editor__paste-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.editor__error {
+  display: flex;
+  gap: var(--space-2);
+  color: var(--app-danger);
+  font-size: 0.8125rem;
+}
+
+:host ::ng-deep p-inputnumber,
+:host ::ng-deep .p-inputnumber,
+:host ::ng-deep textarea {
+  width: 100%;
+}

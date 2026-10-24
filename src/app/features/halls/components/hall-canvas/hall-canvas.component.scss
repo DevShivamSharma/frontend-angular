@@ -1,0 +1,45 @@
+:host {
+  display: block;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 26rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+}
+
+.canvas--editable {
+  cursor: crosshair;
+}
+
+.canvas__grid line {
+  stroke: var(--app-border);
+  stroke-width: 1;
+  opacity: 0.8;
+}
+
+.canvas__hall {
+  fill: color-mix(in srgb, var(--app-brand) 16%, transparent);
+  stroke: var(--app-brand);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.canvas__dimension,
+.canvas__corner text {
+  fill: var(--app-muted);
+  font-family: var(--app-font-body);
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.canvas__corner circle {
+  fill: var(--app-brand);
+  stroke: var(--app-surface);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}

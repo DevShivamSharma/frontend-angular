@@ -1,0 +1,68 @@
+<div class="login">
+  <section class="login__brand" aria-hidden="true">
+    <img src="itpo-logo.svg" alt="" width="48" height="48" />
+    <div class="login__brand-text">
+      <h2>Stall Planning Portal</h2>
+      <p>Set up halls, run ITPO's own events and keep the planning rules in one place.</p>
+    </div>
+  </section>
+
+  <main class="login__panel">
+    <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="login__heading">
+        <img class="login__logo" src="itpo-logo.svg" alt="ITPO" width="48" height="48" />
+        <h1>Sign in</h1>
+        <p class="text-muted">Use your ITPO account.</p>
+      </div>
+
+      @if (failure(); as message) {
+        <p-message severity="error" variant="outlined" role="alert">{{ message }}</p-message>
+      }
+
+      <app-form-field
+        label="Email"
+        inputId="login-email"
+        [control]="form.controls.email"
+        [required]="true"
+      >
+        <input
+          pInputText
+          id="login-email"
+          type="email"
+          formControlName="email"
+          autocomplete="username"
+          inputmode="email"
+          autofocus
+        />
+      </app-form-field>
+
+      <app-form-field
+        label="Password"
+        inputId="login-password"
+        [control]="form.controls.password"
+        [required]="true"
+      >
+        <p-password
+          inputId="login-password"
+          formControlName="password"
+          autocomplete="current-password"
+          [feedback]="false"
+          [toggleMask]="true"
+          styleClass="login__password"
+          inputStyleClass="login__password-input"
+        />
+      </app-form-field>
+
+      <p-button
+        type="submit"
+        label="Sign in"
+        icon="pi pi-sign-in"
+        styleClass="login__submit"
+        [loading]="submitting()"
+        [disabled]="submitting()"
+      />
+
+      <p class="login__help text-muted">Need access? Contact ITPO.</p>
+    </form>
+  </main>
+</div>

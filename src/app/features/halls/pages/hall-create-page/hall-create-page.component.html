@@ -1,0 +1,243 @@
+<div class="page">
+  <app-page-header
+    title="Create hall"
+    subtitle="Draw the hall by its size. It is saved with ITPO's halls and appears in the SelfCare hall list."
+    backLink="/halls"
+    backLabel="Halls"
+  />
+
+  <form class="create" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <section class="card create__basics" aria-labelledby="basics-title">
+      <h2 id="basics-title">Basics</h2>
+      <div class="form-grid">
+        <app-form-field
+          class="form-grid__full"
+          label="Hall name"
+          inputId="hall-name"
+          [control]="form.controls.name"
+          [required]="true"
+        >
+          <input
+            pInputText
+            id="hall-name"
+            formControlName="name"
+            autocomplete="off"
+            maxlength="255"
+          />
+        </app-form-field>
+
+        <app-form-field
+          label="Category"
+          inputId="hall-category"
+          [control]="form.controls.categoryId"
+          [hint]="
+            categoriesState() === 'failed'
+              ? 'Categories could not be loaded. You can create the hall without one.'
+              : 'Optional.'
+          "
+        >
+          <p-select
+            inputId="hall-category"
+            formControlName="categoryId"
+            [options]="categories()"
+            optionLabel="name"
+            optionValue="id"
+            [showClear]="true"
+            [loading]="categoriesState() === 'loading'"
+            placeholder="Choose a category"
+            appendTo="body"
+          />
+        </app-form-field>
+
+        <app-form-field
+          label="Area capacity (sqm)"
+          inputId="hall-capacity"
+          [control]="form.controls.capacity"
+          hint="How many square metres the hall holds, as you state it. Not worked out from the size."
+        >
+          <p-inputnumber
+            inputId="hall-capacity"
+            formControlName="capacity"
+            [min]="0"
+            [maxFractionDigits]="2"
+          />
+        </app-form-field>
+      </div>
+      @if (categoriesState() === 'failed') {
+        <p-button
+          label="Try loading categories again"
+          icon="pi pi-refresh"
+          size="small"
+          [text]="true"
+          (onClick)="loadCategories()"
+        />
+      }
+    </section>
+
+    <section class="card create__shape" aria-labelledby="shape-title">
+      <h2 id="shape-title">Shape and size</h2>
+      <p class="text-muted section-intro">
+        Pick the shape, then enter its measurements in metres. A custom shape lets you place each
+        corner.
+      </p>
+
+      <app-shape-picker
+        [shapes]="shapes"
+        [selectedId]="shapeId()"
+        (selected)="selectShape($event)"
+      />
+
+      @if (shape().params.length) {
+        <div class="form-grid params">
+          @for (param of shape().params; track param.key) {
+            <div class="param">
+              <label class="param__label" [for]="'param-' + param.key">{{ param.label }}</label>
+              <p-inputnumber
+                [inputId]="'param-' + param.key"
+                [ngModel]="params()[param.key]"
+                (ngModelChange)="setParam(param.key, $event)"
+                [ngModelOptions]="{ standalone: true }"
+                [min]="param.min"
+                [max]="param.max"
+                [step]="param.step"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="2"
+                [suffix]="param.unit ? ' ' + param.unit : ''"
+                [showButtons]="true"
+                buttonLayout="horizontal"
+                incrementButtonIcon="pi pi-plus"
+                decrementButtonIcon="pi pi-minus"
+              />
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="custom">
+          <app-corner-editor [corners]="corners()" (cornersChange)="corners.set($event)" />
+        </div>
+      }
+    </section>
+
+    <section class="card preview" aria-labelledby="preview-title">
+      <h2 id="preview-title">Preview</h2>
+      <app-hall-canvas
+        [ring]="outline().ring"
+        [corners]="isCustom() ? corners() : []"
+        [editable]="isCustom()"
+        (cornerAdded)="addCorner($event)"
+      />
+
+      @if (outlineMessage(); as message) {
+        <p-message severity="warn" variant="outlined" role="alert">{{ message }}</p-message>
+      } @else if (isCustom() && !corners().length) {
+        <p class="text-muted">Click on the grid to place the first corner.</p>
+      }
+
+      @if (stats(); as measured) {
+        <dl class="stats">
+          <div>
+            <dt>Width</dt>
+            <dd>{{ measured.width }} m</dd>
+          </div>
+          <div>
+            <dt>Depth</dt>
+            <dd>{{ measured.depth }} m</dd>
+          </div>
+          <div>
+            <dt>Footprint</dt>
+            <dd>{{ measured.footprint }} m²</dd>
+          </div>
+          <div>
+            <dt>Floor in outline</dt>
+            <dd>{{ measured.floor }} m²</dd>
+          </div>
+        </dl>
+      }
+    </section>
+
+    <section class="card create__options" aria-labelledby="options-title">
+      <h2 id="options-title">Hall details</h2>
+      @if (isNta()) {
+        <p-message severity="info" variant="outlined">
+          This is a Non-Tower Area hall: it has no VIP lounge, F&amp;B, complimentary days or order.
+        </p-message>
+      }
+      <div class="options">
+        <div class="toggle-row">
+          <p-toggleswitch inputId="hall-popular" formControlName="isPopular" />
+          <label for="hall-popular">Most popular</label>
+        </div>
+        <div class="toggle-row">
+          <p-toggleswitch inputId="hall-vip" formControlName="isVipLounge" />
+          <label for="hall-vip">Has a VIP lounge</label>
+        </div>
+        <div class="toggle-row">
+          <p-toggleswitch inputId="hall-fnb" formControlName="isAvailableForFnB" />
+          <label for="hall-fnb">Available for F&amp;B</label>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <app-form-field
+          label="Complimentary days"
+          inputId="hall-complimentary"
+          [control]="form.controls.complimentaryDays"
+        >
+          <p-selectbutton
+            formControlName="complimentaryDays"
+            [options]="complimentaryOptions"
+            optionLabel="label"
+            optionValue="value"
+            [allowEmpty]="false"
+            ariaLabelledBy="hall-complimentary"
+          />
+        </app-form-field>
+        <app-form-field
+          label="Order in lists"
+          inputId="hall-order"
+          [control]="form.controls.sortOrder"
+          hint="0 to 20. The lower the earlier."
+        >
+          <p-inputnumber
+            inputId="hall-order"
+            formControlName="sortOrder"
+            [min]="0"
+            [max]="20"
+            [showButtons]="true"
+          />
+        </app-form-field>
+      </div>
+    </section>
+
+    <section class="card create__images" aria-labelledby="images-title">
+      <h2 id="images-title">Pictures</h2>
+      <p class="text-muted images-intro">
+        Optional. Add each picture by the address it is kept at (for example on S3). One of them can
+        be the cover.
+      </p>
+      <app-hall-images-editor [images]="form.controls.images" />
+    </section>
+
+    <div class="actionbar" role="region" aria-label="Create the hall">
+      <div class="actionbar__inner">
+        <span class="actionbar__message">
+          @if (failure(); as message) {
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+          } @else if (outlineMessage(); as message) {
+            <i class="pi pi-info-circle" aria-hidden="true"></i> {{ message }}
+          }
+        </span>
+        <span class="actionbar__buttons">
+          <a class="p-button p-button-secondary p-button-text" routerLink="/halls">Cancel</a>
+          <p-button
+            type="submit"
+            label="Create hall"
+            icon="pi pi-check"
+            [loading]="submitting()"
+            [disabled]="submitting()"
+          />
+        </span>
+      </div>
+    </div>
+  </form>
+</div>

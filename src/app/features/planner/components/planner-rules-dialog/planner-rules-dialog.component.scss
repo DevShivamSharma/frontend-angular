@@ -1,0 +1,80 @@
+.head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.head small {
+  display: block;
+  font: var(--app-body-small);
+}
+.badge {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--app-primary) 14%, transparent);
+  color: var(--app-primary);
+  flex: 0 0 auto;
+}
+.body {
+  display: grid;
+  gap: 14px;
+}
+.lead,
+.profile {
+  margin: 0;
+}
+.group {
+  margin: 0 0 8px;
+  font: var(--app-title-small);
+  color: var(--app-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.rules li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.on {
+  color: light-dark(#15803d, #4ade80);
+  flex: 0 0 auto;
+}
+.waiting {
+  color: var(--app-on-surface-variant);
+  flex: 0 0 auto;
+}
+.rule {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.name {
+  font: var(--app-title-small);
+}
+.ref {
+  font: var(--app-body-small);
+  color: var(--app-on-surface-variant);
+  margin-left: 4px;
+}
+.value {
+  font: var(--app-body-medium);
+  font-weight: 600;
+  color: var(--app-primary);
+}
+.small {
+  font: var(--app-body-small);
+}
+.off summary {
+  cursor: pointer;
+  font: var(--app-label-medium);
+  color: var(--app-on-surface-variant);
+}

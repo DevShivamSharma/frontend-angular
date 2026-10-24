@@ -1,0 +1,122 @@
+<section class="panel" aria-label="AI Assistant">
+  <header class="head">
+    <app-icon name="auto_awesome" class="spark" />
+    <h2>AI Assistant</h2>
+    <button
+      type="button"
+      class="icon-btn"
+      (click)="toggleVoice()"
+      [attr.aria-pressed]="voiceOn()"
+      [attr.aria-label]="voiceOn() ? 'Stop reading answers aloud' : 'Read answers aloud'"
+      [title]="voiceOn() ? 'Answers are read aloud' : 'Answers are not read aloud'"
+    >
+      <app-icon [name]="voiceOn() ? 'volume_up' : 'volume_off'" />
+    </button>
+    <button type="button" class="icon-btn" (click)="closed.emit()" aria-label="Close the assistant">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  <div class="log" #log aria-live="polite">
+    @if (!items().length) {
+      <div class="empty">
+        <p>
+          Ask about this hall, or tell me what to do: make zones, fill them with booths, change
+          booths, save, show it in 3D. Type, or press the microphone and speak in Hindi or English.
+        </p>
+        <div class="chips">
+          @for (s of suggestions; track s) {
+            <button type="button" class="chip" (click)="send(s)">{{ s }}</button>
+          }
+        </div>
+      </div>
+    }
+    @for (item of items(); track $index; let i = $index) {
+      @switch (item.kind) {
+        @case ('action') {
+          <p class="action" [class]="item.state">
+            @switch (item.state) {
+              @case ('running') {
+                <span class="spinner" aria-hidden="true"></span>
+              }
+              @case ('ok') {
+                <app-icon name="check_circle" label="Done" />
+              }
+              @default {
+                <app-icon name="error" label="Not done" />
+              }
+            }
+            <span>{{ item.text }}</span>
+          </p>
+        }
+        @case ('undo') {
+          <div class="undo">
+            <span>{{ item.text }}</span>
+            <button
+              pButton
+              [text]="true"
+              size="small"
+              type="button"
+              (click)="undo(i)"
+              [disabled]="item.used || working()"
+            >
+              <app-icon name="undo" />{{ item.used ? 'Undone' : 'Undo' }}
+            </button>
+          </div>
+        }
+        @default {
+          <p class="msg" [class.me]="item.kind === 'user'">{{ item.text }}</p>
+        }
+      }
+    }
+    @if (thinking()) {
+      <p class="msg typing" aria-label="The assistant is thinking">
+        <span></span><span></span><span></span>
+      </p>
+    }
+    @if (error(); as e) {
+      <div class="err" role="alert">
+        <span>{{ e }}</span>
+        <button pButton [text]="true" size="small" type="button" (click)="retry()">
+          <app-icon name="restart_alt" />Retry
+        </button>
+      </div>
+    }
+  </div>
+
+  <form class="ask" (submit)="$event.preventDefault(); send(draft())">
+    @if (canListen) {
+      <button
+        type="button"
+        class="mic"
+        [class.on]="listening()"
+        (click)="toggleListen()"
+        [disabled]="working()"
+        [attr.aria-pressed]="listening()"
+        [attr.aria-label]="listening() ? 'Stop listening' : 'Speak'"
+        [title]="listening() ? 'Listening… press to stop' : 'Speak'"
+      >
+        <app-icon [name]="listening() ? 'stop' : 'mic'" />
+      </button>
+    }
+    <input
+      type="text"
+      [ngModel]="draft()"
+      (ngModelChange)="draft.set($event)"
+      name="q"
+      maxlength="2000"
+      [placeholder]="listening() ? 'Listening…' : 'Ask, or say what to do'"
+      aria-label="Your question or command"
+      autocomplete="off"
+    />
+    @if (working()) {
+      <button pButton severity="danger" type="button" (click)="stop()" aria-label="Stop">
+        <app-icon name="stop" />
+      </button>
+    } @else {
+      <button pButton type="submit" [disabled]="!draft().trim()" aria-label="Send">
+        <app-icon name="send" />
+      </button>
+    }
+  </form>
+</section>

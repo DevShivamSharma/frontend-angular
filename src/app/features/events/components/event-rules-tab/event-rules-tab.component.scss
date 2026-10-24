@@ -1,0 +1,26 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 1.125rem;
+}
+
+p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.loading {
+  padding: var(--space-5) var(--space-4);
+}
+
+.list {
+  padding: 0 var(--space-4) var(--space-4);
+}

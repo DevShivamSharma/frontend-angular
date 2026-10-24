@@ -1,0 +1,22 @@
+<ul class="card-grid" aria-hidden="true">
+  @for (item of items(); track item) {
+    <li class="item-card" [class.item-card--media]="media()">
+      @if (media()) {
+        <p-skeleton class="item-card__media" width="7.5rem" height="100%" borderRadius="0" />
+        <div class="item-card__body">
+          <p-skeleton width="70%" height="1.1rem" />
+          <p-skeleton width="45%" height="0.8rem" />
+          <p-skeleton width="30%" height="1.4rem" borderRadius="999px" />
+        </div>
+      } @else {
+        <p-skeleton width="70%" height="1.1rem" />
+        <p-skeleton width="50%" height="0.8rem" />
+        <p-skeleton width="60%" height="0.8rem" />
+        <div class="item-card__tags">
+          <p-skeleton width="4.5rem" height="1.4rem" borderRadius="999px" />
+          <p-skeleton width="5.5rem" height="1.4rem" borderRadius="999px" />
+        </div>
+      }
+    </li>
+  }
+</ul>

@@ -1,0 +1,110 @@
+.cut-reset {
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--p-primary-color, #0e7490);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+:host {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+h3 {
+  margin: 0;
+  font: var(--app-title-small);
+}
+.pad {
+  display: flex;
+  gap: 4px;
+}
+label,
+.lbl {
+  display: grid;
+  gap: 4px;
+  font: var(--app-label-medium);
+}
+.inline {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+input[type='color'] {
+  width: 44px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 6px;
+  background: none;
+}
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+:host ::ng-deep .p-inputnumber,
+:host ::ng-deep .p-inputnumber-input,
+:host ::ng-deep .p-select,
+:host ::ng-deep .p-multiselect,
+input[pInputText],
+textarea {
+  width: 100%;
+  min-width: 0;
+}
+.sides {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.side {
+  padding: 6px 0;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 6px;
+  background: var(--app-surface);
+  color: var(--app-on-surface);
+  font: var(--app-label-small);
+  text-transform: capitalize;
+  cursor: pointer;
+}
+.side.on {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #14532d;
+}
+.flags {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font: var(--app-body-medium);
+}
+dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+dt {
+  color: var(--app-on-surface-variant);
+}
+dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.small {
+  font: var(--app-body-small);
+  margin: 0;
+}
+.nums {
+  font-variant-numeric: tabular-nums;
+}

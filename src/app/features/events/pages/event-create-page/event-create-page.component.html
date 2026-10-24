@@ -1,0 +1,17 @@
+<div class="page">
+  <app-page-header
+    title="Create event"
+    subtitle="An internal event ITPO organises itself."
+    backLink="/events"
+    backLabel="Events"
+  />
+  <app-event-form
+    mode="create"
+    [organisations]="organisations()"
+    [organisationsLoading]="organisationsLoading()"
+    [submitting]="submitting()"
+    [failure]="failure()"
+    (created)="create($event)"
+    (cancelled)="cancel()"
+  />
+</div>

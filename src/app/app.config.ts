@@ -1,33 +1,29 @@
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
-  inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
+  inject,
 } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import {
+  PreloadAllModules,
   provideRouter,
-  TitleStrategy,
   withComponentInputBinding,
   withInMemoryScrolling,
-  withRouterConfig,
+  withPreloading,
 } from '@angular/router';
 import { MessageService } from 'primeng/api';
-import { providePrimeNG } from 'primeng/config';
 import { DialogService } from 'primeng/dynamicdialog';
+import { providePrimeNG } from 'primeng/config';
 
-import { environment } from '../environments/environment';
 import { routes } from './app.routes';
-import { API_BASE_URL } from './core/api/api-base.token';
-import { errorToastInterceptor } from './core/api/error-toast.interceptor';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
+import { BrowserTokenStorage, TokenStorage } from './core/auth/token-storage';
+import { envelopeInterceptor } from './core/http/envelope.interceptor';
 import { AppPreset } from './core/theme/app-preset';
-import { ThemeService } from './core/theme/theme.service';
-import { ColorSchemeService } from './core/theme/color-scheme.service';
-import { AppTitleStrategy } from './core/ui/app-title.strategy';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -36,31 +32,24 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withComponentInputBinding(),
-      // Pages under /<org>/ read the slug from their own route.
-      withRouterConfig({ paramsInheritanceStrategy: 'always' }),
+      withPreloading(PreloadAllModules),
       withInMemoryScrolling({ scrollPositionRestoration: 'top' }),
     ),
-    provideHttpClient(withFetch(), withInterceptors([errorToastInterceptor, authInterceptor])),
-    { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
-    { provide: TitleStrategy, useClass: AppTitleStrategy },
+    // The auth interceptor is outermost: it sees the envelope interceptor's ApiError (a 401) and can refresh.
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, envelopeInterceptor])),
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {
         preset: AppPreset,
-        // Follows the device's light or dark setting, as the app's own tokens do. In a CSS
-        // layer, so a component's own styles always win over PrimeNG's without !important.
-        options: { darkModeSelector: '.app-dark', cssLayer: { name: 'primeng' } },
+        // Dark when the page says so (ThemeService), in a CSS layer so a component's own styles win.
+        options: { darkModeSelector: '[data-theme="dark"]', cssLayer: { name: 'primeng' } },
       },
       ripple: false,
     }),
-    // App-wide toasts (their outlet is in the root component) and dialogs.
     MessageService,
     DialogService,
-    // Guards read the session synchronously, so it is restored before the first navigation.
+    { provide: TokenStorage, useClass: BrowserTokenStorage },
+    // The saved session is picked up before the first navigation, so the guards can read it.
     provideAppInitializer(() => inject(AuthService).restore()),
-    // The platform's colours until a route applies an organisation's.
-    provideAppInitializer(() => inject(ThemeService).reset()),
-    // Light or dark as chosen (or as the device is), before anything shows.
-    provideAppInitializer(() => void inject(ColorSchemeService)),
   ],
 };

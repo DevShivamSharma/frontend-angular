@@ -1,0 +1,197 @@
+<header class="dialog-title head">
+  <span class="badge" aria-hidden="true"><app-icon name="auto_awesome" /></span>
+  <span>
+    Plan {{ region().name }}
+    <small class="muted">A few complete layouts to choose from, kept to the hall's rules</small>
+  </span>
+</header>
+<div class="dialog-content grid">
+  <div class="col">
+    <label
+      >Area
+      <p-select
+        [options]="data.regions"
+        optionLabel="label"
+        optionValue="id"
+        [ngModel]="regionId()"
+        (ngModelChange)="regionId.set($event)"
+        appendTo="body"
+      />
+    </label>
+    @if (standing()) {
+      <label class="check">
+        <p-checkbox [binary]="true" [ngModel]="afresh()" (ngModelChange)="afresh.set($event)" />
+        Start afresh: replace the {{ standing() }} booths there now
+      </label>
+    }
+    <span class="lbl">Booth size (m)</span>
+    <p-selectbutton
+      [options]="sizes"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      [ngModel]="size()"
+      (ngModelChange)="pickSize($event)"
+      ariaLabel="Booth size"
+    />
+    <div class="pair">
+      <label
+        >Width
+        <p-inputnumber
+          [ngModel]="brief().width"
+          (ngModelChange)="set({ width: $event })"
+          [min]="1"
+          [max]="60"
+          [maxFractionDigits]="1"
+        />
+      </label>
+      <label
+        >Depth
+        <p-inputnumber
+          [ngModel]="brief().depth"
+          (ngModelChange)="set({ depth: $event })"
+          [min]="1"
+          [max]="60"
+          [maxFractionDigits]="1"
+        />
+      </label>
+      <label
+        >Aisle (m)
+        <p-inputnumber
+          [ngModel]="brief().aisle"
+          (ngModelChange)="set({ aisle: $event })"
+          [min]="1"
+          [max]="20"
+          [maxFractionDigits]="1"
+        />
+      </label>
+      <label
+        >At most (booths)
+        <p-inputnumber
+          [ngModel]="brief().count"
+          (ngModelChange)="set({ count: $event })"
+          [min]="1"
+          [max]="3000"
+          placeholder="as many as fit"
+        />
+      </label>
+    </div>
+    <label
+      >Lines along the side walls
+      <p-select
+        [options]="wallChoices"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="brief().wallLines"
+        (ngModelChange)="set({ wallLines: $event })"
+        appendTo="body"
+      />
+    </label>
+    <label class="check">
+      <p-checkbox
+        [binary]="true"
+        [ngModel]="brief().corners"
+        (ngModelChange)="set({ corners: $event })"
+      />
+      Line ends open on two sides (corner booths)
+    </label>
+    <div class="pair">
+      <label
+        >Numbering
+        <p-select
+          [options]="numberings"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="brief().numbering"
+          (ngModelChange)="set({ numbering: $event })"
+          appendTo="body"
+        />
+      </label>
+      <label
+        >Prefix
+        <input
+          pInputText
+          [ngModel]="brief().prefix"
+          (ngModelChange)="set({ prefix: $event })"
+          maxlength="20"
+          placeholder="e.g. H6-"
+        />
+      </label>
+    </div>
+    <label
+      >Categories
+      <p-multiselect
+        [options]="categories()"
+        optionLabel="name"
+        optionValue="id"
+        [ngModel]="brief().categoryIds"
+        (ngModelChange)="set({ categoryIds: $event })"
+        placeholder="None"
+        display="chip"
+        appendTo="body"
+      />
+    </label>
+  </div>
+
+  <div class="col options" role="radiogroup" aria-label="Layouts">
+    @if (!options().length) {
+      <p class="muted">Nothing fits here with these booths. Try smaller booths or another area.</p>
+    }
+    @for (o of options(); track o.key; let i = $index) {
+      <button
+        type="button"
+        class="option"
+        role="radio"
+        [attr.aria-checked]="chosen()?.key === o.key"
+        [class.on]="chosen()?.key === o.key"
+        (click)="chosenKey.set(o.key)"
+      >
+        <svg [attr.viewBox]="viewBox()" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <polygon [attr.points]="regionPoints()" class="region" />
+          @for (p of o.places; track $index) {
+            <rect
+              [attr.x]="p.x"
+              [attr.y]="p.y"
+              [attr.width]="p.width"
+              [attr.height]="p.height"
+              [class.corner]="p.corner"
+            />
+          }
+        </svg>
+        <span class="body">
+          <b>{{ letter(i) }}. {{ o.label }}</b>
+          <span class="stats">
+            <span
+              ><b>{{ o.booths | number }}</b> booths</span
+            >
+            <span>{{ o.area | number: '1.0-0' }} m²</span>
+            <span>{{ o.corners }} corner</span>
+            <span [class.bad]="o.overLimit">{{ o.used | number: '1.0-0' }}% floor</span>
+          </span>
+          <span class="check-state" [class.bad]="!!broken().get(o.key)">
+            @if (broken().has(o.key)) {
+              @if (broken().get(o.key)) {
+                {{ broken().get(o.key) }} break a rule and are left out
+              } @else {
+                Every booth keeps the hall's rules
+              }
+            } @else {
+              Checking the hall's rules…
+            }
+          </span>
+        </span>
+      </button>
+    }
+  </div>
+</div>
+<div class="dialog-actions">
+  <button pButton [text]="true" type="button" (click)="ref.close()">Cancel</button>
+  <button pButton type="button" (click)="use()" [disabled]="!chosen()">
+    @if (chosen(); as c) {
+      Use layout {{ letter(chosenIndex()) }} ({{ c.booths - (broken().get(c.key) ?? 0) | number }}
+      booths)
+    } @else {
+      Use layout
+    }
+  </button>
+</div>

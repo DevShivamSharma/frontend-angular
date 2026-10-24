@@ -1,0 +1,56 @@
+<section class="card card--flush" aria-label="Planning rules of the event">
+  <div class="bar">
+    <div>
+      <h2>Planning rules</h2>
+      <p class="text-muted">
+        @if (internal()) {
+          Rules are always off for an internal event: stalls can be planned freely.
+        } @else {
+          These follow the default rules.
+          @if (!readonly()) {
+            Switch one here to change it for this event only.
+          }
+        }
+        @if (changedCount() && !internal()) {
+          {{ changedCount() }} {{ changedCount() === 1 ? 'rule differs' : 'rules differ' }} from the
+          default.
+        }
+      </p>
+    </div>
+    @if (changedCount() && !readonly()) {
+      <p-button
+        label="Use all defaults"
+        icon="pi pi-undo"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="busy()"
+        (onClick)="useAllDefaults()"
+      />
+    }
+  </div>
+
+  @if (failed()) {
+    <app-empty-state
+      icon="pi-exclamation-triangle"
+      title="The rules could not be loaded"
+      message="Check your connection and try again."
+    >
+      <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
+    </app-empty-state>
+  } @else if (loading()) {
+    <p class="loading text-muted" role="status">
+      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Loading rules…
+    </p>
+  } @else {
+    <div class="list">
+      <app-rule-switch-list
+        [items]="items()"
+        [eventMode]="true"
+        [busy]="busy() || readonly()"
+        [revision]="revision()"
+        (toggled)="toggle($event)"
+        (reset)="useDefault($event)"
+      />
+    </div>
+  }
+</section>

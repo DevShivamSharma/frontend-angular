@@ -1,0 +1,24 @@
+<div
+  class="confirm"
+  [class.confirm--danger]="data.danger"
+  role="alertdialog"
+  aria-labelledby="confirm-title"
+  aria-describedby="confirm-message"
+>
+  <span class="confirm__icon" aria-hidden="true"><i [class]="data.icon"></i></span>
+  <h2 class="confirm__title" id="confirm-title">{{ data.header }}</h2>
+  <p class="confirm__message" id="confirm-message">{{ data.message }}</p>
+  <div class="confirm__actions">
+    <button type="button" class="confirm__button" (click)="ref.close(false)">
+      {{ data.rejectLabel }}
+    </button>
+    <button
+      type="button"
+      class="confirm__button confirm__button--accept"
+      autofocus
+      (click)="ref.close(true)"
+    >
+      {{ data.acceptLabel }}
+    </button>
+  </div>
+</div>

@@ -1,0 +1,82 @@
+<p-dialog
+  header="New category"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!saving()"
+  [style]="{ width: '30rem', maxWidth: '96vw' }"
+>
+  <form class="fields" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <app-form-field
+      label="Group"
+      inputId="category-group"
+      [control]="form.controls.group"
+      [required]="true"
+      hint="The fair or kind of stall it belongs to."
+    >
+      <p-select
+        inputId="category-group"
+        formControlName="group"
+        [options]="groups()"
+        optionLabel="name"
+        optionValue="slug"
+        [filter]="true"
+        filterBy="name"
+        placeholder="Choose a group"
+        appendTo="body"
+      />
+    </app-form-field>
+
+    <app-form-field
+      label="Name"
+      inputId="category-name"
+      [control]="form.controls.name"
+      [required]="true"
+    >
+      <input
+        pInputText
+        id="category-name"
+        formControlName="name"
+        maxlength="100"
+        autocomplete="off"
+      />
+    </app-form-field>
+    @if (failure(); as message) {
+      <p class="problem" role="alert">
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+      </p>
+    }
+
+    <app-form-field
+      label="Note"
+      inputId="category-note"
+      [control]="form.controls.description"
+      hint="Optional."
+    >
+      <textarea
+        pTextarea
+        id="category-note"
+        formControlName="description"
+        rows="2"
+        maxlength="255"
+      ></textarea>
+    </app-form-field>
+  </form>
+
+  <ng-template #footer>
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Create category"
+      icon="pi pi-plus"
+      [loading]="saving()"
+      [disabled]="saving()"
+      (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>

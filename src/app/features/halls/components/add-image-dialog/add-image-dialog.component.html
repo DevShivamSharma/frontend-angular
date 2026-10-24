@@ -1,0 +1,62 @@
+<p-dialog
+  header="Add a picture"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!saving()"
+  [style]="{ width: '34rem', maxWidth: '96vw' }"
+>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <app-form-field
+      label="Picture address"
+      inputId="add-image-url"
+      [control]="form.controls.url"
+      [required]="true"
+      hint="The https address the picture is kept at, for example on S3."
+    >
+      <input
+        pInputText
+        type="url"
+        id="add-image-url"
+        formControlName="url"
+        [maxlength]="maxLength"
+        placeholder="https://…"
+        autocomplete="off"
+        autofocus
+      />
+    </app-form-field>
+
+    @if (failure(); as message) {
+      <p class="problem" role="alert">
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+      </p>
+    }
+
+    <div class="cover">
+      <p-toggleswitch inputId="add-image-cover" formControlName="cover" [disabled]="hasCover()" />
+      <label for="add-image-cover">Use as the cover</label>
+      @if (hasCover()) {
+        <span class="text-muted"
+          >The hall already has a cover. Remove it first to choose another.</span
+        >
+      }
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Add picture"
+      icon="pi pi-plus"
+      [loading]="saving()"
+      [disabled]="saving()"
+      (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>

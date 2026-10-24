@@ -1,0 +1,61 @@
+:host {
+  display: block;
+}
+
+.shapes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: var(--space-2);
+}
+
+.shape {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+
+  &:hover {
+    background: var(--app-surface-hover);
+  }
+
+  &:has(input:checked) {
+    border-color: var(--app-brand);
+    background: color-mix(in srgb, var(--app-brand) 8%, transparent);
+  }
+
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+  }
+}
+
+.shape__thumb {
+  width: 3.5rem;
+  height: 2.5rem;
+
+  polygon,
+  .shape__custom {
+    fill: color-mix(in srgb, var(--app-brand) 18%, transparent);
+    stroke: var(--app-brand);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .shape__custom {
+    stroke-dasharray: 3 2;
+  }
+}
+
+.shape__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: center;
+}

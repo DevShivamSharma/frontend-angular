@@ -1,57 +1,40 @@
-import { definePreset, palette } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
-
-/** The platform's own colour, before an organisation's branding replaces it. */
-export const PLATFORM_PRIMARY = '#3949ab';
+import { definePreset } from '@primeuix/themes';
 
 /**
- * PrimeNG's look for the platform: Aura, a calm slate neutral, and slightly tighter corners.
- * The primary palette follows the organisation's colour at runtime (ThemeService); everything
- * here is the same for every organisation.
+ * PrimeNG's Aura with ITPO's red as the primary colour. 600 is the one used for filled controls:
+ * white text on it keeps a contrast ratio above 4.5:1.
  */
 export const AppPreset = definePreset(Aura, {
   semantic: {
-    primary: palette(PLATFORM_PRIMARY),
+    primary: {
+      50: '#fdf2f3',
+      100: '#fce7e9',
+      200: '#f9d0d5',
+      300: '#f4a9b2',
+      400: '#ec7686',
+      500: '#df4a60',
+      600: '#c8283f',
+      700: '#a81f33',
+      800: '#8c1d30',
+      900: '#771d2e',
+      950: '#420c15',
+    },
     colorScheme: {
       light: {
-        surface: {
-          0: '#ffffff',
-          50: '{slate.50}',
-          100: '{slate.100}',
-          200: '{slate.200}',
-          300: '{slate.300}',
-          400: '{slate.400}',
-          500: '{slate.500}',
-          600: '{slate.600}',
-          700: '{slate.700}',
-          800: '{slate.800}',
-          900: '{slate.900}',
-          950: '{slate.950}',
+        primary: {
+          color: '{primary.600}',
+          hoverColor: '{primary.700}',
+          activeColor: '{primary.800}',
         },
       },
       dark: {
-        surface: {
-          0: '#ffffff',
-          50: '{zinc.50}',
-          100: '{zinc.100}',
-          200: '{zinc.200}',
-          300: '{zinc.300}',
-          400: '{zinc.400}',
-          500: '{zinc.500}',
-          600: '{zinc.600}',
-          700: '{zinc.700}',
-          800: '{zinc.800}',
-          900: '{zinc.900}',
-          950: '{zinc.950}',
+        primary: {
+          color: '{primary.400}',
+          hoverColor: '{primary.300}',
+          activeColor: '{primary.200}',
         },
       },
-    },
-    formField: {
-      borderRadius: '8px',
-    },
-    overlay: {
-      modal: { borderRadius: '16px' },
-      popover: { borderRadius: '10px' },
     },
   },
 });

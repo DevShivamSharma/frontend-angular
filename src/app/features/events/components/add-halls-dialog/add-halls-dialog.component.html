@@ -1,0 +1,50 @@
+<p-dialog
+  header="Add halls to the event"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!saving()"
+  [style]="{ width: '32rem', maxWidth: '96vw' }"
+>
+  <label class="picker-label" for="add-halls-picker">Halls</label>
+  <p-multiselect
+    inputId="add-halls-picker"
+    [options]="options()"
+    [formControl]="picker"
+    optionLabel="name"
+    optionValue="id"
+    [filter]="true"
+    filterBy="name"
+    [loading]="loading()"
+    placeholder="Choose one or more halls"
+    display="chip"
+    appendTo="body"
+    styleClass="picker"
+    (onChange)="choose($event.value)"
+  />
+  @if (failed()) {
+    <p class="problem" role="alert">
+      The halls could not be loaded.
+      <p-button label="Try again" [text]="true" size="small" (onClick)="load()" />
+    </p>
+  } @else if (!loading() && !options().length) {
+    <p class="text-muted note">Every hall is already in this event.</p>
+  }
+
+  <ng-template #footer>
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      [label]="chosen().length > 1 ? 'Add ' + chosen().length + ' halls' : 'Add hall'"
+      icon="pi pi-plus"
+      [loading]="saving()"
+      [disabled]="saving() || !chosen().length"
+      (onClick)="add()"
+    />
+  </ng-template>
+</p-dialog>

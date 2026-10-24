@@ -1,0 +1,382 @@
+<form class="event-form" [formGroup]="active" (ngSubmit)="submit()" novalidate>
+  <section class="card" aria-labelledby="event-main-title">
+    <h2 id="event-main-title">Event</h2>
+    <div class="form-grid">
+      @if (mode() === 'create') {
+        <app-form-field
+          class="form-grid__full"
+          label="Organisation"
+          inputId="event-organisation"
+          [control]="active.controls.organisationId"
+          [required]="true"
+          hint="The event is booked under this organisation."
+        >
+          <p-select
+            inputId="event-organisation"
+            formControlName="organisationId"
+            [options]="organisations()"
+            optionLabel="name"
+            optionValue="id"
+            [filter]="true"
+            filterBy="name"
+            [loading]="organisationsLoading()"
+            placeholder="Choose an organisation"
+            appendTo="body"
+          />
+        </app-form-field>
+      }
+
+      <app-form-field
+        class="form-grid__full"
+        label="Event name"
+        inputId="event-name"
+        [control]="active.controls.name"
+        [required]="true"
+      >
+        <input
+          pInputText
+          id="event-name"
+          formControlName="name"
+          maxlength="200"
+          autocomplete="off"
+        />
+      </app-form-field>
+
+      <app-form-field
+        label="Starts"
+        inputId="event-start"
+        [control]="active.controls.startDate"
+        [required]="true"
+        hint="First day of the tenancy."
+      >
+        <p-datepicker
+          inputId="event-start"
+          formControlName="startDate"
+          dateFormat="dd M yy"
+          [showIcon]="true"
+          appendTo="body"
+        />
+      </app-form-field>
+
+      <app-form-field
+        label="Ends"
+        inputId="event-end"
+        [control]="active.controls.endDate"
+        [required]="true"
+        hint="Last day of the tenancy."
+      >
+        <p-datepicker
+          inputId="event-end"
+          formControlName="endDate"
+          dateFormat="dd M yy"
+          [showIcon]="true"
+          appendTo="body"
+        />
+      </app-form-field>
+
+      @if (active.errors?.['eventDates']; as message) {
+        <p class="form-error form-grid__full" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+        </p>
+      }
+
+      <app-form-field
+        label="Event type"
+        inputId="event-type"
+        [control]="active.controls.eventType"
+        hint="Optional."
+      >
+        <p-select
+          inputId="event-type"
+          formControlName="eventType"
+          [options]="kinds"
+          optionLabel="label"
+          optionValue="value"
+          [showClear]="true"
+          placeholder="Choose a type"
+          appendTo="body"
+        />
+      </app-form-field>
+    </div>
+  </section>
+
+  <section class="card card--flush" aria-label="More details">
+    <p-accordion [multiple]="true" value="">
+      <p-accordion-panel value="description">
+        <p-accordion-header>Description and notes</p-accordion-header>
+        <p-accordion-content>
+          <div class="form-grid">
+            <app-form-field
+              class="form-grid__full"
+              label="Description"
+              inputId="event-description"
+              [control]="active.controls.description"
+            >
+              <textarea
+                pTextarea
+                id="event-description"
+                formControlName="description"
+                rows="4"
+                maxlength="5000"
+              ></textarea>
+            </app-form-field>
+            <app-form-field
+              label="Product profile"
+              inputId="event-profile"
+              [control]="active.controls.productProfile"
+            >
+              <input pInputText id="event-profile" formControlName="productProfile" />
+            </app-form-field>
+            <app-form-field
+              label="Specific product profile"
+              inputId="event-specific"
+              [control]="active.controls.specificProductProfile"
+            >
+              <input pInputText id="event-specific" formControlName="specificProductProfile" />
+            </app-form-field>
+            <app-form-field
+              label="Special request"
+              inputId="event-request"
+              [control]="active.controls.specialRequest"
+            >
+              <input pInputText id="event-request" formControlName="specialRequest" />
+            </app-form-field>
+            <app-form-field
+              label="Remarks"
+              inputId="event-remarks"
+              [control]="active.controls.remarks"
+            >
+              <input pInputText id="event-remarks" formControlName="remarks" />
+            </app-form-field>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <p-accordion-panel value="organiser">
+        <p-accordion-header>Format and organiser</p-accordion-header>
+        <p-accordion-content>
+          <div class="form-grid">
+            <app-form-field
+              label="Event format"
+              inputId="event-format"
+              [control]="active.controls.eventFormat"
+            >
+              <input pInputText id="event-format" formControlName="eventFormat" maxlength="70" />
+            </app-form-field>
+            <app-form-field
+              label="Co-organizer"
+              inputId="event-coorganizer"
+              [control]="active.controls.coOrganizerName"
+            >
+              <input pInputText id="event-coorganizer" formControlName="coOrganizerName" />
+            </app-form-field>
+            <app-form-field
+              label="Product category"
+              inputId="event-category"
+              [control]="active.controls.productCategory"
+              hint="The fair whose categories the halls of this event can sell."
+            >
+              <p-select
+                inputId="event-category"
+                formControlName="productCategory"
+                [options]="categoryGroups()"
+                optionLabel="name"
+                optionValue="slug"
+                [filter]="true"
+                filterBy="name"
+                [showClear]="true"
+                placeholder="Choose a category group"
+                appendTo="body"
+              />
+            </app-form-field>
+            <app-form-field
+              label="File number"
+              inputId="event-file"
+              [control]="active.controls.fileNumber"
+            >
+              <input pInputText id="event-file" formControlName="fileNumber" maxlength="150" />
+            </app-form-field>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <p-accordion-panel value="schedule">
+        <p-accordion-header>Exhibition days and timings</p-accordion-header>
+        <p-accordion-content>
+          <div class="form-grid">
+            <app-form-field
+              label="Exhibition starts"
+              inputId="event-ex-start"
+              [control]="active.controls.exhibitionStartDate"
+            >
+              <p-datepicker
+                inputId="event-ex-start"
+                formControlName="exhibitionStartDate"
+                dateFormat="dd M yy"
+                [showIcon]="true"
+                appendTo="body"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Exhibition ends"
+              inputId="event-ex-end"
+              [control]="active.controls.exhibitionEndDate"
+            >
+              <p-datepicker
+                inputId="event-ex-end"
+                formControlName="exhibitionEndDate"
+                dateFormat="dd M yy"
+                [showIcon]="true"
+                appendTo="body"
+              />
+            </app-form-field>
+            @if (active.errors?.['exhibitionDates']; as message) {
+              <p class="form-error form-grid__full" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+              </p>
+            }
+            <app-form-field
+              label="Opens at"
+              inputId="event-time-start"
+              [control]="active.controls.startTimeOfEvent"
+            >
+              <input
+                pInputText
+                id="event-time-start"
+                type="time"
+                formControlName="startTimeOfEvent"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Closes at"
+              inputId="event-time-end"
+              [control]="active.controls.endTimeOfEvent"
+            >
+              <input pInputText id="event-time-end" type="time" formControlName="endTimeOfEvent" />
+            </app-form-field>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <p-accordion-panel value="numbers">
+        <p-accordion-header>Expected numbers</p-accordion-header>
+        <p-accordion-content>
+          <div class="form-grid">
+            <app-form-field
+              label="Expected visitors"
+              inputId="event-visitors"
+              [control]="active.controls.expectedNumberOfVisitor"
+            >
+              <p-inputnumber
+                inputId="event-visitors"
+                formControlName="expectedNumberOfVisitor"
+                [min]="0"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Expected exhibitors"
+              inputId="event-exhibitors"
+              [control]="active.controls.expectedNumberOfExhibitors"
+            >
+              <p-inputnumber
+                inputId="event-exhibitors"
+                formControlName="expectedNumberOfExhibitors"
+                [min]="0"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Number of stalls"
+              inputId="event-stalls"
+              [control]="active.controls.noOfStalls"
+            >
+              <p-inputnumber inputId="event-stalls" formControlName="noOfStalls" [min]="0" />
+            </app-form-field>
+            <app-form-field
+              label="Number of F&B stalls"
+              inputId="event-fnb-stalls"
+              [control]="active.controls.noOfFnbStalls"
+            >
+              <p-inputnumber inputId="event-fnb-stalls" formControlName="noOfFnbStalls" [min]="0" />
+            </app-form-field>
+            <app-form-field
+              label="Categories an exhibitor may register for"
+              inputId="event-max-categories"
+              [control]="active.controls.maxCategoriesForRegistration"
+            >
+              <p-inputnumber
+                inputId="event-max-categories"
+                formControlName="maxCategoriesForRegistration"
+                [min]="0"
+                [max]="1000"
+              />
+            </app-form-field>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <p-accordion-panel value="settings">
+        <p-accordion-header>Settings</p-accordion-header>
+        <p-accordion-content>
+          <div class="toggles">
+            <div class="toggle-row">
+              <p-toggleswitch inputId="event-overseas" formControlName="allowOverseasUser" />
+              <label for="event-overseas">Overseas users may register</label>
+            </div>
+            <div class="toggle-row">
+              <p-toggleswitch inputId="event-marquee" formControlName="isMarqueeEnabled" />
+              <label for="event-marquee">Marquee enabled</label>
+            </div>
+            <div class="toggle-row">
+              <p-toggleswitch inputId="event-secondary" formControlName="isSecondaryEnabled" />
+              <label for="event-secondary">Secondary (multi-product) enabled</label>
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+    </p-accordion>
+  </section>
+
+  <section class="card" aria-labelledby="event-visibility-title">
+    <h2 id="event-visibility-title">Public list</h2>
+    <p class="text-muted visibility-intro">
+      Whether the event shows in the public list of events.
+      @if (mode() === 'edit') {
+        The portal does not know the current setting, so it is left alone unless you change it.
+      }
+    </p>
+    <p-selectbutton
+      formControlName="visibility"
+      [options]="visibilityOptions"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      ariaLabelledBy="event-visibility-title"
+    />
+  </section>
+
+  <div class="actionbar" role="region" aria-label="Save the event">
+    <div class="actionbar__inner">
+      <span class="actionbar__message">
+        @if (failure(); as message) {
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+        }
+      </span>
+      <span class="actionbar__buttons">
+        <p-button
+          label="Cancel"
+          severity="secondary"
+          [text]="true"
+          [disabled]="submitting()"
+          (onClick)="cancelled.emit()"
+        />
+        <p-button
+          type="submit"
+          [label]="mode() === 'create' ? 'Create event' : 'Save changes'"
+          icon="pi pi-check"
+          [loading]="submitting()"
+          [disabled]="submitting()"
+        />
+      </span>
+    </div>
+  </div>
+</form>

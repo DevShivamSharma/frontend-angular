@@ -1,0 +1,86 @@
+:host {
+  display: block;
+}
+
+.event-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+h2 {
+  margin-bottom: var(--space-4);
+}
+
+.form-error {
+  display: flex;
+  gap: var(--space-2);
+  color: var(--app-danger);
+  font-size: 0.8125rem;
+}
+
+.visibility-intro {
+  margin-bottom: var(--space-3);
+  font-size: 0.875rem;
+}
+
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+}
+
+.actionbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  margin: 0 calc(var(--space-5) * -1);
+  background: color-mix(in srgb, var(--app-surface) 86%, transparent);
+  backdrop-filter: saturate(160%) blur(14px);
+  border-top: 1px solid var(--app-border);
+}
+
+.actionbar__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.actionbar__message {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 1.5rem;
+  color: var(--app-danger);
+}
+
+.actionbar__buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+:host ::ng-deep {
+  p-select,
+  .p-select,
+  p-datepicker,
+  .p-datepicker,
+  p-inputnumber,
+  .p-inputnumber,
+  textarea {
+    width: 100%;
+  }
+
+  .p-accordion-content {
+    padding-top: var(--space-2);
+  }
+}

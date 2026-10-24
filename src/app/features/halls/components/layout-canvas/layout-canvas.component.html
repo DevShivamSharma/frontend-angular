@@ -1,0 +1,76 @@
+<svg
+  class="canvas"
+  [class.canvas--editable]="editable()"
+  [attr.viewBox]="viewBox()"
+  [style.aspect-ratio]="ratio()"
+  [style.--aspect]="aspect()"
+  role="img"
+  [attr.aria-label]="label()"
+  preserveAspectRatio="xMidYMid meet"
+  (mousemove)="onMove($event)"
+  (mouseleave)="hover.set(null)"
+  (click)="onClick($event)"
+>
+  <defs>
+    <pattern
+      id="layout-grid"
+      [attr.width]="gridStep()"
+      [attr.height]="gridStep()"
+      patternUnits="userSpaceOnUse"
+    >
+      <path [attr.d]="'M ' + gridStep() + ' 0 L 0 0 0 ' + gridStep()" class="grid-line" />
+    </pattern>
+  </defs>
+
+  <rect class="floor" x="0" y="0" [attr.width]="columns()" [attr.height]="rows()" />
+  <rect x="0" y="0" [attr.width]="columns()" [attr.height]="rows()" fill="url(#layout-grid)" />
+
+  @for (wall of outside(); track $index) {
+    <rect
+      class="wall"
+      [attr.x]="wall.x"
+      [attr.y]="wall.y"
+      [attr.width]="wall.width"
+      [attr.height]="wall.height"
+    />
+  }
+  @for (line of lines(); track line.index) {
+    <rect
+      [attr.x]="line.area.x"
+      [attr.y]="line.area.y"
+      [attr.width]="line.area.width"
+      [attr.height]="line.area.height"
+      [attr.fill]="line.area.fillColor"
+    />
+  }
+  @if (selectedLine(); as chosen) {
+    <rect
+      class="chosen"
+      [attr.x]="chosen.x - 0.4"
+      [attr.y]="chosen.y - 0.4"
+      [attr.width]="chosen.width + 0.8"
+      [attr.height]="chosen.height + 0.8"
+    />
+  }
+  @for (pillar of pillars(); track $index) {
+    <rect
+      class="pillar"
+      [attr.x]="pillar.x"
+      [attr.y]="pillar.y"
+      [attr.width]="pillar.width"
+      [attr.height]="pillar.height"
+    />
+  }
+
+  @if (hover(); as cell) {
+    <rect
+      class="hover"
+      [attr.x]="cell.x"
+      [attr.y]="cell.y"
+      [attr.width]="pillarSize()"
+      [attr.height]="pillarSize()"
+    />
+  }
+
+  <rect class="frame" x="0" y="0" [attr.width]="columns()" [attr.height]="rows()" />
+</svg>

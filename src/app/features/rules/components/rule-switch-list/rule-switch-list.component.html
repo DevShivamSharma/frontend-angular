@@ -1,0 +1,50 @@
+@for (group of groups(); track group.group) {
+  <section class="rule-group" [attr.aria-labelledby]="'rule-group-' + group.group">
+    <h3 class="rule-group__title" [id]="'rule-group-' + group.group">{{ group.title }}</h3>
+    <ul class="rules">
+      @for (item of group.items; track item.id + '@' + revision()) {
+        <li class="rule" [class.rule--changed]="eventMode() && item.overridden">
+          <div class="rule__text">
+            <span class="rule__label" [id]="'rule-label-' + item.id">{{ item.label }}</span>
+            <span class="rule__description text-muted">{{ item.description }}</span>
+            <span class="rule__tags">
+              <p-tag severity="secondary" [value]="item.reference" />
+              @if (!item.available) {
+                <p-tag
+                  severity="warn"
+                  [value]="'Takes effect once available: ' + item.waitingFor"
+                />
+              }
+              @if (eventMode() && item.overridden) {
+                <p-tag
+                  severity="info"
+                  [value]="
+                    'Changed for this event (default: ' + (item.defaultEnabled ? 'on' : 'off') + ')'
+                  "
+                />
+              }
+            </span>
+          </div>
+          <div class="rule__control">
+            @if (eventMode() && item.overridden) {
+              <p-button
+                label="Use default"
+                size="small"
+                [text]="true"
+                severity="secondary"
+                [disabled]="busy()"
+                (onClick)="reset.emit(item.id)"
+              />
+            }
+            <p-toggleswitch
+              [ngModel]="item.enabled"
+              [disabled]="busy()"
+              [ariaLabelledBy]="'rule-label-' + item.id"
+              (onChange)="onToggle(item, $event.checked)"
+            />
+          </div>
+        </li>
+      }
+    </ul>
+  </section>
+}

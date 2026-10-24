@@ -1,0 +1,43 @@
+:host {
+  display: block;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: calc(var(--space-2) * -1);
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+p-tab i {
+  margin-right: var(--space-2);
+}
+
+.count {
+  margin-left: var(--space-2);
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-brand) 14%, transparent);
+  color: var(--app-brand);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+// The cards inside the tabs have their own surface; the tab strip and panels are only the frame.
+:host ::ng-deep {
+  .p-tabs,
+  .p-tablist-tab-list,
+  .p-tabpanels {
+    background: transparent;
+  }
+
+  .p-tabpanels {
+    padding: var(--space-4) 0 0;
+  }
+}

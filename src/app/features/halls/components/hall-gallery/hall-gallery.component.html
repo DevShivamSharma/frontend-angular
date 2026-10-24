@@ -1,0 +1,37 @@
+@if (current(); as image) {
+  <figure class="stage">
+    <img [src]="image.url" [alt]="alt(image, shown().indexOf(image))" (error)="markBroken(image)" />
+    @if (image.kind === 'cover') {
+      <span class="badge">Cover</span>
+    }
+    @if (canRemove()) {
+      <p-button
+        class="remove"
+        icon="pi pi-trash"
+        severity="danger"
+        [rounded]="true"
+        ariaLabel="Remove this picture"
+        (onClick)="removed.emit(image)"
+      />
+    }
+  </figure>
+
+  @if (shown().length > 1) {
+    <ul class="thumbs" aria-label="Pictures of the hall">
+      @for (thumb of shown(); track thumb.documentId; let i = $index) {
+        <li>
+          <button
+            type="button"
+            class="thumb"
+            [class.thumb--current]="thumb.documentId === image.documentId"
+            [attr.aria-label]="'Show picture ' + (i + 1)"
+            [attr.aria-current]="thumb.documentId === image.documentId"
+            (click)="choose(thumb)"
+          >
+            <img [src]="thumb.url" alt="" loading="lazy" (error)="markBroken(thumb)" />
+          </button>
+        </li>
+      }
+    </ul>
+  }
+}

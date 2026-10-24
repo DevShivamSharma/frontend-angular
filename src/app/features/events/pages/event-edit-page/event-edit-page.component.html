@@ -1,0 +1,22 @@
+<div class="page">
+  <app-page-header
+    title="Edit event"
+    [subtitle]="known()?.name"
+    [backLink]="'/events/' + eventId()"
+    backLabel="Event"
+  />
+  @if (loading()) {
+    <p class="text-muted" role="status">
+      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Loading the event…
+    </p>
+  } @else {
+    <app-event-form
+      mode="edit"
+      [known]="known()"
+      [submitting]="submitting()"
+      [failure]="failure()"
+      (edited)="save($event)"
+      (cancelled)="back()"
+    />
+  }
+</div>

@@ -1,0 +1,91 @@
+@if (tour.step(); as step) {
+  <div class="root">
+    @if (!hole()) {
+      <div class="dim"></div>
+      <div class="block"></div>
+    } @else {
+      @let h = hole()!;
+      <div
+        class="spot"
+        [style.top.px]="h.top"
+        [style.left.px]="h.left"
+        [style.width.px]="h.width"
+        [style.height.px]="h.height"
+      ></div>
+      <!-- The tour does the steps itself: nothing on the page takes clicks meanwhile. -->
+      <div class="block all"></div>
+      @if (step.action) {
+        <div
+          class="pulse"
+          [style.top.px]="h.top"
+          [style.left.px]="h.left"
+          [style.width.px]="h.width"
+          [style.height.px]="h.height"
+        ></div>
+      }
+    }
+
+    <div
+      #dialog
+      class="dialog"
+      [class.centred]="!hole()"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="'tour-title-' + step.id"
+      tabindex="-1"
+      [style.top.px]="hole() ? place().top : null"
+      [style.left.px]="hole() ? place().left : null"
+    >
+      <div class="head">
+        <p class="count">Step {{ tour.index() + 1 }} of {{ tour.total() }}</p>
+        <button type="button" class="close" (click)="tour.end('close')" aria-label="Close the tour">
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      </div>
+      <h2 [id]="'tour-title-' + step.id">
+        {{ step.title }}
+        @if (step.shortcut) {
+          <kbd>{{ step.shortcut }}</kbd>
+        }
+      </h2>
+      <div class="body" aria-live="polite">
+        @for (p of step.body; track $index) {
+          <p>{{ p }}</p>
+        }
+      </div>
+      @if (step.action) {
+        @if (tour.status() === 'done') {
+          <p class="callout done">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>Done — on to the next step…
+          </p>
+        } @else {
+          <p class="callout">
+            <i class="pi pi-arrow-circle-right" aria-hidden="true"></i
+            ><span><b>Watch:</b> {{ step.action.prompt }}</span>
+          </p>
+        }
+      }
+      <div class="track"><div class="fill" [style.width.%]="progress()"></div></div>
+      <div class="foot">
+        @if (tour.isLast()) {
+          @if (made()) {
+            <button type="button" class="link" (click)="removeMade()">Remove what I made →</button>
+          } @else {
+            <span></span>
+          }
+        } @else {
+          <button type="button" class="link" (click)="tour.end('skip')">Skip the tour</button>
+        }
+        <div class="buttons">
+          @if (tour.isLast()) {
+            <button type="button" class="primary" data-primary (click)="tour.next()">
+              <i class="pi pi-check" aria-hidden="true"></i>Finish
+            </button>
+          } @else {
+            <span class="playing">Plays by itself</span>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

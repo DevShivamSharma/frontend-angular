@@ -1,0 +1,95 @@
+<section class="card card--flush" aria-label="Halls of the event">
+  <div class="bar">
+    <h2>
+      Halls <span class="text-muted">({{ store().halls().length }})</span>
+    </h2>
+    @if (!readonly()) {
+      <p-button label="Add halls" icon="pi pi-plus" (onClick)="openAdd()" />
+    }
+  </div>
+
+  @if (store().hallsFailed()) {
+    <app-empty-state
+      icon="pi-exclamation-triangle"
+      title="The halls could not be loaded"
+      message="ITPO could not be reached. Reload the page to try again."
+    />
+  } @else if (store().halls().length) {
+    <ul class="halls">
+      @for (hall of store().halls(); track hall.eventHallId) {
+        <li class="hall">
+          <img
+            class="cover"
+            [src]="hall.coverImage ?? placeholder"
+            alt=""
+            loading="lazy"
+            appImageFallback
+          />
+          <div class="body">
+            <div class="head">
+              <h3>{{ hall.name }}</h3>
+              @if (!readonly()) {
+                <p-button
+                  icon="pi pi-ellipsis-v"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="secondary"
+                  [ariaLabel]="'More for ' + hall.name"
+                  (onClick)="menuHall.set(hall); menu.toggle($event)"
+                />
+              }
+            </div>
+            <p class="meta">
+              {{ hall.forStallFnb ? 'F&B stalls' : 'Stalls' }} · {{ hall.stallCount }}
+            </p>
+            <p-tag
+              [value]="hall.isPriceAdded ? 'Prices added' : 'Prices not added'"
+              [severity]="hall.isPriceAdded ? 'success' : 'secondary'"
+            />
+            <div class="foot">
+              @if (plannerBase(); as base) {
+                <a
+                  class="act plan"
+                  [routerLink]="[base, store().summary()?.id, 'halls', hall.eventHallId, 'planner']"
+                >
+                  <i class="pi pi-th-large" aria-hidden="true"></i>
+                  {{ plannerLabel() }}
+                </a>
+              }
+              @if (!readonly()) {
+                <button type="button" class="act danger" (click)="askRemove(hall)">
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                  Remove
+                </button>
+              }
+            </div>
+          </div>
+        </li>
+      }
+    </ul>
+    <p-menu #menu [model]="menuItems()" [popup]="true" appendTo="body" />
+  } @else {
+    <app-empty-state
+      icon="pi-building"
+      title="No halls yet"
+      [message]="
+        readonly()
+          ? 'No halls have been added to this event.'
+          : 'Add the halls this event uses to start planning its stalls.'
+      "
+    >
+      @if (!readonly()) {
+        <p-button label="Add halls" icon="pi pi-plus" (onClick)="openAdd()" />
+      }
+    </app-empty-state>
+  }
+</section>
+
+@if (!readonly()) {
+  <app-add-halls-dialog [saving]="saving()" [taken]="takenIds()" (added)="add($event)" />
+  <app-hall-categories-dialog
+    [eventId]="store().summary()?.id ?? ''"
+    [saving]="saving()"
+    (saved)="saveCategories($event)"
+  />
+}

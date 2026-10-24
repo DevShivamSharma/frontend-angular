@@ -1,58 +1,38 @@
-import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { catchError, from, switchMap, throwError } from 'rxjs';
+import { catchError, switchMap, throwError } from 'rxjs';
 
-import { API_BASE_URL } from '../api/api-base.token';
+import { ApiError } from '../http/api-error';
+import { SKIP_AUTH } from './auth-api.service';
 import { AuthService } from './auth.service';
 
-/** Auth calls that read or set the refresh cookie, and carry no bearer token. */
-const COOKIE_CALLS = /\/auth\/(login|refresh|logout|invitations\/[^/]+\/accept)$/;
-
 /**
- * Adds the access token to API calls, and on a 401 refreshes the session once and retries.
- * When the session cannot be refreshed, sends the user to the sign-in page they belong to.
+ * Adds the access token to every request, and when an API answers 401 refreshes it once and
+ * repeats the request. If the refresh fails too, the session is over.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const api = inject(API_BASE_URL);
-  if (!req.url.startsWith(api)) {
+  if (req.context.get(SKIP_AUTH)) {
     return next(req);
   }
 
   const auth = inject(AuthService);
-  const router = inject(Router);
+  const withToken = (request: HttpRequest<unknown>) => {
+    const token = auth.accessToken();
+    return token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
+  };
 
-  if (COOKIE_CALLS.test(req.url)) {
-    return next(req.clone({ withCredentials: true }));
-  }
-
-  const token = auth.accessToken();
-  const withToken = (request: HttpRequest<unknown>, value: string | null) =>
-    value ? request.clone({ setHeaders: { Authorization: `Bearer ${value}` } }) : request;
-
-  return next(withToken(req, token)).pipe(
+  return next(withToken(req)).pipe(
     catchError((error: unknown) => {
-      if (!(error instanceof HttpErrorResponse) || error.status !== 401 || !token) {
+      if (!(error instanceof ApiError) || !error.isUnauthorised || !auth.hasSession()) {
         return throwError(() => error);
       }
-      return from(auth.refresh()).pipe(
-        switchMap((refreshed) => {
-          if (!refreshed) {
-            void router.navigateByUrl(signInUrl(router.url), { replaceUrl: true });
-            return throwError(() => error);
-          }
-          return next(withToken(req, auth.accessToken()));
+      return auth.refresh().pipe(
+        switchMap(() => next(withToken(req))),
+        catchError(() => {
+          auth.expire();
+          return throwError(() => error);
         }),
       );
     }),
   );
 };
-
-/** `/admin/...` signs in at /admin/login; `/<org>/...` at its own branded page. */
-export function signInUrl(currentUrl: string): string {
-  const [first] = currentUrl.split(/[/?#]/).filter(Boolean);
-  if (!first || first === 'admin' || first === 'invalid-link') {
-    return `/admin/login?returnUrl=${encodeURIComponent(currentUrl)}`;
-  }
-  return `/${first}/login?returnUrl=${encodeURIComponent(currentUrl)}`;
-}

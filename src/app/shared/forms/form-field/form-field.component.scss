@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.field__required {
+  margin-left: var(--space-1);
+  color: var(--app-danger);
+}
+
+.field__hint {
+  color: var(--app-muted);
+  font-size: var(--text-xs);
+}
+
+.field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--app-danger);
+  font-size: 0.8125rem;
+}
+
+/* The input inside takes the full width of its field. */
+:host
+  ::ng-deep
+  .field
+  > :is(
+    input,
+    textarea,
+    p-select,
+    p-inputnumber,
+    p-datepicker,
+    p-multiselect,
+    p-password,
+    p-inputgroup
+  ) {
+  width: 100%;
+}
