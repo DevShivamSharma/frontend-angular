@@ -8,6 +8,18 @@ The original builder used 10 × 10 zoom-16 tiles and 6 × 6 zoom-13 tiles around
 
 Images load on the first Color switch and are reused. Natural retains the OSM map; Color also falls back to OSM if a satellite asset fails. Both images must load before switching the background. A later Color switch retries a failed load. Imagery shares the local map's altitude fade during globe navigation and is disposed with the viewer.
 
+## Color → Map surroundings (24 October 2026)
+
+`venue-surroundings.json` contains **© OpenStreetMap contributors** data under the **ODbL**: https://www.openstreetmap.org/copyright . It is derived from the same saved nearby OSM map extract as `venue-map-context.json`, not a new survey or live download. The compact, reproducible input is `work/venue-surroundings/osm-surroundings.json`; run `node scripts/build-venue-surroundings-context.cjs` to rebuild the runtime file. Its source URL and input SHA-256 are recorded in the output.
+
+All footprints and railway centre lines pass through the shared **lat/lon → zoom-18 pixel → satellite-reference.json fit** in `build-venue-map-context.cjs`. Heights, track gauges and widths use the same 1.056 venue-metres/ground-metre scale. The 484 building pieces retain courtyard holes. Twenty-six have OSM `height` or `building:levels`; the rest use explicit type/landmark estimates, recorded per feature. The Supreme Court's main wings are not raised to the height of its dome. The 90 railway and four elevated metro sections are separate systems; unobserved bridge/deck elevations and station heights are estimates. Underground lines are omitted.
+
+The Crafts Museum's two building footprints and the National Science Centre's building footprint are associated with their OSM museum-site polygons. Only the buildings are extruded. Those museum grounds are excluded from the old illustrative campus ground mask for this scenery only. The shared property boundary and all navigation data remain unchanged.
+
+The 3D Map ground reuses **`satellite/venue-map.jpg`**, with its existing **`venue-map.json` worldToImage** registration and a feather at both the image edge and campus perimeter. Credit: **Esri, Maxar, Earthstar Geographics, and the GIS User Community**. The imagery and OSM credits are both visible in the Map view. No imagery was downloaded or added. This photo covers the immediate campus surroundings; beyond its crop, registered OSM surfaces remain a simplified fallback. No Google imagery or Photorealistic 3D Tiles are used.
+
+The runtime batches building colours into vertex colours, and rail beds, viaducts and rail detail into three more materials. Buildings reduce to footprint meshes at distance; rail heads and sleepers disappear sooner. The only new texture allocation besides decoding the already bundled JPEG is a small procedural campus coverage mask. Natural and Color → Satellite retain their existing scenery; failed new data loads retain the previous volumes, and a failed photo load retains OSM ground. See `work/venue-surroundings/README.md` for comparison findings and limitations.
+
 ## Earth
 
 `earth-day.jpg` is NASA Earth Observatory's **Blue Marble: Next Generation, July 2004**, downloaded at the publisher's 2048 × 1024 rendition. Credit: **NASA Earth Observatory**. The image is historical satellite-derived global surface imagery, not live imagery.

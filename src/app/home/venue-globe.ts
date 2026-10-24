@@ -1,4 +1,4 @@
-/* Geographic context. Local frame: east +X, up +Y, south +Z.
+/* Geographic context. Natural uses east +X / south +Z; Color → Map uses the authored venue frame via the satellite fit.
  * Sources and limitations: geography/ATTRIBUTION.md, work/venue/globe-notes.md.
  */
 import * as T from 'three';
@@ -6,7 +6,8 @@ import { createVenueGlobeMarker } from './venue-globe-marker';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { VenueAppearance, VenueScenery } from './venue-appearance';
-import { createVenueSatellite } from './venue-satellite';
+import { createVenueSatellite, createVenueMapGround } from './venue-satellite';
+import { createVenueSurroundings, insideSurroundings, VenueSurroundings } from './venue-surroundings';
 import type { SiteRegistration } from './venue-site-detail';
 
 
@@ -17,9 +18,9 @@ type Kind = 'road' | 'building' | 'water' | 'park';
 /** c: road class or park 'trees', b: bridge, h: building height in metres (venue-map-context.json only). */
 interface Feature { k: Kind; p: [number, number][]; w?: number; h?: number; holes?: [number, number][][]; c?: string; b?: 1; }
 interface Geography { features: Feature[]; }
-interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onAtmosphereChange?: (spaceMix: number) => void; onLocalMapReady?: () => void; onSatelliteReady?: () => void; markerElement?: HTMLElement; }
+interface GlobeOptions { scene: T.Scene; camera: T.PerspectiveCamera; controls: OrbitControls; renderer: T.WebGLRenderer; signal: AbortSignal; asset: (path: string) => string; onModeChange: (mode: Mode) => void; onInvalidate: () => void; onAtmosphereChange?: (spaceMix: number) => void; onLocalMapReady?: () => void; onSatelliteReady?: () => void; onSurroundingsReady?: () => void; markerElement?: HTMLElement; }
 
-export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onAtmosphereChange,onLocalMapReady,onSatelliteReady,markerElement}: GlobeOptions) {
+export async function createGlobeContext({scene,camera,controls,renderer,signal,asset,onModeChange,onInvalidate,onAtmosphereChange,onLocalMapReady,onSatelliteReady,onSurroundingsReady,markerElement}: GlobeOptions) {
   const R=6371000, center=new T.Vector3(0,-R-8,0), localBackground=scene.background instanceof T.Color ? scene.background.clone() : new T.Color('#e5e7e5');
   const naturalBackground = localBackground.clone();
   const skyBackground = new T.Color('#17232c'), background = localBackground.clone();
@@ -42,11 +43,20 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   groundGroup.add(sceneryFeatures);
   const satellite = createVenueSatellite(asset, renderer, signal);
   groundGroup.add(satellite.group);
+  const mapPhoto = createVenueMapGround(asset, renderer, signal);
+  groundGroup.add(mapPhoto.group); mapPhoto.group.visible = false;
+  let surroundings: ReturnType<typeof createVenueSurroundings> | undefined;
+  let photoLoading = false;
   let appearanceMode: VenueAppearance = 'natural', scenery: VenueScenery = 'satellite', satelliteReady = false;
   let sceneryState: 'idle' | 'loading' | 'ready' = 'idle';
   function showContext() {
     const mapScenery = appearanceMode === 'color' && scenery === 'map';
     if (mapScenery && sceneryState === 'idle') loadSceneryFeatures();
+    mapPhoto.group.visible = mapScenery;
+    if (mapScenery && !photoLoading) {
+      photoLoading = true;
+      void mapPhoto.load().then(() => { photoLoading = false; if (!signal.aborted) onInvalidate(); });
+    }
     satellite.group.visible = appearanceMode === 'color' && scenery === 'satellite' && satelliteReady;
     sceneryFeatures.visible = mapScenery && sceneryState === 'ready';
     mapFeatures.visible = !satellite.group.visible && !sceneryFeatures.visible;
@@ -155,10 +165,9 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     natural: { ground: '#858b80', road: '#b6baad', building: '#959b8c', water: '#719095', park: '#71876b' },
     color: { ground: '#b5bc99', road: '#e2dbc5', building: '#b9af99', water: '#5b9fac', park: '#719f57' }
   };
-  // Color → Map: arterial roads darkest and widest, local and service lighter, parks lawn green,
-  // woods a darker green, water blue, close to the site layer's own asphalt, lawn and tree-cover finishes.
-  const sceneryPalette = { ground: '#c5c9b6', building: '#ada594', water: '#5f9fcf', park: '#86b864', trees: '#4c7a3a',
-    arterial: '#5c6165', local: '#8c9092', service: '#a6a6a0', path: '#cdbfa5' };
+  // Color → Map follows the aerial's dusty roads, subdued green canopy and dark green water.
+  const sceneryPalette = { ground: '#a6a28c', building: '#ada594', water: '#526b55', park: '#77805a', trees: '#465b3e',
+    arterial: '#737773', local: '#868880', service: '#9b978b', path: '#b8ac91' };
   const sceneryMaterials = new Map<string, T.MeshBasicMaterial>();
   const sceneryKey = (f: Feature) => f.k === 'road' ? (f.b ? 'bridge-' : '') + (f.c ?? 'local') : f.k === 'park' && f.c === 'trees' ? 'trees' : f.k;
   function sceneryMaterial(key: string) {
@@ -167,6 +176,7 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
       material = mapMaterial(sceneryPalette[key.replace('bridge-', '') as keyof typeof sceneryPalette]);
       // Extruded buildings carry their wall shading (shadeBuilding) and are solid, so they sort and occlude as volumes.
       if (key === 'building') Object.assign(material, { vertexColors: true, transparent: false });
+      else if (!key.startsWith('bridge-')) mapPhoto.blend(material, key === 'water' || key === 'park' || key === 'trees' ? .96 : .82);
       sceneryMaterials.set(key, material);
     }
     return material;
@@ -186,20 +196,33 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
   }
   function loadSceneryFeatures() {
     sceneryState = 'loading';
-    fetch(asset('geography/venue-map-context.json'), { signal }).then(r => { if (!r.ok) throw Error(String(r.status)); return r.json(); }).then((data: Geography) => {
+    const read = (path: string) => fetch(asset(path), { signal }).then(r => { if (!r.ok) throw Error(String(r.status)); return r.json(); });
+    Promise.all([read('geography/venue-map-context.json'), read('geography/venue-surroundings.json').catch(error => {
+      if (!signal.aborted) console.warn('OSM volumes unavailable; retaining the existing surroundings.', error);
+      return undefined;
+    })]).then(([data, detail]: [Geography, VenueSurroundings | undefined]) => {
       if (signal.aborted) return;
+      if (detail) {
+        surroundings = createVenueSurroundings(detail);
+        sceneryFeatures.add(surroundings.group);
+        mapPhoto.setProperty(detail.photoExclusion);
+      }
       // Paths under local roads under arterials; flyovers over the roads they cross; woods over parks.
       const height = (f: Feature) => f.k === 'road' ? (f.b ? -6.5 : f.c === 'path' ? -6.62 : f.c === 'arterial' ? -6.58 : -6.6) : f.k === 'park' && f.c === 'trees' ? -6.88 : undefined;
-      addFeatureMeshes(data.features, ['path', 'service', 'local', 'arterial', 'bridge-arterial', 'bridge-local', 'bridge-service', 'bridge-path', 'building', 'water', 'park', 'trees'],
+      // Replace nearby volumes only; the old registered distant context remains inexpensive.
+      const features = detail ? data.features.filter(f => f.k !== 'building' ||
+        !insideSurroundings([f.p.reduce((s, p) => s + p[0], 0) / f.p.length, f.p.reduce((s, p) => s + p[1], 0) / f.p.length], detail.coverage)) : data.features;
+      addFeatureMeshes(features, ['path', 'service', 'local', 'arterial', 'bridge-arterial', 'bridge-local', 'bridge-service', 'bridge-path', 'building', 'water', 'park', 'trees'],
         sceneryKey, sceneryMaterial, sceneryFeatures, 'OSM venue map ', height);
       sceneryState = 'ready';
+      if (surroundings) onSurroundingsReady?.();
       showContext(); onInvalidate();
     }).catch(error => {
       sceneryState = 'idle';
       if (!signal.aborted) console.warn('Venue map context unavailable; keeping the local map.', error);
     });
   }
-  // The satellite photos load only once Color → Satellite is shown; Color → Map never needs them.
+  // Historical broad mosaics load only for Color → Satellite. Map uses its own current-fit JPEG above.
   let satelliteLoading = false;
   function loadSatellite() {
     if (appearanceMode !== 'color' || scenery !== 'satellite' || satelliteReady || satelliteLoading) return;
@@ -339,6 +362,9 @@ export async function createGlobeContext({scene,camera,controls,renderer,signal,
     groundGroup.visible=altitude<80000;
     const groundOpacity=1-T.MathUtils.smoothstep(altitude,9000,45000);groundMaterial.opacity=groundOpacity;
     Object.values(contextMaterials).forEach(m=>m.opacity=groundOpacity);
+    sceneryMaterials.forEach(m => { m.opacity = groundOpacity; });
+    if (sceneryFeatures.visible) surroundings?.update(camera, groundOpacity);
+    mapPhoto.setOpacity(groundOpacity);
     satellite.setOpacity(groundOpacity);
     updateMarker?.(mode === 'globe' && !transition && altitude > 180000);
     if (onAtmosphereChange) onAtmosphereChange(planetMix);

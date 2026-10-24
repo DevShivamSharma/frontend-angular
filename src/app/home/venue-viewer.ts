@@ -25,7 +25,7 @@ import { createVisitorNavigation } from './visitor-navigation';
 import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor';
 import { createVenueSecurityGuards } from './venue-security-guards';
 import { capturePedestrianPaths, createVenuePedestrians } from './venue-pedestrians';
-import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration, takeMapSurfaces } from './venue-site-detail';
+import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration, takeMapSurfaces, takeMapSurroundings } from './venue-site-detail';
 import { createVenueRouteTrack, ROUTE_FRAME_MS } from './venue-route-track';
 import { Point } from './venue-route-geometry';
 import { prepareGate9 } from './venue-gate9';
@@ -143,6 +143,12 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
         let prepared = false, localMapReady = false;
         let mapSurfaces: T.Group | undefined, scenery: VenueScenery = INITIAL_SCENERY, appearanceMode: VenueAppearance = 'natural';
+        let historicalSurroundings: T.Group | undefined, mapSurroundingsReady = false;
+        function syncSurroundings() {
+            if (!root || !historicalSurroundings) return;
+            if (appearanceMode === 'color' && scenery === 'map' && mapSurroundingsReady) historicalSurroundings.removeFromParent();
+            else root.add(historicalSurroundings);
+        }
         let siteRegistration: SiteRegistration | undefined;
         let gate9: Awaited<ReturnType<typeof prepareGate9>> | undefined;
         let pendingInterior: (()=>void) | undefined;
@@ -324,6 +330,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         controls.update();
         try {
             globe=await createGlobeContext({scene,camera,controls,renderer,signal,asset,markerElement,onModeChange:events.modeChanged,onInvalidate:invalidate,onAtmosphereChange:sky.setSpaceMix,onSatelliteReady:events.satelliteReady,
+                onSurroundingsReady: () => { mapSurroundingsReady = true; syncSurroundings(); renderer.shadowMap.needsUpdate = true; invalidate(); },
                 onLocalMapReady: () => {
                     localMapReady = true;
                     if (root) revealMappedRoads(root);
@@ -407,14 +414,15 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const onPedestrianPath = capturePedestrianPaths(root);
         preparePhotoEntrances(root, visitorNavigation.portals);
         const venueLightSources = collectVenueLightSources(root, gate9?.lights ?? [], visitorNavigation.portals);
-        // Export is already metres, Y-up, east +X / south +Z. Do not rotate the
-        // glTF a second time; W converts only the authored navigation coordinates.
+        // Export retains the authored venue metres, Y-up, not geographic east/south.
+        // Do not rotate the glTF; W converts only the authored navigation coordinates.
         batchVenue(root, classify, o => [
             ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i),
             ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/),
             /label|sign|glass|glazing|light|spray/i.test(o.name),
             isLegacyContextRoad(o),
-            !!o.userData['supersededBySiteReference']
+            !!o.userData['supersededBySiteReference'],
+            !!o.userData['mapSurroundingsReplacement']
         ].join(':'));
         if (localMapReady) revealMappedRoads(root);
         scene.add(root);
@@ -443,6 +451,11 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         if (siteRegistration) prepareSiteDetailRendering(root, siteRegistration);
         const appearance = createVenueAppearance(root, renderer, asset, signal);
         cleanups.push(() => appearance.dispose());
+        if (siteRegistration) {
+            const historical = historicalSurroundings = takeMapSurroundings(root);
+            root.add(historical);
+            cleanups.push(() => { if (!historical.parent) disposeScene(historical); });
+        }
         // After batching and per-mesh material cloning, so the glow edits touch the live materials.
         nightLights = createVenueNightLights(scene, root, venueLightSources);
         cleanups.push(() => nightLights?.dispose());
@@ -523,6 +536,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             nightLights?.setDaylight(true);
             await appearance.apply(mode, scenery);
             appearanceMode = mode;
+            syncSurroundings();
             // Venue ground surfaces belong to Color → Map only; attach/detach, never toggle visible.
             if (mapSurfaces && root) { if (mode === 'color' && scenery === 'map') root.add(mapSurfaces); else mapSurfaces.removeFromParent(); }
             nightLights?.refreshMaterials();
@@ -629,6 +643,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             pointer.set((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
             ray.setFromCamera(pointer, camera);
             const visibleMeshes = pickMeshes.filter(mesh => {
+                if (mesh.userData['mapSurroundingsReplacement'] && !historicalSurroundings?.parent) return false;
                 for (let node: T.Object3D | null = mesh; node; node = node.parent) if (!node.visible) return false;
                 return true;
             });

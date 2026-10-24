@@ -107,4 +107,5 @@ if (require.main === module) {
   fs.writeFileSync(output, JSON.stringify(result));
   console.log(JSON.stringify({ ...result.counts, features: result.features.length, bytes: fs.statSync(output).size }));
 }
-module.exports = { buildMapContext };
+// The 3D surroundings share this exact registration; never project them directly in geographic metres.
+module.exports = { buildMapContext, pixel, venue, property, square, widthScale, inside };

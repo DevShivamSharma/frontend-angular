@@ -1,5 +1,41 @@
 # Bharat Mandapam surroundings and property planting
 
+## Color → Map surroundings — 24 October 2026
+
+This refinement runs inside the existing 3D explorer. The Blender authoring notes below describe the historical layer still used by Natural and Color → Satellite. Color → Map now replaces its surrounding building and metro meshes only after the registered OSM replacement finishes loading. The original halls, GLBs, property/walkway data, routing, and phone 2D map are unchanged.
+
+### Satellite comparison
+
+Reviewed the bundled `satellite/venue-map.jpg`, its registration, the saved `explorer-color-map-vs-satellite.jpg` reference in the parent project's `docs/aerial-reference`, current geometry/data, and the user's marked railway screenshot. The saved comparison predates the 23 October OSM building additions, so it is only evidence of the ground/overall alignment; current building behaviour was read from source. No dev server or browser was opened.
+
+| Feature | Finding before this change | Color → Map change / remaining limit |
+| --- | --- | --- |
+| Building footprints | The newer registered OSM context coexisted with ten earlier illustrative traces and GLB blocks. Masks and overlapping geometry could hide the actual footprint. | Replace those surroundings with 484 OSM building pieces, retaining courtyard holes. Nearby old map extrusions are omitted when replacements load. |
+| Heights and roofs | GLB blocks used broadly repeated heights/textures; map roofs shared one tone. The older height table treated the Supreme Court dome's height as the whole building. | OSM height or levels for 26 pieces; recorded estimates for the rest. Distinct concrete, sandstone and metal roof/wall tones share a vertex-colour batch. Main Court wings use an estimated low-rise height; its dome is not reconstructed. |
+| Roads | Main road traces were already corrected through the fit, but the pale local-road finishes and flat background read unlike the aerial. | Keep the traced road geometry; mute only Map road finishes to dusty grey. Feather OSM ground roads into the photo; retain bridge surfaces. Grade separation of the old authored road network is not rebuilt. |
+| Green areas | Broad bright green polygons missed the irregular canopy and bare-ground mottling in the photo. | Reuse photographic ground and reduce opaque OSM fills over it; use muted greens beyond the crop. Existing canopy trees remain. |
+| Water | The flat bright blue surroundings did not match the dark green water visible in the aerial. | Muted water fallback and photo coverage; existing campus fountains and their water systems remain unchanged. |
+| Railway behind the metro | OSM railway ways were absent from the old Map renderer; the broad multi-track corridor and sidings were missing. | 90 ground railway sections with ballast, track gauge, rails and close-view sleepers, separately registered from the metro. The user-marked corridor is the railway, not a road or extra metro line. |
+| Pragati Maidan / Supreme Court metro | The station and viaduct came from the earlier illustrative reference. | OSM station footprint over four elevated Blue Line sections, with deck and piers. Station/bridge elevations and supports are estimated; access stairs, glazing and roof ribs are not surveyed. Underground lines stay hidden. |
+| Supreme Court | Generic blocks could obscure the OSM footprint and courtyards. | Preserve the Court's OSM outline/courtyards and the extension's eight-floor tag. No claim to an accurate dome or façade reconstruction. |
+| Crafts Museum | Its two actual OSM buildings were omitted by the broad illustrative property exclusion. | Restore only those two footprints with low-rise sandstone tones. The museum-site outline is ground coverage, not an extruded building. Small unmapped pavilions remain photographic detail. |
+| National Science Centre | Its OSM building was also inside that old exclusion. | Restore the actual footprint with an estimated 19 ground-metre height and warm concrete/sandstone tones. No invented window or roof-plant detail. |
+| Ground seam | Map mode did not use the current-fit high-resolution photo; uniform ground exposed the change at the model perimeter. | Drape the existing JPEG at outside ground grade. A small procedural coverage mask feathers the campus perimeter and allows photo ground in the museum sites; a 45 m feather softens the photo crop into OSM. |
+
+### Data and runtime
+
+- `src/assets/venue/geography/venue-surroundings.json`: new compact registered building/rail data, coverage and photo exclusion polygons, input hash and height provenance.
+- `work/venue-surroundings/osm-surroundings.json`: new compact source snapshot, extracted from the existing `tmp/delhi-nearby-osm.json`. Includes the OSM tags and geometry needed to reproduce the result; no new network retrieval.
+- `scripts/build-venue-surroundings-context.cjs`: offline builder. Run `node scripts/build-venue-surroundings-context.cjs` from the frontend root. It imports the same registration helpers as `build-venue-map-context.cjs`: lat/lon → z18 pixels → the fitted venue frame. Widths, gauge and heights use the same venue/ground scale.
+- `venue-surroundings.ts`: four active geometry/material batches for nearby building volumes, track beds, raised structures, and close rail detail. At 2.3 km camera distance rail detail drops out; at 3.8 km buildings reduce to footprints, with hysteresis. Sleepers are capped at 9,000 quads. The photo adds one ground draw. No per-building material, new npm dependency, or added imagery file.
+- `venue-satellite.ts`: reuses `satellite/venue-map.jpg` (already 816 kB) with `venue-map.json`'s exact `worldToImage`; one 512 × 302 procedural coverage texture. Failed image loads retain OSM ground; failed replacement data retains the historical volumes. Both Esri and OSM credits are visible in Map mode.
+
+The photo crop does not cover all of the surrounding district. Beyond it, OSM colours/geometry remain an approximation. OSM completeness, historical imagery dates, building heights without tags, façade details, domes, trackside equipment, and exact bridge clearances cannot be matched from these sources. The existing Hall 1 fit discrepancy (~20 m in the reference notes) is deliberately untouched.
+
+Validation is limited to `npx tsc --noEmit -p tsconfig.app.json` in PowerShell, as requested. The user will check the rendered result; no visual-runtime verification is claimed.
+
+## Historical Blender layer
+
 The supplied aerial image with the red outline is the visual reference. The outline is recorded in `reference.json`, in its original 1918 × 820 image coordinates. Four existing hall centres register that image to the application's metre-based X/Z coordinates. Halls and hangars are read-only reference geometry.
 
 ## Editable source and integration

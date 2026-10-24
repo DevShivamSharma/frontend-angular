@@ -6,7 +6,7 @@ import { createArchitecturalFinishes } from './venue-architectural-detail';
 export type VenueAppearance = 'natural' | 'color';
 /** Ground context shown under the Color appearance. */
 export type VenueScenery = 'satellite' | 'map';
-/** What the explorer opens on: Color with the drawn map, so no satellite photos are needed at first. */
+/** What the explorer opens on: Color with registered map surroundings and the bundled ground imagery. */
 export const INITIAL_APPEARANCE: VenueAppearance = 'color', INITIAL_SCENERY: VenueScenery = 'map';
 /** The Color palette with its textures as JPEG (scripts/compress-venue-palette.py from venue-colour-materials.glb). */
 export const COLOUR_MATERIALS = 'venue-colour-materials-web.glb?v=colour-20260927-r1';
@@ -14,9 +14,9 @@ export const COLOUR_MATERIALS = 'venue-colour-materials-web.glb?v=colour-2026092
 /** Color → Map finishes of the surroundings layer, by material name (venue-site-detail.glb; the
  * asphalt keeps the Gate 9 texture, tinted by road class). Natural and Color → Satellite keep theirs. */
 const MAP_FINISHES: [RegExp, string][] = [
-    [/SITE_ROAD weathered asphalt arterial$/, '#8f959a'],
-    [/SITE_ROAD weathered asphalt local$/, '#c3c6c8'],
-    [/SITE_ROAD weathered asphalt$/, '#dcdbd5'],
+    [/SITE_ROAD weathered asphalt arterial$/, '#858782'],
+    [/SITE_ROAD weathered asphalt local$/, '#999a92'],
+    [/SITE_ROAD weathered asphalt$/, '#b1ac9d'],
     [/^SITE_ROAD clipped groundcover$/, '#5d8f3e'],
     [/^SITE_ROAD warm concrete footpaths$/, '#d6cfc0'],
     [/^SITE_ROAD pale kerb stone$/, '#ebe8df'],

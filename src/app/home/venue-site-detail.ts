@@ -37,6 +37,8 @@ export async function prepareVenueSiteDetail(root: T.Group, asset: (path: string
   gltf.scene.userData['referenceStatus'] = registration.status;
   gltf.scene.traverse(object => {
     if (object instanceof T.Mesh) {
+      // Retain the historical scenery for Natural/Satellite, but keep it out of batches containing campus geometry.
+      object.userData['mapSurroundingsReplacement'] = /^SITE_(osm-building-|northwest-office-|southwest-institution-|north-edge-service-block|metro_|Supreme_Court_metro|Supreme_Court_station_)/.test(object.name);
       for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
         material.userData['siteDetail'] = true;
         material.userData['siteRoad'] = material.name.startsWith('SITE_ROAD ');
@@ -72,6 +74,20 @@ export function takeMapSurfaces(root: T.Group): T.Group {
   // attach() keeps each mesh where it is relative to root, so the group can later sit directly under root.
   root.add(group); root.updateMatrixWorld(true);
   for (const mesh of surfaces) { group.attach(mesh); mesh.receiveShadow = true; }
+  group.removeFromParent();
+  return group;
+}
+
+/** Called after appearance/material setup. Detaching this group only when the registered OSM layer is
+ * ready preserves both the Natural view and the old scenery if the replacement data cannot load. */
+export function takeMapSurroundings(root: T.Group): T.Group {
+  const group = new T.Group(); group.name = 'Historical surroundings (Natural and Satellite)';
+  const meshes: T.Mesh[] = [];
+  root.traverse(object => {
+    if (object instanceof T.Mesh && object.userData['mapSurroundingsReplacement']) meshes.push(object);
+  });
+  root.add(group); root.updateMatrixWorld(true);
+  for (const mesh of meshes) group.attach(mesh);
   group.removeFromParent();
   return group;
 }
