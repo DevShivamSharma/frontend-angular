@@ -196,40 +196,96 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 /* "Maps" skin of the 3D explorer (home-page data-ui, see venue-ui-maps.css): the search box and chips top-left as on
    Google Maps desktop, the labels as haloed text beside the pins. Kept after the media rules so it wins in every width. */
 :host(.overlay[data-ui=maps]){--text:#202124;--muted:#5f6368;--blue:#1a73e8;--lift:0 1px 2px #3c40434d,0 2px 6px 2px #3c404326;font-family:Roboto,"Segoe UI",Arial,sans-serif}
-:host(.overlay[data-ui=maps]) .map-head{left:16px;right:auto;top:16px;bottom:auto;transform:none;flex-wrap:wrap;gap:8px;width:400px;padding:0;border-radius:0;background:none}
-:host(.overlay[data-ui=maps]) .map-search{display:flex;flex:1 1 100%;height:48px;padding:0 8px 0 16px;border-radius:24px;background:#fff;box-shadow:var(--lift)}
+/* One row only: the search box first, the chips take whatever room is left after it, and pills that would
+   overflow simply clip away behind the fade; nothing wraps to a second line, and the row stops short of the
+   3D | Image switch at the top right. */
+:host(.overlay[data-ui=maps]) .map-head{left:16px;right:176px;top:16px;bottom:auto;transform:none;flex-wrap:nowrap;align-items:center;gap:8px;width:auto;padding:0;border-radius:0;background:none}
+/* The search box widens a touch past Google's 408 px to hold the view tools; it never shrinks onto the chips. */
+:host(.overlay[data-ui=maps]) .map-search{display:flex;flex:0 0 auto;width:min(548px,100%);height:48px;padding:0 8px 0 16px;border-radius:24px;background:#fff;box-shadow:var(--lift)}
 /* As on Google Maps desktop: the field first, then the magnifier, then the teal directions diamond. */
 :host(.overlay[data-ui=maps]) .map-search>svg{order:2;width:20px;height:20px;color:var(--muted)}
 :host(.overlay[data-ui=maps]) .map-search input{order:1;font-size:15px;color:var(--text)}
 :host(.overlay[data-ui=maps]) .map-search:focus-within{box-shadow:0 0 0 2px var(--blue),var(--lift)}
 .map-search-directions{display:none}
-:host(.overlay[data-ui=maps]) .map-search-directions{order:3;display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:none;color:#fff}
+:host(.overlay[data-ui=maps]) .map-search-directions{order:3;display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:none}
 :host(.overlay[data-ui=maps]) .map-search-directions:hover{background:var(--g-hover,#f8f9fa)}
-:host(.overlay[data-ui=maps]) .map-search-directions svg{width:22px;height:22px;stroke-width:1.6}
-:host(.overlay[data-ui=maps]) .map-search-directions svg path:first-child{fill:#0b8a7d;stroke:none}
+:host(.overlay[data-ui=maps]) .map-search-directions svg{width:24px;height:24px}
+:host(.overlay[data-ui=maps]) .map-search-directions svg path{fill:#0b8a7d;stroke:none}
+/* The view tools sit inside the box after a hairline divider: round ghost buttons, blue when active. */
+.map-search-tools{display:none}
+:host(.overlay[data-ui=maps]) .map-search-tools{order:4;display:flex;align-items:center;gap:2px;flex-shrink:0;margin-left:2px;padding-left:8px;border-left:1px solid var(--g-line,#dadce0)}
+:host(.overlay[data-ui=maps]) .map-search-tools button{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted)}
+:host(.overlay[data-ui=maps]) .map-search-tools button:hover{background:var(--g-hover,#f8f9fa);color:var(--text)}
+:host(.overlay[data-ui=maps]) .map-search-tools button.active{background:var(--g-active,#e8f0fe);color:var(--blue)}
+:host(.overlay[data-ui=maps]) .map-search-tools button[disabled]{opacity:.38}
+:host(.overlay[data-ui=maps]) .map-search-tools svg{width:17px;height:17px}
+@media(max-width:900px){:host(.overlay[data-ui=maps]) .map-search-tools{display:none}}
 :host(.overlay[data-ui=maps]) .map-results{top:54px;bottom:auto}
-/* The filter chips in the Google Maps manner: one row that scrolls sideways with a fade at the end, white chips
-   with a hairline border instead of a shadow, an icon per category, grey text, a grey hover, and the group
-   colour only once pressed. The round chevron scrolls the row, as on Google Maps. */
-:host(.overlay[data-ui=maps]) .map-chips{flex:1 1 auto;flex-wrap:nowrap;min-width:0;gap:8px;padding:2px 28px 2px 0;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),#0000);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),#0000)}
-:host(.overlay[data-ui=maps]) .map-chips::-webkit-scrollbar{display:none}
-:host(.overlay[data-ui=maps]) .map-chips button{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:0 12px;border:1px solid var(--g-line,#dadce0);border-radius:8px;background:#fff;color:var(--g-text,#3c4043);font:400 13px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:none;transition:background .15s,border-color .15s}
+/* The filter chips exactly as Google Maps desktop: full-rounded white pills with a soft shadow (no border),
+   an icon per category, dark text, a grey hover, and the group colour only once pressed. One row only —
+   pills that would not fit whole are hidden outright (see fitChips), so nothing clips or ghosts mid-pill. */
+:host(.overlay[data-ui=maps]) .map-chips{flex:1 1 auto;flex-wrap:nowrap;min-width:0;gap:8px;padding:4px 2px;overflow:hidden}
+:host(.overlay[data-ui=maps]) .map-chips button{flex-shrink:0;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border:0;border-radius:20px;background:#fff;color:var(--g-text,#3c4043);font:500 14px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:0 1px 2px #3c40434d,0 1px 3px 1px #3c404326;transition:background .15s}
+:host(.overlay[data-ui=maps]) .map-chips button.chip-gone{display:none}
 :host(.overlay[data-ui=maps]) .map-chips button:hover{background:var(--g-hover,#f8f9fa)}
 :host(.overlay[data-ui=maps]) .map-chips button[data-group]::before{content:none}
-:host(.overlay[data-ui=maps]) .map-chips button[aria-pressed=true]{border-color:transparent;background:var(--group,var(--blue));color:#fff;font-weight:500}
+:host(.overlay[data-ui=maps]) .map-chips button[aria-pressed=true]{background:var(--group,var(--blue));color:#fff}
 .chip-icon{display:none}
-:host(.overlay[data-ui=maps]) .chip-icon{display:block;width:16px;height:16px;color:var(--group,var(--muted))}
+:host(.overlay[data-ui=maps]) .chip-icon{display:block;width:18px;height:18px;color:var(--group,var(--muted))}
 :host(.overlay[data-ui=maps]) .chip-icon path{fill:currentColor;stroke:none}
 :host(.overlay[data-ui=maps]) .map-chips button[aria-pressed=true] .chip-icon{color:#fff}
-.map-chips-more{display:none}
-:host(.overlay[data-ui=maps]) .map-chips-more{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;padding:0;border:1px solid var(--g-line,#dadce0);border-radius:50%;background:#fff;color:var(--muted)}
-:host(.overlay[data-ui=maps]) .map-chips-more:hover{background:var(--g-hover,#f8f9fa)}
-:host(.overlay[data-ui=maps]) .map-chips-more svg{width:18px;height:18px}
-:host(.overlay[data-ui=maps]) .map-labels{flex-shrink:0;min-height:32px;padding:0 12px;border:1px solid var(--g-line,#dadce0);border-radius:8px;background:#fff;color:var(--g-text,#3c4043);font:400 13px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:none}
+/* The focus panel under the search box (Maps skin only): pinned shortcuts in teal circles over recent history
+   in clock circles, sliding in row by row as on Google Maps. */
+.map-search-panel{display:none}
+:host(.overlay[data-ui=maps]) .map-search-panel{display:block;position:absolute;top:54px;left:0;width:100%;max-height:calc(100dvh - 150px);overflow-y:auto;scrollbar-width:thin;padding:8px 0;border-radius:16px;background:#fff;box-shadow:0 2px 6px 2px rgba(60,64,67,.15),0 1px 2px rgba(60,64,67,.3);animation:search-panel-in .18s ease-out}
+@keyframes search-panel-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+:host(.overlay[data-ui=maps]) .panel-row{display:flex;align-items:center;gap:14px;width:100%;min-height:48px;padding:8px 16px;border:0;background:none;text-align:left;color:var(--g-text,#3c4043);font:400 14px Roboto,"Segoe UI",Arial,sans-serif;animation:search-row-in .22s ease-out backwards}
+:host(.overlay[data-ui=maps]) .panel-row:nth-child(2){animation-delay:25ms}
+:host(.overlay[data-ui=maps]) .panel-row:nth-child(3){animation-delay:50ms}
+:host(.overlay[data-ui=maps]) .panel-row:nth-child(4){animation-delay:75ms}
+:host(.overlay[data-ui=maps]) .panel-row:nth-child(5){animation-delay:100ms}
+:host(.overlay[data-ui=maps]) .panel-row:nth-child(n+6){animation-delay:125ms}
+@keyframes search-row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+:host(.overlay[data-ui=maps]) .panel-row:hover{background:var(--g-hover,#f8f9fa)}
+.panel-icon{flex-shrink:0;display:grid;place-items:center;width:36px;height:36px;border-radius:50%}
+:host(.overlay[data-ui=maps]) .panel-icon.k-nav-icon{background:var(--g-active,#e8f0fe);color:var(--blue)}
+:host(.overlay[data-ui=maps]) .panel-icon.k-pin{background:#e6f4f2;color:#0b8a7d}
+:host(.overlay[data-ui=maps]) .panel-icon.k-clock{background:#f1f3f4;color:#5f6368}
+.panel-icon svg{width:20px;height:20px;fill:currentColor;stroke:none}
+.panel-text{display:grid;gap:2px;min-width:0}
+.panel-text b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel-text small{font-size:12px;font-weight:400;color:var(--g-muted,#5f6368);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel-divider{margin:8px 16px;border:0;border-top:1px solid var(--g-line,#dadce0)}
+.panel-more{display:block;width:100%;padding:12px 16px 8px;border:0;background:none;text-align:center;color:#0b8a7d;font:500 14px Roboto,"Segoe UI",Arial,sans-serif}
+:host(.overlay[data-ui=maps]) .panel-more:hover{text-decoration:underline}
+@media (prefers-reduced-motion:reduce){:host(.overlay[data-ui=maps]) .map-search-panel,:host(.overlay[data-ui=maps]) .panel-row{animation:none}}
+:host(.overlay[data-ui=maps]) .map-labels{flex-shrink:0;min-height:40px;padding:0 14px;border:0;border-radius:20px;background:#fff;color:var(--g-text,#3c4043);font:500 14px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:0 1px 2px #3c40434d,0 1px 3px 1px #3c404326}
 :host(.overlay[data-ui=maps]) .map-labels:hover{background:var(--g-hover,#f8f9fa)}
 :host(.overlay[data-ui=maps]) .map-labels input{accent-color:var(--blue)}
 :host(.overlay[data-ui=maps]) .map-pin-layer .pin-label{padding:0;border-radius:0;background:none;color:#202124;font:500 12px Roboto,"Segoe UI",Arial,sans-serif;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff,0 1px 4px #fff}
 :host(.overlay[data-ui=maps]) .map-pin-layer .pin-head{left:-9px;width:18px;height:18px;border-width:1.5px}
 :host(.overlay[data-ui=maps]) .map-pin-layer .pin-head::after{inset:5px}
-@media(max-width:1100px){:host(.overlay[data-ui=maps]) .map-head{left:16px;right:auto;width:min(400px,calc(100% - 180px))}}
-@media(max-width:700px){:host(.overlay[data-ui=maps]) .map-head{left:12px;top:60px;width:calc(100% - 110px)}}
+@media(max-width:1100px){:host(.overlay[data-ui=maps]) .map-head{left:16px;right:auto;width:calc(100% - 200px)}}
+
+/* Image view (the 2D map) in the Maps skin wears the same chrome as the 3D overlay: one row — a fixed-width
+   search pill with the teal diamond, then whole pills that fit, ending clear of the 3D | Image switch. */
+:host([data-ui=maps]:not(.overlay)){--g-line:#dadce0;--g-hover:#f8f9fa;--g-text:#3c4043;--g-active:#e8f0fe}
+:host([data-ui=maps]:not(.overlay)) .map-head{top:16px;left:16px;right:176px;padding:0;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;transform:none;width:auto;pointer-events:none}
+:host([data-ui=maps]:not(.overlay)) .map-head>*{pointer-events:auto}
+:host([data-ui=maps]:not(.overlay)) .map-search{flex:0 0 auto;width:min(440px,100%);height:48px;padding:0 8px 0 16px;border-radius:24px;background:#fff;box-shadow:var(--lift)}
+:host([data-ui=maps]:not(.overlay)) .map-search>svg{order:2;width:20px;height:20px;color:var(--muted)}
+:host([data-ui=maps]:not(.overlay)) .map-search input{order:1;font-size:15px;color:var(--text)}
+:host([data-ui=maps]:not(.overlay)) .map-search-directions{display:grid;order:3;place-items:center;flex-shrink:0;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:none}
+:host([data-ui=maps]:not(.overlay)) .map-search-directions:hover{background:var(--g-hover)}
+:host([data-ui=maps]:not(.overlay)) .map-search-directions svg{width:24px;height:24px}
+:host([data-ui=maps]:not(.overlay)) .map-search-directions svg path{fill:#0b8a7d;stroke:none}
+:host([data-ui=maps]:not(.overlay)) .map-head-directions{display:none}
+:host([data-ui=maps]:not(.overlay)) .map-results{top:54px}
+:host([data-ui=maps]:not(.overlay)) .map-chips{flex:1 1 auto;min-width:0;margin:0;padding:4px 2px;gap:8px;overflow:hidden}
+:host([data-ui=maps]:not(.overlay)) .map-chips button{flex-shrink:0;gap:8px;min-height:40px;border-radius:20px;font:500 14px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:0 1px 2px #3c40434d,0 1px 3px 1px #3c404326}
+:host([data-ui=maps]:not(.overlay)) .map-chips button:hover{background:var(--g-hover)}
+:host([data-ui=maps]:not(.overlay)) .map-chips button[data-group]::before{content:none}
+:host([data-ui=maps]:not(.overlay)) .chip-icon{display:block;width:18px;height:18px;color:var(--group,var(--muted))}
+:host([data-ui=maps]:not(.overlay)) .chip-icon path{fill:currentColor;stroke:none}
+:host([data-ui=maps]:not(.overlay)) .map-chips button[aria-pressed=true] .chip-icon{color:#fff}
+@media(max-width:700px){:host(.overlay[data-ui=maps]) .map-head{left:12px;top:60px;width:calc(100% - 110px);right:auto;flex-wrap:wrap}:host(.overlay[data-ui=maps]) .map-search{flex:1 1 100%}}

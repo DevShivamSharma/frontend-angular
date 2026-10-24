@@ -34,11 +34,16 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
   /** A place to route to, e.g. from a hall's "Directions here"; `request` changes on every ask. */
   @Input() destinationNode = '';
   @Input() request = 0;
+  /** A place to route from, e.g. a search-history route ("Gate 9 → Hall 6"); `startRequest` changes on every ask. */
+  @Input() startNode = '';
+  @Input() startRequest = 0;
   /** The 3D explorer can hand the route to the visitor ("Walk it as a visitor"); the phone map cannot. */
   @Input() canWalk = false;
   /** In visitor mode: where the visitor stands (world x, y, z). The route then starts there, with no Source picker. */
   @Input() visitorAt: number[] | null = null;
   @Output() readonly route = new EventEmitter<Point[] | null>();
+  /** A freshly planned route's ends, as labels ("Gate 9", "Hall 6"); the explorer files it in the search history. */
+  @Output() readonly planned = new EventEmitter<{ from: string; to: string }>();
   /** The walk for the visitor to follow, and the place it leads to. */
   @Output() readonly walk = new EventEmitter<{ points: Point[]; label: string; destination: string }>();
   readonly graph = signal<MapGraph | null>(null);
@@ -126,6 +131,7 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     // Leaving route mode starts over: the next Directions asks again where the visitor is.
     if (changes['active'] && !this.active && this.submitted()) { this.submitted.set(null); this.folded.set(false); this.side.set(null); }
     if (changes['request'] && this.request) this.applyDestinationRequest();
+    if (changes['startRequest'] && this.startRequest) this.applyStartRequest();
     // In visitor mode the route always starts where the visitor stands (placed afresh on each plan, see replan).
     if (changes['visitorAt']) this.visiting.set(!!this.visitorAt);
     if (changes['visitorAt'] && this.visitorAt && this.selectionValue(this.source()) !== MY_LOCATION) this.source.set({ locationId: 'me', pointId: 'me' });
@@ -134,6 +140,11 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     if (!this.destinationNode || !this.graph()) return;
     const selection = selectionForNode(this.destinationNode, this.locations());
     if (selection) { this.destination.set(selection); this.folded.set(false); this.replan(); }
+  }
+  private applyStartRequest(): void {
+    if (!this.startNode || !this.graph()) return;
+    const selection = selectionForNode(this.startNode, this.locations());
+    if (selection) { this.source.set(selection); this.folded.set(false); this.replan(); }
   }
 
   locationOptions(other: LocationSelection | undefined, locations: NavigationLocation[]) {
@@ -201,7 +212,7 @@ export class VenueDirectionsComponent implements OnInit, OnChanges {
     if (!a || !b || !g || !this.placed(a) || !this.placed(b)) { if (shown) this.route.emit(null); return; }
     this.submitted.set({ source: a, destination: b });
     const journey = this.journey();
-    if (journey) { this.route.emit(journeyPolyline(journey.path, this.adjacency(), g.nodeMap)); this.folded.set(true); }
+    if (journey) { this.route.emit(journeyPolyline(journey.path, this.adjacency(), g.nodeMap)); this.folded.set(true); this.planned.emit({ from: journey.start.label, to: journey.end.label }); }
     else { this.folded.set(false); if (shown) this.route.emit(null); }
   }
   change(): void { this.folded.set(false); }

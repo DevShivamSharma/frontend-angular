@@ -48,18 +48,8 @@
 :host([data-ui=maps]) .detail-body dd{font-size:13px;color:var(--g-text)}
 :host([data-ui=maps]) .level-link,:host([data-ui=maps]) .plan-card{border-radius:8px;background:var(--g-fill);border:0;font-size:13px}
 
-/* Bottom left: the venue card, as Google Maps keeps a place card there; the status pill floats above it. */
-:host([data-ui=maps]) .appearance-control{top:auto;right:auto;left:16px;bottom:166px;max-width:none;text-align:left}
-:host([data-ui=maps]) .appearance-control .appearance-switch{margin-left:0}
-:host([data-ui=maps]) .scenery-switch{margin:6px 0 0}
-:host([data-ui=maps]) #appearance-status{border-radius:8px;background:#fff;color:var(--g-text);font-size:12px;box-shadow:var(--g-lift)}
-:host([data-ui=maps]) .venue-card{display:grid;gap:10px;position:absolute;z-index:2;left:16px;bottom:40px;width:min(340px,calc(100vw - 140px));padding:14px 16px;border:0;border-radius:8px;background:#fff;box-shadow:var(--g-lift);text-align:left;color:var(--g-text);font:400 14px Roboto,"Segoe UI",Arial,sans-serif}
-:host([data-ui=maps]) .venue-card:hover{background:var(--g-hover)}
-:host([data-ui=maps]) .venue-card strong{display:grid;gap:2px;font-size:16px;font-weight:500}
-:host([data-ui=maps]) .venue-card strong small{font-size:12px;font-weight:400;color:var(--g-muted)}
-:host([data-ui=maps]) .venue-card span{display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--g-line);font-size:13px}
-:host([data-ui=maps]) .venue-card span svg{width:18px;height:18px;fill:#ea4335;stroke:none}
-:host([data-ui=maps]) .venue-card span b{margin-left:auto;color:var(--g-muted);font-size:20px;font-weight:400}
+/* Bottom left: just the status pill, floating clear of the footer. */
+:host([data-ui=maps]) .appearance-control{top:auto;right:auto;left:16px;bottom:40px;max-width:none;text-align:left}
 :host([data-ui=maps]) .venue-time-control{width:auto;min-width:220px;margin:8px 0 0;border-radius:8px;background:#fff;color:var(--g-text);box-shadow:var(--g-lift)}
 :host([data-ui=maps]) .venue-time-toggle{border-radius:8px;font:400 13px Roboto,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
 :host([data-ui=maps]) .venue-time-toggle small{color:var(--g-muted)}
@@ -73,15 +63,18 @@
 :host([data-ui=maps]) .venue-time-presets button:hover{background:#e8eaed}
 :host([data-ui=maps]) .venue-time-presets button[aria-pressed=true]{background:var(--g-active);color:var(--g-blue)}
 
-/* Bottom right: round white tools, the zoom pair joined as on Maps. */
-:host([data-ui=maps]) .map-tools{right:16px;bottom:88px;gap:8px}
-:host([data-ui=maps]) .map-tools button{width:40px;height:40px;border-radius:50%;background:#fff;color:var(--g-muted);font-size:22px;font-weight:300;box-shadow:var(--g-lift)}
-:host([data-ui=maps]) .map-tools button:hover{background:var(--g-hover);color:var(--g-text)}
-:host([data-ui=maps]) .map-tools button.active{background:var(--g-active);color:var(--g-blue)}
-:host([data-ui=maps]) .map-tools svg{width:20px;height:20px}
-:host([data-ui=maps]) .tool-gap{height:8px}
-:host([data-ui=maps]) #zoom-in{border-radius:8px 8px 0 0;box-shadow:0 1px 2px #3c40434d,0 -1px 4px 1px #3c404326}
-:host([data-ui=maps]) #zoom-out{margin-top:-8px;border-top:1px solid var(--g-line);border-radius:0 0 8px 8px;box-shadow:0 2px 2px #3c40434d,0 2px 6px 2px #3c404326}
+/* Under the search box: the view tools (home, globe, daylight, rain) as one white vertical pill, as Google Maps
+   keeps a control column there; the open place list slides over it. Zoom stays bottom right, joined as on Maps. */
+:host([data-ui=maps]) .map-tools.map-tools-float{left:16px;right:auto;top:74px;bottom:auto;gap:0;padding:4px;border-radius:24px;background:#fff;box-shadow:var(--g-lift)}
+:host([data-ui=maps]) .map-tools-float button{width:40px;height:40px;border-radius:50%;background:none;color:var(--g-muted);font-size:22px;font-weight:300;box-shadow:none}
+:host([data-ui=maps]) .map-tools-float button:hover{background:var(--g-hover);color:var(--g-text)}
+:host([data-ui=maps]) .map-tools-float button.active{background:var(--g-active);color:var(--g-blue)}
+:host([data-ui=maps]) .map-tools-float svg{width:20px;height:20px}
+:host([data-ui=maps]) .map-zoom{right:16px;bottom:88px;gap:8px}
+:host([data-ui=maps]) .map-zoom button{width:40px;height:40px;background:#fff;color:var(--g-muted);font-size:22px;font-weight:300}
+:host([data-ui=maps]) .map-zoom button:hover{background:var(--g-hover);color:var(--g-text)}
+:host([data-ui=maps]) .map-zoom #zoom-in{border-radius:8px 8px 0 0;box-shadow:0 1px 2px #3c40434d,0 -1px 4px 1px #3c404326}
+:host([data-ui=maps]) .map-zoom #zoom-out{margin-top:-8px;border-top:1px solid var(--g-line);border-radius:0 0 8px 8px;box-shadow:0 2px 2px #3c40434d,0 2px 6px 2px #3c404326}
 
 /* Bottom edge: status and credits as plain text on the map. */
 :host([data-ui=maps]) footer{left:16px;right:16px;bottom:8px;justify-content:flex-end;font:11px/1.4 Roboto,"Segoe UI",Arial,sans-serif;color:var(--g-muted);text-shadow:0 0 3px #fff,0 0 3px #fff}
@@ -96,5 +89,5 @@
   :host([data-ui=maps]) .appearance-control .appearance-switch{margin-left:auto}
   :host([data-ui=maps]) .view-control{top:12px;right:12px}
   :host([data-ui=maps]) .ui-switch{position:static;margin-bottom:6px}
-  :host([data-ui=maps]) .venue-card{display:none}
+  :host([data-ui=maps]) .map-tools.map-tools-float{left:12px;top:64px}
 }

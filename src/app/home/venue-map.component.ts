@@ -1,10 +1,11 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnDestroy, OnInit, Output, ViewEncapsulation, computed, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnDestroy, OnInit, Output, ViewEncapsulation, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { VenueDetail, venueAsset } from './venue.models';
 import { parseMapGraph } from './venue-route-graph';
 import { NAVIGATION_LOCATIONS, availableLocations } from './venue-route-locations';
 import { Point, RouteGeometry, buildRouteGeometry, positionAtDistance, roundCorners } from './venue-route-geometry';
 import { VenueDirectionsComponent } from './venue-directions.component';
+import { HistoryEntry, loadHistory, recordPlace, recordRoute } from './venue-history';
 import { LABEL_RANK } from './venue-map-pins';
 
 /** A pin: a walkways-graph point (venue-walkways.json) in its picker group, with its spot on the map image. */
@@ -27,6 +28,14 @@ const CHIP_ICONS: Record<string, string> = {
   busStop: 'M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v11h-1v3h-2v-3H7v3H5v-3H4V5Zm2 1v5h12V6H6Zm1.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm9 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
   metro: 'M6 3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-2.12 2.87L20 18v2h-2.5l-1.5-2h-8L6.5 20H4v-2l1.12-1.13A3 3 0 0 1 3 14V6a3 3 0 0 1 3-3Zm0 4v5h12V7H6Zm2 9a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 8 16Zm8 0a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 16 16Z',
 };
+/** The search panel's main rows (Maps skin), above Home/Work and the history; `id` goes to the explorer's side panel. */
+const NAV_ROWS = [
+  { id: 'overview', title: 'Entire venue', sub: 'Aerial view', icon: 'M3 20V9l6-3 6 3 6-3v14l-6 2-6-3-6 1Z' },
+  { id: 'cc', title: 'Convention Centre', sub: 'Halls, foyers & 3 levels', icon: CHIP_ICONS['conventionCentre'] },
+  { id: 'halls', title: 'Halls', sub: 'Exhibition halls & hangars', icon: CHIP_ICONS['halls'] },
+  { id: 'gates', title: 'Gates', sub: 'Entry & exit', icon: CHIP_ICONS['gates'] },
+  { id: 'directions', title: 'Directions', sub: 'Walking routes', icon: 'M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12-14a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 17V9a3 3 0 0 1 3-3h4m5 3v8a3 3 0 0 1-3 3h-4' },
+];
 
 /**
  * The venue map in the ITPO app's style: search, group chips, pins with labels, details on tap.
@@ -36,20 +45,36 @@ const CHIP_ICONS: Record<string, string> = {
 @Component({ selector: 'section[appVenueMap]', standalone: true, imports: [NgTemplateOutlet, VenueDirectionsComponent], templateUrl: './venue-map.component.html', styleUrl: './venue-map.css',
   encapsulation: ViewEncapsulation.ShadowDom, changeDetection: ChangeDetectionStrategy.OnPush,
   host: { 'aria-label': 'Venue map', '[class.overlay]': "mode === 'overlay'", '[class.routing]': 'directions()' } })
-export class VenueMapComponent implements OnInit, OnDestroy {
+export class VenueMapComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() mode: 'image' | 'overlay' = 'image';
   /** Image mode on the web: open on this place, and draw this route, carried over from the 3D explorer. */
   @Input() initialPlace = '';
   @Input() initialRoute: Point[] | null = null;
+  /** View-tool states the in-search icon buttons reflect (Maps skin); the explorer owns the actions. */
+  @Input() daylight = true;
+  @Input() raining = false;
+  @Input() globeActive = false;
+  @Input() globeAvailable = true;
   @Output() readonly picked = new EventEmitter<string>();
   /** The search box's directions diamond (Maps skin); the explorer opens its Directions planner. */
   @Output() readonly directionsClick = new EventEmitter<void>();
+  /** A history route row ("Gate 9 → Hall 6"); the explorer opens its planner with both ends set. */
+  @Output() readonly routeClick = new EventEmitter<{ from: string; to: string }>();
+  /** A search-panel nav row ("Halls"); the explorer opens its side panel on that section. */
+  @Output() readonly navClick = new EventEmitter<string>();
+  /** A category chip the side panel has a section for (halls/gates/conventionCentre); the explorer opens it. */
+  @Output() readonly chipOpen = new EventEmitter<string>();
+  /** A view tool inside the search box (home/globe/light/rain); the explorer performs it. */
+  @Output() readonly toolClick = new EventEmitter<string>();
   readonly pinLayer = viewChild<ElementRef<HTMLElement>>('pinLayer');
   private readonly viewport = viewChild<ElementRef<HTMLElement>>('viewport');
   private readonly head = viewChild<ElementRef<HTMLElement>>('head');
   private readonly chips = viewChild<ElementRef<HTMLElement>>('chips');
   private readonly walker = viewChild<ElementRef<SVGGElement>>('walker');
   private readonly zone = inject(NgZone);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  /** Watches the chips row so pills that would not fully fit hide outright instead of clipping mid-pill. */
+  private chipsObserver: ResizeObserver | null = null;
   readonly map = signal<MapImage | null>(null);
   readonly places = signal<MapPlace[]>([]);
   readonly groups = signal<{ id: string; title: string }[]>([]);
@@ -57,6 +82,14 @@ export class VenueMapComponent implements OnInit, OnDestroy {
   readonly error = signal('');
   readonly group = signal('');
   readonly query = signal('');
+  /** The Google-style panel under the search box: open while the field is focused, closed by Escape or a click outside. */
+  readonly searchOpen = signal(false);
+  readonly history = signal<HistoryEntry[]>(loadHistory());
+  /** Six rows show first, as on Google Maps; the footer link reveals the rest. */
+  readonly historyExpanded = signal(false);
+  readonly historyRows = computed(() => this.history().slice(0, this.historyExpanded() ? 12 : 6));
+  /** The search panel's main options, above Home/Work and the history. */
+  readonly navRows = NAV_ROWS;
   readonly labels = signal(true);
   readonly selected = signal<MapPlace | null>(null);
   /** The hint shows until the first touch on the map. */
@@ -94,7 +127,29 @@ export class VenueMapComponent implements OnInit, OnDestroy {
   private walk?: { route: RouteGeometry; speed: number; progress: number; last: number; frame: number };
 
   ngOnInit(): void { void this.load(); }
-  ngOnDestroy(): void { this.stopWalk(); }
+  ngAfterViewInit(): void {
+    // Groups arrive with the asset, the row resizes with the window: either way the fit pass runs again.
+    this.chipsObserver = new ResizeObserver(() => this.fitChips());
+    const row = this.chips()?.nativeElement;
+    if (row) this.chipsObserver.observe(row);
+    effect(() => { this.groups(); setTimeout(() => this.fitChips()); });
+  }
+  ngOnDestroy(): void { this.stopWalk(); this.chipsObserver?.disconnect(); }
+
+  /** The chips row ends in one line: any pill that would not fit whole hides outright (Maps skin only). */
+  private fitChips(): void {
+    const row = this.chips()?.nativeElement;
+    if (!row || this.host.nativeElement.dataset['ui'] !== 'maps') return;
+    const pills = Array.from(row.querySelectorAll('button'));
+    pills.forEach(pill => pill.classList.remove('chip-gone'));
+    const limit = row.clientWidth - 4;
+    let used = 0;
+    for (const pill of pills) {
+      const width = pill.offsetWidth + 8;
+      if (used > 0 && used + width > limit) pill.classList.add('chip-gone');
+      else used += width;
+    }
+  }
   @HostListener('window:resize') resized(): void { this.width.set(innerWidth); }
 
   async load(): Promise<void> {
@@ -123,11 +178,51 @@ export class VenueMapComponent implements OnInit, OnDestroy {
 
   select(place: MapPlace, focus = false): void {
     this.query.set('');
+    this.searchOpen.set(false);
+    // Search-driven picks join the panel's history; plain pin taps do not, as on Google Maps.
+    if (focus) this.history.set(recordPlace(this.history(), place.label, this.groupTitle(place.group)));
     if (this.group() && place.group !== this.group()) this.group.set('');
     this.picked.emit(place.id);
     if (this.mode === 'overlay') return;
     this.selected.set(place);
     if (focus) this.focus(place); else this.reveal(place);
+  }
+
+  /** Focus opens the panel of pinned shortcuts and recent history under the box. */
+  openSearch(): void { this.searchOpen.set(true); }
+
+  closeSearch(): void { this.searchOpen.set(false); }
+
+  /** A click anywhere off the search box folds the panel; the path is composed, as the pins live in shadow DOM. */
+  @HostListener('document:click', ['$event'])
+  closeOnOutsideClick(event: MouseEvent): void {
+    const inside = event.composedPath().some(node => node instanceof Element && node.classList?.contains('map-search'));
+    if (!inside) this.closeSearch();
+  }
+
+  /** The explorer calls this when a walking route is planned, so it tops the history next time. */
+  recordRouteEntry(from: string, to: string): void { this.history.set(recordRoute(this.history(), from, to)); }
+
+  /** The pinned rows above the history (Home / Work), as on Google Maps. */
+  pickShortcut(label: string): void {
+    const place = this.placeByLabel(label);
+    if (place) this.select(place, true);
+  }
+
+  /** A history row: places fly to their pin; routes open the explorer's Directions planner with both ends set. */
+  pickHistory(entry: HistoryEntry): void {
+    if (entry.kind === 'route') {
+      const from = this.placeByLabel(entry.from ?? ''), to = this.placeByLabel(entry.to ?? '');
+      if (from && to) { this.closeSearch(); this.routeClick.emit({ from: from.id, to: to.id }); }
+      return;
+    }
+    const place = this.placeByLabel(entry.ref ?? entry.label);
+    if (place) this.select(place, true);
+  }
+
+  private placeByLabel(label: string): MapPlace | undefined {
+    const wanted = label.toLowerCase();
+    return this.places().find(place => place.label.toLowerCase() === wanted) ?? this.places().find(place => place.label.toLowerCase().includes(wanted));
   }
 
   /** Keep a tapped pin clear of the place sheet at the bottom and the search at the top. */
@@ -157,11 +252,16 @@ export class VenueMapComponent implements OnInit, OnDestroy {
 
   fit(): void { this.zoom.set(1); this.pan.set([0, 0]); }
 
-  /** A chip filters the pins and frames them; All frames the halls and the CC, as on opening. */
+  /** A chip filters the pins and frames them; All frames the halls and the CC, as on opening.
+   * Chips with a side-panel section (halls/gates/convention centre) also tell the explorer to open it. */
   showGroup(id: string): void {
     this.group.set(id);
+    if (id) this.chipOpen.emit(id);
     this.fitTo(id ? this.shown() : this.main());
   }
+
+  /** A search-panel nav row: the panel closes and the explorer opens the matching side-panel section. */
+  pickNav(id: string): void { this.closeSearch(); this.navClick.emit(id); }
 
   /** Open the Directions sheet, routing to `place` when given. */
   openDirections(place?: MapPlace): void {
@@ -276,9 +376,6 @@ export class VenueMapComponent implements OnInit, OnDestroy {
   groupTitle(id: string): string { return this.groups().find(item => item.id === id)?.title ?? ''; }
 
   chipIcon(id: string): string { return CHIP_ICONS[id] ?? ''; }
-
-  /** The chevron at the end of the chips row scrolls the hidden categories into view, as on Google Maps. */
-  scrollChips(): void { this.chips()?.nativeElement.scrollBy({ left: 220, behavior: 'smooth' }); }
 
   /** A drag that ends on a pin is not a tap. */
   tap(place: MapPlace): void { if (!this.dragged) this.select(place); }

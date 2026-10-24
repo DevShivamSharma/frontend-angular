@@ -58,8 +58,11 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
   readonly routeActive = signal(false);
   readonly directionsTarget = signal('');
   readonly directionsRequest = signal(0);
+  /** A history route's start ("Gate 9"), handed to the planner as its Source. */
+  readonly directionsSource = signal('');
+  readonly directionsSourceRequest = signal(0);
   readonly gates = signal<Destination[]>([]);
-  readonly collapsed = signal(false);
+  readonly collapsed = signal(true);
   readonly activeView = signal('overview');
   readonly activeLevel = signal(0);
   readonly detailId = signal('');
@@ -211,11 +214,37 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     this.closeDetails(); this.group.set(null);
     this.zone.runOutsideAngular(() => this.viewer?.walkRoute(points, label, destination));
   }
+  /** A search-panel nav row: "Entire venue" flies out to the aerial, the rest open the side panel on that section. */
+  openNavSection(id: string): void {
+    if (id === 'overview') { this.overview(); return; }
+    this.group.set(id as 'cc' | 'halls' | 'gates' | 'directions'); this.collapsed.set(false);
+  }
+  /** A view tool from inside the search box: the same actions the floating column used to carry. */
+  onMapTool(tool: string): void {
+    if (tool === 'home') this.overview();
+    else if (tool === 'globe') this.globe();
+    else if (tool === 'light') this.toggleLight();
+    else if (tool === 'rain') this.toggleRain();
+  }
+  /** A category chip the panel has a section for opens the side panel with it; the rest just filter the pins. */
+  openChipSection(groupId: string): void {
+    const sections: Record<string, 'cc' | 'halls' | 'gates'> = { halls: 'halls', gates: 'gates', conventionCentre: 'cc' };
+    const section = sections[groupId];
+    if (section) { this.group.set(section); this.collapsed.set(false); }
+  }
   /** "Directions here" from a hall's or the CC's options: open the planner with it as the destination. */
   directionsTo(id: string): void {
     this.group.set('directions'); this.collapsed.set(false);
     this.directionsTarget.set(id.startsWith('cc-level') ? 'cc' : id); this.directionsRequest.update(n => n + 1);
   }
+  /** A search-history route ("Gate 9 → Hall 6"): open the planner with both ends filled in. */
+  openRouteFromHistory({ from, to }: { from: string; to: string }): void {
+    this.group.set('directions'); this.collapsed.set(false);
+    this.directionsSource.set(from); this.directionsSourceRequest.update(n => n + 1);
+    this.directionsTarget.set(to); this.directionsRequest.update(n => n + 1);
+  }
+  /** A route planned in the planner tops the search panel's history next time it opens. */
+  recordRouteHistory({ from, to }: { from: string; to: string }): void { this.placesMap().recordRouteEntry(from, to); }
   toggleGroup(group: 'cc' | 'halls' | 'gates' | 'directions'): void {
     const open = this.group() !== group; this.group.set(open ? group : null);
     if (group === 'cc') { if (open) this.view('cc'); else this.closeDetails(); }

@@ -3,13 +3,50 @@
     <h1>Venue Map <small>Bharat Mandapam · New Delhi</small></h1>
     <button type="button" class="map-head-directions" aria-label="Directions" title="Directions" (click)="openDirections()"><ng-container *ngTemplateOutlet="turn" /></button>
   }
-  <div class="map-search">
+  <div class="map-search" [class.open]="searchOpen()">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
     <input type="search" [placeholder]="mode === 'overlay' ? 'Search places…' : 'Search halls, gates, facilities…'" aria-label="Search halls, gates and facilities"
-      [value]="query()" (input)="query.set($any($event.target).value)" (keydown.enter)="results()[0] && select(results()[0], true)" />
+      aria-controls="map-search-panel" [attr.aria-expanded]="searchOpen()"
+      [value]="query()" (focus)="openSearch()" (input)="query.set($any($event.target).value)" (keydown.escape)="closeSearch()" (keydown.enter)="results()[0] && select(results()[0], true)" />
     <!-- The teal directions diamond sits inside the search box, as on Google Maps desktop (Maps skin only). -->
-    <button type="button" class="map-search-directions" aria-label="Directions" title="Directions" (click)="directionsClick.emit()"><ng-container *ngTemplateOutlet="turn" /></button>
-    @if (results().length) {
+    <button type="button" class="map-search-directions" aria-label="Directions" title="Directions" (click)="mode === 'overlay' ? directionsClick.emit() : openDirections()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.7 11.3l-9-9a1 1 0 0 0-1.4 0l-9 9a1 1 0 0 0 0 1.4l9 9a1 1 0 0 0 1.4 0l9-9a1 1 0 0 0 0-1.4ZM14 14.5V12h-4v3H8v-4a1 1 0 0 1 1-1h5V7.5l3.5 3.5-3.5 3.5Z"/></svg></button>
+    <!-- The view tools (home, globe, daylight, rain) live inside the box, after a divider (Maps skin only). -->
+    <div class="map-search-tools" aria-label="View controls">
+      <button type="button" aria-label="Return to venue" title="Return to venue" (click)="toolClick.emit('home')"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg></button>
+      <button type="button" [class.active]="globeActive" [disabled]="!globeAvailable" aria-label="Explore globe" title="Explore globe" (click)="toolClick.emit('globe')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button>
+      <button type="button" [class.active]="daylight" [attr.aria-label]="daylight ? 'Switch to evening' : 'Switch to daylight'" [title]="daylight ? 'Switch to evening' : 'Switch to daylight'" (click)="toolClick.emit('light')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/></svg></button>
+      <button type="button" [class.active]="raining" [attr.aria-label]="raining ? 'Stop the rain' : 'Start rain'" [title]="raining ? 'Stop the rain' : 'Start rain'" (click)="toolClick.emit('rain')"><svg viewBox="0 0 24 24"><path d="M7 14a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 7a3.5 3.5 0 0 1 0 7H7Zm1 3-1 3m5-3-1 3m5-3-1 3"/></svg></button>
+    </div>
+    @if (mode === 'overlay' && searchOpen() && !query().trim()) {
+      <!-- The venue's main sections first, then the pinned shortcuts, then recents — as Google Maps stacks them. -->
+      <div id="map-search-panel" class="map-search-panel" role="dialog" aria-label="Venue sections, shortcuts and recent history">
+        @for (row of navRows; track row.id) {
+          <button type="button" class="panel-row k-nav" (click)="pickNav(row.id)">
+            <span class="panel-icon k-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="row.icon" /></svg></span>
+            <span class="panel-text"><b>{{ row.title }}</b><small>{{ row.sub }}</small></span>
+          </button>
+        }
+        <hr class="panel-divider" />
+        <button type="button" class="panel-row" (click)="pickShortcut('ITPO Admin Block')">
+          <span class="panel-icon k-pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 8h-3v10h-4v-6h-4v6H6V11H3l9-8Z"/></svg></span>
+          <span class="panel-text"><b>Home</b><small>ITPO Admin Block, Gate 9</small></span>
+        </button>
+        <button type="button" class="panel-row" (click)="pickShortcut('Convention Centre')">
+          <span class="panel-icon k-pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2h5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5Zm4 0V4h-2v2h2Z"/></svg></span>
+          <span class="panel-text"><b>Work</b><small>Convention Centre</small></span>
+        </button>
+        <hr class="panel-divider" />
+        @for (entry of historyRows(); track entry.label + entry.at) {
+          <button type="button" class="panel-row k-history" (click)="pickHistory(entry)">
+            <span class="panel-icon k-clock"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 10.6 4 2.4-.8 1.3L11 13V7h2v5.6Z"/></svg></span>
+            <span class="panel-text"><b>{{ entry.label }}</b><small>{{ entry.sub }}</small></span>
+          </button>
+        }
+        @if (!historyExpanded() && history().length > 6) {
+          <button type="button" class="panel-more" (click)="historyExpanded.set(true)">More from recent history</button>
+        }
+      </div>
+    } @else if (results().length) {
       <ul class="map-results" role="listbox" aria-label="Search results">
         @for (place of results(); track place.id) {
           <li><button type="button" role="option" (click)="select(place, true)">{{ place.label }}</button></li>
@@ -25,7 +62,6 @@
       <button type="button" [attr.data-group]="item.id" [attr.aria-pressed]="group() === item.id" (click)="showGroup(item.id)"><svg class="chip-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="chipIcon(item.id)" /></svg>{{ item.title }}</button>
     }
   </div>
-  <button type="button" class="map-chips-more" aria-label="More categories" title="More categories" (click)="scrollChips()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
   <!-- Over the 3D view the labels toggle sits with the other map filters, clear of the right-hand view controls. -->
   @if (mode === 'overlay') {
     <label class="map-labels"><input type="checkbox" [checked]="labels()" (change)="labels.set($any($event.target).checked)" /> Labels</label>
