@@ -7,7 +7,7 @@
     <span class="venue-marker-tooltip" id="venue-marker-tooltip" role="tooltip">Bharat Mandapam</span>
   </button>
 </div>
-<section appVenueMap mode="overlay" [attr.data-ui]="uiSkin()" [hidden]="visitor().active || interior().walking || globeActive() || venueView() === 'image'" [inert]="!loading.ready()" (picked)="pickPlace($event)"></section>
+<section appVenueMap mode="overlay" [attr.data-ui]="uiSkin()" [hidden]="visitor().active || interior().walking || globeActive() || venueView() === 'image'" [inert]="!loading.ready()" (picked)="pickPlace($event)" (directionsClick)="collapsed.set(false); group.set('directions')"></section>
 <!-- Image view: the 2D map phones get, in place of the canvas; the 3D viewer stays loaded and paused. -->
 @if (venueView() === 'image') {
   <section appVenueMap mode="image" [initialPlace]="place()" [initialRoute]="route()" (picked)="imagePicked($event)"></section>
@@ -24,8 +24,8 @@
 <div id="navigation" class="navigation" [hidden]="visitor().active || venueView() === 'image'" [class.collapsed]="collapsed()" [inert]="!loading.ready()">
 <button id="collapse-menu" class="collapse-menu" [attr.aria-label]="collapsed() ? 'Expand menu' : 'Collapse menu'" [attr.aria-expanded]="!collapsed()" (click)="collapsed.set(!collapsed())">{{ collapsed() ? '›' : '‹' }}</button>
 <nav #menu id="menu" aria-label="Discover the venue">
-<button class="section-row" [class.active]="activeView() === 'overview'" data-view="overview" (click)="overview()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20V9l6-3 6 3 6-3v14l-6 2-6-3-6 1M9 6v13m6-10v13M9 2v2m6-1v3"/></svg><span>Entire venue</span></button>
-<button class="section-row" id="cc-group" [attr.aria-expanded]="group() === 'cc'" (click)="toggleGroup('cc')" aria-controls="cc-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm0 0v20M3 7l9 5 9-5M7 5l10 6v8"/></svg><span>Convention Centre</span><b>›</b></button>
+<button class="section-row" [class.active]="activeView() === 'overview'" data-view="overview" (click)="overview()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20V9l6-3 6 3 6-3v14l-6 2-6-3-6 1M9 6v13m6-10v13M9 2v2m6-1v3"/></svg><span>Entire venue<small>Aerial view</small></span></button>
+<button class="section-row" id="cc-group" [attr.aria-expanded]="group() === 'cc'" (click)="toggleGroup('cc')" aria-controls="cc-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm0 0v20M3 7l9 5 9-5M7 5l10 6v8"/></svg><span>Convention Centre<small>Halls, foyers &amp; 3 levels</small></span><b>›</b></button>
 <div id="cc-menu" class="sub-menu" [hidden]="group() !== 'cc'">
   <button data-view="cc" [class.active]="activeView() === 'cc'" (click)="view('cc')">Overview <span aria-hidden="true">›</span></button>
   @for (level of [1, 2, 3]; track level) {
@@ -35,7 +35,7 @@
     }
   }
 </div>
-<button class="section-row" id="halls-group" [attr.aria-expanded]="group() === 'halls'" (click)="toggleGroup('halls')" aria-controls="hall-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16l-6 9 6 9H4l6-9-6-9ZM8 3l8 18M16 3 8 21"/></svg><span>Halls</span><b>›</b></button>
+<button class="section-row" id="halls-group" [attr.aria-expanded]="group() === 'halls'" (click)="toggleGroup('halls')" aria-controls="hall-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16l-6 9 6 9H4l6-9-6-9ZM8 3l8 18M16 3 8 21"/></svg><span>Halls<small>Exhibition halls &amp; hangars</small></span><b>›</b></button>
 <div id="hall-menu" class="sub-menu hall-menu" [hidden]="group() !== 'halls'">
   @for (destination of destinations(); track destination.id) {
     <button [attr.data-view]="destination.id" [class.active]="activeView() === destination.id || menuInterior() === destination.id" [attr.aria-expanded]="menuInterior() === destination.id" [attr.aria-controls]="'walkthrough-' + destination.id" (click)="selectHall(destination.id)"><span class="hall-name">{{ destination.label }}</span><span aria-hidden="true">{{ menuInterior() === destination.id ? '⌄' : '›' }}</span></button>
@@ -44,9 +44,9 @@
     }
   }
 </div>
-<button class="section-row" id="gates-group" [attr.aria-expanded]="group() === 'gates'" (click)="toggleGroup('gates')" aria-controls="gate-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V5h18v16M7 21V9h10v12M3 5V2m18 3V2"/></svg><span>Gates</span><b>›</b></button>
+<button class="section-row" id="gates-group" [attr.aria-expanded]="group() === 'gates'" (click)="toggleGroup('gates')" aria-controls="gate-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V5h18v16M7 21V9h10v12M3 5V2m18 3V2"/></svg><span>Gates<small>Entry &amp; exit</small></span><b>›</b></button>
 <div id="gate-menu" class="sub-menu" [hidden]="group() !== 'gates'">@for (destination of gates(); track destination.id) {<button [attr.data-view]="destination.id" [class.active]="activeView() === destination.id" (click)="view(destination.id, false)"><span>{{ destination.label }}</span><span>›</span></button>}</div>
-<button class="section-row" id="directions-group" [class.active]="routeActive()" [attr.aria-expanded]="group() === 'directions'" (click)="toggleGroup('directions')" aria-controls="directions-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12-14a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 17V9a3 3 0 0 1 3-3h4m5 3v8a3 3 0 0 1-3 3h-4"/></svg><span>Directions</span><b>›</b></button>
+<button class="section-row" id="directions-group" [class.active]="routeActive()" [attr.aria-expanded]="group() === 'directions'" (click)="toggleGroup('directions')" aria-controls="directions-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12-14a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 17V9a3 3 0 0 1 3-3h4m5 3v8a3 3 0 0 1-3 3h-4"/></svg><span>Directions<small>Walking routes</small></span><b>›</b></button>
 <div id="directions-menu" class="sub-menu" [hidden]="group() !== 'directions'"><section appVenueDirections [active]="routeActive()" [destinationNode]="directionsTarget()" [request]="directionsRequest()" [canWalk]="visitorReady()" (route)="showRoute($event)" (walk)="walkRoute($event)"></section></div>
 </nav>
 <aside appVenueDetails [id]="detailId()" [detail]="details()[detailId()]" [visible]="detailsVisible()" [selection]="selection()" (close)="closeDetails()" (levelChange)="selectLevel($event)" (openPlan)="plan().open($event)"></aside>
@@ -112,54 +112,17 @@
   </section>
 </ng-template>
 
-<a class="planner-link" [hidden]="visitor().active || venueView() === 'image'" [inert]="!loading.ready()" routerLink="/planner">Stall planner ↗</a>
-
 <div class="appearance-control" [hidden]="visitor().active || venueView() === 'image'" [inert]="!loading.ready()">
-  <div class="appearance-switch ui-switch" role="group" aria-label="Controls style">
-    <button type="button" data-ui-skin="classic" [attr.aria-pressed]="uiSkin() === 'classic'" (click)="setUiSkin('classic')">Classic</button>
-    <button type="button" data-ui-skin="maps" [attr.aria-pressed]="uiSkin() === 'maps'" (click)="setUiSkin('maps')">Maps</button>
-  </div>
-  <div class="appearance-switch" role="group" aria-label="Model appearance" [attr.aria-busy]="appearanceBusy()">
-    <button type="button" data-appearance="natural" [attr.aria-pressed]="appearance() === 'natural'" [disabled]="appearanceBusy()" (click)="setAppearance('natural')">Natural</button>
-    <button type="button" data-appearance="color" [attr.aria-pressed]="appearance() === 'color'" [disabled]="appearanceBusy()" (click)="setAppearance('color')">Color</button>
-  </div>
-  @if (appearance() === 'color') {
-    <div class="appearance-switch scenery-switch" role="group" aria-label="Scenery">
-      <button type="button" data-scenery="satellite" [attr.aria-pressed]="scenery() === 'satellite'" (click)="setScenery('satellite')">Satellite</button>
-      <button type="button" data-scenery="map" [attr.aria-pressed]="scenery() === 'map'" (click)="setScenery('map')">Map</button>
-    </div>
-  }
-  <div class="venue-time-control" aria-label="Venue time">
-    <div class="venue-time-summary">
-      <button type="button" class="venue-time-toggle" aria-controls="venue-time-options"
-        [attr.aria-expanded]="timeControlsOpen()" title="Manual change time"
-        (click)="timeControlsOpen.set(!timeControlsOpen())">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        <span>{{ venueTime() }} IST <small>{{ liveTime() ? 'Live' : 'Demo' }} · {{ daylight() ? 'Day' : 'Night' }}</small></span>
-      </button>
-      @if (!liveTime()) { <button type="button" class="venue-time-live" (click)="resumeLiveTime()" title="Follow current India time">Live</button> }
-    </div>
-    <div id="venue-time-options" [hidden]="!timeControlsOpen()">
-      <label for="venue-demo-time">Manual time <span>IST</span></label>
-      <input id="venue-demo-time" type="time" step="60" [value]="venueTime()"
-        (input)="setManualTime($any($event.target).value)" aria-describedby="venue-time-help" />
-      <div class="venue-time-presets" role="group" aria-label="Demo lighting">
-        <button type="button" (click)="setManualTime('12:00')">Day</button>
-        <button type="button" (click)="setManualTime('21:00')">Night</button>
-        <button type="button" [attr.aria-pressed]="liveTime()" (click)="resumeLiveTime()">Live time</button>
-      </div>
-      <p id="venue-time-help">Day 06:30–18:30 · Night after 18:30.<br>Live follows New Delhi time automatically.</p>
-    </div>
-  </div>
   <p id="appearance-status" role="status" [hidden]="!appearanceBusy() && !appearanceError()">{{ appearanceBusy() ? 'Preparing materials…' : appearanceError() }}</p>
 </div>
 
-@if (!visitor().active) {
-  <button #visitButton type="button" class="visit-launch" [hidden]="venueView() === 'image'" [disabled]="!loading.ready() || !visitorReady()" (click)="startVisitor()">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m8 21 3-7 4 3v4M6 12l3-5 5 1 2 4h4M11 8l-1 6"/></svg>
-    Visit as a Person
-  </button>
-} @else {
+<!-- Bottom left in the Maps skin, as Google Maps keeps a place card there: the venue's name and a line about it. -->
+<button type="button" class="venue-card" [hidden]="visitor().active || venueView() === 'image'" (click)="overview()">
+  <strong>Bharat Mandapam<small>Pragati Maidan, New Delhi</small></strong>
+  <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7c0 5.25-7 13-7 13S5 14.25 5 9a7 7 0 0 1 7-7Zm0 9.5A2.5 2.5 0 1 0 12 6.5a2.5 2.5 0 0 0 0 5Z"/></svg> Exhibition &amp; convention venue <b aria-hidden="true">›</b></span>
+</button>
+
+@if (visitor().active) {
   <section class="visitor-panel" aria-label="Visitor navigation">
     <div class="visitor-heading"><strong>{{ visitor().location }}</strong><span class="visitor-live">{{ visitor().autoWalking ? 'Auto-walking' : 'On foot' }}</span></div>
       @if (visitor().nearbyEntrance; as entrance) {

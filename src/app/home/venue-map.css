@@ -197,18 +197,36 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
    Google Maps desktop, the labels as haloed text beside the pins. Kept after the media rules so it wins in every width. */
 :host(.overlay[data-ui=maps]){--text:#202124;--muted:#5f6368;--blue:#1a73e8;--lift:0 1px 2px #3c40434d,0 2px 6px 2px #3c404326;font-family:Roboto,"Segoe UI",Arial,sans-serif}
 :host(.overlay[data-ui=maps]) .map-head{left:16px;right:auto;top:16px;bottom:auto;transform:none;flex-wrap:wrap;gap:8px;width:400px;padding:0;border-radius:0;background:none}
-:host(.overlay[data-ui=maps]) .map-search{display:flex;flex:1 1 100%;height:48px;padding:0 16px;border-radius:24px;background:#fff;box-shadow:var(--lift)}
-:host(.overlay[data-ui=maps]) .map-search svg{color:var(--muted)}
-:host(.overlay[data-ui=maps]) .map-search input{font-size:15px;color:var(--text)}
+:host(.overlay[data-ui=maps]) .map-search{display:flex;flex:1 1 100%;height:48px;padding:0 8px 0 16px;border-radius:24px;background:#fff;box-shadow:var(--lift)}
+/* As on Google Maps desktop: the field first, then the magnifier, then the teal directions diamond. */
+:host(.overlay[data-ui=maps]) .map-search>svg{order:2;width:20px;height:20px;color:var(--muted)}
+:host(.overlay[data-ui=maps]) .map-search input{order:1;font-size:15px;color:var(--text)}
 :host(.overlay[data-ui=maps]) .map-search:focus-within{box-shadow:0 0 0 2px var(--blue),var(--lift)}
+.map-search-directions{display:none}
+:host(.overlay[data-ui=maps]) .map-search-directions{order:3;display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:none;color:#fff}
+:host(.overlay[data-ui=maps]) .map-search-directions:hover{background:var(--g-hover,#f8f9fa)}
+:host(.overlay[data-ui=maps]) .map-search-directions svg{width:22px;height:22px;stroke-width:1.6}
+:host(.overlay[data-ui=maps]) .map-search-directions svg path:first-child{fill:#0b8a7d;stroke:none}
 :host(.overlay[data-ui=maps]) .map-results{top:54px;bottom:auto}
-:host(.overlay[data-ui=maps]) .map-chips{flex:1 1 auto;flex-wrap:wrap;padding:0;overflow:visible;-webkit-mask-image:none;mask-image:none}
-:host(.overlay[data-ui=maps]) .map-chips button{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:0 12px;border:0;border-radius:16px;background:#fff;color:var(--text);font-size:13px;box-shadow:var(--lift)}
-:host(.overlay[data-ui=maps]) .map-chips button:hover{background:#f8f9fa}
-:host(.overlay[data-ui=maps]) .map-chips button[data-group]::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--group)}
-:host(.overlay[data-ui=maps]) .map-chips button[aria-pressed=true]{background:var(--group,var(--blue));color:#fff}
-:host(.overlay[data-ui=maps]) .map-chips button[aria-pressed=true]::before{background:#fff}
-:host(.overlay[data-ui=maps]) .map-labels{min-height:32px;padding:0 12px;border-radius:16px;background:#fff;color:var(--text);font-size:13px;box-shadow:var(--lift)}
+/* The filter chips in the Google Maps manner: one row that scrolls sideways with a fade at the end, white chips
+   with a hairline border instead of a shadow, an icon per category, grey text, a grey hover, and the group
+   colour only once pressed. The round chevron scrolls the row, as on Google Maps. */
+:host(.overlay[data-ui=maps]) .map-chips{flex:1 1 auto;flex-wrap:nowrap;min-width:0;gap:8px;padding:2px 28px 2px 0;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),#0000);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),#0000)}
+:host(.overlay[data-ui=maps]) .map-chips::-webkit-scrollbar{display:none}
+:host(.overlay[data-ui=maps]) .map-chips button{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:0 12px;border:1px solid var(--g-line,#dadce0);border-radius:8px;background:#fff;color:var(--g-text,#3c4043);font:400 13px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:none;transition:background .15s,border-color .15s}
+:host(.overlay[data-ui=maps]) .map-chips button:hover{background:var(--g-hover,#f8f9fa)}
+:host(.overlay[data-ui=maps]) .map-chips button[data-group]::before{content:none}
+:host(.overlay[data-ui=maps]) .map-chips button[aria-pressed=true]{border-color:transparent;background:var(--group,var(--blue));color:#fff;font-weight:500}
+.chip-icon{display:none}
+:host(.overlay[data-ui=maps]) .chip-icon{display:block;width:16px;height:16px;color:var(--group,var(--muted))}
+:host(.overlay[data-ui=maps]) .chip-icon path{fill:currentColor;stroke:none}
+:host(.overlay[data-ui=maps]) .map-chips button[aria-pressed=true] .chip-icon{color:#fff}
+.map-chips-more{display:none}
+:host(.overlay[data-ui=maps]) .map-chips-more{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;padding:0;border:1px solid var(--g-line,#dadce0);border-radius:50%;background:#fff;color:var(--muted)}
+:host(.overlay[data-ui=maps]) .map-chips-more:hover{background:var(--g-hover,#f8f9fa)}
+:host(.overlay[data-ui=maps]) .map-chips-more svg{width:18px;height:18px}
+:host(.overlay[data-ui=maps]) .map-labels{flex-shrink:0;min-height:32px;padding:0 12px;border:1px solid var(--g-line,#dadce0);border-radius:8px;background:#fff;color:var(--g-text,#3c4043);font:400 13px Roboto,"Segoe UI",Arial,sans-serif;box-shadow:none}
+:host(.overlay[data-ui=maps]) .map-labels:hover{background:var(--g-hover,#f8f9fa)}
 :host(.overlay[data-ui=maps]) .map-labels input{accent-color:var(--blue)}
 :host(.overlay[data-ui=maps]) .map-pin-layer .pin-label{padding:0;border-radius:0;background:none;color:#202124;font:500 12px Roboto,"Segoe UI",Arial,sans-serif;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff,0 1px 4px #fff}
 :host(.overlay[data-ui=maps]) .map-pin-layer .pin-head{left:-9px;width:18px;height:18px;border-width:1.5px}

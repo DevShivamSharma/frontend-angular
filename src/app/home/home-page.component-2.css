@@ -4,3 +4,6 @@
 :host{display:block;position:fixed;inset:0;height:100%;font-size:16px;line-height:normal} .planner-link{position:absolute;right:14px;top:18px;z-index:2;padding:10px 12px;background:#f3f0eaef;color:#272c2b;font:600 12px Arial,Helvetica,sans-serif;text-decoration:none}.planner-link:hover{background:#fff}@media(max-width:700px){.planner-link{top:10px;right:10px;font-size:11px;padding:9px}}
 /* Touch screens (tablets on the 3D view): the side tools and menu toggle get a 44 px target. */
 @media(pointer:coarse){.map-tools button{width:44px;height:44px}.map-tools{gap:6px}.collapse-menu{width:44px;height:44px;top:-48px}}
+/* The Maps skin restyles these; everywhere else the section subtitles and the venue card stay hidden. */
+.section-row small{display:none}
+.venue-card{display:none}

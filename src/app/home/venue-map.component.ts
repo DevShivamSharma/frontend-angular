@@ -16,6 +16,17 @@ const PIN_HEIGHT: Record<string, number> = { halls: 26, conventionCentre: 50 };
 const MAX_ZOOM = 6;
 /** Chip order of the ITPO app's map; other groups follow. */
 const CHIP_ORDER = ['halls', 'gates', 'conventionCentre', 'amphitheatres', 'parking'];
+/** Google Maps-style chip icons (24×24 fill paths), one per picker group. */
+const CHIP_ICONS: Record<string, string> = {
+  halls: 'M3 21V9l9-6 9 6v12h-5v-6H8v6H3Z',
+  gates: 'M4 21v-8a8 8 0 0 1 16 0v8h-3v-8a5 5 0 0 0-10 0v8H4Z',
+  conventionCentre: 'M12 2 2 8v2h20V8L12 2ZM4 12h16v8H4v-8Z',
+  amphitheatres: 'M12 4a10 10 0 0 1 10 10v6h-3v-6a7 7 0 0 0-14 0v6H2v-6A10 10 0 0 1 12 4Zm0 6a4 4 0 0 1 4 4v6H8v-6a4 4 0 0 1 4-4Z',
+  parking: 'M6 21V3h7a5 5 0 0 1 0 10H9v8H6Zm3-10h4a2 2 0 0 0 0-4H9v4Z',
+  itpoOffice: 'M4 7h5V3h6v4h5v14H4V7Zm7-2v2h2V5h-2Z',
+  busStop: 'M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v11h-1v3h-2v-3H7v3H5v-3H4V5Zm2 1v5h12V6H6Zm1.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm9 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
+  metro: 'M6 3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-2.12 2.87L20 18v2h-2.5l-1.5-2h-8L6.5 20H4v-2l1.12-1.13A3 3 0 0 1 3 14V6a3 3 0 0 1 3-3Zm0 4v5h12V7H6Zm2 9a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 8 16Zm8 0a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 16 16Z',
+};
 
 /**
  * The venue map in the ITPO app's style: search, group chips, pins with labels, details on tap.
@@ -31,9 +42,12 @@ export class VenueMapComponent implements OnInit, OnDestroy {
   @Input() initialPlace = '';
   @Input() initialRoute: Point[] | null = null;
   @Output() readonly picked = new EventEmitter<string>();
+  /** The search box's directions diamond (Maps skin); the explorer opens its Directions planner. */
+  @Output() readonly directionsClick = new EventEmitter<void>();
   readonly pinLayer = viewChild<ElementRef<HTMLElement>>('pinLayer');
   private readonly viewport = viewChild<ElementRef<HTMLElement>>('viewport');
   private readonly head = viewChild<ElementRef<HTMLElement>>('head');
+  private readonly chips = viewChild<ElementRef<HTMLElement>>('chips');
   private readonly walker = viewChild<ElementRef<SVGGElement>>('walker');
   private readonly zone = inject(NgZone);
   readonly map = signal<MapImage | null>(null);
@@ -260,6 +274,11 @@ export class VenueMapComponent implements OnInit, OnDestroy {
   wheel(event: WheelEvent): void { event.preventDefault(); this.zoomBy(event.deltaY < 0 ? 1.2 : 1 / 1.2, ...this.local(event)); }
 
   groupTitle(id: string): string { return this.groups().find(item => item.id === id)?.title ?? ''; }
+
+  chipIcon(id: string): string { return CHIP_ICONS[id] ?? ''; }
+
+  /** The chevron at the end of the chips row scrolls the hidden categories into view, as on Google Maps. */
+  scrollChips(): void { this.chips()?.nativeElement.scrollBy({ left: 220, behavior: 'smooth' }); }
 
   /** A drag that ends on a pin is not a tap. */
   tap(place: MapPlace): void { if (!this.dragged) this.select(place); }

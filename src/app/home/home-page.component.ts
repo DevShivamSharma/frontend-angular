@@ -20,10 +20,11 @@ const VENUE_VIEW_KEY = 'venue-explorer-view';
 function storedVenueView(): '3d' | 'image' {
   try { return localStorage.getItem(VENUE_VIEW_KEY) === 'image' ? 'image' : '3d'; } catch { return '3d'; }
 }
-/** Chrome skin: the venue's own (classic) or the Google Maps manner (venue-ui-maps.css); remembered per browser. */
+/** Chrome skin: the venue's own (classic) or the Google Maps manner (venue-ui-maps.css). The Classic | Maps
+   switch is off for now, so the explorer always opens in the Maps skin. */
 const UI_SKIN_KEY = 'venue-explorer-ui';
 function storedUiSkin(): 'classic' | 'maps' {
-  try { return localStorage.getItem(UI_SKIN_KEY) === 'maps' ? 'maps' : 'classic'; } catch { return 'classic'; }
+  return 'maps';
 }
 
 @Component({

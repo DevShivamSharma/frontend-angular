@@ -7,6 +7,8 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
     <input type="search" [placeholder]="mode === 'overlay' ? 'Search places…' : 'Search halls, gates, facilities…'" aria-label="Search halls, gates and facilities"
       [value]="query()" (input)="query.set($any($event.target).value)" (keydown.enter)="results()[0] && select(results()[0], true)" />
+    <!-- The teal directions diamond sits inside the search box, as on Google Maps desktop (Maps skin only). -->
+    <button type="button" class="map-search-directions" aria-label="Directions" title="Directions" (click)="directionsClick.emit()"><ng-container *ngTemplateOutlet="turn" /></button>
     @if (results().length) {
       <ul class="map-results" role="listbox" aria-label="Search results">
         @for (place of results(); track place.id) {
@@ -17,12 +19,13 @@
       <p class="map-results map-empty" role="status">No hall, gate or facility matches "{{ query().trim() }}"</p>
     }
   </div>
-  <div class="map-chips" role="group" aria-label="Show on the map">
+  <div class="map-chips" #chips role="group" aria-label="Show on the map">
     <button type="button" [attr.aria-pressed]="!group()" (click)="showGroup('')">All</button>
     @for (item of groups(); track item.id) {
-      <button type="button" [attr.data-group]="item.id" [attr.aria-pressed]="group() === item.id" (click)="showGroup(item.id)">{{ item.title }}</button>
+      <button type="button" [attr.data-group]="item.id" [attr.aria-pressed]="group() === item.id" (click)="showGroup(item.id)"><svg class="chip-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="chipIcon(item.id)" /></svg>{{ item.title }}</button>
     }
   </div>
+  <button type="button" class="map-chips-more" aria-label="More categories" title="More categories" (click)="scrollChips()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
   <!-- Over the 3D view the labels toggle sits with the other map filters, clear of the right-hand view controls. -->
   @if (mode === 'overlay') {
     <label class="map-labels"><input type="checkbox" [checked]="labels()" (change)="labels.set($any($event.target).checked)" /> Labels</label>
