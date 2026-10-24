@@ -43,6 +43,7 @@ function buildingStyle(tags, ring, landmark) {
   const colour = (value, fallback) => /^#[0-9a-f]{6}$/i.test(value ?? '') ? value : fallback;
   return { h: round(height * widthScale), base: round(base * widthScale), roof: colour(tags['roof:colour'], roof),
     wall: colour(tags['building:colour'], wall), heightSource: tagged > 0 ? 'height' : levels > 0 ? 'building:levels' : 'estimated',
+    floors: Math.max(1, Math.round(levels > 0 ? levels - (parseFloat(tags['building:min_level']) || 0) : (height - base) / 3.5)),
     ...(name ? { name } : {}), ...(station ? { station: true } : {}) };
 }
 
@@ -102,7 +103,7 @@ function buildSurroundings(raw) {
   return { credit: '© OpenStreetMap contributors · ODbL https://www.openstreetmap.org/copyright', source: raw.source,
     frame: 'lat/lon → z18 pixel → satellite-reference.json fit (shared with build-venue-map-context.cjs)',
     sourceSha256: crypto.createHash('sha256').update(JSON.stringify(raw)).digest('hex'),
-    coverage: square[0], photoExclusion: clip.difference(property, ...museums.map(m => [m.ring])), scale: widthScale,
+    coverage: square[0], scale: widthScale,
     note: 'Heights without OSM height/levels and bridge elevations are estimates. Building holes are courtyards. Railway rail is distinct from the elevated subway. Museum site polygons are not buildings.',
     buildings, railways };
 }

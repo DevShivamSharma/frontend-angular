@@ -56,11 +56,8 @@
 <div class="map-zoom" [hidden]="venueView() === 'image'" [inert]="!loading.ready()" aria-label="Zoom controls"><button id="zoom-in" (click)="zoom(.74)" aria-label="Zoom in">+</button><button id="zoom-out" (click)="zoom(1.35)" aria-label="Zoom out">−</button></div>
 <footer [hidden]="venueView() === 'image'" [inert]="!loading.ready()"><span id="status" aria-live="polite">{{ status() }}</span><span class="interaction-hint">{{ visitor().active ? 'W A S D to walk · Space to jump · Drag to look · Shift to walk faster' : interior().walking ? 'Drag to look · W A S D to walk' : 'Drag to orbit · Right drag to pan · Scroll to zoom' }}</span></footer>
 <div id="geo-credit" [hidden]="!geographyReady() || venueView() === 'image'" [inert]="!loading.ready()">
-  @if (appearance() === 'color' && (scenery() === 'map' || satelliteReady()) && !globeActive()) {
+  @if (appearance() === 'color' && scenery() === 'satellite' && satelliteReady() && !globeActive()) {
     <a id="satellite-credit" href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer" target="_blank" rel="noopener">Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community</a>
-    @if (scenery() === 'map') {
-      · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>
-    }
   } @else {
     <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>
   }

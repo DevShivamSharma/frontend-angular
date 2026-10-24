@@ -6,7 +6,7 @@ import { createArchitecturalFinishes } from './venue-architectural-detail';
 export type VenueAppearance = 'natural' | 'color';
 /** Ground context shown under the Color appearance. */
 export type VenueScenery = 'satellite' | 'map';
-/** What the explorer opens on: Color with registered map surroundings and the bundled ground imagery. */
+/** What the explorer opens on: Color with modeled, satellite-registered surroundings. */
 export const INITIAL_APPEARANCE: VenueAppearance = 'color', INITIAL_SCENERY: VenueScenery = 'map';
 /** The Color palette with its textures as JPEG (scripts/compress-venue-palette.py from venue-colour-materials.glb). */
 export const COLOUR_MATERIALS = 'venue-colour-materials-web.glb?v=colour-20260927-r1';
