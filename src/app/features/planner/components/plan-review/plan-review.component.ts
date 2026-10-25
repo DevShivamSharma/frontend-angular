@@ -14,7 +14,15 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { stallLabel } from '../../domain/plan.models';
 import { forSale, rupees } from '../../domain/stall-price';
+import { firstValueFrom } from 'rxjs';
+
+import { AppDialog } from '../../../../core/dialog/app-dialog.service';
 import { ConfirmService } from '../../../../core/confirm/confirm.service';
+import {
+  RejectDialogComponent,
+  RejectDialogData,
+  RejectDialogResult,
+} from '../reject-dialog/reject-dialog.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { PlannerCanvasComponent, PlannerTool } from '../planner-canvas/planner-canvas.component';
 import { PlannerStore } from '../../state/planner.store';
@@ -51,6 +59,7 @@ export class PlanReviewComponent {
   protected readonly rupees = rupees;
   protected readonly store = inject(PlannerStore);
   private readonly confirm = inject(ConfirmService);
+  private readonly dialog = inject(AppDialog);
   protected readonly canvas = viewChild<PlannerCanvasComponent>('canvas');
 
   readonly categoryColors = input<ReadonlyMap<string, string>>(new Map());
@@ -158,14 +167,25 @@ export class PlanReviewComponent {
   }
 
   protected async sendBack(): Promise<void> {
-    const r = this.store.view()?.plan.review;
-    const note = await this.confirm.askReason({
-      title: 'Send the plan back?',
-      message: `${r?.submittedBy ?? 'The organiser'} gets an email with your note, and can change the plan and send it again.`,
-      reasonLabel: 'What should change',
-      confirmLabel: 'Send back',
-      destructive: true,
+    const v = this.store.view();
+    const sent = await firstValueFrom(
+      this.dialog.open<RejectDialogResult>(RejectDialogComponent, {
+        data: { hallName: v?.hall.hall.name ?? 'the plan' } satisfies RejectDialogData,
+        width: 'min(560px, 96vw)',
+      }),
+      { defaultValue: undefined },
+    );
+    if (sent) await this.store.review('reject', sent.note, sent.files);
+  }
+
+  /** ITPO takes an approved plan back to Draft, so the organiser can change it. */
+  protected async reopen(): Promise<void> {
+    const ok = await this.confirm.confirm({
+      title: 'Reopen the plan?',
+      message:
+        'The hall goes back to Draft. The organiser is told, can change the plan and must send it for approval again.',
+      confirmLabel: 'Reopen',
     });
-    if (note) await this.store.review('reject', note);
+    if (ok) await this.store.review('reopen');
   }
 }

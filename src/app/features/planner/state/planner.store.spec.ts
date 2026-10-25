@@ -96,6 +96,7 @@ function view(overrides: Partial<PlannerView> = {}): PlannerView {
     canSubmit: false,
     canWithdraw: false,
     canApprove: false,
+    canReopen: false,
     ...overrides,
   };
 }

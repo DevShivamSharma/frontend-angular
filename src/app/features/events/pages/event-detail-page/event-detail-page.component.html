@@ -57,6 +57,9 @@
           <p-tab value="rules"
             ><i class="pi pi-sliders-h" aria-hidden="true"></i> Planning rules</p-tab
           >
+          @if (event.kind === 'internal' && store.canManage()) {
+            <p-tab value="config"><i class="pi pi-cog" aria-hidden="true"></i> Configuration</p-tab>
+          }
         </p-tablist>
         <p-tabpanels>
           <p-tabpanel value="details"><app-event-details-card [event]="event" /></p-tabpanel>
@@ -70,6 +73,11 @@
               [internal]="store.summary()?.kind === 'internal'"
             />
           </p-tabpanel>
+          @if (event.kind === 'internal' && store.canManage()) {
+            <p-tabpanel value="config">
+              <app-event-config-tab [eventId]="eventId()" />
+            </p-tabpanel>
+          }
         </p-tabpanels>
       </p-tabs>
     }

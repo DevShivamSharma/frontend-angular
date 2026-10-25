@@ -17,7 +17,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
 import { firstValueFrom } from 'rxjs';
 
-import type { DrawingImportResult } from '../../domain/drawing-import.models';
+import type { AiFinding, DrawingImportResult } from '../../domain/drawing-import.models';
 import { PlansApiService } from '../../data/plans-api.service';
 import { type PlanStall, stallLabel } from '../../domain/plan.models';
 import { dialogData, DialogRef } from '../../../../core/dialog/app-dialog.service';
@@ -415,6 +415,21 @@ export class DrawingImportDialogComponent {
   }
 
   // ---- one stall on its own ---------------------------------------------------------------
+
+  protected findingKind(f: AiFinding): string {
+    return f.kind === 'missing' ? 'Missing' : f.kind === 'extra' ? 'Extra' : 'Check';
+  }
+
+  protected findingStall(f: AiFinding): string | null {
+    return f.stallKey
+      ? (this.result()?.stalls.find((s) => s.key === f.stallKey)?.name ?? null)
+      : null;
+  }
+
+  /** A finding about a stall picks it on the drawing. */
+  protected focusFinding(f: AiFinding): void {
+    if (f.stallKey) this.pick(f.stallKey);
+  }
 
   protected pick(key: string | null): void {
     this.picked.set(key);

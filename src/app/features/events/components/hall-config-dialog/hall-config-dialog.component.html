@@ -1,0 +1,124 @@
+<h2 class="dialog-title head"><app-icon name="tune" /> Configuration of {{ data.hallName }}</h2>
+<div class="dialog-content stack">
+  @let _changes = version();
+  @if (loading()) {
+    <p class="muted" role="status">Loading the configuration…</p>
+  } @else if (loadFailed()) {
+    <p class="error" role="alert">
+      The configuration could not be loaded. Close this and try again.
+    </p>
+  } @else {
+    <p class="muted small">
+      When stalls of this hall can be booked, how many one user may book, and whether the hall is
+      for the mobile app only. The same configuration SelfCare shows.
+    </p>
+    @for (row of rows.controls; track row; let i = $index) {
+      <fieldset class="row" [formGroup]="row">
+        <div class="row__head">
+          <b>#{{ i + 1 }}</b>
+          <button
+            pButton
+            type="button"
+            [text]="true"
+            severity="danger"
+            size="small"
+            [disabled]="rows.length === 1"
+            (click)="remove(i)"
+          >
+            <app-icon name="delete" />Remove
+          </button>
+        </div>
+        <div class="grid">
+          <label
+            >Stall booking opens
+            <p-datepicker
+              formControlName="startDate"
+              [showTime]="true"
+              [showIcon]="false"
+              dateFormat="d M yy"
+              placeholder="Select a date"
+              appendTo="body"
+            />
+          </label>
+          <label
+            >Stall booking closes
+            <p-datepicker
+              formControlName="endDate"
+              [showTime]="true"
+              [showIcon]="false"
+              dateFormat="d M yy"
+              placeholder="Select a date"
+              appendTo="body"
+            />
+          </label>
+        </div>
+        @if (row.errors?.['range']) {
+          <p class="error" role="alert">The opening date cannot be later than the closing date.</p>
+        } @else if (row.errors?.['empty'] && row.touched) {
+          <p class="error" role="alert">Give a date for when booking opens, closes, or both.</p>
+        }
+        <label
+          >Most stalls one user can book
+          <input
+            pInputText
+            formControlName="stallCount"
+            inputmode="numeric"
+            placeholder="A number"
+          />
+        </label>
+        @if (data.isFnb) {
+          <label
+            >Most food and beverage stalls one user can book
+            <input
+              pInputText
+              formControlName="fnbStallCount"
+              inputmode="numeric"
+              placeholder="A number"
+            />
+          </label>
+        }
+        <label
+          >Hall description
+          <textarea
+            pTextarea
+            formControlName="description"
+            rows="3"
+            maxlength="1000"
+            placeholder="Describe the hall for exhibitors"
+          ></textarea>
+        </label>
+        <label class="check">
+          <p-checkbox formControlName="isRestrictedToApp" [binary]="true" />
+          The hall is for the mobile application only
+        </label>
+      </fieldset>
+    }
+    <button pButton type="button" [outlined]="true" size="small" (click)="add()">
+      <app-icon name="add" />Add another window
+    </button>
+  }
+</div>
+<div class="dialog-actions">
+  <button pButton type="button" [text]="true" severity="secondary" (click)="ref.close()">
+    Close
+  </button>
+  <button
+    pButton
+    type="button"
+    [outlined]="true"
+    severity="danger"
+    [disabled]="!exists() || loading()"
+    (click)="removeAll()"
+  >
+    Delete all
+  </button>
+  <button
+    pButton
+    type="button"
+    [loading]="saving()"
+    [disabled]="loading() || loadFailed()"
+    (click)="save()"
+  >
+    Save
+  </button>
+</div>

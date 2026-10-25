@@ -1,5 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgTemplateOutlet } from '@angular/common';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -9,6 +16,7 @@ import { MenuModule } from 'primeng/menu';
 import { AuthService } from '../../core/auth/auth.service';
 import { TooltipModule } from 'primeng/tooltip';
 
+import { PlansApiService } from '../../features/planner/data/plans-api.service';
 import { ConfirmService } from '../../core/confirm/confirm.service';
 import { ThemeMode, ThemeService } from '../../core/theme/theme.service';
 import { groupNav, NAV_ITEMS } from '../nav-items';
@@ -36,6 +44,12 @@ export class ShellComponent {
   private readonly theme = inject(ThemeService);
   private readonly confirm = inject(ConfirmService);
 
+  private readonly plans = inject(PlansApiService);
+  private readonly router = inject(Router);
+
+  /** Hall plans waiting for ITPO's answer (ITPO staff). */
+  protected readonly pending = signal(0);
+
   protected readonly user = this.auth.user;
   protected readonly displayName = this.auth.displayName;
   protected readonly drawerOpen = signal(false);
@@ -46,6 +60,28 @@ export class ShellComponent {
 
   /** The sidebar shows only icons; kept between visits, because a user who shrank it wants it so. */
   protected readonly collapsed = signal(readCollapsed());
+
+  constructor() {
+    if (this.auth.isStaff()) {
+      this.refreshPending();
+      // After each page change, and every minute: an organiser may have sent a hall meanwhile.
+      const sub = this.router.events.subscribe((e) => {
+        if (e instanceof NavigationEnd) this.refreshPending();
+      });
+      const timer = setInterval(() => this.refreshPending(), 60_000);
+      inject(DestroyRef).onDestroy(() => {
+        sub.unsubscribe();
+        clearInterval(timer);
+      });
+    }
+  }
+
+  private refreshPending(): void {
+    this.plans.pendingCount().subscribe({
+      next: (count) => this.pending.set(count),
+      error: () => undefined,
+    });
+  }
 
   protected readonly initials = computed(() => {
     const words = this.displayName()

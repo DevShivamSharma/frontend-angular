@@ -40,6 +40,51 @@
             <span>{{ r.issues[0] }}</span>
           }
         </p>
+        @if (r.aiCheck; as check) {
+          @if (check.status === 'done') {
+            <section class="ai" aria-label="Second look by AI">
+              <p class="ai__head">
+                <app-icon name="auto_awesome" />
+                <b>Second look by AI</b>
+                @if (check.findings.length) {
+                  <span class="muted">
+                    {{ check.findings.length }}
+                    {{ check.findings.length === 1 ? 'thing' : 'things' }} to look at. Only a hint:
+                    stalls stay where the drawing puts them.
+                  </span>
+                } @else {
+                  <span class="muted">Nothing looks missing, extra or wrong.</span>
+                }
+              </p>
+              @if (check.findings.length) {
+                <ul class="ai__list">
+                  @for (f of check.findings; track $index) {
+                    <li>
+                      <button
+                        type="button"
+                        class="ai__item"
+                        [disabled]="!f.stallKey"
+                        (click)="focusFinding(f)"
+                      >
+                        <span class="ai__kind" [attr.data-kind]="f.kind">{{ findingKind(f) }}</span>
+                        @if (findingStall(f); as name) {
+                          <b>{{ name }}</b>
+                        }
+                        <span>{{ f.message }}</span>
+                        @if (f.kind === 'missing' && f.unresolved !== null) {
+                          <span class="muted">
+                            The drawing has a label there with no closed outline:
+                            {{ r.unresolved[f.unresolved].texts.join(' ') }}
+                          </span>
+                        }
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+            </section>
+          }
+        }
         <div class="grid">
           <div class="col">
             <!-- A click on a stall picks it to change on its own; on the floor, lets it go.

@@ -174,6 +174,7 @@ function toDetail(raw: Raw): ItpoEventDetail {
         hallId: Number(hall['hallId']),
         name: String(hall['hallName'] ?? ''),
         forStallFnb: hall['forStallFnb'] === true,
+        forHorseShoe: hall['forHorseShoe'] === true,
         stallCount: Number(hall['stallCount'] ?? 0),
         isPriceAdded: hall['isPriceAdded'] === true,
         coverImage: firstImage(hall['coverImage']),

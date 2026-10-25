@@ -1,0 +1,74 @@
+:host {
+  display: block;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--app-border);
+
+  input,
+  p-select,
+  p-datepicker {
+    flex: 0 1 13rem;
+    min-width: 0;
+  }
+}
+
+:host ::ng-deep .filters .p-select,
+:host ::ng-deep .filters .p-datepicker,
+:host ::ng-deep .filters .p-datepicker-input {
+  width: 100%;
+}
+
+.count {
+  margin-left: auto;
+}
+
+.loading {
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--app-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.detail {
+  max-width: 22rem;
+  overflow-wrap: anywhere;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+}
+
+.small {
+  display: block;
+  font-size: 0.75rem;
+}

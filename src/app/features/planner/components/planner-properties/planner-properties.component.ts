@@ -23,6 +23,7 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { pointInRing, polygonArea, ringBox } from '../../domain/planner-geometry';
 import type { PlannerStore } from '../../state/planner.store';
 import { stallArea } from '../../domain/stall-cells';
+import { rupees, type StallPrice } from '../../domain/stall-price';
 
 export type StallPatch = Partial<Omit<PlanStall, 'id'>>;
 
@@ -61,6 +62,13 @@ const FLAGS: Array<{ key: keyof PlanStall; label: string }> = [
   styleUrl: './planner-properties.component.scss',
 })
 export class PlannerPropertiesComponent {
+  protected readonly rupees = rupees;
+
+  /** The price the rate card gives the stall; null without a card or when it is not for sale. */
+  protected priceOf(s: { id: string }): StallPrice | null {
+    return this.store().prices().get(s.id) ?? null;
+  }
+
   protected readonly stallArea = stallArea;
   readonly store = input.required<PlannerStore>();
   readonly readonly = input(false);
@@ -176,6 +184,14 @@ export class PlannerPropertiesComponent {
     if (!raw || !Number.isFinite(value) || value === current) return;
     if ((key === 'width' || key === 'depth') && value <= 0) return;
     this.patch.emit({ [key]: value });
+  }
+
+  /** A price typed in a field: set on the stall (or on every selected stall) when it changes. */
+  protected ownPrice(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.replace(/,/g, '').trim();
+    if (!raw) return;
+    const value = Number(raw);
+    if (Number.isFinite(value) && value >= 0) this.patch.emit({ price: value });
   }
 
   protected toggleSide(s: PlanStall, side: StallSide): void {

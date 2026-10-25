@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, TitleCasePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -44,6 +44,7 @@ const PAGE_SIZE = 15;
     ReactiveFormsModule,
     RouterLink,
     DatePipe,
+    TitleCasePipe,
     ButtonModule,
     IconFieldModule,
     InputIconModule,

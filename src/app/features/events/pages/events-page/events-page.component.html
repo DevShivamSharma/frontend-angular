@@ -50,7 +50,7 @@
                 appImageFallback
               />
               <h2 class="item-card__title">
-                <a [routerLink]="[base(), event.id]">{{ event.name }}</a>
+                <a [routerLink]="[base(), event.id]">{{ event.name | titlecase }}</a>
               </h2>
               <p class="item-card__meta">
                 <i class="pi pi-calendar" aria-hidden="true"></i>

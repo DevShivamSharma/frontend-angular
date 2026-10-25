@@ -110,6 +110,7 @@ function toEventHall(hall: EventHall): ItpoEventHall {
     hallId: hall.hallId,
     name: hall.name,
     forStallFnb: hall.forStallFnb,
+    forHorseShoe: false,
     stallCount: 0,
     isPriceAdded: false,
     coverImage: null,

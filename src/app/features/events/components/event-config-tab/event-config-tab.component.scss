@@ -1,0 +1,79 @@
+.bar {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--app-border);
+
+  h2 {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  p {
+    margin: var(--space-1) 0 0;
+  }
+}
+
+.loading {
+  padding: var(--space-6);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+fieldset {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+}
+
+legend {
+  padding: 0 var(--space-2);
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+}
+
+label {
+  display: grid;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.error {
+  margin: 0;
+  color: var(--app-danger);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+:host ::ng-deep .p-datepicker,
+:host ::ng-deep .p-datepicker-input,
+:host ::ng-deep .p-select,
+:host ::ng-deep textarea {
+  width: 100%;
+}

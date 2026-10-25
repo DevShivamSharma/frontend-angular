@@ -20,6 +20,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-sta
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { EventDetailsCardComponent } from '../../components/event-details-card/event-details-card.component';
 import { EventHallsTabComponent } from '../../components/event-halls-tab/event-halls-tab.component';
+import { EventConfigTabComponent } from '../../components/event-config-tab/event-config-tab.component';
 import { EventRulesTabComponent } from '../../components/event-rules-tab/event-rules-tab.component';
 import { statusSeverity } from '../../domain/event-status';
 import { EventDetailStore } from '../../state/event-detail.store';
@@ -37,6 +38,7 @@ import { EventDetailStore } from '../../state/event-detail.store';
     PageHeaderComponent,
     EventDetailsCardComponent,
     EventHallsTabComponent,
+    EventConfigTabComponent,
     EventRulesTabComponent,
   ],
   providers: [EventDetailStore],

@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api-config';
-import { EventRules, RuleCatalogue, RuleSet, RuleSetChanges } from './rules.models';
+import { EventRules, HallRules, RuleCatalogue, RuleSet, RuleSetChanges } from './rules.models';
 
 /** The rules endpoints of the EMS API. */
 @Injectable({ providedIn: 'root' })
@@ -30,5 +30,14 @@ export class RulesApiService {
   /** `true`/`false` switches a rule on or off for the event; `null` goes back to the default. */
   setForEvent(eventId: string, switches: Record<string, boolean | null>): Observable<EventRules> {
     return this.http.put<EventRules>(`${this.url}/events/${eventId}/rules`, { switches });
+  }
+
+  forHall(hallId: number): Observable<HallRules> {
+    return this.http.get<HallRules>(`${this.url}/halls/${hallId}/rules`);
+  }
+
+  /** `true`/`false` switches a rule on or off for the hall; `null` goes back to the default. */
+  setForHall(hallId: number, switches: Record<string, boolean | null>): Observable<HallRules> {
+    return this.http.put<HallRules>(`${this.url}/halls/${hallId}/rules`, { switches });
   }
 }

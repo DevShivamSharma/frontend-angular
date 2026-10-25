@@ -66,6 +66,18 @@
             hidden
             (change)="importPlan($event)"
           />
+          @if (store.pricing()) {
+            <button
+              type="button"
+              class="tool"
+              (click)="openRates()"
+              [disabled]="store.busy()"
+              pTooltip="The rate card the stalls are priced by"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="payments" /><span>Pricing</span>
+            </button>
+          }
           <button
             type="button"
             class="tool auto"
@@ -581,6 +593,16 @@
               <span>
                 {{ r.reviewedBy ?? 'The venue' }} sent version {{ r.revision }} back on
                 {{ r.reviewedAt | date: 'd MMM y, HH:mm' }}: <b>{{ r.note }}</b>
+                @if (r.attachments?.length) {
+                  <span class="proof">
+                    Proof:
+                    @for (file of r.attachments; track file.id) {
+                      <button type="button" class="link" (click)="downloadProof(file)">
+                        {{ file.name }}
+                      </button>
+                    }
+                  </span>
+                }
               </span>
             }
           }
@@ -630,6 +652,57 @@
                   <b>{{ stats().saleable | number: '1.0-0' }} m²</b> to sell;
                   <b>{{ stats().blocked | number }}</b> blocked.
                 </p>
+                @if (store.pricing(); as pricing) {
+                  <p class="small">
+                    @if (pricing.card) {
+                      Value <b>{{ rupees(store.planValue()) }}</b> before GST
+                      @if (store.unpriced().length) {
+                        · <b>{{ store.unpriced().length | number }}</b> without a price
+                      }
+                    } @else {
+                      No rates yet: set them under <b>Pricing</b> to price the stalls.
+                    }
+                  </p>
+                  <button type="button" class="outline" (click)="openPrices()">
+                    <app-icon name="payments" />Stall prices
+                  </button>
+                }
+                <div class="colour" role="group" aria-label="Colour the stalls by">
+                  <span class="small">Colour by</span>
+                  @for (mode of colourModes; track mode.id) {
+                    <button
+                      type="button"
+                      class="chip"
+                      [class.on]="colourBy() === mode.id"
+                      [attr.aria-pressed]="colourBy() === mode.id"
+                      (click)="colourBy.set(mode.id)"
+                    >
+                      {{ mode.label }}
+                    </button>
+                  }
+                </div>
+                @if (colourBy() === 'price') {
+                  <ul class="legend-list">
+                    @for (band of priceBands().bands; track band.label) {
+                      <li>
+                        <span class="swatch" [style.background]="band.color"></span>
+                        {{ band.label }} <span class="muted">· {{ band.count }}</span>
+                      </li>
+                    } @empty {
+                      <li class="muted">No prices yet: set the rates under Pricing.</li>
+                    }
+                  </ul>
+                } @else if (colourBy() === 'scheme') {
+                  <ul class="legend-list">
+                    <li>
+                      <span class="swatch" [style.background]="schemeColors.shell"></span>Shell
+                      scheme
+                    </li>
+                    <li>
+                      <span class="swatch" [style.background]="schemeColors.raw"></span>Bare space
+                    </li>
+                  </ul>
+                }
               }
             </section>
 
@@ -767,6 +840,7 @@
           [tool]="tool()"
           [snapStep]="snapStep()"
           [categoryColors]="categoryColors()"
+          [stallColors]="stallColors()"
           [readonly]="ro"
           [showGrid]="showGrid()"
           [showLabels]="showLabels()"
@@ -788,6 +862,7 @@
             [selection]="store.selection()"
             tool="pan"
             [categoryColors]="categoryColors()"
+            [stallColors]="stallColors()"
             [readonly]="true"
             [showGrid]="showGrid()"
             [showLabels]="showLabels()"

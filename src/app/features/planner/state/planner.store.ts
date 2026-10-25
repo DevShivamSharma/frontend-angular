@@ -5,6 +5,7 @@ import { ApiError } from '../../../core/http/api-error';
 import { NotifierService } from '../../../core/notification/notifier.service';
 import { PlansApiService } from '../data/plans-api.service';
 import type { CategoryRef } from '../domain/planner-hall.models';
+import type { RateCardView } from '../domain/rate-card.models';
 import { plannerFloor, PlannerFloor } from '../domain/planner-geometry';
 import type {
   PlanContent,
@@ -69,13 +70,27 @@ export class PlannerStore {
 
   /** The stalls' prices as saved; null when this member may not see prices. */
   readonly pricing = signal<PlanPricing | null>(null);
+  /** Sets the rate card the stalls are priced by (after it is opened or saved). */
+  setRateCard(card: RateCardView): void {
+    this.pricing.set({
+      card: card.card,
+      prices: [],
+      canManage: card.canManage,
+      readOnlyReason: card.readOnlyReason,
+    });
+  }
+
   /** Each stall's price as the plan is now, unsaved changes too; null: none. */
   readonly prices = computed(() => {
     const pricing = this.pricing();
     const out = new Map<string, StallPrice | null>();
     if (!pricing) return out;
     const own = new Map(pricing.prices.map((p) => [p.stallId, p] as const));
-    for (const s of this.plan().stalls) out.set(s.id, stallPrice(s, pricing.card, own.get(s.id)));
+    for (const s of this.plan().stalls) {
+      // A price set on the stall comes before the rate card's.
+      const alone = s.price != null ? { price: s.price, note: null } : own.get(s.id);
+      out.set(s.id, stallPrice(s, pricing.card, alone));
+    }
     return out;
   });
   /** Stalls for sale with no price yet. */
@@ -263,20 +278,26 @@ export class PlannerStore {
    * External events: sends the plan for approval, takes it back, or (the venue) approves it or
    * sends it back. Who may edit changes with each, so the planner opens again afterwards.
    */
-  async review(step: 'submit' | 'withdraw' | 'approve' | 'reject', note = ''): Promise<boolean> {
+  async review(
+    step: 'submit' | 'withdraw' | 'approve' | 'reject' | 'reopen',
+    note = '',
+    files: File[] = [],
+  ): Promise<boolean> {
     const { eventId, hallId } = this.target;
     const sent = this.view()?.plan.review?.revision ?? this.revision();
     const calls = {
       submit: () => this.api.submit(eventId, hallId, this.revision()),
       withdraw: () => this.api.withdraw(eventId, hallId),
       approve: () => this.api.approve(eventId, hallId, sent),
-      reject: () => this.api.reject(eventId, hallId, sent, note),
+      reject: () => this.api.reject(eventId, hallId, sent, note, files),
+      reopen: () => this.api.reopen(eventId, hallId),
     };
     const done = {
       submit: 'Sent to ITPO for approval.',
       withdraw: 'Taken back. You can change the plan again.',
       approve: 'Approved. The organiser can publish it now.',
       reject: 'Sent back to the organiser with your note.',
+      reopen: 'Reopened. The organiser can change the plan and send it again.',
     };
     this.busy.set(true);
     try {

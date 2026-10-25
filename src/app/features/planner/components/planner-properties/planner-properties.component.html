@@ -38,6 +38,11 @@
   } @else if (stalls().length === 1) {
     @let s = stalls()[0];
     <h3>Stall {{ label(s) }}</h3>
+    @if (priceOf(s); as price) {
+      <p class="price small" [title]="price.reckoning">
+        <b>{{ rupees(price.price) }}</b> <span class="muted">· {{ price.reckoning }}</span>
+      </p>
+    }
     <div class="pair">
       <label
         >Island / prefix
@@ -173,6 +178,20 @@
       }
     </fieldset>
     <label
+      >Own price (₹, before GST)
+      <p-inputnumber
+        [ngModel]="s.price ?? null"
+        (onBlur)="ownPrice($event)"
+        (onClear)="patch.emit({ price: null })"
+        [min]="0"
+        [maxFractionDigits]="2"
+        [showClear]="true"
+        placeholder="The rate card's price"
+        [disabled]="ro"
+      />
+    </label>
+    <p class="muted small">Set on this stall, it is used instead of the rate card's price.</p>
+    <label
       >Location
       <input
         pInputText
@@ -205,6 +224,24 @@
       <dt>Area</dt>
       <dd>{{ stallsArea() | number: '1.0-1' }} m²</dd>
     </dl>
+    <label
+      >Price of all (₹, before GST)
+      <p-inputnumber
+        [ngModel]="null"
+        (onBlur)="ownPrice($event)"
+        (onClear)="patch.emit({ price: null })"
+        [min]="0"
+        [maxFractionDigits]="2"
+        [showClear]="true"
+        placeholder="Type a price to set on all"
+        [disabled]="ro"
+      />
+    </label>
+    @if (!ro) {
+      <button pButton [outlined]="true" size="small" (click)="patch.emit({ price: null })">
+        Use the rate card's price for all
+      </button>
+    }
     <label
       >Categories of all
       <p-multiselect

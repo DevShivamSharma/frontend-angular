@@ -40,6 +40,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'Setup',
     staffOnly: true,
   },
+  { label: 'Audit trail', icon: 'pi-history', route: '/audit', group: 'Setup', staffOnly: true },
 ];
 
 export interface NavGroup {
@@ -47,11 +48,11 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-/** The items a user may see, under their headings in the order the headings first appear. */
+/** The items under their headings, in the order the headings first appear. */
 export function groupNav(items: readonly NavItem[]): NavGroup[] {
   const groups = new Map<string, NavItem[]>();
   for (const item of items) {
     groups.set(item.group, [...(groups.get(item.group) ?? []), item]);
   }
-  return [...groups].map(([title, grouped]) => ({ title, items: grouped }));
+  return [...groups].map(([title, list]) => ({ title, items: list }));
 }

@@ -2,6 +2,9 @@
   <div class="bar">
     <h2>
       Halls <span class="text-muted">({{ store().halls().length }})</span>
+      @if (approvedSummary(); as summary) {
+        <span class="summary">{{ summary }}</span>
+      }
     </h2>
     @if (!readonly()) {
       <p-button label="Add halls" icon="pi pi-plus" (onClick)="openAdd()" />
@@ -42,10 +45,83 @@
             <p class="meta">
               {{ hall.forStallFnb ? 'F&B stalls' : 'Stalls' }} · {{ hall.stallCount }}
             </p>
-            <p-tag
-              [value]="hall.isPriceAdded ? 'Prices added' : 'Prices not added'"
-              [severity]="hall.isPriceAdded ? 'success' : 'secondary'"
-            />
+            <div class="chips">
+              @if (statusOf(hall); as plan) {
+                <p-tag
+                  [value]="statusLabel(plan.status)"
+                  [severity]="statusSeverity(plan.status)"
+                />
+              }
+              <p-tag
+                [value]="hall.isPriceAdded ? 'Prices added' : 'Prices not added'"
+                [severity]="hall.isPriceAdded ? 'success' : 'secondary'"
+              />
+            </div>
+            @if (statusOf(hall); as plan) {
+              @if (plan.status === 'rejected' && plan.review) {
+                <div class="banner" role="note">
+                  <b>Sent back:</b> {{ plan.review.note }}
+                  @for (file of plan.review.attachments ?? []; track file.id) {
+                    <button type="button" class="link" (click)="download(hall, file)">
+                      {{ file.name }}
+                    </button>
+                  }
+                </div>
+              }
+              @if (plan.canSubmit || plan.canWithdraw || plan.canApprove || plan.canReopen) {
+                <div class="workflow">
+                  @if (plan.canSubmit) {
+                    <p-button
+                      label="Send for approval"
+                      size="small"
+                      [disabled]="plan.violations > 0 || working() === hall.eventHallId"
+                      [title]="
+                        plan.violations > 0
+                          ? plan.violations + ' rule(s) are broken: fix them in the planner first'
+                          : ''
+                      "
+                      (onClick)="send(hall, plan)"
+                    />
+                  }
+                  @if (plan.canWithdraw) {
+                    <p-button
+                      label="Withdraw"
+                      size="small"
+                      severity="secondary"
+                      [outlined]="true"
+                      [disabled]="working() === hall.eventHallId"
+                      (onClick)="withdraw(hall)"
+                    />
+                  }
+                  @if (plan.canApprove) {
+                    <p-button
+                      label="Approve"
+                      size="small"
+                      [disabled]="plan.violations > 0 || working() === hall.eventHallId"
+                      (onClick)="approve(hall, plan)"
+                    />
+                    <p-button
+                      label="Reject"
+                      size="small"
+                      severity="danger"
+                      [outlined]="true"
+                      [disabled]="working() === hall.eventHallId"
+                      (onClick)="reject(hall, plan)"
+                    />
+                  }
+                  @if (plan.canReopen) {
+                    <p-button
+                      label="Reopen"
+                      size="small"
+                      severity="secondary"
+                      [outlined]="true"
+                      [disabled]="working() === hall.eventHallId"
+                      (onClick)="reopen(hall)"
+                    />
+                  }
+                </div>
+              }
+            }
             <div class="foot">
               @if (plannerBase(); as base) {
                 <a

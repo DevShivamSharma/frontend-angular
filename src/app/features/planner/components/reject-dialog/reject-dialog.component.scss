@@ -1,0 +1,109 @@
+.head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+  min-width: min(520px, 88vw);
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font: var(--app-label-medium);
+}
+
+:host ::ng-deep textarea {
+  width: 100%;
+}
+
+.proof {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font: var(--app-label-medium);
+}
+
+.drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px;
+  border: 2px dashed var(--app-outline);
+  border-radius: 12px;
+  color: var(--app-on-surface-variant);
+
+  &.over {
+    border-color: var(--app-primary);
+    background: var(--app-primary-container);
+  }
+}
+
+.browse {
+  display: inline;
+  color: var(--app-primary);
+  font: var(--app-label-large);
+  text-decoration: underline;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--app-primary);
+  }
+}
+
+.files {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--app-outline-variant);
+    border-radius: 8px;
+  }
+}
+
+.name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.x {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--app-on-surface-variant);
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  color: var(--app-error);
+  font: var(--app-body-small);
+}
+
+.small {
+  margin: 0;
+  font: var(--app-body-small);
+}

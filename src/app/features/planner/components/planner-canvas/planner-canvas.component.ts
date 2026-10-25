@@ -193,6 +193,8 @@ export class PlannerCanvasComponent {
   /** Metres positions and sizes snap to. */
   readonly snapStep = input(0.5);
   readonly categoryColors = input<ReadonlyMap<string, string>>(new Map());
+  /** A colour for single stalls (by their id), before their category's: a price band or a scheme. */
+  readonly stallColors = input<ReadonlyMap<string, string> | null>(null);
   readonly readonly = input(false);
   readonly showGrid = input(true);
   readonly showLabels = input(true);
@@ -328,6 +330,7 @@ export class PlannerCanvasComponent {
       this.plan();
       this.selection();
       this.categoryColors();
+      this.stallColors();
       this.showLabels();
       untracked(() => this.buildPlan());
     });
@@ -359,6 +362,7 @@ export class PlannerCanvasComponent {
         plan: this.plan(),
         selection: this.selection(),
         categoryColors: this.categoryColors(),
+        stallColors: this.stallColors(),
         showGrid: this.showGrid(),
         showLabels: this.showLabels(),
       };
@@ -882,6 +886,7 @@ export class PlannerCanvasComponent {
     const selected = new Set(sel?.ids ?? []);
     const g = this.planGroup;
     const colors = this.categoryColors();
+    const own = this.stallColors();
 
     for (const z of plan.zones) {
       const on = sel?.kind === 'zone' && selected.has(z.id);
@@ -910,7 +915,11 @@ export class PlannerCanvasComponent {
     const color = new T.Color();
     for (const s of plan.stalls) {
       const r = stallRect(s);
-      color.set(s.isBlocked ? STALL_BLOCKED : (colors.get(s.categoryIds[0] ?? '') ?? STALL_FILL));
+      color.set(
+        s.isBlocked
+          ? STALL_BLOCKED
+          : (own?.get(s.id) ?? colors.get(s.categoryIds[0] ?? '') ?? STALL_FILL),
+      );
       // A stall with cells cut away is drawn cell by cell, walled round the cuts.
       const cut = s.cutCells?.length > 0;
       const cells = cut ? keptCells(s) : [r];

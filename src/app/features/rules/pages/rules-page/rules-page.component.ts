@@ -33,6 +33,9 @@ import {
 } from '../../components/rule-switch-list/rule-switch-list.component';
 import { RuleValuesFormComponent } from '../../components/rule-values-form/rule-values-form.component';
 import { RuleCatalogue, RuleSet, RuleSetChanges } from '../../data/rules.models';
+import { HallRulesPanelComponent } from '../../components/hall-rules-panel/hall-rules-panel.component';
+import { ItpoHallsApiService } from '../../../halls/data/itpo-halls-api.service';
+import { FormsModule } from '@angular/forms';
 import { RulesApiService } from '../../data/rules-api.service';
 import { itemsOfRuleSet } from '../../domain/rule-items';
 import { createValuesForm, toRuleValues, ValuesForm } from '../../domain/rule-values.form';
@@ -52,6 +55,8 @@ import { createValuesForm, toRuleValues, ValuesForm } from '../../domain/rule-va
     PageHeaderComponent,
     RuleSwitchListComponent,
     RuleValuesFormComponent,
+    HallRulesPanelComponent,
+    FormsModule,
   ],
   templateUrl: './rules-page.component.html',
   styleUrl: './rules-page.component.scss',
@@ -75,6 +80,22 @@ export class RulesPageComponent {
   protected readonly profile = new FormControl('free', { nonNullable: true });
   protected readonly references = new FormArray<ReferenceGroup>([]);
 
+  private readonly hallsApi = inject(ItpoHallsApiService);
+  /** The hall whose rules are shown; null: the default rules every hall follows. */
+  protected readonly hallId = signal<number | null>(null);
+  private readonly halls = signal<Array<{ id: number; name: string }>>([]);
+  protected readonly scopes = computed(() => [
+    { id: null as number | null, label: 'All halls (the default rules)' },
+    ...this.halls().map((h) => ({ id: h.id as number | null, label: h.name })),
+  ]);
+  protected readonly hallName = computed(
+    () => this.halls().find((h) => h.id === this.hallId())?.name ?? 'this hall',
+  );
+
+  protected chooseHall(id: number | null): void {
+    this.hallId.set(id);
+  }
+
   private loaded: RuleSet | null = null;
   private readonly switchesChanged = signal(false);
   private readonly formChanged = signal(false);
@@ -91,6 +112,13 @@ export class RulesPageComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => this.tracking?.unsubscribe());
+    this.hallsApi
+      .halls({ page: 1, size: 200 })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (page) => this.halls.set(page.items.map((h) => ({ id: h.id, name: h.name }))),
+        error: () => undefined,
+      });
     this.load();
   }
 

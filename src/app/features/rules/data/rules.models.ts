@@ -87,3 +87,10 @@ export interface EventRules {
   rules: EventRule[];
   values: RuleValues;
 }
+
+/** A hall's rules: the default, and what ITPO switched for this hall. */
+export interface HallRules {
+  hall: { id: number; name: string };
+  rules: EventRule[];
+  values: RuleValues;
+}

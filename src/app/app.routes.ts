@@ -100,6 +100,14 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'audit',
+            title: 'Audit trail',
+            loadComponent: () =>
+              import('./features/audit/pages/audit-page/audit-page.component').then(
+                (m) => m.AuditPageComponent,
+              ),
+          },
+          {
             path: 'rules',
             title: 'Planning rules',
             loadComponent: () =>

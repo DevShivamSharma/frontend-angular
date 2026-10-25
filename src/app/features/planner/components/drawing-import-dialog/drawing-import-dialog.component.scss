@@ -305,3 +305,64 @@ details summary {
 .dxf {
   margin-right: auto;
 }
+
+.ai {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 10px;
+  background: var(--app-surface-container-low);
+}
+
+.ai__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.ai__list {
+  display: grid;
+  gap: 4px;
+  max-height: 9rem;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.ai__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+
+  &:not(:disabled) {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--app-surface-container-high);
+    }
+  }
+}
+
+.ai__kind {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--app-surface-container-high);
+  font: var(--app-label-small);
+
+  &[data-kind='missing'] {
+    background: var(--app-error-container);
+    color: var(--app-on-error-container);
+  }
+}

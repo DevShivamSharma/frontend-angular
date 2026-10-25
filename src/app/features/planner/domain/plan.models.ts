@@ -30,6 +30,8 @@ export interface PlanStall {
   cutCells: Array<[number, number]>;
   /** m² the hall drawing writes on the stall, sold as its area; null: its cells. */
   labelArea?: number | null;
+  /** ₹ before GST set on the stall itself, before the rate card's price; null or none: the card prices it. */
+  price?: number | null;
   scheme: StallScheme;
   categoryIds: string[];
   isPremium: boolean;
@@ -99,6 +101,33 @@ export interface PlanPricing {
   readOnlyReason: string | null;
 }
 
+/** A proof file attached when a plan was sent back. */
+export interface PlanAttachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+}
+
+export type PlanStatus = 'not_started' | 'draft' | 'planned' | 'pending' | 'approved' | 'rejected';
+
+/** One hall of an event: where its plan stands, and what this user may do with it next. */
+export interface HallPlanStatus {
+  eventHallId: string;
+  hallName: string;
+  status: PlanStatus;
+  revision: number;
+  stalls: number;
+  updatedAt: string | null;
+  review: Omit<PlanReview, 'submittedBy' | 'reviewedBy'> | null;
+  /** Rules the saved plan breaks; Send for approval waits until there are none. */
+  violations: number;
+  canSubmit: boolean;
+  canWithdraw: boolean;
+  canApprove: boolean;
+  canReopen: boolean;
+}
+
 export interface PlanReview {
   status: 'submitted' | 'approved' | 'rejected';
   /** The saved revision that was sent. */
@@ -109,6 +138,8 @@ export interface PlanReview {
   reviewedBy: string | null;
   /** Why the venue sent it back. */
   note: string | null;
+  /** The proof the venue attached when sending it back. */
+  attachments?: PlanAttachment[];
 }
 
 export interface PlannerView {
@@ -127,6 +158,8 @@ export interface PlannerView {
   canSubmit: boolean;
   canWithdraw: boolean;
   canApprove: boolean;
+  /** ITPO staff may take an approved hall back to Draft. */
+  canReopen: boolean;
 }
 
 /** A broken rule, and the zones, stalls or seats it is about (none: the whole plan). */

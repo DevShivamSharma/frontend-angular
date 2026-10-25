@@ -76,7 +76,29 @@ export interface DrawingGridArea {
   area: number;
 }
 
+/** What the vision model noticed about the stalls found: a hint to look at, never a place. */
+export interface AiFinding {
+  kind: 'missing' | 'extra' | 'wrong';
+  /** The stall it is about; `missing` has none. */
+  stallKey: string | null;
+  message: string;
+  /** Page point the model pointed at, for a missing stall. */
+  at: DrawingPoint | null;
+  /** Index in `unresolved` of the drawing's own label close to it. */
+  unresolved: number | null;
+}
+
+/** The second look at the plan: `skipped` without a key, `failed` when the model did not answer. */
+export interface AiCheck {
+  status: 'done' | 'skipped' | 'failed';
+  model: string | null;
+  findings: AiFinding[];
+  message?: string;
+}
+
 export interface DrawingImportResult {
+  /** Missing from older backends. */
+  aiCheck?: AiCheck;
   page: { width: number; height: number; rotation: number };
   layers: Array<{ name: string; role: string; paths: number }>;
   usedLayers: boolean;

@@ -85,6 +85,7 @@ const ICONS: Record<string, string> = {
   numbers: 'hashtag',
   object: 'box',
   open_in_new: 'external-link',
+  payments: 'wallet',
   palette: 'palette',
   pause: 'pause-circle',
   person_add: 'user-plus',

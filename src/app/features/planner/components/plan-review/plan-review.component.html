@@ -16,6 +16,20 @@
       <span class="status" [class]="status().tone" role="status">
         <app-icon [name]="status().icon" />{{ status().label }}
       </span>
+      @if (v.canReopen) {
+        <div class="actions">
+          <button
+            type="button"
+            class="btn quiet"
+            (click)="reopen()"
+            [disabled]="store.busy()"
+            pTooltip="Take the approved plan back to Draft so the organiser can change it"
+            tooltipPosition="bottom"
+          >
+            <app-icon name="restart_alt" />Reopen
+          </button>
+        </div>
+      }
       @if (v.canApprove) {
         <div class="actions">
           <button

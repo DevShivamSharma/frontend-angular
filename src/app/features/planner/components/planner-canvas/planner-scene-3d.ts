@@ -65,6 +65,7 @@ export interface Scene3dInput {
   plan: PlanContent;
   selection: Selection | null;
   categoryColors: ReadonlyMap<string, string>;
+  stallColors?: ReadonlyMap<string, string> | null;
   showGrid: boolean;
   showLabels: boolean;
 }
@@ -135,7 +136,9 @@ export function buildScene3d(g: T.Group, input: Scene3dInput, extent: Rect): voi
       ? SELECTED
       : s.isBlocked
         ? STALL_BLOCKED
-        : (input.categoryColors.get(s.categoryIds[0] ?? '') ?? STALL_FILL);
+        : (input.stallColors?.get(s.id) ??
+          input.categoryColors.get(s.categoryIds[0] ?? '') ??
+          STALL_FILL);
     // A stall with cells cut away: a tile per kept cell, shell walls round the cuts too.
     if (s.cutCells?.length) {
       const material = new T.MeshLambertMaterial({ color });

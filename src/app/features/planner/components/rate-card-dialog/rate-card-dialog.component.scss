@@ -1,0 +1,81 @@
+.head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+  min-width: min(760px, 90vw);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--app-outline-variant);
+}
+
+.tab {
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--app-on-surface-variant);
+  font: var(--app-label-large);
+  cursor: pointer;
+
+  &.on {
+    border-bottom-color: var(--app-primary);
+    color: var(--app-primary);
+  }
+}
+
+.period {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 12px;
+}
+
+.period__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  gap: 10px 12px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font: var(--app-label-medium);
+}
+
+.empty {
+  padding: 12px;
+  text-align: center;
+}
+
+.error {
+  margin: 0;
+  color: var(--app-error);
+}
+
+.small {
+  margin: 0;
+  font: var(--app-body-small);
+}
+
+:host ::ng-deep .p-inputnumber,
+:host ::ng-deep .p-inputnumber-input,
+:host ::ng-deep .p-datepicker,
+:host ::ng-deep .p-datepicker-input {
+  width: 100%;
+}

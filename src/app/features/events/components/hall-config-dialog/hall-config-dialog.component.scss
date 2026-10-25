@@ -1,0 +1,61 @@
+.head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+  min-width: min(640px, 90vw);
+}
+
+.row {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 12px;
+}
+
+.row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 10px 12px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font: var(--app-label-medium);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error {
+  margin: 0;
+  color: var(--app-error);
+  font: var(--app-body-small);
+}
+
+.small {
+  margin: 0;
+  font: var(--app-body-small);
+}
+
+:host ::ng-deep .p-datepicker,
+:host ::ng-deep .p-datepicker-input,
+:host ::ng-deep textarea {
+  width: 100%;
+}

@@ -1,0 +1,107 @@
+<div class="page">
+  <app-page-header
+    title="Audit trail"
+    subtitle="Who saved, sent, approved or changed what, and when. Visible to ITPO staff only."
+  />
+
+  <section class="card card--flush" aria-label="Audit trail">
+    <form class="filters" [formGroup]="filters" (submit)="$event.preventDefault()">
+      <input
+        pInputText
+        formControlName="event"
+        type="search"
+        placeholder="Event"
+        aria-label="Event"
+      />
+      <input pInputText formControlName="user" type="search" placeholder="User" aria-label="User" />
+      <p-select
+        formControlName="action"
+        [options]="actions()"
+        optionLabel="label"
+        optionValue="id"
+        placeholder="Any action"
+        [showClear]="true"
+        appendTo="body"
+        ariaLabel="Action"
+      />
+      <p-datepicker
+        formControlName="from"
+        dateFormat="d M yy"
+        placeholder="From"
+        [showClear]="true"
+        appendTo="body"
+      />
+      <p-datepicker
+        formControlName="to"
+        dateFormat="d M yy"
+        placeholder="To"
+        [showClear]="true"
+        appendTo="body"
+      />
+      <p-button label="Clear" [text]="true" severity="secondary" (onClick)="clear()" />
+      <span class="text-muted count" aria-live="polite">
+        @if (!loading() && !failed()) {
+          {{ total() }} {{ total() === 1 ? 'entry' : 'entries' }}
+        }
+      </span>
+    </form>
+
+    @if (failed()) {
+      <app-empty-state
+        icon="pi-exclamation-triangle"
+        title="The audit trail could not be loaded"
+        message="Check your connection and try again."
+      >
+        <p-button label="Try again" icon="pi pi-refresh" (onClick)="retry()" />
+      </app-empty-state>
+    } @else if (loading()) {
+      <p class="loading text-muted" role="status">Loading…</p>
+    } @else if (items().length) {
+      <div class="wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Who</th>
+              <th>Action</th>
+              <th>Event</th>
+              <th>Hall</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of items(); track row.id) {
+              <tr>
+                <td class="nowrap">{{ row.at | date: 'd MMM y, HH:mm' }}</td>
+                <td>
+                  {{ row.actor.name ?? '—' }}
+                  <span class="muted small">{{
+                    row.actor.type === 'organiser' ? 'Organiser' : 'ITPO'
+                  }}</span>
+                </td>
+                <td>{{ actionLabel(row.action) }}</td>
+                <td>{{ row.event.name ?? '—' }}</td>
+                <td>{{ row.hall.name ?? '—' }}</td>
+                <td class="detail">{{ row.detail ?? '' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p-paginator
+        class="list-footer"
+        [first]="first()"
+        [rows]="pageSize"
+        [totalRecords]="total()"
+        [showCurrentPageReport]="false"
+        (onPageChange)="onPage($event)"
+      />
+    } @else {
+      <app-empty-state
+        icon="pi-history"
+        title="Nothing recorded for these filters"
+        message="Actions on plans, rates and rules show here as they happen."
+      />
+    }
+  </section>
+</div>

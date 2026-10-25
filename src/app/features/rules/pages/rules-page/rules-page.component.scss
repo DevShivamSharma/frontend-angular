@@ -86,3 +86,19 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+.scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.scope label {
+  font-weight: 500;
+}
+
+:host ::ng-deep .scope__select {
+  min-width: 20rem;
+  max-width: 100%;
+}

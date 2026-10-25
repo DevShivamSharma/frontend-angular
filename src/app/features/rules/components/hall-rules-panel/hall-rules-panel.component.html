@@ -1,0 +1,49 @@
+<section class="card card--flush" aria-label="Planning rules of the hall">
+  <div class="bar">
+    <div>
+      <h2>Rules of {{ hallName() }}</h2>
+      <p class="text-muted">
+        These follow the default rules. Switch one here to change it for this hall only.
+        @if (changedCount()) {
+          {{ changedCount() }} {{ changedCount() === 1 ? 'rule differs' : 'rules differ' }} from the
+          default.
+        }
+      </p>
+    </div>
+    @if (changedCount()) {
+      <p-button
+        label="Use all defaults"
+        icon="pi pi-undo"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="busy()"
+        (onClick)="useAllDefaults()"
+      />
+    }
+  </div>
+
+  @if (failed()) {
+    <app-empty-state
+      icon="pi-exclamation-triangle"
+      title="The rules could not be loaded"
+      message="Check your connection and try again."
+    >
+      <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
+    </app-empty-state>
+  } @else if (loading()) {
+    <p class="loading text-muted" role="status">
+      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Loading rules…
+    </p>
+  } @else {
+    <div class="list">
+      <app-rule-switch-list
+        [items]="items()"
+        [eventMode]="true"
+        [busy]="busy()"
+        [revision]="revision()"
+        (toggled)="toggle($event)"
+        (reset)="useDefault($event)"
+      />
+    </div>
+  }
+</section>

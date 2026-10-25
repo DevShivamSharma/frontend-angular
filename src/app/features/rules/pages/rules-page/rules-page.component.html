@@ -1,10 +1,28 @@
 <div class="page">
   <app-page-header
     title="Planning rules"
-    subtitle="One set of rules for every hall. An event can switch rules off for itself."
+    subtitle="One default set of rules for every hall. A hall, and then an event, can switch rules for itself."
   />
 
-  @if (loading()) {
+  <section class="card scope" aria-label="Whose rules">
+    <label for="rules-scope">Rules for</label>
+    <p-select
+      inputId="rules-scope"
+      [options]="scopes()"
+      optionLabel="label"
+      optionValue="id"
+      [ngModel]="hallId()"
+      (ngModelChange)="chooseHall($event)"
+      [filter]="true"
+      filterBy="label"
+      appendTo="body"
+      styleClass="scope__select"
+    />
+  </section>
+
+  @if (hallId() !== null) {
+    <app-hall-rules-panel [hallId]="hallId()!" [hallName]="hallName()" />
+  } @else if (loading()) {
     <section class="card skeletons" aria-busy="true" aria-label="Loading the rules">
       <p-skeleton height="1.5rem" width="30%" />
       <p-skeleton height="4rem" />

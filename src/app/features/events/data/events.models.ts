@@ -126,6 +126,7 @@ export interface ItpoEventHall {
   hallId: number;
   name: string;
   forStallFnb: boolean;
+  forHorseShoe: boolean;
   stallCount: number;
   isPriceAdded: boolean;
   /** The hall's cover picture (its first image), when it has one. */

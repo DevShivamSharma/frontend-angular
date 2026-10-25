@@ -1,0 +1,49 @@
+<h2 class="dialog-title head"><app-icon name="payments" /> Stall prices</h2>
+<div class="dialog-content">
+  @if (!rows().length) {
+    <p class="muted">No stalls yet.</p>
+  } @else {
+    <p class="muted small">
+      {{ rows().length }} {{ rows().length === 1 ? 'stall' : 'stalls' }} · value
+      {{ rupees(total()) }} before GST
+      @if (unpriced()) {
+        · <b class="warn">{{ unpriced() }} without a price</b>
+      }
+    </p>
+    <div class="wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Stall</th>
+            <th class="num">Area (m²)</th>
+            <th>Scheme</th>
+            <th>How</th>
+            <th class="num">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td>{{ row.label }}</td>
+              <td class="num">{{ row.area | number: '1.0-2' }}</td>
+              <td>{{ row.scheme }}</td>
+              <td class="how">
+                @if (!row.forSale) {
+                  <span class="muted">Not for sale</span>
+                } @else if (row.price) {
+                  {{ row.price.reckoning }}
+                } @else {
+                  <span class="warn">No rate card yet</span>
+                }
+              </td>
+              <td class="num">{{ row.price ? rupees(row.price.price) : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+<div class="dialog-actions">
+  <button pButton type="button" (click)="ref.close()">Close</button>
+</div>

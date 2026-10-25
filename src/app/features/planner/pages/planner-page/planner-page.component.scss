@@ -572,3 +572,59 @@
   min-height: 60vh;
   padding: 24px;
 }
+
+.proof {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-left: 8px;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--app-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.colour {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.chip {
+  padding: 3px 10px;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 999px;
+  background: none;
+  color: var(--app-on-surface-variant);
+  font: var(--app-label-medium);
+  cursor: pointer;
+
+  &.on {
+    border-color: var(--app-primary);
+    background: var(--app-primary-container);
+    color: var(--app-primary);
+  }
+}
+
+.legend-list {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font: var(--app-body-small);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}

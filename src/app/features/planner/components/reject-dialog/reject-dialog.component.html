@@ -1,0 +1,70 @@
+<h2 class="dialog-title head"><app-icon name="undo" /> Send {{ data.hallName }} back</h2>
+<div class="dialog-content stack">
+  <label
+    >Remark for the organiser
+    <textarea
+      pTextarea
+      [formControl]="note"
+      rows="4"
+      maxlength="1000"
+      placeholder="What must change before you can approve it?"
+    ></textarea>
+  </label>
+  @if (note.invalid && note.touched) {
+    <p class="error" role="alert">Say what the organiser should change (at least 3 characters).</p>
+  }
+
+  <div class="proof">
+    <span class="label">Proof <span class="muted">(optional)</span></span>
+    <div
+      class="drop"
+      [class.over]="dragging()"
+      (dragover)="over($event)"
+      (dragleave)="dragging.set(false)"
+      (drop)="drop($event)"
+    >
+      <app-icon name="upload_file" />
+      <span>Drag files here or</span>
+      <label class="browse">
+        browse
+        <input
+          type="file"
+          multiple
+          accept=".jpg,.jpeg,.png,.webp,.pdf,image/*,application/pdf"
+          (change)="pick($event)"
+        />
+      </label>
+    </div>
+    <p class="muted small">
+      Images (JPG, PNG, WebP) and PDF, up to {{ maxFiles }} files, 5 MB each.
+    </p>
+    @if (problem()) {
+      <p class="error" role="alert">{{ problem() }}</p>
+    }
+    @if (files().length) {
+      <ul class="files">
+        @for (file of files(); track file.name + file.size; let i = $index) {
+          <li>
+            <app-icon name="link" />
+            <span class="name">{{ file.name }}</span>
+            <span class="muted">{{ file.size / 1024 | number: '1.0-0' }} KB</span>
+            <button
+              type="button"
+              class="x"
+              [attr.aria-label]="'Remove ' + file.name"
+              (click)="remove(i)"
+            >
+              <app-icon name="close" />
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>
+<div class="dialog-actions">
+  <button pButton type="button" [text]="true" severity="secondary" (click)="ref.close()">
+    Cancel
+  </button>
+  <button pButton type="button" severity="danger" (click)="send()">Send back</button>
+</div>

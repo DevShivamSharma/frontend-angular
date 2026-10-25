@@ -1,0 +1,148 @@
+<h2 class="dialog-title head"><app-icon name="payments" /> Rates for {{ data.hallName }}</h2>
+<div class="dialog-content stack">
+  <!-- Adding or removing a period is a change of a form array, which signals do not see. -->
+  @let _changes = version();
+  <p class="muted small">
+    The same rates SelfCare prices stall bookings from. Rupees before GST, per m²; a period is the
+    days its rates apply (early-bird and late rates).
+    @if (!editable) {
+      <b> {{ data.view.readOnlyReason ?? 'You can look at the rates but not change them.' }}</b>
+    }
+  </p>
+
+  <div class="tabs" role="tablist">
+    @for (type of types; track type) {
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.on]="tab() === type"
+        [attr.aria-selected]="tab() === type"
+        (click)="tab.set(type)"
+      >
+        {{ type }} <span class="muted">({{ periods(type).length }})</span>
+      </button>
+    }
+  </div>
+  <p class="muted small">{{ help[tab()] }}</p>
+
+  @for (period of periods(tab()).controls; track period; let i = $index) {
+    <fieldset class="period" [formGroup]="period" [disabled]="!editable">
+      <div class="period__head">
+        <b>Period {{ i + 1 }}</b>
+        @if (editable && (tab() !== 'General' || periods(tab()).length > 1)) {
+          <button
+            pButton
+            type="button"
+            [text]="true"
+            severity="danger"
+            size="small"
+            (click)="remove(tab(), i)"
+          >
+            <app-icon name="delete" />Remove
+          </button>
+        }
+      </div>
+      <div class="grid">
+        <label
+          >From
+          <p-datepicker
+            formControlName="start"
+            dateFormat="d M yy"
+            appendTo="body"
+            [showIcon]="false"
+          />
+        </label>
+        <label
+          >To
+          <p-datepicker
+            formControlName="end"
+            dateFormat="d M yy"
+            appendTo="body"
+            [showIcon]="false"
+          />
+        </label>
+        <label
+          >Bare space (₹/m²)
+          <p-inputnumber
+            formControlName="bareRate"
+            [min]="0"
+            mode="decimal"
+            [maxFractionDigits]="2"
+          />
+        </label>
+        <label
+          >Shell scheme (₹/m²)
+          <p-inputnumber
+            formControlName="shellRate"
+            [min]="0"
+            mode="decimal"
+            [maxFractionDigits]="2"
+          />
+        </label>
+        <label
+          >2 open sides (+ %)
+          <p-inputnumber
+            formControlName="side2Percent"
+            [min]="0"
+            [max]="1000"
+            suffix=" %"
+            [maxFractionDigits]="2"
+          />
+        </label>
+        <label
+          >3 open sides (+ %)
+          <p-inputnumber
+            formControlName="side3Percent"
+            [min]="0"
+            [max]="1000"
+            suffix=" %"
+            [maxFractionDigits]="2"
+          />
+        </label>
+        <label
+          >4 open sides (+ %)
+          <p-inputnumber
+            formControlName="side4Percent"
+            [min]="0"
+            [max]="1000"
+            suffix=" %"
+            [maxFractionDigits]="2"
+          />
+        </label>
+        <label
+          >Catalogue entry (₹)
+          <p-inputnumber formControlName="catalogueCharge" [min]="0" [maxFractionDigits]="2" />
+        </label>
+        <label
+          >Food &amp; beverage stall (₹)
+          <p-inputnumber
+            formControlName="fnbPrice"
+            [min]="0"
+            [maxFractionDigits]="2"
+            placeholder="Area rate"
+          />
+        </label>
+      </div>
+    </fieldset>
+  } @empty {
+    <p class="muted empty">No {{ tab() }} rates: those stalls are priced as General.</p>
+  }
+
+  @if (editable) {
+    <button pButton type="button" [outlined]="true" size="small" (click)="add(tab())">
+      <app-icon name="add" />Add a period
+    </button>
+  }
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+</div>
+<div class="dialog-actions">
+  <button pButton [text]="true" type="button" (click)="ref.close()">
+    {{ editable ? 'Cancel' : 'Close' }}
+  </button>
+  @if (editable) {
+    <button pButton type="button" [loading]="saving()" (click)="save()">Save rates</button>
+  }
+</div>

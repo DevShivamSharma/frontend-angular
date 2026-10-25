@@ -1,0 +1,50 @@
+.head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.wrap {
+  min-width: min(780px, 88vw);
+  max-height: 55vh;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--app-body-medium);
+}
+
+th,
+td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--app-outline-variant);
+  text-align: left;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: var(--app-surface-container-lowest);
+  font: var(--app-label-medium);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.how {
+  color: var(--app-on-surface-variant);
+  font: var(--app-body-small);
+}
+
+.warn {
+  color: var(--app-error);
+}
+
+.small {
+  margin: 0 0 8px;
+}

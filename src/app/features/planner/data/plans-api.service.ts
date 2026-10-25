@@ -5,10 +5,12 @@ import { Observable, map, switchMap, throwError, from, of } from 'rxjs';
 import { ApiError } from '../../../core/http/api-error';
 
 import { API_CONFIG } from '../../../core/config/api-config';
+import type { RateCardView, RatePeriod } from '../domain/rate-card.models';
 import type { DrawingImportResult } from '../domain/drawing-import.models';
 import type { HallFloor } from '../domain/floor.models';
 import type { EventHallRules, EventKind, EventType } from '../domain/planner-hall.models';
 import type {
+  HallPlanStatus,
   PlanContent,
   PlanFinding,
   PlannerView,
@@ -34,6 +36,7 @@ interface RawPlannerView {
   canSubmit: boolean;
   canWithdraw: boolean;
   canApprove: boolean;
+  canReopen: boolean;
   event: {
     id: string;
     name: string;
@@ -113,6 +116,17 @@ export class PlansApiService {
     );
   }
 
+  /** The hall's rate card, and whether this user may change it. */
+  rateCard(eventId: string, hallId: string): Observable<RateCardView> {
+    return this.http.get<RateCardView>(`${this.ems}/events/${eventId}/halls/${hallId}/pricing`);
+  }
+
+  saveRateCard(eventId: string, hallId: string, periods: RatePeriod[]): Observable<RateCardView> {
+    return this.http.put<RateCardView>(`${this.ems}/events/${eventId}/halls/${hallId}/pricing`, {
+      periods,
+    });
+  }
+
   /** The rules the plan breaks because of `changed`, or as a whole. */
   check(
     eventId: string,
@@ -164,15 +178,47 @@ export class PlansApiService {
       .pipe(map(toStallPlan));
   }
 
+  /** Sends the plan back with a note, and files as proof when there are any. */
   reject(
     eventId: string,
     hallId: string,
     revision: number,
     note: string,
+    files: File[] = [],
   ): Observable<StallPlanView> {
+    const form = new FormData();
+    form.append('revision', String(revision));
+    form.append('note', note);
+    for (const file of files) form.append('files', file, file.name);
     return this.http
-      .post<RawPlan>(`${this.base(eventId, hallId)}/reject`, { revision, note })
+      .post<RawPlan>(`${this.base(eventId, hallId)}/reject`, form)
       .pipe(map(toStallPlan));
+  }
+
+  /** ITPO takes an approved hall back to Draft. */
+  reopen(eventId: string, hallId: string): Observable<StallPlanView> {
+    return this.http
+      .post<RawPlan>(`${this.base(eventId, hallId)}/reopen`, {})
+      .pipe(map(toStallPlan));
+  }
+
+  /** Where the plan of each hall of the event stands. */
+  planStatuses(eventId: string): Observable<HallPlanStatus[]> {
+    return this.http.get<HallPlanStatus[]>(`${this.ems}/events/${eventId}/plan-statuses`);
+  }
+
+  /** How many plans wait for ITPO's answer (ITPO staff). */
+  pendingCount(): Observable<number> {
+    return this.http
+      .get<{ count: number }>(`${this.ems}/plan-reviews/pending-count`)
+      .pipe(map((r) => r.count));
+  }
+
+  /** A proof file of a rejection. */
+  attachment(eventId: string, hallId: string, id: string): Observable<Blob> {
+    return this.http
+      .get(`${this.base(eventId, hallId)}/attachments/${id}`, { responseType: 'blob' })
+      .pipe(switchMap((blob) => this.fileOrError(blob)));
   }
 }
 
@@ -229,5 +275,6 @@ function toPlannerView(raw: RawPlannerView): PlannerView {
     canSubmit: raw.canSubmit,
     canWithdraw: raw.canWithdraw,
     canApprove: raw.canApprove,
+    canReopen: raw.canReopen === true,
   };
 }

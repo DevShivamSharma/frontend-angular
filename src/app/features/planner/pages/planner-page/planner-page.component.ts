@@ -81,6 +81,10 @@ import {
   PlannerPropertiesComponent,
   StallPatch,
 } from '../../components/planner-properties/planner-properties.component';
+import { saveBlob } from '../../../../shared/files/save-blob';
+import type { PlanAttachment } from '../../domain/plan.models';
+import { priceBandsOf, SCHEME_COLORS } from '../../domain/price-bands';
+import { rupees } from '../../domain/stall-price';
 import { ApiError } from '../../../../core/http/api-error';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PlansApiService } from '../../data/plans-api.service';
@@ -96,6 +100,15 @@ import {
   type DrawingImportOutcome,
 } from '../../components/drawing-import-dialog/drawing-import-dialog.component';
 import { PlannerSkeletonComponent } from '../../components/planner-skeleton/planner-skeleton.component';
+import {
+  RateCardData,
+  RateCardDialogComponent,
+} from '../../components/rate-card-dialog/rate-card-dialog.component';
+import {
+  StallPricesData,
+  StallPricesDialogComponent,
+} from '../../components/stall-prices-dialog/stall-prices-dialog.component';
+import type { RateCardView } from '../../domain/rate-card.models';
 import { PlannerAssistantComponent } from '../../components/planner-assistant/planner-assistant.component';
 import { type PlannerAgentCtx } from '../../domain/planner-agent';
 import { type PlannerTourCtx, plannerTour } from '../../domain/planner-tour';
@@ -302,6 +315,7 @@ export class PlannerPageComponent implements HasUnsavedChanges {
     try {
       const view = await firstValueFrom(this.api.get(eventId, hallId));
       this.store.load(eventId, hallId, view);
+      void this.loadRateCard(eventId, hallId);
       if (view.plan.imported) {
         this.notifier.info(
           'Existing stalls loaded',
@@ -317,6 +331,65 @@ export class PlannerPageComponent implements HasUnsavedChanges {
       this.loadError.set(
         error instanceof ApiError ? error.message : 'The planner could not be opened.',
       );
+    }
+  }
+
+  /** The rates the stalls are priced by; without them the planner shows no prices. */
+  private async loadRateCard(eventId: string, hallId: string): Promise<void> {
+    try {
+      this.store.setRateCard(await firstValueFrom(this.api.rateCard(eventId, hallId)));
+    } catch {
+      // Prices are an extra: the planner works without them.
+    }
+  }
+
+  /** The hall's rate card: who may change it edits it; others look. */
+  protected async openRates(): Promise<void> {
+    const view = this.store.view();
+    if (!view) return;
+    let card: RateCardView;
+    try {
+      card = await firstValueFrom(this.api.rateCard(this.eventId(), this.hallId()));
+    } catch (error) {
+      this.notifier.fromError(error, 'The rates could not be opened');
+      return;
+    }
+    const saved = await firstValueFrom(
+      this.dialog.open<RateCardView>(RateCardDialogComponent, {
+        data: {
+          eventId: this.eventId(),
+          hallId: this.hallId(),
+          hallName: view.hall.hall.name,
+          view: card,
+        } satisfies RateCardData,
+        width: 'min(820px, 96vw)',
+      }),
+      { defaultValue: undefined },
+    );
+    if (saved) {
+      this.store.setRateCard(saved);
+      this.notifier.success('Rates saved', 'The stalls are priced by them now.');
+    }
+  }
+
+  protected openPrices(): void {
+    this.dialog
+      .open(StallPricesDialogComponent, {
+        data: { store: this.store } satisfies StallPricesData,
+        width: 'min(860px, 96vw)',
+      })
+      .subscribe();
+  }
+
+  /** A proof file ITPO attached when it sent the plan back. */
+  protected async downloadProof(file: PlanAttachment): Promise<void> {
+    try {
+      saveBlob(
+        await firstValueFrom(this.api.attachment(this.eventId(), this.hallId(), file.id)),
+        file.name,
+      );
+    } catch (error) {
+      this.notifier.fromError(error, 'The file could not be downloaded');
     }
   }
 
@@ -1136,6 +1209,34 @@ export class PlannerPageComponent implements HasUnsavedChanges {
   // ---- guided tour --------------------------------------------------------------------------
 
   protected readonly tour = inject<TourService<PlannerTourCtx>>(TourService);
+  protected readonly rupees = rupees;
+
+  protected readonly colourModes = [
+    { id: 'category', label: 'Category' },
+    { id: 'scheme', label: 'Scheme' },
+    { id: 'price', label: 'Price' },
+  ] as const;
+  protected readonly schemeColors = SCHEME_COLORS;
+
+  /** What the stalls are coloured by: their category, their scheme, or their price. */
+  protected readonly colourBy = signal<'category' | 'scheme' | 'price'>('category');
+  /** The price bands of the plan, cheapest first, with the colour each stall of one is drawn in. */
+  protected readonly priceBands = computed(() => priceBandsOf(this.store.prices()));
+  protected readonly stallColors = computed<ReadonlyMap<string, string> | null>(() => {
+    const mode = this.colourBy();
+    if (mode === 'scheme') {
+      return new Map(
+        this.store
+          .plan()
+          .stalls.map((s) => [
+            s.id,
+            s.scheme === 'shell' ? SCHEME_COLORS.shell : SCHEME_COLORS.raw,
+          ]),
+      );
+    }
+    if (mode === 'price') return new Map(this.priceBands().colors);
+    return null;
+  });
   protected readonly tourOpen = signal(true);
   /** Why the planner could not be opened, shown on the page itself. */
   protected readonly loadError = signal<string | null>(null);

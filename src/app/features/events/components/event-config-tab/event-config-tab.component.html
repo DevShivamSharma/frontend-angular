@@ -1,0 +1,226 @@
+<section class="card" aria-label="Stall booking configuration">
+  <div class="bar">
+    <div>
+      <h2>Configuration</h2>
+      <p class="text-muted">
+        The stall booking configuration of this event, as SelfCare keeps it: categories, limits and
+        the dates of each kind of booking.
+      </p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p class="loading text-muted" role="status">Loading the configuration…</p>
+  } @else if (failed()) {
+    <p class="loading text-muted" role="alert">
+      The configuration could not be loaded. Reload the page.
+    </p>
+  } @else {
+    <form [formGroup]="form" class="form" (ngSubmit)="save()">
+      <fieldset>
+        <legend>Booking</legend>
+        <div class="grid">
+          <label
+            >Event category type *
+            <p-select
+              formControlName="eventCategory"
+              [options]="types()"
+              optionLabel="name"
+              optionValue="slug"
+              placeholder="Select the category type"
+              [filter]="true"
+              appendTo="body"
+            />
+          </label>
+          <label
+            >Most categories a user can select *
+            <p-select
+              formControlName="maxCategories"
+              [options]="categoryCounts"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+            />
+          </label>
+          <label
+            >Most stalls a user can book (1 to 200)
+            <input pInputText formControlName="noOfStalls" inputmode="numeric" />
+          </label>
+          @for (f of publicDates; track f.key) {
+            <label
+              >{{ f.label }}
+              <p-datepicker
+                [formControlName]="f.key"
+                [showTime]="true"
+                [showIcon]="false"
+                dateFormat="d M yy"
+                placeholder="Select a date"
+                appendTo="body"
+              />
+            </label>
+          }
+        </div>
+        <label class="check">
+          <p-checkbox formControlName="isSecondaryCatEnabled" [binary]="true" />
+          A user may pick a multi-product category
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>What the booking site shows</legend>
+        <div class="checks">
+          @for (s of shows; track s.key) {
+            <label class="check">
+              <p-checkbox [formControlName]="s.key" [binary]="true" />
+              {{ s.label }}
+            </label>
+          }
+        </div>
+        <div class="grid">
+          @if (form.controls.showSponsor.value) {
+            <label
+              >Sponsor PDF link *
+              <input pInputText formControlName="sponsorPdf" placeholder="https://…" />
+            </label>
+          }
+          @if (form.controls.showBranding.value) {
+            <label
+              >Branding PDF link *
+              <input pInputText formControlName="brandingPdf" placeholder="https://…" />
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>
+          <label class="check">
+            <p-checkbox formControlName="isMarqueeEnabled" [binary]="true" />
+            Marquee applies
+          </label>
+        </legend>
+        @if (form.controls.isMarqueeEnabled.value) {
+          <div class="grid">
+            @for (f of marqueeDates; track f.key) {
+              <label
+                >{{ f.label }}
+                <p-datepicker
+                  [formControlName]="f.key"
+                  [showTime]="true"
+                  [showIcon]="false"
+                  dateFormat="d M yy"
+                  placeholder="Select a date"
+                  appendTo="body"
+                />
+              </label>
+            }
+          </div>
+          <label
+            >Marquee registration info *
+            <textarea pTextarea formControlName="marqueeInfo" rows="3"></textarea>
+          </label>
+        } @else {
+          <p class="text-muted">Switch it on to set the marquee dates.</p>
+        }
+      </fieldset>
+
+      <fieldset>
+        <legend>
+          <label class="check">
+            <p-checkbox formControlName="isFnb" [binary]="true" />
+            Food and beverage stalls
+          </label>
+        </legend>
+        @if (form.controls.isFnb.value) {
+          <div class="grid">
+            @for (f of fnbDates; track f.key) {
+              <label
+                >{{ f.label }}
+                <p-datepicker
+                  [formControlName]="f.key"
+                  [showTime]="true"
+                  [showIcon]="false"
+                  dateFormat="d M yy"
+                  placeholder="Select a date"
+                  appendTo="body"
+                />
+              </label>
+            }
+          </div>
+          <label
+            >F&amp;B registration info
+            <textarea pTextarea formControlName="fnbInfo" rows="3"></textarea>
+          </label>
+          <label class="check">
+            <p-checkbox formControlName="fnbSecurity" [binary]="true" />
+            Security deposit applies
+          </label>
+          @if (form.controls.fnbSecurity.value) {
+            <div class="grid">
+              <label
+                >Security type
+                <p-select
+                  formControlName="fnbType"
+                  [options]="securityTypes"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select"
+                  appendTo="body"
+                />
+              </label>
+              <label
+                >Security value
+                <input pInputText formControlName="fnbValue" inputmode="numeric" />
+              </label>
+            </div>
+          }
+        } @else {
+          <p class="text-muted">Switch it on to set the F&amp;B dates.</p>
+        }
+      </fieldset>
+
+      <fieldset>
+        <legend>Branding, LED and sponsor booking</legend>
+        <div class="grid">
+          @for (f of extraDates; track f.key) {
+            <label
+              >{{ f.label }}
+              <p-datepicker
+                [formControlName]="f.key"
+                [showTime]="true"
+                [showIcon]="false"
+                dateFormat="d M yy"
+                placeholder="Select a date"
+                appendTo="body"
+              />
+            </label>
+          }
+          <label
+            >Cart timer (minutes)
+            <input
+              pInputText
+              formControlName="cartTimer"
+              inputmode="numeric"
+              placeholder="Default 120"
+            />
+          </label>
+        </div>
+      </fieldset>
+
+      @for (message of errors(); track message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+
+      @if (!readonly()) {
+        <div class="actions">
+          <p-button
+            type="submit"
+            [label]="exists() ? 'Save the configuration' : 'Create the configuration'"
+            icon="pi pi-check"
+            [loading]="saving()"
+          />
+        </div>
+      }
+    </form>
+  }
+</section>

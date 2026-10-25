@@ -64,6 +64,13 @@
             >
               <i class="pi" [class]="item.icon" aria-hidden="true"></i>
               <span class="nav__label" [class.visually-hidden]="compact">{{ item.label }}</span>
+              @if (item.route === '/external-events' && pending() > 0) {
+                <span
+                  class="nav__badge"
+                  [attr.aria-label]="pending() + ' plans waiting for approval'"
+                  >{{ pending() }}</span
+                >
+              }
             </a>
           </li>
         }
