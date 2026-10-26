@@ -425,3 +425,23 @@ p-datepicker {
 .p-toast-message-error .p-toast-summary {
   color: light-dark(#b42318, #fecaca);
 }
+
+/* A destructive menu entry reads as one. */
+.p-menu .menu-item--danger .p-menu-item-link,
+.p-menu .menu-item--danger .p-menu-item-icon,
+.p-menu .menu-item--danger .p-menu-item-label {
+  color: var(--app-danger);
+}
+
+.hall-menu .p-menu-item:not(.menu-item--danger) .p-menu-item-link,
+.hall-menu .p-menu-item:not(.menu-item--danger) .p-menu-item-icon,
+.hall-menu .p-menu-item:not(.menu-item--danger) .p-menu-item-label {
+  color: var(--app-text);
+}
+
+/* A switch that is on is green: on is a good state, and red would read as an error. */
+.p-toggleswitch {
+  --p-toggleswitch-checked-background: var(--app-success);
+  --p-toggleswitch-checked-hover-background: color-mix(in srgb, var(--app-success) 88%, black);
+  --p-toggleswitch-checked-border-color: var(--app-success);
+}

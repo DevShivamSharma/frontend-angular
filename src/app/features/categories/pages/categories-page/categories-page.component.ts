@@ -15,6 +15,8 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { TabsModule } from 'primeng/tabs';
+import { TooltipModule } from 'primeng/tooltip';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
@@ -23,7 +25,7 @@ import { UrlState } from '../../../../core/navigation/url-state';
 import { ConfirmService } from '../../../../core/confirm/confirm.service';
 import { ApiError } from '../../../../core/http/api-error';
 import { NotifierService } from '../../../../core/notification/notifier.service';
-import { CardSkeletonComponent } from '../../../../shared/ui/card-skeleton/card-skeleton.component';
+import { TableSkeletonComponent } from '../../../../shared/ui/table-skeleton/table-skeleton.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import {
@@ -49,9 +51,11 @@ const PAGE_SIZE = 15;
     InputTextModule,
     SelectModule,
     SelectButtonModule,
+    TabsModule,
+    TooltipModule,
     PaginatorModule,
     ToggleSwitchModule,
-    CardSkeletonComponent,
+    TableSkeletonComponent,
     EmptyStateComponent,
     PageHeaderComponent,
     CategoryDialogComponent,
@@ -67,6 +71,14 @@ export class CategoriesPageComponent {
   private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = viewChild.required(CategoryDialogComponent);
+  protected readonly groupsPanel = viewChild(GroupsPanelComponent);
+  /** Placeholder columns while the list loads: number, name, status, action. */
+  protected readonly skeleton = [
+    { width: '1.5rem' },
+    { width: '60%' },
+    { width: '7rem' },
+    { width: '2rem' },
+  ];
 
   protected readonly pageSize = PAGE_SIZE;
   protected readonly search = new FormControl('', { nonNullable: true });

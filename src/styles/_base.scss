@@ -131,7 +131,7 @@ a {
     padding: var(--space-4) var(--space-3) var(--space-6);
   }
 
-  .card {
+  .card:not(.card--flush) {
     padding: var(--space-4);
   }
 }

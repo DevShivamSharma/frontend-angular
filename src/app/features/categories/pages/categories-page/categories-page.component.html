@@ -11,30 +11,28 @@
         [disabled]="!groups().length"
         (onClick)="openNew()"
       />
+    } @else {
+      <p-button actions label="New group" icon="pi pi-plus" (onClick)="groupsPanel()?.openNew()" />
     }
   </app-page-header>
 
-  <p-selectbutton
-    class="view-switch"
-    [options]="viewOptions"
-    optionLabel="label"
-    optionValue="value"
-    [allowEmpty]="false"
-    [ngModel]="view()"
-    (ngModelChange)="chooseView($event)"
-    ariaLabel="Categories or groups"
-  />
+  <p-tabs [value]="view()" (valueChange)="chooseView($any($event))">
+    <p-tablist>
+      <p-tab value="categories"><i class="pi pi-tags" aria-hidden="true"></i> Categories</p-tab>
+      <p-tab value="groups"><i class="pi pi-folder" aria-hidden="true"></i> Groups</p-tab>
+    </p-tablist>
+  </p-tabs>
 
   <section
-    class="card card--flush"
+    class="card card--flush list"
     [attr.aria-label]="view() === 'groups' ? 'Groups' : 'Categories'"
   >
     @if (view() === 'groups') {
       <app-groups-panel (changed)="loadGroups()" />
     } @else {
-      <div class="toolbar">
-        <div class="toolbar__field">
-          <label class="toolbar__label" for="category-group-filter">Group</label>
+      <div class="filters">
+        <div class="filters__group">
+          <label for="category-group-filter">Group</label>
           <p-select
             inputId="category-group-filter"
             [options]="groups()"
@@ -46,10 +44,11 @@
             filterBy="name"
             placeholder="Choose a group"
             appendTo="body"
-            styleClass="toolbar__group"
+            styleClass="filters__select"
           />
         </div>
         <p-selectbutton
+          class="filter-seg"
           [options]="statusOptions"
           optionLabel="label"
           optionValue="value"
@@ -58,7 +57,7 @@
           (ngModelChange)="chooseStatus($event)"
           ariaLabel="Show"
         />
-        <p-iconfield class="toolbar__search">
+        <p-iconfield class="filters__search">
           <p-inputicon class="pi pi-search" />
           <input
             pInputText
@@ -68,11 +67,6 @@
             aria-label="Search categories"
           />
         </p-iconfield>
-        <span class="text-muted toolbar__count" aria-live="polite">
-          @if (!loading() && !failed()) {
-            {{ total() }} {{ total() === 1 ? 'category' : 'categories' }}
-          }
-        </span>
       </div>
 
       @if (groupsFailed()) {
@@ -90,52 +84,88 @@
         >
           <p-button label="Try again" icon="pi pi-refresh" (onClick)="retry()" />
         </app-empty-state>
+      } @else if (loading()) {
+        <app-table-skeleton [count]="10" [columns]="skeleton" />
+      } @else if (categories().length) {
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <caption class="visually-hidden">
+              Categories in
+              {{
+                groupName()
+              }}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" class="cell-no">Sr. no.</th>
+                <th scope="col">Category</th>
+                <th scope="col" class="cell-status">Status</th>
+                <th scope="col" class="cell-actions"><span class="th-short">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (category of categories(); track category.id; let i = $index) {
+                <tr [class.is-off]="!category.active">
+                  <td class="cell-no">{{ first() + i + 1 }}</td>
+                  <th scope="row" class="cell-name">
+                    <span class="cell-name__title">{{ category.name }}</span>
+                    @if (category.description) {
+                      <span class="cell-name__note">{{ category.description }}</span>
+                    }
+                  </th>
+                  <td class="cell-status">
+                    <span class="cell-state">
+                      <p-toggleswitch
+                        [ngModel]="category.active"
+                        (onChange)="toggle(category, $event.checked)"
+                        [ariaLabel]="
+                          (category.active ? 'Deactivate ' : 'Activate ') + category.name
+                        "
+                      />
+                      <span class="badge" [class.badge--off]="!category.active">{{
+                        category.active ? 'Active' : 'Inactive'
+                      }}</span>
+                    </span>
+                  </td>
+                  <td class="cell-actions">
+                    <p-button
+                      icon="pi pi-trash"
+                      severity="secondary"
+                      [text]="true"
+                      [rounded]="true"
+                      styleClass="row-delete"
+                      pTooltip="Delete"
+                      tooltipPosition="left"
+                      [ariaLabel]="'Delete ' + category.name"
+                      (onClick)="remove(category)"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="list-foot">
+          <span class="text-muted" aria-live="polite">
+            Showing {{ first() + 1 }}–{{ first() + categories().length }} of {{ total() }}
+            {{ total() === 1 ? 'category' : 'categories' }}
+          </span>
+          @if (total() > pageSize) {
+            <p-paginator
+              [first]="first()"
+              [rows]="pageSize"
+              [totalRecords]="total()"
+              [showCurrentPageReport]="false"
+              (onPageChange)="onPage($event)"
+            />
+          }
+        </div>
       } @else {
-        @if (loading()) {
-          <app-card-skeleton [count]="9" />
-        } @else if (categories().length) {
-          <ul class="card-grid">
-            @for (category of categories(); track category.id) {
-              <li class="item-card">
-                <h2 class="item-card__title">{{ category.name }}</h2>
-                <p class="item-card__meta">{{ category.description ?? 'No note' }}</p>
-                <div class="item-card__tags state-row">
-                  <p-toggleswitch
-                    [ngModel]="category.active"
-                    (onChange)="toggle(category, $event.checked)"
-                    [ariaLabel]="(category.active ? 'Deactivate ' : 'Activate ') + category.name"
-                  />
-                  <span class="state" [class.state--off]="!category.active">{{
-                    category.active ? 'Active' : 'Inactive'
-                  }}</span>
-                  <p-button
-                    class="item-card__delete"
-                    icon="pi pi-trash"
-                    severity="danger"
-                    [text]="true"
-                    [rounded]="true"
-                    [ariaLabel]="'Delete ' + category.name"
-                    (onClick)="remove(category)"
-                  />
-                </div>
-              </li>
-            }
-          </ul>
-          <p-paginator
-            class="list-footer"
-            [first]="first()"
-            [rows]="pageSize"
-            [totalRecords]="total()"
-            [showCurrentPageReport]="false"
-            (onPageChange)="onPage($event)"
-          />
-        } @else {
-          <app-empty-state
-            icon="pi-tags"
-            [title]="search.value ? 'No category matches your search' : 'No categories here yet'"
-            [message]="search.value ? 'Try a different name.' : 'Add the first one to this group.'"
-          />
-        }
+        <app-empty-state
+          icon="pi-tags"
+          [title]="search.value ? 'No category matches your search' : 'No categories here yet'"
+          [message]="search.value ? 'Try a different name.' : 'Add the first one to this group.'"
+        />
       }
     }
   </section>

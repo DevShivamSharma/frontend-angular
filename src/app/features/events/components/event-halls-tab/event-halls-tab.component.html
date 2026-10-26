@@ -31,7 +31,12 @@
           />
           <div class="body">
             <div class="head">
-              <h2>{{ hall.name }}</h2>
+              <div class="titles">
+                <h2>{{ hall.name }}</h2>
+                <p class="meta">
+                  <b>{{ hall.stallCount }}</b> {{ hall.forStallFnb ? 'F&B stalls' : 'stalls' }}
+                </p>
+              </div>
               @if (!readonly()) {
                 <p-button
                   icon="pi pi-ellipsis-v"
@@ -43,21 +48,30 @@
                 />
               }
             </div>
-            <p class="meta">
-              {{ hall.forStallFnb ? 'F&B stalls' : 'Stalls' }} · {{ hall.stallCount }}
-            </p>
-            <div class="chips">
-              @if (statusOf(hall); as plan) {
-                <p-tag
-                  [value]="statusLabel(plan.status)"
-                  [severity]="statusSeverity(plan.status)"
-                />
-              }
-              <p-tag
-                [value]="hall.isPriceAdded ? 'Prices added' : 'Prices not added'"
-                [severity]="hall.isPriceAdded ? 'success' : 'secondary'"
-              />
-            </div>
+            <dl class="facts">
+              <div>
+                <dt>Plan</dt>
+                <dd>
+                  @if (statusOf(hall); as plan) {
+                    <p-tag
+                      [value]="statusLabel(plan.status)"
+                      [severity]="statusSeverity(plan.status)"
+                    />
+                  } @else {
+                    <p-tag value="Not started" severity="secondary" />
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Prices</dt>
+                <dd>
+                  <p-tag
+                    [value]="hall.isPriceAdded ? 'Added' : 'Not added'"
+                    [severity]="hall.isPriceAdded ? 'success' : 'warn'"
+                  />
+                </dd>
+              </div>
+            </dl>
             @if (statusOf(hall); as plan) {
               @if (plan.status === 'rejected' && plan.review) {
                 <div class="banner" role="note">
@@ -123,28 +137,20 @@
                 </div>
               }
             }
-            <div class="foot">
-              @if (plannerBase(); as base) {
-                <a
-                  class="act plan"
-                  [routerLink]="[base, store().summary()?.id, 'halls', hall.eventHallId, 'planner']"
-                >
-                  <i class="pi pi-th-large" aria-hidden="true"></i>
-                  {{ plannerLabel() }}
-                </a>
-              }
-              @if (!readonly()) {
-                <button type="button" class="act danger" (click)="askRemove(hall)">
-                  <i class="pi pi-trash" aria-hidden="true"></i>
-                  Remove
-                </button>
-              }
-            </div>
+            @if (plannerBase(); as base) {
+              <a
+                class="cta"
+                [routerLink]="[base, store().summary()?.id, 'halls', hall.eventHallId, 'planner']"
+              >
+                <i class="pi pi-th-large" aria-hidden="true"></i>
+                {{ plannerLabel() }}
+              </a>
+            }
           </div>
         </li>
       }
     </ul>
-    <p-menu #menu [model]="menuItems()" [popup]="true" appendTo="body" />
+    <p-menu #menu [model]="menuItems()" [popup]="true" appendTo="body" styleClass="hall-menu" />
   } @else {
     <app-empty-state
       icon="pi-building"

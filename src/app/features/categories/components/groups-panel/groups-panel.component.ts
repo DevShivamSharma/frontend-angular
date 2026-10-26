@@ -11,6 +11,9 @@ import { firstValueFrom } from 'rxjs';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TextareaModule } from 'primeng/textarea';
@@ -20,7 +23,7 @@ import { ConfirmService } from '../../../../core/confirm/confirm.service';
 import { ApiError } from '../../../../core/http/api-error';
 import { NotifierService } from '../../../../core/notification/notifier.service';
 import { FormFieldComponent } from '../../../../shared/forms/form-field/form-field.component';
-import { CardSkeletonComponent } from '../../../../shared/ui/card-skeleton/card-skeleton.component';
+import { TableSkeletonComponent } from '../../../../shared/ui/table-skeleton/table-skeleton.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { CategoriesApiService } from '../../data/categories-api.service';
 import { CategoryGroup } from '../../data/categories.models';
@@ -39,12 +42,15 @@ type Show = 'all' | 'active' | 'inactive';
     ReactiveFormsModule,
     ButtonModule,
     DialogModule,
+    IconFieldModule,
+    InputIconModule,
+    TooltipModule,
     InputTextModule,
     SelectButtonModule,
     TextareaModule,
     ToggleSwitchModule,
     FormFieldComponent,
-    CardSkeletonComponent,
+    TableSkeletonComponent,
     EmptyStateComponent,
   ],
   templateUrl: './groups-panel.component.html',
@@ -66,6 +72,14 @@ export class GroupsPanelComponent {
     { label: 'Inactive', value: 'inactive' },
   ];
   protected readonly show = signal<Show>('all');
+  protected readonly query = signal('');
+  /** Placeholder columns while the list loads: number, name, status, action. */
+  protected readonly skeleton = [
+    { width: '1.5rem' },
+    { width: '50%' },
+    { width: '7rem' },
+    { width: '2rem' },
+  ];
   protected readonly groups = signal<CategoryGroup[]>([]);
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
@@ -84,12 +98,16 @@ export class GroupsPanelComponent {
 
   protected shown(): CategoryGroup[] {
     const show = this.show();
+    const query = this.query().trim().toLowerCase();
     return this.groups().filter(
-      (g) => show === 'all' || (show === 'active' ? g.active : !g.active),
+      (g) =>
+        (show === 'all' || (show === 'active' ? g.active : !g.active)) &&
+        (!query || g.name.toLowerCase().includes(query)),
     );
   }
 
-  protected openNew(): void {
+  /** Opens the form for a new group; the page's header button calls it. */
+  openNew(): void {
     this.form.reset({ name: '', description: '' });
     this.failure.set(null);
     this.visible.set(true);

@@ -264,6 +264,13 @@ export class EventHallsTabComponent {
         command: () => this.openConfig(hall),
       });
     }
+    items.push({ separator: true });
+    items.push({
+      label: 'Remove from event',
+      icon: 'pi pi-trash',
+      styleClass: 'menu-item--danger',
+      command: () => this.askRemove(hall),
+    });
     return items;
   });
 

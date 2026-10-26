@@ -1,5 +1,6 @@
-<div class="toolbar">
+<div class="filters">
   <p-selectbutton
+    class="filter-seg"
     [options]="showOptions"
     optionLabel="label"
     optionValue="value"
@@ -8,12 +9,17 @@
     (ngModelChange)="show.set($event)"
     ariaLabel="Show groups"
   />
-  <span class="text-muted toolbar__count" aria-live="polite">
-    @if (!loading() && !failed()) {
-      {{ shown().length }} {{ shown().length === 1 ? 'group' : 'groups' }}
-    }
-  </span>
-  <p-button label="New group" icon="pi pi-plus" (onClick)="openNew()" />
+  <p-iconfield class="filters__search">
+    <p-inputicon class="pi pi-search" />
+    <input
+      pInputText
+      type="search"
+      [ngModel]="query()"
+      (ngModelChange)="query.set($event)"
+      placeholder="Search groups"
+      aria-label="Search groups"
+    />
+  </p-iconfield>
 </div>
 
 @if (failed()) {
@@ -25,39 +31,68 @@
     <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
   </app-empty-state>
 } @else if (loading()) {
-  <app-card-skeleton [count]="6" />
+  <app-table-skeleton [count]="6" [columns]="skeleton" />
 } @else if (shown().length) {
-  <ul class="card-grid">
-    @for (group of shown(); track group.id) {
-      <li class="item-card">
-        <h2 class="item-card__title">{{ group.name }}</h2>
-        <p class="item-card__meta">{{ group.description ?? group.slug }}</p>
-        <div class="item-card__tags state-row">
-          <p-toggleswitch
-            [ngModel]="group.active"
-            (onChange)="toggle(group, $event.checked)"
-            [ariaLabel]="(group.active ? 'Deactivate ' : 'Activate ') + group.name"
-          />
-          <span class="state" [class.state--off]="!group.active">{{
-            group.active ? 'Active' : 'Inactive'
-          }}</span>
-          <p-button
-            class="item-card__delete"
-            icon="pi pi-trash"
-            severity="danger"
-            [text]="true"
-            [rounded]="true"
-            [ariaLabel]="'Delete ' + group.name"
-            (onClick)="remove(group)"
-          />
-        </div>
-      </li>
-    }
-  </ul>
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <caption class="visually-hidden">
+        Category groups
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col" class="cell-no">Sr. no.</th>
+          <th scope="col">Group</th>
+          <th scope="col" class="cell-status">Status</th>
+          <th scope="col" class="cell-actions"><span class="th-short">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (group of shown(); track group.id; let i = $index) {
+          <tr [class.is-off]="!group.active">
+            <td class="cell-no">{{ i + 1 }}</td>
+            <th scope="row" class="cell-name">
+              <span class="cell-name__title">{{ group.name }}</span>
+              <span class="cell-name__note">{{ group.description ?? group.slug }}</span>
+            </th>
+            <td class="cell-status">
+              <span class="cell-state">
+                <p-toggleswitch
+                  [ngModel]="group.active"
+                  (onChange)="toggle(group, $event.checked)"
+                  [ariaLabel]="(group.active ? 'Deactivate ' : 'Activate ') + group.name"
+                />
+                <span class="badge" [class.badge--off]="!group.active">{{
+                  group.active ? 'Active' : 'Inactive'
+                }}</span>
+              </span>
+            </td>
+            <td class="cell-actions">
+              <p-button
+                icon="pi pi-trash"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                styleClass="row-delete"
+                pTooltip="Delete"
+                tooltipPosition="left"
+                [ariaLabel]="'Delete ' + group.name"
+                (onClick)="remove(group)"
+              />
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="list-foot">
+    <span class="text-muted" aria-live="polite">
+      {{ shown().length }} {{ shown().length === 1 ? 'group' : 'groups' }}
+    </span>
+  </div>
 } @else {
   <app-empty-state
     icon="pi-tags"
-    title="No groups here"
+    [title]="query() ? 'No group matches your search' : 'No groups here'"
     message="Add a group, then add its categories."
   />
 }
