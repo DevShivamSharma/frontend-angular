@@ -100,6 +100,14 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'email-recipients',
+            title: 'Email recipients',
+            loadComponent: () =>
+              import('./features/email-recipients/pages/email-recipients-page/email-recipients-page.component').then(
+                (m) => m.EmailRecipientsPageComponent,
+              ),
+          },
+          {
             path: 'audit',
             title: 'Audit trail',
             loadComponent: () =>

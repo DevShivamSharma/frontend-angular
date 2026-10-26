@@ -40,6 +40,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'Setup',
     staffOnly: true,
   },
+  {
+    label: 'Email recipients',
+    icon: 'pi-envelope',
+    route: '/email-recipients',
+    group: 'Setup',
+    staffOnly: true,
+  },
   { label: 'Audit trail', icon: 'pi-history', route: '/audit', group: 'Setup', staffOnly: true },
 ];
 

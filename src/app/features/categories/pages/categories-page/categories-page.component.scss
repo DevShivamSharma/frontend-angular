@@ -3,7 +3,12 @@
 }
 
 p-tabs {
-  margin-bottom: var(--space-4);
+  display: block;
+}
+
+/* The list sits a little way under the tab line, as the lists of the other pages do. */
+.list {
+  margin-top: var(--space-4);
 }
 
 /* One line of filters: what to look at on the left, the search at the right. */
