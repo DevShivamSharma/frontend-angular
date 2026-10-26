@@ -22,7 +22,7 @@
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: 4px;
+  border-radius: var(--app-radius-2xs);
   color: var(--app-on-surface);
 }
 .back:hover {
@@ -46,22 +46,22 @@ h1 {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   font: var(--app-label-medium);
   background: var(--app-surface-container);
   color: var(--app-on-surface);
 }
 .status.wait {
-  background: light-dark(#e0f2fe, #0c4a6e);
-  color: light-dark(#0c4a6e, #e0f2fe);
+  background: light-dark(var(--palette-sky-100), var(--palette-sky-900));
+  color: light-dark(var(--palette-sky-900), var(--palette-sky-100));
 }
 .status.good {
-  background: light-dark(#dcfce7, #14532d);
-  color: light-dark(#14532d, #dcfce7);
+  background: light-dark(var(--palette-green-100), var(--palette-green-900));
+  color: light-dark(var(--palette-green-900), var(--palette-green-100));
 }
 .status.bad {
-  background: light-dark(#fee2e2, #7f1d1d);
-  color: light-dark(#7f1d1d, #fee2e2);
+  background: light-dark(var(--palette-red-100), var(--palette-red-900));
+  color: light-dark(var(--palette-red-900), var(--palette-red-100));
 }
 .actions {
   display: flex;
@@ -74,7 +74,7 @@ h1 {
   height: 32px;
   padding: 0 12px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--app-radius-2xs);
   font: var(--app-label-medium);
   cursor: pointer;
 }
@@ -83,8 +83,8 @@ h1 {
   color: var(--app-on-surface);
 }
 .btn.approve {
-  background: #16a34a;
-  color: #fff;
+  background: var(--palette-green-600);
+  color: var(--palette-white);
 }
 .btn:disabled {
   opacity: 0.5;
@@ -116,7 +116,7 @@ h1 {
   width: 32px;
   height: 32px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--app-radius-2xs);
   background: none;
   color: var(--app-on-surface);
   cursor: pointer;
@@ -166,7 +166,7 @@ h1 {
 .card {
   padding: 12px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
 }
 h2 {
   margin: 0 0 8px;
@@ -183,7 +183,7 @@ h2 {
   align-items: center;
 }
 .good {
-  color: light-dark(#15803d, #4ade80);
+  color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .bad {
   color: var(--app-error);

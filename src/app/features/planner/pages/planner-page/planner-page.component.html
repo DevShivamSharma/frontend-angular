@@ -1,3 +1,6 @@
+<h1 class="visually-hidden">
+  Stall planner{{ store.view() ? ': ' + store.view()!.hall.hall.name : '' }}
+</h1>
 @if (reviewMode()) {
   <!-- The venue reviews an external event's plan: no drawing tools, no tour. -->
   <app-plan-review [categoryColors]="categoryColors()" />
@@ -5,498 +8,930 @@
   @let ro = !canEdit();
   @let noStalls = !store.selectedStalls().length || ro || store.busy();
   <div class="planner">
+    <p class="small-screen" role="note">
+      The stall planner works best on a tablet or a larger screen.
+    </p>
     <app-tour-overlay />
     <nav class="ribbon" aria-label="Tools">
-      <div class="group">
-        <div class="tools">
-          <button
-            data-tour="zone-tool"
-            type="button"
-            class="tool"
-            [class.on]="tool() === 'zone-rect'"
-            (click)="setTool('zone-rect')"
-            [attr.aria-pressed]="tool() === 'zone-rect'"
-            [disabled]="ro"
-            pTooltip="Zone (Z)"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="grid_view" /><span>Zone</span>
-          </button>
-        </div>
-      </div>
-      <div class="group" data-tour="fill-group">
-        <div class="tools">
-          <button
-            data-tour="booth-tool"
-            type="button"
-            class="tool"
-            [class.on]="tool() === 'booth'"
-            (click)="setTool('booth')"
-            [attr.aria-pressed]="tool() === 'booth'"
-            [disabled]="ro"
-            pTooltip="Booth (B)"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="storefront" /><span>Booth</span>
-          </button>
-          <button
-            type="button"
-            class="tool auto"
-            (click)="autoBooths()"
-            [disabled]="ro || store.busy()"
-            pTooltip="Auto-booths: fill the selected zone with booths"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="auto_awesome" /><span>Auto-booths</span>
-          </button>
-          <button
-            type="button"
-            class="tool"
-            (click)="importFile.click()"
-            [disabled]="ro || store.busy()"
-            pTooltip="Import this hall's stalls from a CAD plan (PDF or DXF)"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="upload_file" /><span>Import</span>
-          </button>
-          <input
-            #importFile
-            type="file"
-            accept=".pdf,.dxf,application/pdf,application/dxf,image/vnd.dxf"
-            hidden
-            (change)="importPlan($event)"
-          />
-          @if (store.pricing()) {
+      <div class="groups">
+        <div class="group" data-name="Zones &amp; booths" data-tour="fill-group">
+          <div class="tools">
+            <button
+              data-tour="zone-tool"
+              type="button"
+              class="tool"
+              [class.on]="tool() === 'zone-rect'"
+              (click)="setTool('zone-rect')"
+              [attr.aria-pressed]="tool() === 'zone-rect'"
+              [disabled]="ro"
+              pTooltip="Zone (Z)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="grid_view" /><span>Zone</span>
+            </button>
+          </div>
+          <div class="tools">
+            <button
+              data-tour="booth-tool"
+              type="button"
+              class="tool"
+              [class.on]="tool() === 'booth'"
+              (click)="setTool('booth')"
+              [attr.aria-pressed]="tool() === 'booth'"
+              [disabled]="ro"
+              pTooltip="Booth (B)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="storefront" /><span>Booth</span>
+            </button>
+            <button
+              type="button"
+              class="tool auto labelled"
+              (click)="autoBooths()"
+              [disabled]="ro || store.busy()"
+              pTooltip="Auto-booths: fill the selected zone with booths"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="auto_awesome" /><span>Auto-booths</span>
+            </button>
+            <button
+              type="button"
+              class="tool labelled"
+              (click)="importFile.click()"
+              [disabled]="ro || store.busy()"
+              pTooltip="Import this hall's stalls from a CAD plan (PDF or DXF)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="upload_file" /><span>Import</span>
+            </button>
+            <input
+              #importFile
+              type="file"
+              accept=".pdf,.dxf,application/pdf,application/dxf,image/vnd.dxf"
+              hidden
+              (change)="importPlan($event)"
+            />
+            @if (store.pricing()) {
+              <button
+                type="button"
+                class="tool labelled"
+                (click)="openRates()"
+                [disabled]="store.busy()"
+                pTooltip="The rate card the stalls are priced by"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="payments" /><span>Pricing</span>
+              </button>
+            }
+            <button
+              type="button"
+              class="tool auto"
+              (click)="planHall()"
+              [disabled]="ro || store.busy()"
+              pTooltip="Lay out the whole hall or a zone: pick one of a few complete layouts"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="dashboard" /><span>Plan hall</span>
+            </button>
             <button
               type="button"
               class="tool"
-              (click)="openRates()"
-              [disabled]="store.busy()"
-              pTooltip="The rate card the stalls are priced by"
+              (click)="toBooth()"
+              [disabled]="ro || store.busy() || !canMakeBooth()"
+              pTooltip="Make a booth of the selected zone or rectangle"
               tooltipPosition="bottom"
             >
-              <app-icon name="payments" /><span>Pricing</span>
+              <app-icon name="crop_free" /><span>To booth</span>
             </button>
-          }
-          <button
-            type="button"
-            class="tool auto"
-            (click)="planHall()"
-            [disabled]="ro || store.busy()"
-            pTooltip="Lay out the whole hall or a zone: pick one of a few complete layouts"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="dashboard" /><span>Plan hall</span>
-          </button>
-          <button
-            type="button"
-            class="tool"
-            (click)="toBooth()"
-            [disabled]="ro || store.busy() || !canMakeBooth()"
-            pTooltip="Make a booth of the selected zone or rectangle"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="crop_free" /><span>To booth</span>
-          </button>
-          <button
-            type="button"
-            class="tool"
-            (click)="seats()"
-            [disabled]="ro || store.busy()"
-            pTooltip="Seats"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="event_seat" /><span>Seats</span>
-          </button>
-          <button
-            type="button"
-            class="tool auto seat"
-            (click)="autoSeats()"
-            [disabled]="ro || store.busy()"
-            pTooltip="Auto-seats: fill the selected zone with seats"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="auto_awesome" /><span>Auto-seats</span>
-          </button>
+            <button
+              type="button"
+              class="tool"
+              (click)="seats()"
+              [disabled]="ro || store.busy()"
+              pTooltip="Seats"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="event_seat" /><span>Seats</span>
+            </button>
+            <button
+              type="button"
+              class="tool auto seat"
+              (click)="autoSeats()"
+              [disabled]="ro || store.busy()"
+              pTooltip="Auto-seats: fill the selected zone with seats"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="auto_awesome" /><span>Auto-seats</span>
+            </button>
+          </div>
+        </div>
+        <div class="group" data-name="Draw">
+          <div class="tools">
+            <button
+              data-tour="select-tool"
+              type="button"
+              class="tool"
+              [class.on]="tool() === 'select'"
+              (click)="setTool('select')"
+              [attr.aria-pressed]="tool() === 'select'"
+              pTooltip="Select (V)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="near_me" /><span>Select</span>
+            </button>
+            <button
+              type="button"
+              class="tool"
+              [class.on]="tool() === 'zone-poly'"
+              (click)="setTool('zone-poly')"
+              [attr.aria-pressed]="tool() === 'zone-poly'"
+              [disabled]="ro"
+              pTooltip="Polygon zone (P)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="hexagon" /><span>Polygon</span>
+            </button>
+            <button
+              type="button"
+              class="tool"
+              [class.on]="tool() === 'text'"
+              (click)="setTool('text')"
+              [attr.aria-pressed]="tool() === 'text'"
+              [disabled]="ro"
+              pTooltip="Text on the plan (T)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="object" /><span>Object</span>
+            </button>
+            @for (pair of drawTools; track $index) {
+              <div class="col">
+                @for (t of pair; track t.id) {
+                  <button
+                    type="button"
+                    class="mini"
+                    [class.on]="tool() === t.id"
+                    (click)="setTool(t.id)"
+                    [attr.aria-pressed]="tool() === t.id"
+                    [disabled]="ro"
+                    [pTooltip]="t.tip"
+                    tooltipPosition="bottom"
+                  >
+                    <app-icon [name]="t.icon" /><span>{{ t.label }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+        <div class="group" data-name="Edit" data-tour="modify-group">
+          <div class="tools">
+            <button
+              type="button"
+              class="tool"
+              [class.on]="tool() === 'pan'"
+              (click)="setTool('pan')"
+              [attr.aria-pressed]="tool() === 'pan'"
+              pTooltip="Pan (H)"
+              tooltipPosition="bottom"
+            >
+              <app-icon name="move" /><span>Pan</span>
+            </button>
+            <div class="col">
+              <button
+                data-tour="copy"
+                type="button"
+                class="mini"
+                (click)="copySelection()"
+                [disabled]="noStalls"
+                pTooltip="Copy the selected booths"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="content_copy" /><span>Copy</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                (click)="splitSelection()"
+                [disabled]="noStalls || store.selectedStalls().length !== 1"
+                pTooltip="Split the selected booth in two along its longer side"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="call_split" /><span>Split</span>
+              </button>
+              <button
+                type="button"
+                class="mini danger"
+                (click)="removeSelection()"
+                [disabled]="!store.selection() || ro || store.busy()"
+                pTooltip="Delete (Del)"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="delete" /><span>Delete</span>
+              </button>
+            </div>
+            <div class="col">
+              <button
+                type="button"
+                class="mini"
+                (click)="mergeSelection()"
+                [disabled]="noStalls || store.selectedStalls().length < 2"
+                pTooltip="Join the selected booths into one; together they must make a rectangle"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="call_merge" /><span>Merge</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                (click)="rotateSelection()"
+                [disabled]="noStalls"
+                pTooltip="Turn the selected booths a quarter"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="rotate" /><span>Rotate</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                (click)="rowOfBooths()"
+                [disabled]="ro || store.busy()"
+                pTooltip="Add booths side by side in a row"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="rows" /><span>Row</span>
+              </button>
+            </div>
+            <div class="col">
+              <button
+                type="button"
+                class="mini"
+                (click)="mirrorSelection('y')"
+                [disabled]="noStalls"
+                pTooltip="Mirror the selected booths top to bottom"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="flip" class="turn" /><span>Mirror</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                [class.on]="tool() === 'mirror-line'"
+                (click)="setTool('mirror-line')"
+                [attr.aria-pressed]="tool() === 'mirror-line'"
+                [disabled]="noStalls"
+                pTooltip="Draw a line to mirror copies of the selected booths across"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="line" /><span>Mirror line</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                (click)="scaleSelection()"
+                [disabled]="noStalls"
+                pTooltip="Make the selected booths bigger or smaller"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="scale" /><span>Scale</span>
+              </button>
+            </div>
+            <div class="col">
+              <button
+                type="button"
+                class="mini"
+                (click)="numberSelection()"
+                [disabled]="noStalls"
+                pTooltip="Number the selected booths from 1, row by row"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="numbers" /><span>Number</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                (click)="mirrorSelection('x')"
+                [disabled]="noStalls"
+                pTooltip="Mirror the selected booths left to right"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="flip" /><span>Mirror X</span>
+              </button>
+              <button
+                type="button"
+                class="mini danger"
+                (click)="removeAllStalls()"
+                [disabled]="!store.plan().stalls.length || ro || store.busy()"
+                pTooltip="Delete every booth on the plan"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="delete" /><span>Delete all</span>
+              </button>
+            </div>
+            <div class="col">
+              <button
+                data-tour="undo"
+                type="button"
+                class="mini"
+                (click)="store.undo()"
+                [disabled]="!store.canUndo() || ro || store.busy()"
+                pTooltip="Undo (Ctrl+Z)"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="undo" /><span>Undo</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                (click)="store.redo()"
+                [disabled]="!store.canRedo() || ro || store.busy()"
+                pTooltip="Redo (Ctrl+Y)"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="redo" /><span>Redo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="group" data-name="Measure" data-tour="measure-group">
+          <div class="tools">
+            <div class="col">
+              <button
+                type="button"
+                class="mini"
+                [class.on]="tool() === 'measure-distance'"
+                (click)="setTool('measure-distance')"
+                [attr.aria-pressed]="tool() === 'measure-distance'"
+                pTooltip="Measure distance"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="measure" /><span>Distance</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                [class.on]="tool() === 'measure-area'"
+                (click)="setTool('measure-area')"
+                [attr.aria-pressed]="tool() === 'measure-area'"
+                pTooltip="Measure area"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="area" /><span>Area</span>
+              </button>
+            </div>
+            <div class="col">
+              <button
+                type="button"
+                class="mini"
+                [class.on]="tool() === 'measure-angle'"
+                (click)="setTool('measure-angle')"
+                [attr.aria-pressed]="tool() === 'measure-angle'"
+                pTooltip="Measure angle"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="angle" /><span>Angle</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                [class.on]="tool() === 'measure-height'"
+                (click)="setTool('measure-height')"
+                [attr.aria-pressed]="tool() === 'measure-height'"
+                pTooltip="Measure height"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="height" /><span>Height</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="group" data-name="View &amp; help">
+          <div class="tools">
+            <div class="col dense">
+              <button
+                type="button"
+                class="mini"
+                (click)="zoom(1.25)"
+                pTooltip="Zoom in"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="zoom_in" /><span>Zoom in</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                (click)="zoom(0.8)"
+                pTooltip="Zoom out"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="zoom_out" /><span>Zoom out</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                [class.on]="splitView()"
+                (click)="splitView.set(!splitView())"
+                [attr.aria-pressed]="splitView()"
+                pTooltip="A second view of the plan beside this one, to zoom on its own"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="split_view" /><span>Split view</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                [class.on]="tool() === 'zoom-window'"
+                (click)="setTool('zoom-window')"
+                [attr.aria-pressed]="tool() === 'zoom-window'"
+                pTooltip="Zoom to a window you drag"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="zoom_window" /><span>Zoom window</span>
+              </button>
+            </div>
+            <div class="col">
+              <button
+                type="button"
+                class="mini toggle"
+                [class.on]="showGrid()"
+                (click)="showGrid.set(!showGrid())"
+                [attr.aria-pressed]="showGrid()"
+                pTooltip="Show the grid"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="grid_on" /><span>Grid</span>
+              </button>
+              <button
+                type="button"
+                class="mini toggle"
+                [class.on]="showLabels()"
+                (click)="showLabels.set(!showLabels())"
+                [attr.aria-pressed]="showLabels()"
+                pTooltip="Show booth labels"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="label" /><span>Labels</span>
+              </button>
+            </div>
+          </div>
+          <div class="tools">
+            <div class="col">
+              <button
+                type="button"
+                class="mini"
+                (click)="showShortcuts()"
+                pTooltip="Keyboard shortcuts (?)"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="numbers" /><span>Shortcuts</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                (click)="startTour()"
+                pTooltip="Help & guided tour"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="help" /><span>Help</span>
+              </button>
+              <button
+                type="button"
+                class="mini"
+                [class.on]="fullscreen()"
+                (click)="toggleFullscreen()"
+                [attr.aria-pressed]="fullscreen()"
+                pTooltip="Full screen"
+                tooltipPosition="bottom"
+              >
+                <app-icon name="fullscreen" /><span>Full</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="group">
-        <div class="tools">
-          <button
-            data-tour="select-tool"
-            type="button"
-            class="tool"
-            [class.on]="tool() === 'select'"
-            (click)="setTool('select')"
-            [attr.aria-pressed]="tool() === 'select'"
-            pTooltip="Select (V)"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="near_me" /><span>Select</span>
-          </button>
-          <button
-            type="button"
-            class="tool"
-            [class.on]="tool() === 'zone-poly'"
-            (click)="setTool('zone-poly')"
-            [attr.aria-pressed]="tool() === 'zone-poly'"
-            [disabled]="ro"
-            pTooltip="Polygon zone (P)"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="hexagon" /><span>Polygon</span>
-          </button>
-          <button
-            type="button"
-            class="tool"
-            [class.on]="tool() === 'text'"
-            (click)="setTool('text')"
-            [attr.aria-pressed]="tool() === 'text'"
-            [disabled]="ro"
-            pTooltip="Text on the plan (T)"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="object" /><span>Object</span>
-          </button>
-          @for (pair of drawTools; track $index) {
-            <div class="col">
-              @for (t of pair; track t.id) {
+
+      <!-- The same tools as a menu by category, for a phone. Keep it in step with the groups above. -->
+      <button type="button" class="menu-btn" (click)="toolsOpen.set(true)" aria-haspopup="dialog">
+        <app-icon name="menu" /> Tools
+      </button>
+      @if (toolsOpen()) {
+        <div class="sheet-backdrop" (click)="toolsOpen.set(false)"></div>
+        <section
+          class="sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Tools by category"
+          (click)="sheetClick($event)"
+        >
+          <header class="sheet__head">
+            <h2>Tools</h2>
+            <button
+              type="button"
+              class="sheet__close"
+              (click)="toolsOpen.set(false)"
+              aria-label="Close the tools"
+            >
+              <app-icon name="close" />
+            </button>
+          </header>
+          <div class="sheet__body">
+            <div class="sgroup" role="group" aria-label="Zones &amp; booths">
+              <h3 class="sgroup__title">Zones &amp; booths</h3>
+              <div class="stools">
                 <button
                   type="button"
-                  class="mini"
-                  [class.on]="tool() === t.id"
-                  (click)="setTool(t.id)"
-                  [attr.aria-pressed]="tool() === t.id"
+                  class="sbtn"
+                  [class.on]="tool() === 'zone-rect'"
+                  (click)="setTool('zone-rect')"
+                  [attr.aria-pressed]="tool() === 'zone-rect'"
                   [disabled]="ro"
-                  [pTooltip]="t.tip"
-                  tooltipPosition="bottom"
                 >
-                  <app-icon [name]="t.icon" /><span>{{ t.label }}</span>
+                  <app-icon name="grid_view" /><span>Zone</span>
                 </button>
-              }
+              </div>
+              <div class="stools">
+                <button
+                  type="button"
+                  class="sbtn"
+                  [class.on]="tool() === 'booth'"
+                  (click)="setTool('booth')"
+                  [attr.aria-pressed]="tool() === 'booth'"
+                  [disabled]="ro"
+                >
+                  <app-icon name="storefront" /><span>Booth</span>
+                </button>
+                <button
+                  type="button"
+                  class="sbtn auto labelled"
+                  (click)="autoBooths()"
+                  [disabled]="ro || store.busy()"
+                >
+                  <app-icon name="auto_awesome" /><span>Auto-booths</span>
+                </button>
+                <button
+                  type="button"
+                  class="sbtn labelled"
+                  (click)="importFile.click()"
+                  [disabled]="ro || store.busy()"
+                >
+                  <app-icon name="upload_file" /><span>Import</span>
+                </button>
+
+                @if (store.pricing()) {
+                  <button
+                    type="button"
+                    class="sbtn labelled"
+                    (click)="openRates()"
+                    [disabled]="store.busy()"
+                  >
+                    <app-icon name="payments" /><span>Pricing</span>
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="sbtn auto"
+                  (click)="planHall()"
+                  [disabled]="ro || store.busy()"
+                >
+                  <app-icon name="dashboard" /><span>Plan hall</span>
+                </button>
+                <button
+                  type="button"
+                  class="sbtn"
+                  (click)="toBooth()"
+                  [disabled]="ro || store.busy() || !canMakeBooth()"
+                >
+                  <app-icon name="crop_free" /><span>To booth</span>
+                </button>
+                <button
+                  type="button"
+                  class="sbtn"
+                  (click)="seats()"
+                  [disabled]="ro || store.busy()"
+                >
+                  <app-icon name="event_seat" /><span>Seats</span>
+                </button>
+                <button
+                  type="button"
+                  class="sbtn auto seat"
+                  (click)="autoSeats()"
+                  [disabled]="ro || store.busy()"
+                >
+                  <app-icon name="auto_awesome" /><span>Auto-seats</span>
+                </button>
+              </div>
             </div>
-          }
-        </div>
-      </div>
-      <div class="group" data-tour="modify-group">
-        <div class="tools">
-          <button
-            type="button"
-            class="tool"
-            [class.on]="tool() === 'pan'"
-            (click)="setTool('pan')"
-            [attr.aria-pressed]="tool() === 'pan'"
-            pTooltip="Pan (H)"
-            tooltipPosition="bottom"
-          >
-            <app-icon name="move" /><span>Pan</span>
-          </button>
-          <div class="col">
-            <button
-              data-tour="copy"
-              type="button"
-              class="mini"
-              (click)="copySelection()"
-              [disabled]="noStalls"
-              pTooltip="Copy the selected booths"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="content_copy" /><span>Copy</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              (click)="splitSelection()"
-              [disabled]="noStalls || store.selectedStalls().length !== 1"
-              pTooltip="Split the selected booth in two along its longer side"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="call_split" /><span>Split</span>
-            </button>
-            <button
-              type="button"
-              class="mini danger"
-              (click)="removeSelection()"
-              [disabled]="!store.selection() || ro || store.busy()"
-              pTooltip="Delete (Del)"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="delete" /><span>Delete</span>
-            </button>
+            <div class="sgroup" role="group" aria-label="Draw">
+              <h3 class="sgroup__title">Draw</h3>
+              <div class="stools">
+                <button
+                  type="button"
+                  class="sbtn"
+                  [class.on]="tool() === 'select'"
+                  (click)="setTool('select')"
+                  [attr.aria-pressed]="tool() === 'select'"
+                >
+                  <app-icon name="near_me" /><span>Select</span>
+                </button>
+                <button
+                  type="button"
+                  class="sbtn"
+                  [class.on]="tool() === 'zone-poly'"
+                  (click)="setTool('zone-poly')"
+                  [attr.aria-pressed]="tool() === 'zone-poly'"
+                  [disabled]="ro"
+                >
+                  <app-icon name="hexagon" /><span>Polygon</span>
+                </button>
+                <button
+                  type="button"
+                  class="sbtn"
+                  [class.on]="tool() === 'text'"
+                  (click)="setTool('text')"
+                  [attr.aria-pressed]="tool() === 'text'"
+                  [disabled]="ro"
+                >
+                  <app-icon name="object" /><span>Object</span>
+                </button>
+                @for (pair of drawTools; track $index) {
+                  <div class="scol">
+                    @for (t of pair; track t.id) {
+                      <button
+                        type="button"
+                        class="sbtn"
+                        [class.on]="tool() === t.id"
+                        (click)="setTool(t.id)"
+                        [attr.aria-pressed]="tool() === t.id"
+                        [disabled]="ro"
+                      >
+                        <app-icon [name]="t.icon" /><span>{{ t.label }}</span>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+            <div class="sgroup" role="group" aria-label="Edit">
+              <h3 class="sgroup__title">Edit</h3>
+              <div class="stools">
+                <button
+                  type="button"
+                  class="sbtn"
+                  [class.on]="tool() === 'pan'"
+                  (click)="setTool('pan')"
+                  [attr.aria-pressed]="tool() === 'pan'"
+                >
+                  <app-icon name="move" /><span>Pan</span>
+                </button>
+                <div class="scol">
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="copySelection()"
+                    [disabled]="noStalls"
+                  >
+                    <app-icon name="content_copy" /><span>Copy</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="splitSelection()"
+                    [disabled]="noStalls || store.selectedStalls().length !== 1"
+                  >
+                    <app-icon name="call_split" /><span>Split</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn danger"
+                    (click)="removeSelection()"
+                    [disabled]="!store.selection() || ro || store.busy()"
+                  >
+                    <app-icon name="delete" /><span>Delete</span>
+                  </button>
+                </div>
+                <div class="scol">
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="mergeSelection()"
+                    [disabled]="noStalls || store.selectedStalls().length < 2"
+                  >
+                    <app-icon name="call_merge" /><span>Merge</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="rotateSelection()"
+                    [disabled]="noStalls"
+                  >
+                    <app-icon name="rotate" /><span>Rotate</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="rowOfBooths()"
+                    [disabled]="ro || store.busy()"
+                  >
+                    <app-icon name="rows" /><span>Row</span>
+                  </button>
+                </div>
+                <div class="scol">
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="mirrorSelection('y')"
+                    [disabled]="noStalls"
+                  >
+                    <app-icon name="flip" class="turn" /><span>Mirror</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    [class.on]="tool() === 'mirror-line'"
+                    (click)="setTool('mirror-line')"
+                    [attr.aria-pressed]="tool() === 'mirror-line'"
+                    [disabled]="noStalls"
+                  >
+                    <app-icon name="line" /><span>Mirror line</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="scaleSelection()"
+                    [disabled]="noStalls"
+                  >
+                    <app-icon name="scale" /><span>Scale</span>
+                  </button>
+                </div>
+                <div class="scol">
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="numberSelection()"
+                    [disabled]="noStalls"
+                  >
+                    <app-icon name="numbers" /><span>Number</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="mirrorSelection('x')"
+                    [disabled]="noStalls"
+                  >
+                    <app-icon name="flip" /><span>Mirror X</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn danger"
+                    (click)="removeAllStalls()"
+                    [disabled]="!store.plan().stalls.length || ro || store.busy()"
+                  >
+                    <app-icon name="delete" /><span>Delete all</span>
+                  </button>
+                </div>
+                <div class="scol">
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="store.undo()"
+                    [disabled]="!store.canUndo() || ro || store.busy()"
+                  >
+                    <app-icon name="undo" /><span>Undo</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    (click)="store.redo()"
+                    [disabled]="!store.canRedo() || ro || store.busy()"
+                  >
+                    <app-icon name="redo" /><span>Redo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="sgroup" role="group" aria-label="Measure">
+              <h3 class="sgroup__title">Measure</h3>
+              <div class="stools">
+                <div class="scol">
+                  <button
+                    type="button"
+                    class="sbtn"
+                    [class.on]="tool() === 'measure-distance'"
+                    (click)="setTool('measure-distance')"
+                    [attr.aria-pressed]="tool() === 'measure-distance'"
+                  >
+                    <app-icon name="measure" /><span>Distance</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    [class.on]="tool() === 'measure-area'"
+                    (click)="setTool('measure-area')"
+                    [attr.aria-pressed]="tool() === 'measure-area'"
+                  >
+                    <app-icon name="area" /><span>Area</span>
+                  </button>
+                </div>
+                <div class="scol">
+                  <button
+                    type="button"
+                    class="sbtn"
+                    [class.on]="tool() === 'measure-angle'"
+                    (click)="setTool('measure-angle')"
+                    [attr.aria-pressed]="tool() === 'measure-angle'"
+                  >
+                    <app-icon name="angle" /><span>Angle</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    [class.on]="tool() === 'measure-height'"
+                    (click)="setTool('measure-height')"
+                    [attr.aria-pressed]="tool() === 'measure-height'"
+                  >
+                    <app-icon name="height" /><span>Height</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="sgroup" role="group" aria-label="View &amp; help">
+              <h3 class="sgroup__title">View &amp; help</h3>
+              <div class="stools">
+                <div class="col dense">
+                  <button type="button" class="sbtn" (click)="zoom(1.25)">
+                    <app-icon name="zoom_in" /><span>Zoom in</span>
+                  </button>
+                  <button type="button" class="sbtn" (click)="zoom(0.8)">
+                    <app-icon name="zoom_out" /><span>Zoom out</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    [class.on]="splitView()"
+                    (click)="splitView.set(!splitView())"
+                    [attr.aria-pressed]="splitView()"
+                  >
+                    <app-icon name="split_view" /><span>Split view</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    [class.on]="tool() === 'zoom-window'"
+                    (click)="setTool('zoom-window')"
+                    [attr.aria-pressed]="tool() === 'zoom-window'"
+                  >
+                    <app-icon name="zoom_window" /><span>Zoom window</span>
+                  </button>
+                </div>
+                <div class="scol">
+                  <button
+                    type="button"
+                    class="sbtn toggle"
+                    [class.on]="showGrid()"
+                    (click)="showGrid.set(!showGrid())"
+                    [attr.aria-pressed]="showGrid()"
+                  >
+                    <app-icon name="grid_on" /><span>Grid</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn toggle"
+                    [class.on]="showLabels()"
+                    (click)="showLabels.set(!showLabels())"
+                    [attr.aria-pressed]="showLabels()"
+                  >
+                    <app-icon name="label" /><span>Labels</span>
+                  </button>
+                </div>
+              </div>
+              <div class="stools">
+                <div class="scol">
+                  <button type="button" class="sbtn" (click)="showShortcuts()">
+                    <app-icon name="numbers" /><span>Shortcuts</span>
+                  </button>
+                  <button type="button" class="sbtn" (click)="startTour()">
+                    <app-icon name="help" /><span>Help</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sbtn"
+                    [class.on]="fullscreen()"
+                    (click)="toggleFullscreen()"
+                    [attr.aria-pressed]="fullscreen()"
+                  >
+                    <app-icon name="fullscreen" /><span>Full</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col">
-            <button
-              type="button"
-              class="mini"
-              (click)="mergeSelection()"
-              [disabled]="noStalls || store.selectedStalls().length < 2"
-              pTooltip="Join the selected booths into one; together they must make a rectangle"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="call_merge" /><span>Merge</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              (click)="rotateSelection()"
-              [disabled]="noStalls"
-              pTooltip="Turn the selected booths a quarter"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="rotate" /><span>Rotate</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              (click)="rowOfBooths()"
-              [disabled]="ro || store.busy()"
-              pTooltip="Add booths side by side in a row"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="rows" /><span>Row</span>
-            </button>
-          </div>
-          <div class="col">
-            <button
-              type="button"
-              class="mini"
-              (click)="mirrorSelection('y')"
-              [disabled]="noStalls"
-              pTooltip="Mirror the selected booths top to bottom"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="flip" class="turn" /><span>Mirror</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              [class.on]="tool() === 'mirror-line'"
-              (click)="setTool('mirror-line')"
-              [attr.aria-pressed]="tool() === 'mirror-line'"
-              [disabled]="noStalls"
-              pTooltip="Draw a line to mirror copies of the selected booths across"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="line" /><span>Mirror line</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              (click)="scaleSelection()"
-              [disabled]="noStalls"
-              pTooltip="Make the selected booths bigger or smaller"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="scale" /><span>Scale</span>
-            </button>
-          </div>
-          <div class="col">
-            <button
-              type="button"
-              class="mini"
-              (click)="numberSelection()"
-              [disabled]="noStalls"
-              pTooltip="Number the selected booths from 1, row by row"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="numbers" /><span>Number</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              (click)="mirrorSelection('x')"
-              [disabled]="noStalls"
-              pTooltip="Mirror the selected booths left to right"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="flip" /><span>Mirror X</span>
-            </button>
-            <button
-              type="button"
-              class="mini danger"
-              (click)="removeAllStalls()"
-              [disabled]="!store.plan().stalls.length || ro || store.busy()"
-              pTooltip="Delete every booth on the plan"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="delete" /><span>Delete all</span>
-            </button>
-          </div>
-          <div class="col">
-            <button
-              data-tour="undo"
-              type="button"
-              class="mini"
-              (click)="store.undo()"
-              [disabled]="!store.canUndo() || ro || store.busy()"
-              pTooltip="Undo (Ctrl+Z)"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="undo" /><span>Undo</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              (click)="store.redo()"
-              [disabled]="!store.canRedo() || ro || store.busy()"
-              pTooltip="Redo (Ctrl+Y)"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="redo" /><span>Redo</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="group" data-tour="measure-group">
-        <div class="tools">
-          <div class="col">
-            <button
-              type="button"
-              class="mini"
-              [class.on]="tool() === 'measure-distance'"
-              (click)="setTool('measure-distance')"
-              [attr.aria-pressed]="tool() === 'measure-distance'"
-              pTooltip="Measure distance"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="measure" /><span>Distance</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              [class.on]="tool() === 'measure-area'"
-              (click)="setTool('measure-area')"
-              [attr.aria-pressed]="tool() === 'measure-area'"
-              pTooltip="Measure area"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="area" /><span>Area</span>
-            </button>
-          </div>
-          <div class="col">
-            <button
-              type="button"
-              class="mini"
-              [class.on]="tool() === 'measure-angle'"
-              (click)="setTool('measure-angle')"
-              [attr.aria-pressed]="tool() === 'measure-angle'"
-              pTooltip="Measure angle"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="angle" /><span>Angle</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              [class.on]="tool() === 'measure-height'"
-              (click)="setTool('measure-height')"
-              [attr.aria-pressed]="tool() === 'measure-height'"
-              pTooltip="Measure height"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="height" /><span>Height</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="group">
-        <div class="tools">
-          <div class="col dense">
-            <button
-              type="button"
-              class="mini"
-              (click)="zoom(1.25)"
-              pTooltip="Zoom in"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="zoom_in" /><span>Zoom in</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              (click)="zoom(0.8)"
-              pTooltip="Zoom out"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="zoom_out" /><span>Zoom out</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              [class.on]="splitView()"
-              (click)="splitView.set(!splitView())"
-              [attr.aria-pressed]="splitView()"
-              pTooltip="A second view of the plan beside this one, to zoom on its own"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="split_view" /><span>Split view</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              [class.on]="tool() === 'zoom-window'"
-              (click)="setTool('zoom-window')"
-              [attr.aria-pressed]="tool() === 'zoom-window'"
-              pTooltip="Zoom to a window you drag"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="zoom_window" /><span>Zoom window</span>
-            </button>
-          </div>
-          <div class="col">
-            <button
-              type="button"
-              class="mini toggle"
-              [class.on]="showGrid()"
-              (click)="showGrid.set(!showGrid())"
-              [attr.aria-pressed]="showGrid()"
-              pTooltip="Show the grid"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="grid_on" /><span>Grid</span>
-            </button>
-            <button
-              type="button"
-              class="mini toggle"
-              [class.on]="showLabels()"
-              (click)="showLabels.set(!showLabels())"
-              [attr.aria-pressed]="showLabels()"
-              pTooltip="Show booth labels"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="label" /><span>Labels</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="group">
-        <div class="tools">
-          <div class="col">
-            <button
-              type="button"
-              class="mini"
-              (click)="startTour()"
-              pTooltip="Help & guided tour"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="help" /><span>Help</span>
-            </button>
-            <button
-              type="button"
-              class="mini"
-              [class.on]="fullscreen()"
-              (click)="toggleFullscreen()"
-              [attr.aria-pressed]="fullscreen()"
-              pTooltip="Full screen"
-              tooltipPosition="bottom"
-            >
-              <app-icon name="fullscreen" /><span>Full</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <span class="spacer"></span>
+        </section>
+      }
       <div class="actions" data-tour="save-publish">
+        @if (saveState()) {
+          <span class="save-state" [class.unsaved]="store.dirty()" role="status" aria-live="polite">
+            {{ saveState() }}
+          </span>
+        }
         @if (canEdit()) {
           <button
             pButton
@@ -613,9 +1048,27 @@
       <p-progressbar mode="indeterminate" class="busy" />
     }
 
-    <div class="body" [class.no-left]="!leftOpen()" [class.no-right]="!rightOpen()">
+    <div
+      class="body"
+      [class.no-left]="!leftOpen()"
+      [class.no-right]="!rightOpen()"
+      [style.--left-w.px]="leftWidth()"
+      [style.--right-w.px]="rightWidth()"
+    >
       @if (leftOpen()) {
         <aside class="side left" aria-label="Plan" data-tour="plan-panel">
+          <div
+            class="resizer resizer--left"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize the plan panel"
+            aria-valuemin="200"
+            aria-valuemax="520"
+            [attr.aria-valuenow]="leftWidth()"
+            tabindex="0"
+            (pointerdown)="resizeStart('left', $event)"
+            (keydown)="resizeKey('left', $event)"
+          ></div>
           <div class="side-head">
             <h2>Plan</h2>
             <button
@@ -830,6 +1283,29 @@
       }
 
       <div class="stage" [class.split]="splitView()">
+        @if (canEdit() && emptyPlan() && tool() === 'select') {
+          <div class="begin" role="group" aria-label="Ways to begin">
+            <h2>Start this hall's plan</h2>
+            <p class="muted">Pick how you want to begin. You can mix them later.</p>
+            <div class="begin__actions">
+              <button type="button" class="begin__card" (click)="autoBooths()">
+                <app-icon name="auto_awesome" />
+                <b>Auto-booths</b>
+                <span>Fill a zone with booths of one size.</span>
+              </button>
+              <button type="button" class="begin__card" (click)="importFile.click()">
+                <app-icon name="upload_file" />
+                <b>Import a plan</b>
+                <span>Read the stalls from a CAD drawing (PDF or DXF).</span>
+              </button>
+              <button type="button" class="begin__card" (click)="setTool('booth')">
+                <app-icon name="storefront" />
+                <b>Draw a booth</b>
+                <span>Drag on the floor, one booth at a time (B).</span>
+              </button>
+            </div>
+          </div>
+        }
         <app-planner-canvas
           #canvas
           data-tour="canvas"
@@ -932,6 +1408,18 @@
 
       @if (rightOpen()) {
         <aside class="side right" aria-label="Properties">
+          <div
+            class="resizer resizer--right"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize the properties panel"
+            aria-valuemin="200"
+            aria-valuemax="520"
+            [attr.aria-valuenow]="rightWidth()"
+            tabindex="0"
+            (pointerdown)="resizeStart('right', $event)"
+            (keydown)="resizeKey('right', $event)"
+          ></div>
           <div class="side-head">
             <h2>Properties</h2>
             <button

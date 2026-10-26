@@ -1,0 +1,38 @@
+@if (steps().length) {
+  <section class="progress" aria-label="Progress of this event">
+    <ol class="steps">
+      @for (step of steps(); track step.id; let i = $index) {
+        <li
+          class="step"
+          [class.done]="step.done"
+          [class.current]="next()?.index === i"
+          [attr.aria-current]="next()?.index === i ? 'step' : null"
+        >
+          <span class="dot" aria-hidden="true">
+            @if (step.done) {
+              <i class="pi pi-check"></i>
+            } @else {
+              {{ i + 1 }}
+            }
+          </span>
+          <span class="label">
+            {{ step.label }}
+            <span class="visually-hidden">{{ step.done ? ' (done)' : '' }}</span>
+          </span>
+        </li>
+      }
+    </ol>
+    @if (next(); as n) {
+      <p class="next">
+        <b>Next:</b> {{ n.step.label }}. {{ n.step.hint }}
+        @if (canAct()) {
+          <button type="button" class="go" (click)="go()(n.step.tab)">Go</button>
+        }
+      </p>
+    } @else {
+      <p class="next done-all">
+        <i class="pi pi-check-circle" aria-hidden="true"></i> Every step is done.
+      </p>
+    }
+  </section>
+}

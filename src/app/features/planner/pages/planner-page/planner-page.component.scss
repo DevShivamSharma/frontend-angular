@@ -13,10 +13,10 @@
   flex: 1;
 }
 .ribbon {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 2px 0;
+  gap: 2px 12px;
   min-height: 40px;
   padding: 4px 8px;
   border-bottom: 1px solid var(--app-outline-variant);
@@ -52,7 +52,7 @@
   height: 32px;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--app-radius-2xs);
   background: none;
   color: var(--app-on-surface);
   cursor: pointer;
@@ -106,10 +106,10 @@
   background: var(--app-on-surface) !important;
 }
 .tool.auto {
-  color: light-dark(#15803d, #4ade80);
+  color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .tool.seat {
-  color: light-dark(#7e22ce, #c084fc);
+  color: light-dark(var(--palette-purple-700), var(--palette-purple-400));
 }
 .danger {
   color: var(--app-error);
@@ -124,34 +124,32 @@
   cursor: not-allowed;
 }
 .actions {
-  position: sticky;
-  right: 0;
   z-index: 1;
   display: flex;
   align-items: center;
+  align-self: start;
   gap: 8px;
-  padding: 0 4px 0 12px;
-  background: var(--app-surface-container-lowest);
-  box-shadow: -12px 0 12px -8px rgb(0 0 0 / 0.12);
+  padding: 2px 4px 0 12px;
+  border-left: 1px solid var(--app-outline-variant);
 }
 /* Save and Publish sit on the toolbar line, as tall as its buttons. */
 .actions .save,
 .publish {
   height: 32px;
   padding: 0 12px;
-  border-radius: 4px;
+  border-radius: var(--app-radius-2xs);
   font: var(--app-label-medium);
 }
 .save {
-  --p-button-primary-background: #16a34a;
-  --p-button-primary-border-color: #16a34a;
-  --p-button-primary-hover-background: #15803d;
-  --p-button-primary-hover-border-color: #15803d;
+  --p-button-primary-background: var(--palette-green-600);
+  --p-button-primary-border-color: var(--palette-green-600);
+  --p-button-primary-hover-background: var(--palette-green-700);
+  --p-button-primary-hover-border-color: var(--palette-green-700);
   gap: 6px;
 }
 .save.saved {
-  --p-button-primary-background: #94a3b8;
-  --p-button-primary-border-color: #94a3b8;
+  --p-button-primary-background: var(--palette-slate-400);
+  --p-button-primary-border-color: var(--palette-slate-400);
 }
 .publish:disabled:not(.done) {
   opacity: 0.5;
@@ -161,13 +159,13 @@
   cursor: pointer;
 }
 .publish.done {
-  background: #16a34a;
+  background: var(--palette-green-600);
 }
 .published-note {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #15803d;
+  color: var(--palette-green-700);
   font: var(--app-label-large);
 }
 .publish {
@@ -175,8 +173,8 @@
   align-items: center;
   gap: 6px;
   border: 0;
-  background: #0f2a4a;
-  color: #fff;
+  background: var(--palette-navy-900);
+  color: var(--palette-white);
   font: var(--app-label-large);
 }
 .readonly,
@@ -189,20 +187,20 @@
   font: var(--app-body-medium);
 }
 .readonly {
-  background: #fef9c3;
-  color: #713f12;
+  background: var(--palette-yellow-100);
+  color: var(--palette-yellow-900);
 }
 .review {
-  background: light-dark(#e0f2fe, #0c4a6e);
-  color: light-dark(#0c4a6e, #e0f2fe);
+  background: light-dark(var(--palette-sky-100), var(--palette-sky-900));
+  color: light-dark(var(--palette-sky-900), var(--palette-sky-100));
 }
 .review.approved {
-  background: light-dark(#dcfce7, #14532d);
-  color: light-dark(#14532d, #dcfce7);
+  background: light-dark(var(--palette-green-100), var(--palette-green-900));
+  color: light-dark(var(--palette-green-900), var(--palette-green-100));
 }
 .review.rejected {
-  background: light-dark(#fee2e2, #7f1d1d);
-  color: light-dark(#7f1d1d, #fee2e2);
+  background: light-dark(var(--palette-red-100), var(--palette-red-900));
+  color: light-dark(var(--palette-red-900), var(--palette-red-100));
 }
 .publish.quiet {
   background: var(--app-surface-container);
@@ -217,14 +215,14 @@
 .body {
   flex: 1;
   display: grid;
-  grid-template-columns: 256px minmax(0, 1fr) 260px;
+  grid-template-columns: var(--left-w, 256px) minmax(0, 1fr) var(--right-w, 260px);
   min-height: 0;
 }
 .body.no-left {
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) var(--right-w, 260px);
 }
 .body.no-right {
-  grid-template-columns: 256px minmax(0, 1fr);
+  grid-template-columns: var(--left-w, 256px) minmax(0, 1fr);
 }
 .body.no-left.no-right {
   grid-template-columns: minmax(0, 1fr);
@@ -282,7 +280,7 @@
   gap: 8px;
   align-items: flex-start;
   padding: 4px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
   color: inherit;
   text-decoration: none;
 }
@@ -302,7 +300,7 @@
   gap: 8px;
   padding: 12px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 10px;
+  border-radius: var(--app-radius-md);
   background: var(--app-surface-container-lowest);
 }
 .card-title {
@@ -344,7 +342,7 @@
   gap: 8px;
   padding: 8px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
   background: none;
   color: inherit;
   font: var(--app-label-large);
@@ -355,12 +353,13 @@
   gap: 8px;
   padding: 6px 10px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
   color: var(--app-on-surface-variant);
 }
 .search input {
   flex: 1;
   min-width: 0;
+  min-height: 24px;
   border: 0;
   outline: none;
   background: none;
@@ -369,6 +368,7 @@
 }
 .search:focus-within {
   border-color: var(--app-primary);
+  box-shadow: 0 0 0 3px var(--app-ring, color-mix(in srgb, var(--app-primary) 28%, transparent));
 }
 .stage {
   position: relative;
@@ -392,11 +392,11 @@
   top: 12px;
   padding: 8px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 8px;
-  background: #fff;
-  color: #334155;
+  border-radius: var(--app-radius-sm);
+  background: var(--palette-white);
+  color: var(--palette-slate-700);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+  box-shadow: var(--app-shadow-sm);
 }
 .reopen.left {
   left: 12px;
@@ -412,9 +412,9 @@
   width: min(370px, calc(100% - 200px));
   padding: 10px 14px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+  border-radius: var(--app-radius-md);
+  background: var(--palette-white);
+  box-shadow: var(--app-shadow-md);
 }
 .tour.closed {
   width: auto;
@@ -427,7 +427,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #1e293b;
+  color: var(--palette-slate-800);
   font: var(--app-title-small);
   cursor: pointer;
   text-align: left;
@@ -442,7 +442,7 @@
 }
 .tour p {
   margin: 6px 0 0 30px;
-  color: #334155;
+  color: var(--palette-slate-700);
 }
 .ai {
   position: absolute;
@@ -453,11 +453,11 @@
   gap: 8px;
   padding: 10px 16px;
   border: 0;
-  border-radius: 999px;
-  background: #0f2a4a;
-  color: #fff;
+  border-radius: var(--app-radius-pill);
+  background: var(--palette-navy-900);
+  color: var(--palette-white);
   font: var(--app-label-large);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  box-shadow: var(--app-shadow-md);
 }
 .zones,
 .legend,
@@ -475,7 +475,7 @@
 .zones li {
   display: flex;
   align-items: center;
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
 }
 .zones li.on,
 .tree button.on {
@@ -491,7 +491,7 @@
   min-width: 0;
   padding: 6px 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
   background: none;
   color: inherit;
   font: var(--app-body-medium);
@@ -512,7 +512,7 @@
   background: none;
   color: var(--app-on-surface-variant);
   padding: 6px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-xs);
   cursor: pointer;
 }
 .x:hover {
@@ -528,8 +528,8 @@
   width: 14px;
   height: 14px;
   flex: none;
-  border-radius: 3px;
-  border: 1px solid rgb(0 0 0 / 0.15);
+  border-radius: var(--app-radius-2xs);
+  border: 1px solid color-mix(in srgb, var(--palette-black) 15%, transparent);
 }
 .small {
   font: var(--app-body-small);
@@ -555,7 +555,7 @@
   text-align: right;
 }
 .stats .ok {
-  color: #16a34a;
+  color: var(--palette-green-600);
 }
 .stats .bad {
   color: var(--app-error);
@@ -601,7 +601,7 @@
 .chip {
   padding: 3px 10px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: none;
   color: var(--app-on-surface-variant);
   font: var(--app-label-medium);
@@ -626,5 +626,363 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+}
+
+/* The few actions people look for by name show it: icon and word, the rest keep to the icon. */
+.tool.labelled {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  width: auto;
+  padding: 0 8px;
+}
+
+.tool.labelled > span {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  font: var(--app-label-medium);
+}
+
+/* A finger needs more than a mouse: bigger targets on a touch screen. */
+@media (pointer: coarse) {
+  .tool,
+  .mini {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+.small-screen {
+  display: none;
+  margin: 0;
+  padding: 6px 12px;
+  background: var(--app-primary-container);
+  color: var(--app-on-primary-container);
+  font: var(--app-body-small);
+}
+
+@media (max-width: 760px) {
+  .small-screen {
+    display: block;
+  }
+
+  .planner {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  /* The Help button in the ribbon still starts the tour; the card would cover the floor. */
+  .tour {
+    display: none;
+  }
+}
+
+/* Controls that are a line of text still get a target a finger can hit (WCAG 2.5.8: 24 px at least). */
+.card-toggle,
+.tour-head {
+  min-height: 32px;
+}
+
+:host ::ng-deep .mode-switch button,
+:host ::ng-deep .view-mode button {
+  min-height: 28px;
+}
+
+.save-state {
+  color: var(--app-on-surface-variant);
+  font: var(--app-label-medium);
+  white-space: nowrap;
+
+  &.unsaved {
+    color: var(--app-error);
+    font-weight: 700;
+  }
+}
+
+/* Over the empty floor, not in the way of the first stroke once it starts. */
+.begin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  width: min(34rem, calc(100% - 32px));
+  padding: 20px;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: var(--app-radius-xl);
+  background: var(--app-surface-container-lowest);
+  box-shadow: var(--app-level3);
+  text-align: center;
+  transform: translate(-50%, -50%);
+
+  h2 {
+    margin: 0 0 4px;
+    font: var(--app-title-medium);
+  }
+
+  p {
+    margin: 0 0 14px;
+  }
+}
+
+.begin__actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 10px;
+}
+
+.begin__card {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 14px 10px;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: var(--app-radius-lg);
+  background: none;
+  color: var(--app-on-surface);
+  font: inherit;
+  cursor: pointer;
+
+  app-icon {
+    color: var(--app-primary);
+    font-size: 1.5rem;
+  }
+
+  span {
+    color: var(--app-on-surface-variant);
+    font: var(--app-body-small);
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--app-primary);
+    background: var(--app-primary-container);
+  }
+}
+
+/* The edge of a side panel is a handle: drag it, or focus it and use the arrow keys. */
+.side {
+  position: relative;
+}
+
+.resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 6;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+
+  &--left {
+    right: -4px;
+  }
+
+  &--right {
+    left: -4px;
+  }
+
+  &:hover,
+  &:focus-visible,
+  &:active {
+    background: color-mix(in srgb, var(--app-primary) 28%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-primary);
+    outline-offset: -2px;
+  }
+}
+
+/* The tools keep to one line; Save and Publish keep their own place at the right, always in view. */
+.groups {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.group {
+  flex: none;
+}
+
+/* A group that starts a row has no divider before it. */
+.groups .group:first-child::before {
+  display: none;
+}
+
+@media (max-width: 1280px) {
+  .ribbon {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions {
+    border-left: 0;
+    border-top: 1px solid var(--app-outline-variant);
+    justify-content: flex-end;
+    padding: 6px 4px 0;
+  }
+}
+
+/* A tablet or a phone: one Tools button opens the categories; Save and Publish stay on the bar. */
+.menu-btn,
+.sheet-backdrop,
+.sheet {
+  display: none;
+}
+
+@media (max-width: 1280px) {
+  .groups {
+    display: none;
+  }
+
+  .menu-btn {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    align-self: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--app-outline);
+    border-radius: var(--app-radius-md);
+    background: var(--app-surface-container-lowest);
+    color: var(--app-on-surface);
+    font: var(--app-label-large);
+    cursor: pointer;
+  }
+
+  .sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: block;
+    background: color-mix(in srgb, var(--palette-black) 40%, transparent);
+  }
+
+  .sheet {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 41;
+    display: flex;
+    flex-direction: column;
+    max-width: 44rem;
+    max-height: 82dvh;
+    margin: 0 auto;
+    border-radius: var(--app-radius-xl) var(--app-radius-xl) 0 0;
+    background: var(--app-surface-container-lowest);
+    box-shadow: var(--app-level3);
+  }
+
+  .sheet__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--app-outline-variant);
+
+    h2 {
+      margin: 0;
+      font: var(--app-title-medium);
+    }
+  }
+
+  .sheet__close {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    background: none;
+    color: var(--app-on-surface);
+    cursor: pointer;
+  }
+
+  .sheet__body {
+    display: grid;
+    gap: 14px;
+    padding: 12px 16px 20px;
+    overflow: auto;
+  }
+
+  .sgroup {
+    display: block;
+  }
+
+  .sgroup__title {
+    margin: 0 0 6px;
+    color: var(--app-on-surface-variant);
+    font: var(--app-label-medium);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .stools,
+  .scol {
+    display: contents;
+  }
+
+  .sgroup {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 8px;
+  }
+
+  .sgroup__title {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+
+  .sbtn {
+    display: grid;
+    gap: 4px;
+    place-items: center;
+    min-height: 64px;
+    padding: 8px 4px;
+    border: 1px solid var(--app-outline-variant);
+    border-radius: var(--app-radius-md);
+    background: none;
+    color: var(--app-on-surface);
+    font: var(--app-label-medium);
+    text-align: center;
+    cursor: pointer;
+
+    app-icon {
+      font-size: 1.25rem;
+    }
+
+    &.on {
+      border-color: var(--app-primary);
+      background: var(--app-primary-container);
+      color: var(--app-primary);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+  }
+}
+
+/* On a desktop the tools are one line of icons (the words are in the tooltips); a bar too narrow
+   for all of them scrolls sideways, and Save and Publish stay in view. */
+@media (min-width: 1281px) {
+  .tool.labelled {
+    width: 32px;
+    padding: 0;
+  }
+
+  .tool.labelled > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
 }

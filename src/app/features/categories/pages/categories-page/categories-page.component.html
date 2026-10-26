@@ -1,111 +1,141 @@
 <div class="page">
   <app-page-header
     title="Categories"
-    subtitle="The product categories halls can sell, by fair. Switch one off to stop offering it."
+    subtitle="The product categories halls can sell, by fair. Switch a category or a whole group off to stop offering it."
   >
-    <p-button
-      actions
-      label="New category"
-      icon="pi pi-plus"
-      [disabled]="!groups().length"
-      (onClick)="openNew()"
-    />
+    @if (view() === 'categories') {
+      <p-button
+        actions
+        label="New category"
+        icon="pi pi-plus"
+        [disabled]="!groups().length"
+        (onClick)="openNew()"
+      />
+    }
   </app-page-header>
 
-  <section class="card card--flush" aria-label="Categories">
-    <div class="toolbar">
-      <div class="toolbar__field">
-        <label class="toolbar__label" for="category-group-filter">Group</label>
-        <p-select
-          inputId="category-group-filter"
-          [options]="groups()"
-          optionLabel="name"
-          optionValue="slug"
-          [ngModel]="group()"
-          (ngModelChange)="chooseGroup($event)"
-          [filter]="true"
-          filterBy="name"
-          placeholder="Choose a group"
-          appendTo="body"
-          styleClass="toolbar__group"
-        />
-      </div>
-      <p-selectbutton
-        [options]="statusOptions"
-        optionLabel="label"
-        optionValue="value"
-        [allowEmpty]="false"
-        [ngModel]="status()"
-        (ngModelChange)="chooseStatus($event)"
-        ariaLabel="Show"
-      />
-      <p-iconfield class="toolbar__search">
-        <p-inputicon class="pi pi-search" />
-        <input
-          pInputText
-          type="search"
-          [formControl]="search"
-          placeholder="Search categories"
-          aria-label="Search categories"
-        />
-      </p-iconfield>
-      <span class="text-muted toolbar__count" aria-live="polite">
-        @if (!loading() && !failed()) {
-          {{ total() }} {{ total() === 1 ? 'category' : 'categories' }}
-        }
-      </span>
-    </div>
+  <p-selectbutton
+    class="view-switch"
+    [options]="viewOptions"
+    optionLabel="label"
+    optionValue="value"
+    [allowEmpty]="false"
+    [ngModel]="view()"
+    (ngModelChange)="chooseView($event)"
+    ariaLabel="Categories or groups"
+  />
 
-    @if (groupsFailed()) {
-      <app-empty-state
-        icon="pi-exclamation-triangle"
-        title="The categories could not be loaded"
-        message="ITPO could not be reached. Reload the page to try again."
-      />
-    } @else if (failed()) {
-      <app-empty-state
-        icon="pi-exclamation-triangle"
-        title="The categories could not be loaded"
-        message="Check your connection and try again."
-      >
-        <p-button label="Try again" icon="pi pi-refresh" (onClick)="retry()" />
-      </app-empty-state>
+  <section
+    class="card card--flush"
+    [attr.aria-label]="view() === 'groups' ? 'Groups' : 'Categories'"
+  >
+    @if (view() === 'groups') {
+      <app-groups-panel (changed)="loadGroups()" />
     } @else {
-      @if (loading()) {
-        <app-card-skeleton [count]="9" />
-      } @else if (categories().length) {
-        <ul class="card-grid">
-          @for (category of categories(); track category.id) {
-            <li class="item-card">
-              <h2 class="item-card__title">{{ category.name }}</h2>
-              <p class="item-card__meta">{{ category.description ?? 'No note' }}</p>
-              <div class="item-card__tags state-row">
-                <p-toggleswitch
-                  [ngModel]="category.active"
-                  (onChange)="toggle(category, $event.checked)"
-                  [ariaLabel]="(category.active ? 'Deactivate ' : 'Activate ') + category.name"
-                />
-                <span class="state" [class.state--off]="!category.active">{{
-                  category.active ? 'Active' : 'Inactive'
-                }}</span>
-              </div>
-            </li>
+      <div class="toolbar">
+        <div class="toolbar__field">
+          <label class="toolbar__label" for="category-group-filter">Group</label>
+          <p-select
+            inputId="category-group-filter"
+            [options]="groups()"
+            optionLabel="name"
+            optionValue="slug"
+            [ngModel]="group()"
+            (ngModelChange)="chooseGroup($event)"
+            [filter]="true"
+            filterBy="name"
+            placeholder="Choose a group"
+            appendTo="body"
+            styleClass="toolbar__group"
+          />
+        </div>
+        <p-selectbutton
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          [ngModel]="status()"
+          (ngModelChange)="chooseStatus($event)"
+          ariaLabel="Show"
+        />
+        <p-iconfield class="toolbar__search">
+          <p-inputicon class="pi pi-search" />
+          <input
+            pInputText
+            type="search"
+            [formControl]="search"
+            placeholder="Search categories"
+            aria-label="Search categories"
+          />
+        </p-iconfield>
+        <span class="text-muted toolbar__count" aria-live="polite">
+          @if (!loading() && !failed()) {
+            {{ total() }} {{ total() === 1 ? 'category' : 'categories' }}
           }
-        </ul>
-        <p-paginator
-          class="list-footer"
-          [first]="first()"
-          [rows]="pageSize"
-          [totalRecords]="total()"
-          [showCurrentPageReport]="false"
-          (onPageChange)="onPage($event)"
-        />
-      } @else {
+        </span>
+      </div>
+
+      @if (groupsFailed()) {
         <app-empty-state
-          icon="pi-tags"
-          [title]="search.value ? 'No category matches your search' : 'No categories here yet'"
-          [message]="search.value ? 'Try a different name.' : 'Add the first one to this group.'"
+          icon="pi-exclamation-triangle"
+          title="The categories could not be loaded"
+          message="ITPO could not be reached."
+          [reload]="true"
         />
+      } @else if (failed()) {
+        <app-empty-state
+          icon="pi-exclamation-triangle"
+          title="The categories could not be loaded"
+          message="Check your connection and try again."
+        >
+          <p-button label="Try again" icon="pi pi-refresh" (onClick)="retry()" />
+        </app-empty-state>
+      } @else {
+        @if (loading()) {
+          <app-card-skeleton [count]="9" />
+        } @else if (categories().length) {
+          <ul class="card-grid">
+            @for (category of categories(); track category.id) {
+              <li class="item-card">
+                <h2 class="item-card__title">{{ category.name }}</h2>
+                <p class="item-card__meta">{{ category.description ?? 'No note' }}</p>
+                <div class="item-card__tags state-row">
+                  <p-toggleswitch
+                    [ngModel]="category.active"
+                    (onChange)="toggle(category, $event.checked)"
+                    [ariaLabel]="(category.active ? 'Deactivate ' : 'Activate ') + category.name"
+                  />
+                  <span class="state" [class.state--off]="!category.active">{{
+                    category.active ? 'Active' : 'Inactive'
+                  }}</span>
+                  <p-button
+                    class="item-card__delete"
+                    icon="pi pi-trash"
+                    severity="danger"
+                    [text]="true"
+                    [rounded]="true"
+                    [ariaLabel]="'Delete ' + category.name"
+                    (onClick)="remove(category)"
+                  />
+                </div>
+              </li>
+            }
+          </ul>
+          <p-paginator
+            class="list-footer"
+            [first]="first()"
+            [rows]="pageSize"
+            [totalRecords]="total()"
+            [showCurrentPageReport]="false"
+            (onPageChange)="onPage($event)"
+          />
+        } @else {
+          <app-empty-state
+            icon="pi-tags"
+            [title]="search.value ? 'No category matches your search' : 'No categories here yet'"
+            [message]="search.value ? 'Try a different name.' : 'Add the first one to this group.'"
+          />
+        }
       }
     }
   </section>

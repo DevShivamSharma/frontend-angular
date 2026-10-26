@@ -27,20 +27,20 @@
 }
 .failed {
   padding: 12px;
-  border-radius: 10px;
+  border-radius: var(--app-radius-md);
   background: color-mix(in srgb, var(--app-error) 10%, transparent);
   color: var(--app-error);
   font: var(--app-body-medium);
   font-weight: 600;
 }
 .match {
-  color: light-dark(#15803d, #4ade80);
+  color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .match span {
   color: var(--app-on-surface);
 }
 .match.warn {
-  color: light-dark(#b45309, #fbbf24);
+  color: light-dark(var(--palette-amber-700), var(--palette-amber-400));
 }
 .spinner {
   width: 18px;
@@ -81,9 +81,9 @@
   right: 6px;
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
   background: var(--app-surface);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+  box-shadow: var(--app-shadow-sm);
 }
 .preview.dragging {
   cursor: grabbing;
@@ -92,16 +92,16 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 10px;
-  background: light-dark(#f1f5f9, #0f172a);
+  border-radius: var(--app-radius-md);
+  background: light-dark(var(--palette-slate-100), var(--palette-slate-900));
 }
 .floor {
-  fill: light-dark(#fff, #1e293b);
-  stroke: #94a3b8;
+  fill: light-dark(var(--palette-white), var(--palette-slate-800));
+  stroke: var(--palette-slate-400);
   stroke-width: 0.2;
 }
 .blocked {
-  fill: light-dark(#fecaca, #7f1d1d);
+  fill: light-dark(var(--palette-red-200), var(--palette-red-900));
   opacity: 0.6;
 }
 .floor-grid {
@@ -110,13 +110,13 @@
 }
 .grid-line {
   fill: none;
-  stroke: light-dark(#94a3b8, #64748b);
+  stroke: light-dark(var(--palette-slate-400), var(--palette-slate-500));
   stroke-width: 0.06;
 }
 /* Every 5 m a stronger line, to count metres while the drawing is moved. */
 .grid-major {
   fill: none;
-  stroke: light-dark(#64748b, #94a3b8);
+  stroke: light-dark(var(--palette-slate-500), var(--palette-slate-400));
   stroke-width: 0.12;
 }
 /* Outlines only: the grid stays visible under the stalls while the drawing is moved. */
@@ -125,33 +125,33 @@
   stroke-width: 0.18;
 }
 .stall.ok {
-  stroke: #16a34a;
+  stroke: var(--palette-green-600);
 }
 .stall.hand {
-  stroke: #64748b;
+  stroke: var(--palette-slate-500);
   stroke-dasharray: 0.4 0.3;
 }
 /* A stall with a problem stands out whole, not as an outline. */
 .stall.bad {
-  fill: #991b1b;
+  fill: var(--palette-red-800);
   fill-opacity: 0.85;
-  stroke: #7f1d1d;
+  stroke: var(--palette-red-900);
 }
 .stall.rule {
-  fill: #b45309;
+  fill: var(--palette-amber-700);
   fill-opacity: 0.85;
-  stroke: #78350f;
+  stroke: var(--palette-amber-900);
 }
 .stall.out {
   fill: transparent;
-  stroke: #94a3b8;
+  stroke: var(--palette-slate-400);
   stroke-dasharray: 0.4 0.3;
 }
 .stall {
   cursor: pointer;
 }
 .stall.changed {
-  stroke: #0e7490;
+  stroke: var(--palette-cyan-700);
 }
 .stall.picked {
   stroke: var(--app-primary);
@@ -169,7 +169,7 @@
   text-anchor: middle;
   dominant-baseline: middle;
   paint-order: stroke;
-  stroke: light-dark(#fff, #0f172a);
+  stroke: light-dark(var(--palette-white), var(--palette-slate-900));
   stroke-width: 0.25;
   pointer-events: none;
 }
@@ -178,7 +178,7 @@
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 10px;
+  border-radius: var(--app-radius-md);
 }
 .one-head {
   display: flex;
@@ -209,7 +209,7 @@
   max-width: 240px;
   padding: 4px 8px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 6px;
+  border-radius: var(--app-radius-xs);
   background: transparent;
   color: inherit;
   font: var(--app-body-medium);
@@ -223,7 +223,7 @@
   width: 90px;
   padding: 4px 8px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 6px;
+  border-radius: var(--app-radius-xs);
   background: transparent;
   color: inherit;
   font: var(--app-body-medium);
@@ -256,7 +256,7 @@
   text-align: right;
 }
 .ok {
-  color: light-dark(#15803d, #4ade80);
+  color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .bad {
   color: var(--app-error);
@@ -278,23 +278,23 @@
 .key {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: var(--app-radius-2xs);
   border: 2px solid;
 }
 .key.ok {
-  border-color: #16a34a;
+  border-color: var(--palette-green-600);
 }
 .key.hand {
-  border-color: #64748b;
+  border-color: var(--palette-slate-500);
   border-style: dashed;
 }
 .key.rule {
-  background: #b45309;
-  border-color: #78350f;
+  background: var(--palette-amber-700);
+  border-color: var(--palette-amber-900);
 }
 .key.bad {
-  background: #991b1b;
-  border-color: #7f1d1d;
+  background: var(--palette-red-800);
+  border-color: var(--palette-red-900);
 }
 details summary {
   cursor: pointer;
@@ -319,7 +319,7 @@ details summary {
   margin: 0 0 12px;
   padding: 10px 12px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 10px;
+  border-radius: var(--app-radius-md);
   background: var(--app-surface-container-low);
 }
 
@@ -349,7 +349,7 @@ details summary {
   width: 100%;
   padding: 6px 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
   background: none;
   color: inherit;
   font: inherit;
@@ -366,12 +366,85 @@ details summary {
 
 .ai__kind {
   padding: 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--app-surface-container-high);
   font: var(--app-label-small);
 
   &[data-kind='missing'] {
     background: var(--app-error-container);
     color: var(--app-on-error-container);
+  }
+}
+
+.summary {
+  margin: 0 0 10px;
+  font: var(--app-body-medium);
+
+  b.ok {
+    color: var(--app-tertiary);
+  }
+
+  b.rule {
+    color: var(--palette-amber-700);
+  }
+
+  b.bad {
+    color: var(--app-error);
+  }
+}
+
+.stall.dim {
+  opacity: 0.18;
+}
+
+.miss circle {
+  fill: color-mix(in srgb, var(--palette-orange-600) 12%, transparent);
+  stroke: var(--palette-orange-600);
+  stroke-dasharray: 0.4 0.3;
+  stroke-width: 0.25;
+}
+
+.miss text {
+  fill: var(--palette-orange-700);
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 6px;
+}
+
+.chip {
+  padding: 3px 10px;
+  border: 1px solid var(--app-outline-variant);
+  border-radius: var(--app-radius-pill);
+  background: none;
+  color: var(--app-on-surface-variant);
+  font: var(--app-label-medium);
+  cursor: pointer;
+
+  &.on {
+    border-color: var(--app-primary);
+    background: var(--app-primary-container);
+    color: var(--app-primary);
+  }
+}
+
+.leave-out {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--palette-amber-700);
+  border-radius: var(--app-radius-sm);
+  background: none;
+  color: var(--palette-amber-800);
+  font: var(--app-label-medium);
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--palette-amber-700) 10%, transparent);
   }
 }

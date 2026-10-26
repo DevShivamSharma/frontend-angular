@@ -31,8 +31,8 @@
 }
 
 .pillar {
-  fill: #6b7280;
-  stroke: #374151;
+  fill: var(--palette-gray-500);
+  stroke: var(--palette-gray-700);
   stroke-width: 0.12;
 }
 

@@ -49,3 +49,12 @@
 .state--off {
   color: var(--app-muted);
 }
+
+.view-switch {
+  display: inline-flex;
+  margin-bottom: var(--space-4);
+}
+
+.item-card__delete {
+  margin-left: auto;
+}

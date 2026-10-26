@@ -15,7 +15,8 @@
     <app-empty-state
       icon="pi-exclamation-triangle"
       title="The halls could not be loaded"
-      message="ITPO could not be reached. Reload the page to try again."
+      message="ITPO could not be reached."
+      [reload]="true"
     />
   } @else if (store().halls().length) {
     <ul class="halls">
@@ -30,7 +31,7 @@
           />
           <div class="body">
             <div class="head">
-              <h3>{{ hall.name }}</h3>
+              <h2>{{ hall.name }}</h2>
               @if (!readonly()) {
                 <p-button
                   icon="pi pi-ellipsis-v"

@@ -1,0 +1,49 @@
+:host {
+  display: block;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.toolbar__count {
+  margin-left: auto;
+}
+
+.state-row {
+  align-items: center;
+}
+
+.state {
+  margin-left: var(--space-2);
+  color: var(--app-success);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.state--off {
+  color: var(--app-muted);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.problem {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: calc(var(--space-2) * -1);
+  color: var(--app-danger);
+  font-size: var(--text-sm);
+}
+
+.item-card__delete {
+  margin-left: auto;
+}

@@ -14,5 +14,7 @@ export class CardSkeletonComponent {
   readonly count = input(6);
   /** The cards have a picture beside their text. */
   readonly media = input(false);
+  /** The cards have a wide picture on top (an event). */
+  readonly cover = input(false);
   protected readonly items = computed(() => Array.from({ length: this.count() }, (_, i) => i));
 }

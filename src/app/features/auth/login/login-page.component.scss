@@ -19,21 +19,21 @@
   background:
     radial-gradient(
       60rem 40rem at 10% 110%,
-      color-mix(in srgb, #c8283f 55%, transparent),
+      color-mix(in srgb, var(--palette-brand-600) 55%, transparent),
       transparent 60%
     ),
     radial-gradient(
       40rem 30rem at 100% 0%,
-      color-mix(in srgb, #742371 35%, transparent),
+      color-mix(in srgb, var(--palette-plum-700) 35%, transparent),
       transparent 55%
     ),
-    #0d0d10;
-  color: #fff;
+    var(--palette-ink-950);
+  color: var(--palette-white);
 
   img {
     padding: 0.375rem;
     border-radius: var(--app-radius-md);
-    background: #fff;
+    background: var(--palette-white);
   }
 
   h2 {
@@ -45,7 +45,7 @@
 
   p {
     max-width: 26rem;
-    color: rgb(255 255 255 / 72%);
+    color: color-mix(in srgb, var(--palette-white) 72%, transparent);
     font-size: var(--text-lg);
   }
 }

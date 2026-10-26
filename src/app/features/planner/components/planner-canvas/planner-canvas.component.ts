@@ -186,6 +186,11 @@ const LABELLED = 1500;
   styleUrl: './planner-canvas.component.scss',
 })
 export class PlannerCanvasComponent {
+  /** The legend starts closed on a phone, where it would cover the floor. */
+  protected readonly legendOpen = !(
+    typeof matchMedia === 'function' && matchMedia('(max-width: 760px)').matches
+  );
+
   readonly floor = input.required<HallFloor>();
   readonly plan = input.required<PlanContent>();
   readonly selection = input<Selection | null>(null);

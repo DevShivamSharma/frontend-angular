@@ -23,6 +23,7 @@ import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { BrowserTokenStorage, TokenStorage } from './core/auth/token-storage';
 import { envelopeInterceptor } from './core/http/envelope.interceptor';
+import { fixEmptySpinbuttons } from './core/a11y/spinbutton-fix';
 import { AppPreset } from './core/theme/app-preset';
 
 export const appConfig: ApplicationConfig = {
@@ -46,6 +47,7 @@ export const appConfig: ApplicationConfig = {
       },
       ripple: false,
     }),
+    provideAppInitializer(() => fixEmptySpinbuttons()),
     MessageService,
     DialogService,
     { provide: TokenStorage, useClass: BrowserTokenStorage },

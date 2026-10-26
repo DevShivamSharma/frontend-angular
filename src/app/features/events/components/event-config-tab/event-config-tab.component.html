@@ -16,8 +16,13 @@
       The configuration could not be loaded. Reload the page.
     </p>
   } @else {
+    <nav class="jump" aria-label="Sections of the configuration">
+      @for (s of sections; track s.id) {
+        <a [href]="'#' + s.id" (click)="jump($event, s.id)">{{ s.label }}</a>
+      }
+    </nav>
     <form [formGroup]="form" class="form" (ngSubmit)="save()">
-      <fieldset>
+      <fieldset id="cfg-booking" tabindex="-1">
         <legend>Booking</legend>
         <div class="grid">
           <label
@@ -31,6 +36,9 @@
               [filter]="true"
               appendTo="body"
             />
+            @if (form.controls.eventCategory.invalid && form.controls.eventCategory.touched) {
+              <span class="field-error" role="alert">Choose the category type of the event.</span>
+            }
           </label>
           <label
             >Most categories a user can select *
@@ -45,6 +53,9 @@
           <label
             >Most stalls a user can book (1 to 200)
             <input pInputText formControlName="noOfStalls" inputmode="numeric" />
+            @if (form.controls.noOfStalls.invalid && form.controls.noOfStalls.touched) {
+              <span class="field-error" role="alert">A whole number from 1 to 200.</span>
+            }
           </label>
           @for (f of publicDates; track f.key) {
             <label
@@ -57,6 +68,9 @@
                 placeholder="Select a date"
                 appendTo="body"
               />
+              @if (dateError(f.key); as problem) {
+                <span class="field-error" role="alert">{{ problem }}</span>
+              }
             </label>
           }
         </div>
@@ -66,7 +80,7 @@
         </label>
       </fieldset>
 
-      <fieldset>
+      <fieldset id="cfg-site" tabindex="-1">
         <legend>What the booking site shows</legend>
         <div class="checks">
           @for (s of shows; track s.key) {
@@ -81,18 +95,24 @@
             <label
               >Sponsor PDF link *
               <input pInputText formControlName="sponsorPdf" placeholder="https://…" />
+              @if (form.controls.sponsorPdf.invalid && form.controls.sponsorPdf.touched) {
+                <span class="field-error" role="alert">Give the sponsor PDF link.</span>
+              }
             </label>
           }
           @if (form.controls.showBranding.value) {
             <label
               >Branding PDF link *
               <input pInputText formControlName="brandingPdf" placeholder="https://…" />
+              @if (form.controls.brandingPdf.invalid && form.controls.brandingPdf.touched) {
+                <span class="field-error" role="alert">Give the branding PDF link.</span>
+              }
             </label>
           }
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset id="cfg-marquee" tabindex="-1">
         <legend>
           <label class="check">
             <p-checkbox formControlName="isMarqueeEnabled" [binary]="true" />
@@ -112,19 +132,25 @@
                   placeholder="Select a date"
                   appendTo="body"
                 />
+                @if (dateError(f.key); as problem) {
+                  <span class="field-error" role="alert">{{ problem }}</span>
+                }
               </label>
             }
           </div>
           <label
             >Marquee registration info *
             <textarea pTextarea formControlName="marqueeInfo" rows="3"></textarea>
+            @if (form.controls.marqueeInfo.invalid && form.controls.marqueeInfo.touched) {
+              <span class="field-error" role="alert">Marquee registration info is needed.</span>
+            }
           </label>
         } @else {
           <p class="text-muted">Switch it on to set the marquee dates.</p>
         }
       </fieldset>
 
-      <fieldset>
+      <fieldset id="cfg-fnb" tabindex="-1">
         <legend>
           <label class="check">
             <p-checkbox formControlName="isFnb" [binary]="true" />
@@ -144,6 +170,9 @@
                   placeholder="Select a date"
                   appendTo="body"
                 />
+                @if (dateError(f.key); as problem) {
+                  <span class="field-error" role="alert">{{ problem }}</span>
+                }
               </label>
             }
           </div>
@@ -179,7 +208,7 @@
         }
       </fieldset>
 
-      <fieldset>
+      <fieldset id="cfg-extra" tabindex="-1">
         <legend>Branding, LED and sponsor booking</legend>
         <div class="grid">
           @for (f of extraDates; track f.key) {
@@ -193,6 +222,9 @@
                 placeholder="Select a date"
                 appendTo="body"
               />
+              @if (dateError(f.key); as problem) {
+                <span class="field-error" role="alert">{{ problem }}</span>
+              }
             </label>
           }
           <label

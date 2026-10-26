@@ -1,3 +1,5 @@
+import { ImageFallbackDirective } from '../../../../shared/ui/placeholder-image/image-fallback.directive';
+import { PLACEHOLDER_IMAGE } from '../../../../shared/ui/placeholder-image/placeholder-image';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 
@@ -10,13 +12,14 @@ import { HallImage } from '../../data/halls.models';
  */
 @Component({
   selector: 'app-hall-gallery',
-  imports: [ButtonModule],
+  imports: [ImageFallbackDirective, ButtonModule],
   templateUrl: './hall-gallery.component.html',
   styleUrl: './hall-gallery.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HallGalleryComponent {
   readonly images = input.required<readonly HallImage[]>();
+  protected readonly placeholder = PLACEHOLDER_IMAGE;
   readonly hallName = input.required<string>();
   /** ITPO staff may take a picture off. */
   readonly canRemove = input(false);

@@ -16,6 +16,7 @@ import { MenuModule } from 'primeng/menu';
 import { AuthService } from '../../core/auth/auth.service';
 import { TooltipModule } from 'primeng/tooltip';
 
+import { LayoutService } from '../../core/layout/layout.service';
 import { PlansApiService } from '../../features/planner/data/plans-api.service';
 import { ConfirmService } from '../../core/confirm/confirm.service';
 import { ThemeMode, ThemeService } from '../../core/theme/theme.service';
@@ -58,8 +59,11 @@ export class ShellComponent {
     groupNav(NAV_ITEMS.filter((item) => !item.staffOnly || this.auth.isStaff())),
   );
 
+  private readonly layout = inject(LayoutService);
   /** The sidebar shows only icons; kept between visits, because a user who shrank it wants it so. */
   protected readonly collapsed = signal(readCollapsed());
+  /** Icons only: by the person's choice, or because the page open needs the width. */
+  protected readonly compact = computed(() => this.collapsed() || this.layout.focus());
 
   constructor() {
     if (this.auth.isStaff()) {
@@ -115,7 +119,9 @@ export class ShellComponent {
   ]);
 
   protected toggleCollapsed(): void {
-    const next = !this.collapsed();
+    // Open for the person, even on a page that asked for the width.
+    if (this.layout.focus() && this.compact()) this.layout.focus.set(false);
+    const next = !this.compact();
     this.collapsed.set(next);
     try {
       localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');

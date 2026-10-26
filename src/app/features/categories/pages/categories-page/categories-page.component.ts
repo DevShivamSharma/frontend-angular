@@ -19,6 +19,7 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { UrlState } from '../../../../core/navigation/url-state';
 import { ConfirmService } from '../../../../core/confirm/confirm.service';
 import { ApiError } from '../../../../core/http/api-error';
 import { NotifierService } from '../../../../core/notification/notifier.service';
@@ -32,6 +33,7 @@ import {
 import { CategoriesApiService } from '../../data/categories-api.service';
 import { Category, CategoryGroup, CategoryQuery } from '../../data/categories.models';
 import { categoryGroups } from '../../domain/category-groups';
+import { GroupsPanelComponent } from '../../components/groups-panel/groups-panel.component';
 
 const PAGE_SIZE = 15;
 
@@ -53,6 +55,7 @@ const PAGE_SIZE = 15;
     EmptyStateComponent,
     PageHeaderComponent,
     CategoryDialogComponent,
+    GroupsPanelComponent,
   ],
   templateUrl: './categories-page.component.html',
   styleUrl: './categories-page.component.scss',
@@ -73,6 +76,11 @@ export class CategoriesPageComponent {
     { label: 'Inactive', value: 'inactive' },
   ];
 
+  protected readonly viewOptions = [
+    { label: 'Categories', value: 'categories' },
+    { label: 'Groups', value: 'groups' },
+  ];
+  protected readonly view = signal<'categories' | 'groups'>('categories');
   protected readonly groups = signal<CategoryGroup[]>([]);
   protected readonly group = signal<string | null>(null);
   protected readonly status = signal<CategoryQuery['status']>('all');
@@ -90,8 +98,23 @@ export class CategoriesPageComponent {
   );
 
   private request: Subscription | null = null;
+  private readonly url = new UrlState();
+  /** The row a reloaded or shared address starts at, used once. */
+  private startAt = this.url.firstRow('page', PAGE_SIZE);
 
   constructor() {
+    this.search.setValue(this.url.text('q'), { emitEvent: false });
+    const statusInUrl = this.url.text('status');
+    if (statusInUrl === 'active' || statusInUrl === 'inactive') this.status.set(statusInUrl);
+    if (this.url.text('view') === 'groups') this.view.set('groups');
+    this.loadGroups(true);
+    this.search.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.fetch(0));
+  }
+
+  /** The active groups, which the picker offers; again after the group master switched one. */
+  protected loadGroups(first = false): void {
     this.api
       .groups()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -99,8 +122,17 @@ export class CategoriesPageComponent {
         next: (groups) => {
           const own = categoryGroups(groups);
           this.groups.set(own);
-          this.group.set(own[0]?.slug ?? null);
-          this.fetch(0);
+          const wanted = first ? this.url.text('group') : this.group();
+          const chosen = own.find((g) => g.slug === wanted)?.slug ?? own[0]?.slug ?? null;
+          const moved = chosen !== this.group();
+          this.group.set(chosen);
+          this.groupsFailed.set(false);
+          if (first) {
+            this.fetch(this.startAt);
+            this.startAt = 0;
+          } else if (moved) {
+            this.fetch(0);
+          }
         },
         error: (error: unknown) => {
           this.groupsFailed.set(true);
@@ -108,9 +140,11 @@ export class CategoriesPageComponent {
           this.notifier.fromError(error, 'The categories could not be loaded');
         },
       });
-    this.search.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.fetch(0));
+  }
+
+  protected chooseView(view: 'categories' | 'groups'): void {
+    this.view.set(view);
+    this.url.write({ view: view === 'groups' ? 'groups' : null });
   }
 
   protected chooseGroup(slug: string): void {
@@ -201,6 +235,27 @@ export class CategoriesPageComponent {
     });
   }
 
+  protected async remove(category: Category): Promise<void> {
+    const go = await this.confirm.ask({
+      header: 'Delete category',
+      message: `Delete "${category.name}" for good? It cannot be brought back. To only stop offering it, deactivate it instead.`,
+      acceptLabel: 'Delete',
+      danger: true,
+    });
+    if (!go) {
+      return;
+    }
+    this.api.deleteCategory(category.id).subscribe({
+      next: () => {
+        this.notifier.success('Category deleted', category.name);
+        const left = this.categories().length - 1;
+        this.fetch(left <= 0 && this.first() > 0 ? this.first() - PAGE_SIZE : this.first());
+      },
+      error: (error: unknown) =>
+        this.notifier.fromError(error, 'The category could not be deleted'),
+    });
+  }
+
   private fetch(first: number): void {
     const group = this.group();
     if (!group) {
@@ -208,6 +263,13 @@ export class CategoriesPageComponent {
     }
     this.request?.unsubscribe();
     this.first.set(first);
+    this.url.write({
+      view: this.view() === 'groups' ? 'groups' : null,
+      group: group === this.groups()[0]?.slug ? null : group,
+      q: this.search.value.trim(),
+      status: this.status() === 'all' ? null : this.status(),
+      page: Math.floor(first / PAGE_SIZE) + 1,
+    });
     this.loading.set(true);
     this.failed.set(false);
     this.request = this.api

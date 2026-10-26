@@ -13,8 +13,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: light-dark(#dcfce7, #14532d);
-  color: light-dark(#15803d, #86efac);
+  background: light-dark(var(--palette-green-100), var(--palette-green-900));
+  color: light-dark(var(--palette-green-700), var(--palette-green-300));
 }
 .grid {
   display: grid;
@@ -66,7 +66,7 @@ input[pInputText] {
   align-items: center;
   padding: 10px;
   border: 2px solid var(--app-outline-variant);
-  border-radius: 12px;
+  border-radius: var(--app-radius-lg);
   background: var(--app-surface-container-lowest);
   color: var(--app-on-surface);
   font: inherit;
@@ -80,21 +80,21 @@ input[pInputText] {
 .option svg {
   width: 150px;
   height: 100px;
-  background: light-dark(#f8fafc, #0f172a);
-  border-radius: 6px;
+  background: light-dark(var(--palette-slate-50), var(--palette-slate-900));
+  border-radius: var(--app-radius-xs);
 }
 .region {
-  fill: light-dark(#fff, #1e293b);
-  stroke: #94a3b8;
+  fill: light-dark(var(--palette-white), var(--palette-slate-800));
+  stroke: var(--palette-slate-400);
   stroke-width: 0.3;
 }
 .option rect {
-  fill: #86efac;
-  stroke: #16a34a;
+  fill: var(--palette-green-300);
+  stroke: var(--palette-green-600);
   stroke-width: 0.15;
 }
 .option rect.corner {
-  fill: #4ade80;
+  fill: var(--palette-green-400);
 }
 .body {
   display: grid;
@@ -111,7 +111,7 @@ input[pInputText] {
 }
 .check-state {
   font: var(--app-body-small);
-  color: light-dark(#15803d, #4ade80);
+  color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .bad {
   color: var(--app-error) !important;

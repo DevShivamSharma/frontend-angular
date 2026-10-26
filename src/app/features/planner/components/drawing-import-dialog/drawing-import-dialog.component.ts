@@ -17,12 +17,17 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
 import { firstValueFrom } from 'rxjs';
 
-import type { AiFinding, DrawingImportResult } from '../../domain/drawing-import.models';
+import type {
+  AiFinding,
+  DrawingImportResult,
+  DrawingStall,
+} from '../../domain/drawing-import.models';
 import { PlansApiService } from '../../data/plans-api.service';
 import { type PlanStall, stallLabel } from '../../domain/plan.models';
 import { dialogData, DialogRef } from '../../../../core/dialog/app-dialog.service';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import {
+  placeOutline,
   type Alignment,
   autoFit,
   autoNumbers,
@@ -555,6 +560,57 @@ export class DrawingImportDialogComponent {
   protected readonly tagSize = computed(() => {
     const [, , w, h] = this.viewBox().split(' ').map(Number);
     return Math.max(w, h) / 40;
+  });
+
+  /** What the preview picks out: all stalls, those that break a rule, or those to draw by hand. */
+  protected readonly show = signal<'all' | 'rule' | 'hand'>('all');
+  protected readonly showModes = [
+    { id: 'all', label: 'All' },
+    { id: 'rule', label: 'Break a rule' },
+    { id: 'hand', label: 'By hand' },
+  ] as const;
+
+  /** The stalls a filter leaves in the light; the rest are faded. */
+  protected dimmed(p: ReturnType<DrawingImportDialogComponent['placed']>[number]): boolean {
+    const mode = this.show();
+    if (mode === 'all') return false;
+    const state = this.stateOf(p);
+    return mode === 'rule' ? state !== 'rule' : state !== 'hand';
+  }
+
+  /** Stalls that break a rule and are still in the import. */
+  protected readonly ruleLeft = computed(
+    () => this.placed().filter((p) => this.stateOf(p) === 'rule').length,
+  );
+
+  /** Takes every stall that breaks a rule out of the import in one step. */
+  protected leaveOutBroken(): void {
+    const next = new Set(this.excluded());
+    for (const p of this.placed()) if (this.stateOf(p) === 'rule') next.add(p.stall.key);
+    this.excluded.set(next);
+  }
+
+  /**
+   * Where the second look thinks a stall is missing, on the preview: the page point it named,
+   * brought into hall metres by the drawing's own scale and the alignment in use.
+   */
+  protected readonly missingMarks = computed(() => {
+    const r = this.result();
+    const a = this.alignment();
+    if (!r?.aiCheck || r.aiCheck.status !== 'done' || !a) return [];
+    return r.aiCheck.findings.flatMap((f, i) => {
+      const g = r.groups.find((x) => x.group === r.hall.groups[0]) ?? r.groups[0];
+      if (f.kind !== 'missing' || !f.at || !g) return [];
+      const x = (f.at.x - g.originX) / g.pitchX;
+      const z = (f.at.y - g.originY) / g.pitchY;
+      const tri = [
+        { x, z },
+        { x: x + 0.01, z },
+        { x, z: z + 0.01 },
+      ];
+      const [p] = placeOutline({ group: g.group, outline: tri } as DrawingStall, a);
+      return [{ x: p.x, z: p.z, n: i + 1, note: f.message }];
+    });
   });
 
   protected stateOf(p: ReturnType<DrawingImportDialogComponent['placed']>[number]): string {

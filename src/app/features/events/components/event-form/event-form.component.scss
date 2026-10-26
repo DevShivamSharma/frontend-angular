@@ -84,3 +84,10 @@ h2 {
     padding-top: var(--space-2);
   }
 }
+
+/* On a phone the page's side padding is smaller: the bar reaches the edge, not past it. */
+@media (max-width: 40rem) {
+  .actionbar {
+    margin: 0 calc(var(--space-3) * -1);
+  }
+}

@@ -21,6 +21,7 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { TagModule } from 'primeng/tag';
 import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { UrlState } from '../../../../core/navigation/url-state';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { NotifierService } from '../../../../core/notification/notifier.service';
 import { ImageFallbackDirective } from '../../../../shared/ui/placeholder-image/image-fallback.directive';
@@ -100,15 +101,22 @@ export class EventsPageComponent {
   protected readonly failed = signal(false);
 
   private request: Subscription | null = null;
+  private readonly url = new UrlState();
+  /** The row a reloaded or shared address starts at, used once. */
+  private startAt = this.url.firstRow('page', PAGE_SIZE);
 
   constructor() {
+    this.search.setValue(this.url.text('q'), { emitEvent: false });
     this.search.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.fetch(0));
     // The kind comes from the route, so it is read once it is set (and again if it changes).
     effect(() => {
       this.kind();
-      untracked(() => this.fetch(0));
+      untracked(() => {
+        this.fetch(this.startAt);
+        this.startAt = 0;
+      });
     });
   }
 
@@ -126,6 +134,7 @@ export class EventsPageComponent {
   private fetch(first: number): void {
     this.request?.unsubscribe();
     this.first.set(first);
+    this.url.write({ q: this.search.value.trim(), page: Math.floor(first / PAGE_SIZE) + 1 });
     this.loading.set(true);
     this.failed.set(false);
     this.request = this.api

@@ -143,6 +143,13 @@ export class EventConfigTabComponent {
   protected readonly failed = signal(false);
   protected readonly saving = signal(false);
   protected readonly messages = MESSAGES;
+  protected readonly sections = [
+    { id: 'cfg-booking', label: 'Booking' },
+    { id: 'cfg-site', label: 'Booking site' },
+    { id: 'cfg-marquee', label: 'Marquee' },
+    { id: 'cfg-fnb', label: 'Food & beverage' },
+    { id: 'cfg-extra', label: 'Branding, LED, sponsor' },
+  ];
 
   protected readonly form = new FormGroup(
     {
@@ -211,8 +218,35 @@ export class EventConfigTabComponent {
     return this.form.get(key) as FormControl;
   }
 
+  /** The cross-check that a date field is part of, as words under that field. */
+  protected dateError(key: string): string | null {
+    const errors = this.form.errors;
+    if (!errors) return null;
+    const by: Record<string, string[]> = {
+      stallStart: ['stallBeforeMarquee', 'stallDates'],
+      stallEnd: ['stallBeforeMarquee', 'stallDates'],
+      ledStart: ['ledDates'],
+      ledEnd: ['ledDates'],
+      sponsorStart: ['sponsorDates'],
+      sponsorEnd: ['sponsorDates'],
+      brandingStart: ['brandingDates'],
+      brandingEnd: ['brandingDates'],
+    };
+    const hit = (by[key] ?? []).find((e) => errors[e]);
+    return hit ? MESSAGES[hit] : null;
+  }
+
+  /** The jump menu: scrolls a section into view and moves focus into it. */
+  protected jump(event: Event, id: string): void {
+    event.preventDefault();
+    const target = document.getElementById(id);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target?.focus({ preventScroll: true });
+  }
+
   protected errors(): string[] {
-    return Object.keys(this.form.errors ?? {}).map((k) => MESSAGES[k]);
+    // Each message already stands under its own field; none is repeated at the foot.
+    return [];
   }
 
   protected async save(): Promise<void> {

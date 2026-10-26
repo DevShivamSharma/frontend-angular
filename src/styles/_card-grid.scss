@@ -35,6 +35,8 @@
     overflow-wrap: anywhere;
 
     a {
+      display: inline-block;
+      min-height: 1.5rem;
       color: inherit;
       text-decoration: none;
 

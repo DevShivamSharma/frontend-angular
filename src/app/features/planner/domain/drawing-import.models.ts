@@ -83,7 +83,7 @@ export interface AiFinding {
   stallKey: string | null;
   message: string;
   /** Page point the model pointed at, for a missing stall. */
-  at: DrawingPoint | null;
+  at: { x: number; y: number } | null;
   /** Index in `unresolved` of the drawing's own label close to it. */
   unresolved: number | null;
 }

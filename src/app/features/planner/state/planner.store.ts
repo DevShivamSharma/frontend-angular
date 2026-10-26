@@ -54,6 +54,8 @@ export class PlannerStore {
     () => !this.dirty() && this.revision() > 0 && this.published()?.revision === this.revision(),
   );
   readonly dirty = signal(false);
+  /** When the plan was last saved: from the server on opening, and again after each save. */
+  readonly savedAt = signal<Date | null>(null);
   /** Goes up when a change is refused, so fields that showed it go back to the plan. */
   readonly refused = signal(0);
   /** Why the last change was refused, as the toast said it; the assistant reports it. */
@@ -132,6 +134,7 @@ export class PlannerStore {
     this.redoStack.set([]);
     this.selection.set(null);
     this.dirty.set(false);
+    this.savedAt.set(view.plan.updatedAt ? new Date(view.plan.updatedAt) : null);
   }
 
   /**
@@ -262,6 +265,7 @@ export class PlannerStore {
         this.api.save(eventId, hallId, this.plan(), this.revision()),
       );
       this.revision.set(saved.revision);
+      this.savedAt.set(new Date());
       this.dirty.set(false);
       await this.refreshFlags();
       this.notifier.success('Stall plan saved.');

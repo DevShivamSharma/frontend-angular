@@ -37,7 +37,7 @@
       </app-empty-state>
     } @else {
       @if (loading()) {
-        <app-card-skeleton [count]="6" />
+        <app-card-skeleton [count]="6" [cover]="true" />
       } @else if (events().length) {
         <ul class="card-grid">
           @for (event of events(); track event.id) {

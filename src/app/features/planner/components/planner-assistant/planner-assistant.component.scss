@@ -8,9 +8,9 @@
   width: min(400px, calc(100% - 24px));
   height: min(560px, calc(100% - 24px));
   border: 1px solid var(--app-outline-variant);
-  border-radius: 14px;
+  border-radius: var(--app-radius);
   background: var(--app-surface, #fff);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.16);
+  box-shadow: var(--app-shadow-pop);
   overflow: hidden;
 }
 .head {
@@ -34,13 +34,13 @@
   align-items: center;
   padding: 6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm);
   background: transparent;
-  color: #475569;
+  color: var(--palette-slate-600);
   cursor: pointer;
 }
 .icon-btn:hover {
-  background: #f1f5f9;
+  background: var(--palette-slate-100);
 }
 .log {
   display: flex;
@@ -51,7 +51,7 @@
 }
 .empty p {
   margin: 0 0 10px;
-  color: #475569;
+  color: var(--palette-slate-600);
   font: var(--app-body-small);
 }
 .chips {
@@ -62,9 +62,9 @@
 .chip {
   padding: 6px 10px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 999px;
-  background: #fff;
-  color: #334155;
+  border-radius: var(--app-radius-pill);
+  background: var(--palette-white);
+  color: var(--palette-slate-700);
   font: var(--app-body-small);
   cursor: pointer;
 }
@@ -75,37 +75,39 @@
   max-width: 88%;
   margin: 0;
   padding: 8px 12px;
-  border-radius: 12px 12px 12px 4px;
-  background: #f1f5f9;
-  color: #0f172a;
+  border-radius: var(--app-radius-lg) var(--app-radius-lg) var(--app-radius-lg)
+    var(--app-radius-2xs);
+  background: var(--palette-slate-100);
+  color: var(--palette-slate-900);
   font: var(--app-body-medium);
   white-space: pre-wrap;
 }
 .msg.me {
   align-self: flex-end;
-  border-radius: 12px 12px 4px 12px;
-  background: #0f2a4a;
-  color: #fff;
+  border-radius: var(--app-radius-lg) var(--app-radius-lg) var(--app-radius-2xs)
+    var(--app-radius-lg);
+  background: var(--palette-navy-900);
+  color: var(--palette-white);
 }
 .action {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  color: #475569;
+  color: var(--palette-slate-600);
   font: var(--app-body-small);
 }
 .action.ok app-icon {
-  color: #16a34a;
+  color: var(--palette-green-600);
 }
 .action.failed {
-  color: #991b1b;
+  color: var(--palette-red-800);
 }
 .spinner {
   width: 14px;
   height: 14px;
   flex: none;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--palette-slate-200);
   border-top-color: var(--app-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -121,8 +123,8 @@
   gap: 8px;
   padding: 4px 4px 4px 10px;
   border: 1px dashed var(--app-outline-variant);
-  border-radius: 8px;
-  color: #475569;
+  border-radius: var(--app-radius-sm);
+  color: var(--palette-slate-600);
   font: var(--app-body-small);
 }
 .undo span {
@@ -136,7 +138,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #94a3b8;
+  background: var(--palette-slate-400);
   animation: blink 1.2s infinite;
 }
 .typing span:nth-child(2) {
@@ -161,9 +163,9 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 8px;
-  background: #fef2f2;
-  color: #991b1b;
+  border-radius: var(--app-radius-sm);
+  background: var(--palette-red-50);
+  color: var(--palette-red-800);
   font: var(--app-body-small);
 }
 .err span {
@@ -180,7 +182,7 @@
   min-width: 0;
   padding: 8px 12px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   font: var(--app-body-medium);
 }
 .mic {
@@ -191,12 +193,12 @@
   flex: none;
   border: 1px solid var(--app-outline-variant);
   border-radius: 50%;
-  background: #fff;
-  color: #0f2a4a;
+  background: var(--palette-white);
+  color: var(--palette-navy-900);
   cursor: pointer;
 }
 .mic.on {
-  border-color: #dc2626;
-  background: #fef2f2;
-  color: #dc2626;
+  border-color: var(--palette-red-600);
+  background: var(--palette-red-50);
+  color: var(--palette-red-600);
 }

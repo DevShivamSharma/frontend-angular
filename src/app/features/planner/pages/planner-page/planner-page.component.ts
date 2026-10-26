@@ -109,6 +109,8 @@ import {
   StallPricesDialogComponent,
 } from '../../components/stall-prices-dialog/stall-prices-dialog.component';
 import type { RateCardView } from '../../domain/rate-card.models';
+import { LayoutService } from '../../../../core/layout/layout.service';
+import { ShortcutsDialogComponent } from '../../components/shortcuts-dialog/shortcuts-dialog.component';
 import { PlannerAssistantComponent } from '../../components/planner-assistant/planner-assistant.component';
 import { type PlannerAgentCtx } from '../../domain/planner-agent';
 import { type PlannerTourCtx, plannerTour } from '../../domain/planner-tour';
@@ -231,8 +233,14 @@ export class PlannerPageComponent implements HasUnsavedChanges {
 
   protected readonly showGrid = signal(true);
   protected readonly showLabels = signal(true);
-  protected readonly leftOpen = signal(true);
-  protected readonly rightOpen = signal(true);
+  /** On a phone the panels start closed: the floor is what there is room for. */
+  private readonly narrow =
+    typeof matchMedia === 'function' && matchMedia('(max-width: 760px)').matches;
+  protected readonly leftOpen = signal(remembered('planner.left', !this.narrow));
+  protected readonly rightOpen = signal(remembered('planner.right', !this.narrow));
+  /** The panels' widths, which the person may drag; kept between visits. */
+  protected readonly leftWidth = signal(rememberedWidth('planner.leftWidth', 256));
+  protected readonly rightWidth = signal(rememberedWidth('planner.rightWidth', 260));
   protected readonly zonesOpen = signal(true);
   protected readonly fullscreen = signal(false);
   protected readonly treeQuery = signal('');
@@ -300,6 +308,12 @@ export class PlannerPageComponent implements HasUnsavedChanges {
   });
 
   constructor() {
+    // The planner takes the width: the navigation shrinks to icons while it is open.
+    const layout = inject(LayoutService);
+    layout.focus.set(true);
+    inject(DestroyRef).onDestroy(() => layout.focus.set(false));
+    effect(() => remember('planner.left', String(this.leftOpen())));
+    effect(() => remember('planner.right', String(this.rightOpen())));
     // Leaving the planner closes what it opened: its dialogs, confirms and toasts.
     inject(DestroyRef).onDestroy(() => {
       this.dialog.closeAll();
@@ -440,6 +454,10 @@ export class PlannerPageComponent implements HasUnsavedChanges {
   protected key(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
     if (target?.closest('input, textarea, select, [contenteditable], .p-dialog')) return;
+    if (e.key === '?') {
+      this.showShortcuts();
+      return;
+    }
     if (!this.canEdit()) return;
     const ctrl = e.ctrlKey || e.metaKey;
     const canvas = this.canvas();
@@ -487,6 +505,55 @@ export class PlannerPageComponent implements HasUnsavedChanges {
       )[e.key.toLowerCase() as 'v'];
       if (tool) this.setTool(tool);
     }
+  }
+
+  /** Drags the edge of a side panel: the panel follows the pointer, within reason. */
+  protected resizeStart(side: 'left' | 'right', event: PointerEvent): void {
+    event.preventDefault();
+    const handle = event.currentTarget as HTMLElement;
+    const body = handle.closest('.body') as HTMLElement;
+    handle.setPointerCapture(event.pointerId);
+    const move = (e: PointerEvent) => {
+      const box = body.getBoundingClientRect();
+      this.setWidth(side, side === 'left' ? e.clientX - box.left : box.right - e.clientX);
+    };
+    const stop = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', stop);
+      handle.removeEventListener('pointercancel', stop);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+  }
+
+  /** Arrow keys on a focused edge: the keyboard way to resize. */
+  protected resizeKey(side: 'left' | 'right', event: KeyboardEvent): void {
+    const grow = side === 'left' ? 'ArrowRight' : 'ArrowLeft';
+    const shrink = side === 'left' ? 'ArrowLeft' : 'ArrowRight';
+    if (event.key !== grow && event.key !== shrink) return;
+    event.preventDefault();
+    const now = side === 'left' ? this.leftWidth() : this.rightWidth();
+    this.setWidth(side, now + (event.key === grow ? 16 : -16));
+  }
+
+  private setWidth(side: 'left' | 'right', width: number): void {
+    const w = Math.round(Math.min(520, Math.max(200, width)));
+    (side === 'left' ? this.leftWidth : this.rightWidth).set(w);
+    remember(side === 'left' ? 'planner.leftWidth' : 'planner.rightWidth', String(w));
+  }
+
+  /** The phone's tools menu. */
+  protected readonly toolsOpen = signal(false);
+
+  /** A tool chosen in the menu closes it; a disabled one does not. */
+  protected sheetClick(event: Event): void {
+    const button = (event.target as HTMLElement).closest('button.sbtn');
+    if (button && !(button as HTMLButtonElement).disabled) this.toolsOpen.set(false);
+  }
+
+  protected showShortcuts(): void {
+    this.dialog.open(ShortcutsDialogComponent, { width: 'min(720px, 96vw)' }).subscribe();
   }
 
   protected setTool(tool: PlannerTool): void {
@@ -1211,6 +1278,20 @@ export class PlannerPageComponent implements HasUnsavedChanges {
   protected readonly tour = inject<TourService<PlannerTourCtx>>(TourService);
   protected readonly rupees = rupees;
 
+  /** Where the plan stands, in words: saving, unsaved, or saved and when. */
+  protected readonly saveState = computed(() => {
+    if (this.store.busy()) return 'Saving…';
+    if (this.store.dirty()) return 'Unsaved changes';
+    const at = this.store.savedAt();
+    return at ? `Saved ${at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
+  });
+
+  /** Nothing is drawn yet: the floor offers the three ways to begin. */
+  protected readonly emptyPlan = computed(() => {
+    const p = this.store.plan();
+    return !p.stalls.length && !p.zones.length && !p.objects.length && !p.seats.length;
+  });
+
   protected readonly colourModes = [
     { id: 'category', label: 'Category' },
     { id: 'scheme', label: 'Scheme' },
@@ -1547,5 +1628,32 @@ export class PlannerPageComponent implements HasUnsavedChanges {
       cancelLabel: 'Not now',
     });
     if (ok) await this.store.review('submit');
+  }
+}
+
+/** Reads a saved flag; storage may be blocked, then the default stands. */
+function remembered(key: string, fallback: boolean): boolean {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v === 'true';
+  } catch {
+    return fallback;
+  }
+}
+
+function rememberedWidth(key: string, fallback: number): number {
+  try {
+    const n = Number(localStorage.getItem(key));
+    return Number.isFinite(n) && n >= 200 && n <= 520 ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function remember(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage may be blocked: the setting then lasts for this visit only.
   }
 }

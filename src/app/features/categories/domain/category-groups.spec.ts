@@ -3,11 +3,17 @@ import { categoryGroups, slugOf } from './category-groups';
 describe('category groups', () => {
   it('should keep the groups of categories and leave ITPO’s other lists out, by name', () => {
     const groups = categoryGroups([
-      { id: 1, name: 'roles', slug: 'role' },
-      { id: 14, name: 'INDIA INTERNATIONAL TRADE FAIR', slug: 'india_international_trade_fair' },
-      { id: 7, name: 'State', slug: 'state' },
-      { id: 13, name: 'AAHAR', slug: 'aahar' },
-      { id: 18, name: 'FnB', slug: 'f&b' },
+      { id: 1, name: 'roles', slug: 'role', description: null, active: true },
+      {
+        id: 14,
+        name: 'INDIA INTERNATIONAL TRADE FAIR',
+        slug: 'india_international_trade_fair',
+        description: null,
+        active: true,
+      },
+      { id: 7, name: 'State', slug: 'state', description: null, active: true },
+      { id: 13, name: 'AAHAR', slug: 'aahar', description: null, active: true },
+      { id: 18, name: 'FnB', slug: 'f&b', description: null, active: true },
     ]);
 
     expect(groups.map((g) => g.name)).toEqual(['AAHAR', 'FnB', 'INDIA INTERNATIONAL TRADE FAIR']);

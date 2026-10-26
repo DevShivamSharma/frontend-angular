@@ -36,7 +36,7 @@ input[type='color'] {
   height: 30px;
   padding: 0;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 6px;
+  border-radius: var(--app-radius-xs);
   background: none;
 }
 .pair {
@@ -61,7 +61,7 @@ textarea {
 .side {
   padding: 6px 0;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 6px;
+  border-radius: var(--app-radius-xs);
   background: var(--app-surface);
   color: var(--app-on-surface);
   font: var(--app-label-small);
@@ -69,9 +69,9 @@ textarea {
   cursor: pointer;
 }
 .side.on {
-  background: #dcfce7;
-  border-color: #16a34a;
-  color: #14532d;
+  background: var(--palette-green-100);
+  border-color: var(--palette-green-600);
+  color: var(--palette-green-900);
 }
 .flags {
   display: grid;

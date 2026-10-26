@@ -57,7 +57,7 @@
     } @else if (loading()) {
       <p class="loading text-muted" role="status">Loading…</p>
     } @else if (items().length) {
-      <div class="wrap">
+      <div class="wrap" tabindex="0" role="region" aria-label="Audit trail entries">
         <table>
           <thead>
             <tr>

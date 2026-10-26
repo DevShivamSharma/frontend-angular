@@ -69,10 +69,14 @@
     &--accept {
       border-color: transparent;
       background: var(--confirm-accent, var(--app-brand));
-      color: #fff;
+      color: var(--palette-white);
 
       &:hover {
-        background: color-mix(in srgb, var(--confirm-accent, var(--app-brand)) 88%, #000);
+        background: color-mix(
+          in srgb,
+          var(--confirm-accent, var(--app-brand)) 88%,
+          var(--palette-black)
+        );
       }
     }
   }

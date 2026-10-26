@@ -39,7 +39,7 @@ label {
   gap: 8px;
   padding: 12px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 10px;
+  border-radius: var(--app-radius-md);
   background: var(--app-surface-container-low);
   text-align: center;
   font-size: 13px;
@@ -53,8 +53,8 @@ canvas {
   max-height: 300px;
 }
 .seat-btn {
-  --p-button-primary-background: #9333ea;
-  --p-button-primary-border-color: #9333ea;
-  --p-button-primary-hover-background: #7e22ce;
-  --p-button-primary-hover-border-color: #7e22ce;
+  --p-button-primary-background: var(--palette-purple-600);
+  --p-button-primary-border-color: var(--palette-purple-600);
+  --p-button-primary-hover-background: var(--palette-purple-700);
+  --p-button-primary-hover-border-color: var(--palette-purple-700);
 }

@@ -67,8 +67,19 @@ label {
 }
 
 .actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   justify-content: flex-end;
+  padding: var(--space-3) 0;
+  background: linear-gradient(to top, var(--app-surface) 70%, transparent);
+}
+
+.field-error {
+  color: var(--app-danger);
+  font-size: 0.8125rem;
+  font-weight: 400;
 }
 
 :host ::ng-deep .p-datepicker,
@@ -76,4 +87,37 @@ label {
 :host ::ng-deep .p-select,
 :host ::ng-deep textarea {
   width: 100%;
+}
+
+.jump {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+
+  a {
+    padding: 2px 12px;
+    border: 1px solid var(--app-border-strong);
+    border-radius: var(--app-radius-pill);
+    color: var(--app-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--app-brand);
+      background: var(--app-brand-soft);
+      color: var(--app-brand);
+    }
+  }
+}
+
+fieldset {
+  scroll-margin-top: 4.5rem;
 }

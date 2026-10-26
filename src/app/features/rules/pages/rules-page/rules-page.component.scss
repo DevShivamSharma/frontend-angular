@@ -46,7 +46,7 @@
   z-index: 50;
   background: var(--app-surface);
   border-top: 1px solid var(--app-border);
-  box-shadow: 0 -4px 16px rgb(15 23 42 / 8%);
+  box-shadow: var(--app-shadow-up);
 }
 
 .savebar__inner {

@@ -31,9 +31,18 @@
   --app-warning: #b45309;
 
   --app-radius: 14px;
+  --app-radius-2xs: 4px;
+  --app-radius-xs: 6px;
+  --app-radius-lg: 12px;
+  --app-radius-xl: 16px;
+  --app-radius-pill: 999px;
   --app-radius-md: 10px;
   --app-radius-sm: 8px;
   --app-shadow: 0 1px 2px rgb(16 16 24 / 4%);
+  --app-shadow-sm: 0 1px 3px color-mix(in srgb, var(--palette-black) 12%, transparent);
+  --app-shadow-md: 0 2px 8px color-mix(in srgb, var(--palette-black) 14%, transparent);
+  --app-shadow-pop: 0 6px 24px color-mix(in srgb, var(--palette-black) 16%, transparent);
+  --app-shadow-up: 0 -4px 16px color-mix(in srgb, var(--palette-slate-900) 8%, transparent);
   --app-shadow-lg: 0 12px 32px -8px rgb(16 16 24 / 18%), 0 2px 6px rgb(16 16 24 / 6%);
 
   --space-1: 0.25rem;

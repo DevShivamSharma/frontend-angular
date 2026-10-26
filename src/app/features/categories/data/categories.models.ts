@@ -3,6 +3,9 @@ export interface CategoryGroup {
   id: number;
   name: string;
   slug: string;
+  description: string | null;
+  /** An inactive group is left out of the category lists and of the event forms. */
+  active: boolean;
 }
 
 /** A product category: one entry of a group. */

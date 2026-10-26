@@ -85,6 +85,19 @@
             </section>
           }
         }
+        <p class="summary" role="status">
+          <b class="ok">{{ importable().length - broken() | number }} ready</b>
+          @if (broken()) {
+            · <b class="rule">{{ broken() }} break a rule</b>
+          }
+          @if (byHand().length) {
+            · <b>{{ byHand().length }} to draw by hand</b>
+          }
+          @if (offFloor()) {
+            · <b class="bad">{{ offFloor() }} off the hall floor</b>
+          }
+          · {{ placed().length }} in the drawing
+        </p>
         <div class="grid">
           <div class="col">
             <!-- A click on a stall picks it to change on its own; on the floor, lets it go.
@@ -145,6 +158,7 @@
                     [class]="'stall ' + stateOf(p)"
                     [class.picked]="picked() === p.stall.key"
                     [class.changed]="overrides().has(p.stall.key)"
+                    [class.dim]="dimmed(p)"
                     role="button"
                     tabindex="-1"
                     [attr.aria-label]="p.stall.name"
@@ -155,6 +169,17 @@
                       {{ p.stall.name }}{{ whyOf(p).length ? ' — ' + whyOf(p).join(' ') : '' }}
                     </title>
                   </polygon>
+                }
+                @for (m of missingMarks(); track m.n) {
+                  <g
+                    class="miss"
+                    role="img"
+                    [attr.aria-label]="'Possibly missing stall ' + m.n + ': ' + m.note"
+                  >
+                    <circle [attr.cx]="m.x" [attr.cy]="m.z" [attr.r]="tagSize() * 0.9" />
+                    <text [attr.x]="m.x" [attr.y]="m.z" [attr.font-size]="tagSize()">?</text>
+                    <title>Possibly missing: {{ m.note }}</title>
+                  </g>
                 }
                 @if (pickedStall(); as p) {
                   <text
@@ -476,6 +501,24 @@
               <dt>Off the hall floor</dt>
               <dd [class.bad]="offFloor()">{{ offFloor() }}</dd>
             </dl>
+            <div class="filter" role="group" aria-label="Show on the drawing">
+              @for (m of showModes; track m.id) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.on]="show() === m.id"
+                  [attr.aria-pressed]="show() === m.id"
+                  (click)="show.set(m.id)"
+                >
+                  {{ m.label }}
+                </button>
+              }
+            </div>
+            @if (ruleLeft()) {
+              <button type="button" class="leave-out" (click)="leaveOutBroken()">
+                Leave out the {{ ruleLeft() }} that break a rule
+              </button>
+            }
             <ul class="legend" aria-label="Colours">
               <li><span class="key ok"></span>Imported</li>
               <li><span class="key hand"></span>Draw by hand</li>

@@ -107,7 +107,8 @@ a.p-button {
 .p-textarea::placeholder,
 .p-select-label.p-placeholder,
 .p-multiselect-label.p-placeholder {
-  color: color-mix(in srgb, var(--app-muted) 80%, transparent);
+  /* 4.5:1 on the field: a placeholder is read as text. */
+  color: var(--app-muted);
 }
 
 .p-select-label,
@@ -188,7 +189,7 @@ p-datepicker {
     }
   }
 
-  .p-togglebutton:not(.p-togglebutton-checked):hover {
+  .p-togglebutton:not(.p-togglebutton-checked) {
     color: var(--app-text);
   }
 }
@@ -386,4 +387,41 @@ p-datepicker {
   .p-datatable .p-datatable-tbody > tr > td {
     padding-inline: 0.75rem;
   }
+}
+
+/* Checkboxes and radios: a 24 px box (WCAG 2.5.8), not PrimeNG's 20. */
+:root {
+  --p-checkbox-width: 1.5rem;
+  --p-checkbox-height: 1.5rem;
+  --p-radiobutton-width: 1.5rem;
+  --p-radiobutton-height: 1.5rem;
+}
+
+/* The stacked + and - of a number field: each at least 24 px tall (WCAG 2.5.8). */
+.p-inputnumber-stacked .p-inputnumber-button {
+  min-height: 1.5rem;
+}
+
+/* The date picker: days outside the month and the month and year buttons stay legible and a finger can hit them. */
+.p-datepicker-panel {
+  .p-disabled,
+  .p-datepicker-other-month .p-datepicker-day {
+    color: var(--app-muted);
+    opacity: 1;
+  }
+
+  .p-datepicker-select-month,
+  .p-datepicker-select-year {
+    min-height: 24px;
+  }
+}
+
+/* Secondary buttons and error toasts keep 4.5:1 on the greys and tints they sit on. */
+.p-button-secondary.p-button-outlined,
+.p-button-secondary.p-button-text {
+  color: light-dark(#475569, #cbd5e1);
+}
+
+.p-toast-message-error .p-toast-summary {
+  color: light-dark(#b42318, #fecaca);
 }

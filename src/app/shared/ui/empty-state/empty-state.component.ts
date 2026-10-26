@@ -11,4 +11,12 @@ export class EmptyStateComponent {
   readonly icon = input('pi-inbox');
   readonly title = input.required<string>();
   readonly message = input<string>();
+  /** Offers Reload the page, for a failure only a reload mends. */
+  readonly reload = input(false);
+  /** The heading level of the title: 2 when nothing but the page title is above it, else 3. */
+  readonly level = input<2 | 3>(3);
+
+  protected reloadPage(): void {
+    location.reload();
+  }
 }

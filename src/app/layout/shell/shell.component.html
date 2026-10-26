@@ -9,7 +9,7 @@
     ariaLabel="Open navigation"
     (onClick)="drawerOpen.set(true)"
   />
-  <a class="topbar__brand" routerLink="/">
+  <a class="topbar__brand" routerLink="/" aria-label="Stall Planning Portal, home">
     <img src="itpo-logo.svg" alt="" width="36" height="36" />
     <span>Stall Planning Portal</span>
   </a>
@@ -79,28 +79,28 @@
   </nav>
 </ng-template>
 
-<div class="frame" [class.frame--collapsed]="collapsed()">
+<div class="frame" [class.frame--collapsed]="compact()">
   <aside class="sidebar">
     <ng-container
       [ngTemplateOutlet]="navigation"
-      [ngTemplateOutletContext]="{ compact: collapsed() }"
+      [ngTemplateOutletContext]="{ compact: compact() }"
     />
 
     <button
       type="button"
       class="sidebar__toggle"
       (click)="toggleCollapsed()"
-      [attr.aria-expanded]="!collapsed()"
-      [attr.aria-label]="collapsed() ? 'Expand the sidebar' : 'Collapse the sidebar'"
-      [pTooltip]="collapsed() ? 'Expand the sidebar' : ''"
+      [attr.aria-expanded]="!compact()"
+      [attr.aria-label]="compact() ? 'Expand the sidebar' : 'Collapse the sidebar'"
+      [pTooltip]="compact() ? 'Expand the sidebar' : ''"
       tooltipPosition="right"
     >
       <i
         class="pi"
-        [class]="collapsed() ? 'pi-angle-double-right' : 'pi-angle-double-left'"
+        [class]="compact() ? 'pi-angle-double-right' : 'pi-angle-double-left'"
         aria-hidden="true"
       ></i>
-      <span [class.visually-hidden]="collapsed()">Collapse</span>
+      <span [class.visually-hidden]="compact()">Collapse</span>
     </button>
   </aside>
 

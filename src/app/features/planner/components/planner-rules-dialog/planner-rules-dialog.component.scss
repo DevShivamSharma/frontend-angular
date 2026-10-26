@@ -45,7 +45,7 @@
   align-items: flex-start;
 }
 .on {
-  color: light-dark(#15803d, #4ade80);
+  color: light-dark(var(--palette-green-700), var(--palette-green-400));
   flex: 0 0 auto;
 }
 .waiting {

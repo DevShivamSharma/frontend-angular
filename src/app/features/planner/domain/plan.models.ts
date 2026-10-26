@@ -120,6 +120,7 @@ export interface HallPlanStatus {
   stalls: number;
   updatedAt: string | null;
   review: Omit<PlanReview, 'submittedBy' | 'reviewedBy'> | null;
+  published: { revision: number; at: string } | null;
   /** Rules the saved plan breaks; Send for approval waits until there are none. */
   violations: number;
   canSubmit: boolean;

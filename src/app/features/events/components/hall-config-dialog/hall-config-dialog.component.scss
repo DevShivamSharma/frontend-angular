@@ -16,7 +16,7 @@
   margin: 0;
   padding: 12px;
   border: 1px solid var(--app-outline-variant);
-  border-radius: 12px;
+  border-radius: var(--app-radius-lg);
 }
 
 .row__head {

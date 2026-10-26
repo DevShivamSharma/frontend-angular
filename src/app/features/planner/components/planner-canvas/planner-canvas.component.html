@@ -25,10 +25,10 @@
 @if (hint()) {
   <p class="hint">{{ hint() }}</p>
 }
-<details class="legend" open>
+<details class="legend" [open]="legendOpen">
   <summary>Legend</summary>
   @if (hallLegend().length) {
-    <h4>Hall</h4>
+    <p class="legend-title">Hall</p>
     <ul>
       @for (l of hallLegend(); track $index) {
         <li>
@@ -38,7 +38,7 @@
       }
     </ul>
   }
-  <h4>Plan</h4>
+  <p class="legend-title">Plan</p>
   <ul>
     @for (l of planLegend; track l.label) {
       <li>

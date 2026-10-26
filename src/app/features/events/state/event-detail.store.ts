@@ -35,6 +35,10 @@ export class EventDetailStore {
   readonly hallsFailed = signal(false);
   readonly halls = computed(() => this.event()?.halls ?? []);
   /** Only ITPO staff change an event, and only an internal one; any other is for reading. */
+  /** ITPO staff switch the planning rules of any event but an internal one, which has them all off. */
+  readonly canSwitchRules = computed(
+    () => this.auth.isStaff() && this.summary()?.kind === 'external',
+  );
   readonly canManage = computed(() => this.auth.isStaff() && this.summary()?.kind === 'internal');
 
   private eventId = '';

@@ -1,0 +1,120 @@
+<div class="toolbar">
+  <p-selectbutton
+    [options]="showOptions"
+    optionLabel="label"
+    optionValue="value"
+    [allowEmpty]="false"
+    [ngModel]="show()"
+    (ngModelChange)="show.set($event)"
+    ariaLabel="Show groups"
+  />
+  <span class="text-muted toolbar__count" aria-live="polite">
+    @if (!loading() && !failed()) {
+      {{ shown().length }} {{ shown().length === 1 ? 'group' : 'groups' }}
+    }
+  </span>
+  <p-button label="New group" icon="pi pi-plus" (onClick)="openNew()" />
+</div>
+
+@if (failed()) {
+  <app-empty-state
+    icon="pi-exclamation-triangle"
+    title="The groups could not be loaded"
+    message="Check your connection and try again."
+  >
+    <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
+  </app-empty-state>
+} @else if (loading()) {
+  <app-card-skeleton [count]="6" />
+} @else if (shown().length) {
+  <ul class="card-grid">
+    @for (group of shown(); track group.id) {
+      <li class="item-card">
+        <h2 class="item-card__title">{{ group.name }}</h2>
+        <p class="item-card__meta">{{ group.description ?? group.slug }}</p>
+        <div class="item-card__tags state-row">
+          <p-toggleswitch
+            [ngModel]="group.active"
+            (onChange)="toggle(group, $event.checked)"
+            [ariaLabel]="(group.active ? 'Deactivate ' : 'Activate ') + group.name"
+          />
+          <span class="state" [class.state--off]="!group.active">{{
+            group.active ? 'Active' : 'Inactive'
+          }}</span>
+          <p-button
+            class="item-card__delete"
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            [rounded]="true"
+            [ariaLabel]="'Delete ' + group.name"
+            (onClick)="remove(group)"
+          />
+        </div>
+      </li>
+    }
+  </ul>
+} @else {
+  <app-empty-state
+    icon="pi-tags"
+    title="No groups here"
+    message="Add a group, then add its categories."
+  />
+}
+
+<p-dialog
+  header="New group"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!saving()"
+  [style]="{ width: '30rem', maxWidth: '96vw' }"
+>
+  <form class="fields" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <app-form-field
+      label="Name"
+      inputId="group-name"
+      [control]="form.controls.name"
+      [required]="true"
+      hint="A fair or kind of stall, like AAHAR or F&B."
+    >
+      <input pInputText id="group-name" formControlName="name" maxlength="100" autocomplete="off" />
+    </app-form-field>
+    @if (failure(); as message) {
+      <p class="problem" role="alert">
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+      </p>
+    }
+    <app-form-field
+      label="Note"
+      inputId="group-note"
+      [control]="form.controls.description"
+      hint="Optional."
+    >
+      <textarea
+        pTextarea
+        id="group-note"
+        formControlName="description"
+        rows="2"
+        maxlength="255"
+      ></textarea>
+    </app-form-field>
+  </form>
+
+  <ng-template #footer>
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Create group"
+      icon="pi pi-plus"
+      [loading]="saving()"
+      [disabled]="saving()"
+      (onClick)="save()"
+    />
+  </ng-template>
+</p-dialog>

@@ -63,7 +63,7 @@
   width: 1rem;
   height: 1rem;
   border: 1px solid var(--app-border);
-  border-radius: 3px;
+  border-radius: var(--app-radius-2xs);
 }
 
 .swatch--floor {
@@ -75,8 +75,8 @@
 }
 
 .swatch--pillar {
-  background: #6b7280;
-  border-color: #374151;
+  background: var(--palette-gray-500);
+  border-color: var(--palette-gray-700);
 }
 
 .stats {

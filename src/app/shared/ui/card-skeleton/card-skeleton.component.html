@@ -1,6 +1,6 @@
 <ul class="card-grid" aria-hidden="true">
   @for (item of items(); track item) {
-    <li class="item-card" [class.item-card--media]="media()">
+    <li class="item-card" [class.item-card--media]="media()" [class.item-card--cover]="cover()">
       @if (media()) {
         <p-skeleton class="item-card__media" width="7.5rem" height="100%" borderRadius="0" />
         <div class="item-card__body">
@@ -9,6 +9,9 @@
           <p-skeleton width="30%" height="1.4rem" borderRadius="999px" />
         </div>
       } @else {
+        @if (cover()) {
+          <p-skeleton class="item-card__cover" width="100%" height="100%" borderRadius="0" />
+        }
         <p-skeleton width="70%" height="1.1rem" />
         <p-skeleton width="50%" height="0.8rem" />
         <p-skeleton width="60%" height="0.8rem" />

@@ -1,0 +1,73 @@
+/*
+ * The colour palette: raw colours, named once. Components never use a hex value; they use a
+ * semantic token from _tokens.scss, or, for the status and drawing colours of the planner, one of
+ * these.
+ */
+:root {
+  --palette-amber-200: #fde68a;
+  --palette-amber-400: #fbbf24;
+  --palette-amber-50: #fffbeb;
+  --palette-amber-700: #b45309;
+  --palette-amber-800: #92400e;
+  --palette-amber-900: #78350f;
+  --palette-black: #000000;
+  --palette-blue-600: #2563eb;
+  --palette-blue-700: #1d4ed8;
+  --palette-brand-600: #c8283f;
+  --palette-cyan-700: #0e7490;
+  --palette-emerald-200: #a7f3d0;
+  --palette-emerald-50: #ecfdf5;
+  --palette-emerald-900: #064e3b;
+  --palette-gray-100: #f3f4f6;
+  --palette-gray-300: #d1d5db;
+  --palette-gray-400: #9ca3af;
+  --palette-gray-50: #f9fafb;
+  --palette-gray-500: #6b7280;
+  --palette-gray-600: #4b5563;
+  --palette-gray-700: #374151;
+  --palette-gray-800: #1f2937;
+  --palette-gray-900: #111827;
+  --palette-green-100: #dcfce7;
+  --palette-green-300: #86efac;
+  --palette-green-400: #4ade80;
+  --palette-green-600: #16a34a;
+  --palette-green-700: #15803d;
+  --palette-green-900: #14532d;
+  --palette-ink-900: #101018;
+  --palette-ink-950: #0d0d10;
+  --palette-navy-900: #0f2a4a;
+  --palette-orange-600: #ea580c;
+  --palette-orange-700: #c2410c;
+  --palette-orange-800: #9a3412;
+  --palette-plum-700: #742371;
+  --palette-plum-800: #7c1d6f;
+  --palette-purple-100: #f3e8ff;
+  --palette-purple-400: #c084fc;
+  --palette-purple-600: #9333ea;
+  --palette-purple-700: #7e22ce;
+  --palette-red-100: #fee2e2;
+  --palette-red-200: #fecaca;
+  --palette-red-300: #fca5a5;
+  --palette-red-50: #fef2f2;
+  --palette-red-600: #dc2626;
+  --palette-red-800: #991b1b;
+  --palette-red-900: #7f1d1d;
+  --palette-rose-700: #be123c;
+  --palette-sky-100: #e0f2fe;
+  --palette-sky-900: #0c4a6e;
+  --palette-slate-100: #f1f5f9;
+  --palette-slate-200: #e2e8f0;
+  --palette-slate-300: #cbd5e1;
+  --palette-slate-400: #94a3b8;
+  --palette-slate-50: #f8fafc;
+  --palette-slate-500: #64748b;
+  --palette-slate-600: #475569;
+  --palette-slate-700: #334155;
+  --palette-slate-800: #1e293b;
+  --palette-slate-900: #0f172a;
+  --palette-violet-700: #6d28d9;
+  --palette-white: #ffffff;
+  --palette-yellow-100: #fef9c3;
+  --palette-yellow-50: #fefce8;
+  --palette-yellow-900: #713f12;
+}

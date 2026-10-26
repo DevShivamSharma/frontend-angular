@@ -22,18 +22,51 @@ export class CategoriesApiService {
   private readonly http = inject(HttpClient);
   private readonly url = `${inject(API_CONFIG).itpoAdmin}/admin/master`;
 
-  /** Every group ITPO keeps; the ones that hold categories are told apart by `categoryGroups`. */
-  groups(): Observable<CategoryGroup[]> {
-    const params = new HttpParams().set('page', 1).set('size', 200).set('status', 'all');
-    return this.http.get<RawPage>(`${this.url}/types`, { params }).pipe(
-      map((raw) =>
-        raw.list.map((g) => ({
-          id: Number(g['id']),
-          name: String(g['name']),
-          slug: String(g['slug']),
-        })),
-      ),
-    );
+  /**
+   * The groups ITPO keeps: by default only the active ones, which is what every picker offers;
+   * the group master passes `all` to also see the switched-off ones. The ones that hold
+   * categories are told apart by `categoryGroups`.
+   */
+  groups(status: 'active' | 'all' = 'active'): Observable<CategoryGroup[]> {
+    const params = new HttpParams()
+      .set('page', 1)
+      .set('size', 200)
+      .set('status', status === 'all' ? 'all' : 'true');
+    return this.http
+      .get<RawPage>(`${this.url}/types`, { params })
+      .pipe(map((raw) => raw.list.map(toGroup).filter((g) => status === 'all' || g.active)));
+  }
+
+  createGroup(group: NewCategory): Observable<CategoryGroup> {
+    return this.http
+      .post<Raw>(`${this.url}/types`, {
+        name: group.name.trim(),
+        slug: slugOf(group.name),
+        ...(group.description?.trim() && { description: group.description.trim() }),
+        status: true,
+      })
+      .pipe(map(toGroup));
+  }
+
+  setGroupActive(id: number, active: boolean): Observable<CategoryGroup> {
+    return this.http
+      .patch<Raw>(`${this.url}/types/update/${id}`, { status: active })
+      .pipe(map(toGroup));
+  }
+
+  /** Removes a category from ITPO's master for good; deactivating is the way to keep it. */
+  deleteCategory(id: number): Observable<void> {
+    return this.http.delete(`${this.url}/code-master/delete/${id}`).pipe(map(() => undefined));
+  }
+
+  /** Removes a group for good. */
+  deleteGroup(id: number): Observable<void> {
+    return this.http.delete(`${this.url}/types/delete/${id}`).pipe(map(() => undefined));
+  }
+
+  /** How many categories a group holds, active or not. */
+  categoryCount(group: string): Observable<number> {
+    return this.list({ group, page: 1, size: 1, status: 'all' }).pipe(map((page) => page.total));
   }
 
   list(query: CategoryQuery): Observable<Page<Category>> {
@@ -72,6 +105,17 @@ export class CategoriesApiService {
       .patch<Raw>(`${this.url}/code-master/update/${id}`, { status: active })
       .pipe(map(toCategory));
   }
+}
+
+function toGroup(raw: Raw): CategoryGroup {
+  return {
+    id: Number(raw['id']),
+    name: String(raw['name'] ?? ''),
+    slug: String(raw['slug'] ?? ''),
+    description:
+      typeof raw['description'] === 'string' && raw['description'] ? raw['description'] : null,
+    active: raw['status'] !== false,
+  };
 }
 
 function toCategory(raw: Raw): Category {

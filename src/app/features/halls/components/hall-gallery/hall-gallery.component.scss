@@ -25,9 +25,9 @@
   left: var(--space-3);
   top: var(--space-3);
   padding: 0.125rem 0.625rem;
-  border-radius: 999px;
-  background: rgb(15 23 42 / 75%);
-  color: #fff;
+  border-radius: var(--app-radius-pill);
+  background: color-mix(in srgb, var(--palette-slate-900) 75%, transparent);
+  color: var(--palette-white);
   font-size: 0.75rem;
   font-weight: 600;
 }

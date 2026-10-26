@@ -60,7 +60,7 @@
   width: min(70%, 34rem);
   aspect-ratio: 4 / 3;
   border: 2px dashed var(--app-border-strong);
-  border-radius: 6px;
+  border-radius: var(--app-radius-xs);
   background: color-mix(in srgb, var(--app-surface) 70%, transparent);
   animation: pulse 1.4s ease-in-out infinite;
 }
@@ -72,7 +72,7 @@
   gap: var(--space-2);
   margin: 0;
   padding: var(--space-2) var(--space-4);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--app-surface);
   box-shadow: var(--app-shadow);
   color: var(--app-muted);
