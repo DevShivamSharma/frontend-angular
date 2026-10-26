@@ -17,7 +17,7 @@ import { prepareReferenceMaterials } from './venue-reference-materials';
 import { prepareReferenceConcourse, prepareCoveredConcourseFloor } from './venue-reference-concourse';
 import { prepareReferenceCanopies } from './venue-reference-canopy';
 import { prepareGroundPhotoDetails, preparePhotoEntrances } from './venue-ground-photos';
-import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
+import { revealMappedRoads } from './venue-edge-detail';
 import { COLOUR_MATERIALS, createVenueAppearance, INITIAL_APPEARANCE, INITIAL_SCENERY, VenueAppearance, VenueScenery } from './venue-appearance';
 import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
 import { createVenueInteriors, InteriorState } from './venue-interiors';
@@ -29,6 +29,8 @@ import { prepareVenueSiteDetail, prepareSiteDetailRendering, SiteRegistration, t
 import { createVenueRouteTrack, ROUTE_FRAME_MS } from './venue-route-track';
 import { Point } from './venue-route-geometry';
 import { prepareGate9 } from './venue-gate9';
+import { prepareBmElements } from './venue-bm-elements';
+import { createVenueClassifier, ancestorMatches, isVenueGround, venueBatchSemantics } from './venue-classify';
 import { createVenueNightLights } from './venue-night-lights';
 import { collectVenueLightSources } from './venue-light-sources';
 import { createVenueRain } from './venue-rain';
@@ -193,27 +195,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const information = await loadInformation();
         signal.throwIfAborted();
         const { destinations } = information;
-        const hallIds = new Set(destinations.filter(d => d.hall).map(d => String(d.hall)));
-        const gateIds = new Set(destinations.filter(d => d.gate).map(d => d.id));
-        function ancestorMatches(o: T.Object3D, re: RegExp) { for (let n: T.Object3D | null = o; n; n = n.parent)
-            if (re.test(n.name))
-                return true; return false; }
-        function classify(o: T.Object3D) { for (let n: T.Object3D | null = o; n; n = n.parent) {
-            if (n.userData['destinationId']) return n.userData['destinationId'] as string;
-            if (gateIds.has(n.userData['gate_id'])) return n.userData['gate_id'] as string;
-            if (n.userData?.['hall'] && hallIds.has(String(n.userData['hall'])))
-                return 'hall' + n.userData['hall'];
-            const h = n.name.match(/^(?:PHOTO_)?HALL_(12A|14|12|11|10|[1-9])(?:[ _]|$)|^ROOF_LABEL_H(12A|14|12|11|10|[1-9])$/);
-            if (h)
-                return 'hall' + (h[1] || h[2]);
-            const sign = n.name.match(/^(?:ARCH_H|PHOTO_ROOF_SIGN_BOARD_H)(12A|14|12|11|10|[1-9])(?:_SIGN)?$/);
-            if (sign)
-                return 'hall' + sign[1];
-            if (/^PHOTO_MUSICAL_FOUNTAIN/.test(n.name))
-                return 'fountain';
-            if (/^PHOTO_CC|^ROOF_LABEL_CC|^ARCH_CC/.test(n.name))
-                return 'cc';
-        } return null; }
+        const classify = createVenueClassifier(destinations);
         function highlight(id: string) {
             if (id === highlighted) return;
             for (const mesh of destinationMeshes.get(highlighted ?? '') ?? []) {
@@ -370,6 +352,14 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         prepareItpoArrival(root);
         prepareVenueRoadFinish(root);
         prepareGate9Paving(root);
+        // Covered walk, forecourt garden (and optionally Hall 14) from the Bharat Mandapam model, before interiors,
+        // navigation and batching read the geometry. Without the asset the earlier parts stay as they are.
+        try {
+            console.info('Bharat Mandapam elements', await prepareBmElements(root, asset, signal, classify));
+        } catch (error) {
+            signal.throwIfAborted();
+            console.warn('Bharat Mandapam elements could not load; keeping the earlier parts.', error);
+        }
         try {
             interiors=await createVenueInteriors({root,scene,camera,canvas,asset,signal,invalidate,shadowsChanged:()=>renderer.shadowMap.needsUpdate=true,exit:()=>leaveCommand(),daylight:()=>daylight,state:state=>{
                 controls.enabled=!state.walking&&!visitor?.active;
@@ -409,13 +399,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const venueLightSources = collectVenueLightSources(root, gate9?.lights ?? [], visitorNavigation.portals);
         // Export is already metres, Y-up, east +X / south +Z. Do not rotate the
         // glTF a second time; W converts only the authored navigation coordinates.
-        batchVenue(root, classify, o => [
-            ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i),
-            ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/),
-            /label|sign|glass|glazing|light|spray/i.test(o.name),
-            isLegacyContextRoad(o),
-            !!o.userData['supersededBySiteReference']
-        ].join(':'));
+        batchVenue(root, classify, venueBatchSemantics);
         if (localMapReady) revealMappedRoads(root);
         scene.add(root);
         const replacedMaterials = new Set<T.Material>();
@@ -436,7 +420,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 destinationMeshes.set(destination, meshes);
             }
             const sourceMaterials = Array.isArray(o.material) ? o.material : [o.material]; o.material = Array.isArray(o.material) ? o.material.map((m: T.Material) => m.clone()) : o.material.clone(); sourceMaterials.forEach((m: T.Material) => replacedMaterials.add(m)); const mats = Array.isArray(o.material) ? o.material : [o.material]; if (ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/))
-            ccMaterials.push(...mats); o.castShadow = !ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i) && !mats.every((m: T.MeshStandardMaterial) => ['paved_ground', 'context_ground', 'water', 'road', 'road_marking', 'supplied_floor_plan'].includes(m.userData['architecturalCategory'])); o.receiveShadow = true; mats.forEach((m: T.MeshStandardMaterial) => { if (m.map)
+            ccMaterials.push(...mats); o.castShadow = !isVenueGround(o) && !mats.every((m: T.MeshStandardMaterial) => ['paved_ground', 'context_ground', 'water', 'road', 'road_marking', 'supplied_floor_plan'].includes(m.userData['architecturalCategory'])); o.receiveShadow = true; mats.forEach((m: T.MeshStandardMaterial) => { if (m.map)
             m.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); }); originals.set(o, mats.map((m: T.MeshStandardMaterial) => ({ color: m.color.clone(), emissive: m.emissive?.clone() || new T.Color(0), emissiveIntensity: m.emissiveIntensity }))); if (o.userData['cc_level'])
             o.visible = false; });
         replacedMaterials.forEach(material => material.dispose());
@@ -731,7 +715,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
  * URL, same-origin CORS mode). The links go when the viewer does.
  */
 function preloadVenueAssets(asset: (path: string) => string, signal: AbortSignal): void {
-    const paths = ['venue-site-detail.glb', 'venue-site-detail.json', 'gate9-detail.glb', 'gate9-detail.json', 'characters/security-guard.glb',
+    const paths = ['venue-site-detail.glb', 'venue-site-detail.json', 'gate9-detail.glb', 'gate9-detail.json', 'venue-bm-elements.glb', 'venue-bm-elements.json', 'characters/security-guard.glb',
         ...(INITIAL_APPEARANCE === 'color' ? [COLOUR_MATERIALS] : []), ...(INITIAL_SCENERY === 'map' ? ['geography/venue-map-context.json'] : [])];
     const links = paths.map(path => Object.assign(document.createElement('link'), { rel: 'preload', as: 'fetch', crossOrigin: 'anonymous', href: asset(path) }));
     document.head.append(...links);

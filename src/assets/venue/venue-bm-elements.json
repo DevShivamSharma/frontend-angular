@@ -1,0 +1,560 @@
+{
+ "source": {
+  "file": "bharat-mandapam.meshopt.glb",
+  "branch": "claude/sweet-newton-zhejct",
+  "sha256": "c68124b64de2e7c5060bbb8fd812063e984ee53c749b91dd46dab5c112359206"
+ },
+ "elements": [
+  {
+   "id": "tunnel",
+   "label": "Central covered walk (canopy with lattice)",
+   "fit": {
+    "method": "axis",
+    "rotationDeg": -0.45,
+    "translationXZ": [
+     4.74,
+     -18.24
+    ],
+    "movedBy": 18.85,
+    "newReference": "^Central canopy remaining solid roof panels$",
+    "oldReference": "^PHOTO VIDEO central spine curved roof$"
+   },
+   "residual": {
+    "description": "outline of the placed element vs outline of the earlier part it replaces (its fit reference), metres",
+    "meanNewToOld": 8.73,
+    "maxNewToOld": 14.53,
+    "meanOldToNew": 21.35,
+    "maxOldToNew": 67.66,
+    "sizeAlongAcross": {
+     "new": [
+      178.6,
+      42.5
+     ],
+     "old": [
+      303,
+      24
+     ]
+    }
+   },
+   "replaces": [
+    "^PHOTO CENTRAL SPINE continuous canopy columns trusses and gutters",
+    "^PHOTO VIDEO central spine curved roof",
+    "^REFERENCE (canopy perforated infill|canopy panel frames)$",
+    "^PHOTO concourse (stone column bases|event banners)$",
+    "^ARCH Pedestrian canopy edge lighting$"
+   ],
+   "cut": "footprint",
+   "footprint": [
+    [
+     -125.66,
+     77.12
+    ],
+    [
+     -125.66,
+     77.11
+    ],
+    [
+     -125.65,
+     77.08
+    ],
+    [
+     -124.61,
+     75.29
+    ],
+    [
+     -120.54,
+     68.23
+    ],
+    [
+     -104.15,
+     40
+    ],
+    [
+     52.14,
+     130.23
+    ],
+    [
+     52.13,
+     130.24
+    ],
+    [
+     34.51,
+     160.91
+    ],
+    [
+     30.9,
+     167.15
+    ],
+    [
+     30.76,
+     167.39
+    ],
+    [
+     30.75,
+     167.41
+    ],
+    [
+     30.72,
+     167.4
+    ],
+    [
+     29.95,
+     166.96
+    ],
+    [
+     28.18,
+     165.93
+    ],
+    [
+     21.2,
+     161.92
+    ],
+    [
+     -86.58,
+     99.78
+    ],
+    [
+     -115.35,
+     83.09
+    ],
+    [
+     -118.95,
+     81
+    ],
+    [
+     -124.63,
+     77.71
+    ],
+    [
+     -125.12,
+     77.43
+    ]
+   ],
+   "tags": {},
+   "materials": {
+    "Canopy warm bronze underside": "PM_Precinct canopy steel",
+    "Light structural steel": "PM_Precinct canopy steel",
+    "Charcoal roof / canopy": "PM_Video graphite canopy roof",
+    "Light stone coping": "PM_Precinct limestone"
+   },
+   "sourceNodes": 372,
+   "triangles": 32714
+  },
+  {
+   "id": "forecourt",
+   "label": "Forecourt garden: sandstone shafts, lawns, benches, planting",
+   "fit": {
+    "method": "grid",
+    "rotationDeg": 0,
+    "translationXZ": [
+     -17.39,
+     -25.28
+    ],
+    "movedBy": 30.68,
+    "newReference": "^Forecourt shaft ",
+    "oldReference": "^PHOTO CENTRAL GARDEN sandstone display portals$"
+   },
+   "residual": {
+    "description": "outline of the placed element vs outline of the earlier part it replaces (its fit reference), metres",
+    "meanNewToOld": 12.85,
+    "maxNewToOld": 26.52,
+    "meanOldToNew": 16.12,
+    "maxOldToNew": 36.57,
+    "sizeAlongAcross": {
+     "new": [
+      188.1,
+      81.5
+     ],
+     "old": [
+      184.8,
+      92.6
+     ]
+    }
+   },
+   "replaces": [
+    "^PHOTO CENTRAL GARDEN (hedges and trees|raised beds benches and lawns|sandstone display portals)$"
+   ],
+   "cut": "all",
+   "footprint": [
+    [
+     -181.06,
+     90.28
+    ],
+    [
+     -179.67,
+     87.92
+    ],
+    [
+     -162.66,
+     81.25
+    ],
+    [
+     -102.66,
+     95.71
+    ],
+    [
+     -101.63,
+     96.1
+    ],
+    [
+     -101.48,
+     96.18
+    ],
+    [
+     -70.31,
+     113.76
+    ],
+    [
+     -60.07,
+     119.91
+    ],
+    [
+     -57.29,
+     121.59
+    ],
+    [
+     -27.26,
+     140.12
+    ],
+    [
+     -26.33,
+     140.92
+    ],
+    [
+     -16.94,
+     157.74
+    ],
+    [
+     -17.51,
+     187.1
+    ],
+    [
+     -17.64,
+     187.32
+    ],
+    [
+     -108.36,
+     187.07
+    ],
+    [
+     -109.48,
+     186.65
+    ],
+    [
+     -114.83,
+     184.38
+    ],
+    [
+     -115.95,
+     183.73
+    ],
+    [
+     -140.64,
+     160.07
+    ],
+    [
+     -166.25,
+     129.11
+    ]
+   ],
+   "tags": {},
+   "materials": {
+    "Grass / planted terrace": "PM_Precinct roof grass",
+    "Light stone coping": "PM_Precinct cream coping",
+    "Agra sandstone · photograph palette": "PM_Precinct red sandstone",
+    "Forecourt shaft recessed panel · untextured reference pending": "PM_Precinct display recess",
+    "Detailed foliage 0": "PM_Precinct clipped planting",
+    "Detailed foliage 1": "PM_Precinct clipped planting",
+    "Detailed foliage 2": "PM_Precinct clipped planting",
+    "Detailed foliage 3": "PM_Precinct clipped planting",
+    "Charcoal roof / canopy": "PM_Precinct sandstone trim"
+   },
+   "sourceNodes": 1587,
+   "triangles": 135314
+  },
+  {
+   "id": "hall14",
+   "label": "Hall 14 drum (\"amphitheatre\")",
+   "fit": {
+    "method": "centre",
+    "rotationDeg": 0,
+    "translationXZ": [
+     -1.71,
+     -12.22
+    ],
+    "movedBy": 12.34,
+    "newReference": "^Hall 14 roof$",
+    "oldReference": "^PHOTO HALL 14 standing seam roof$"
+   },
+   "residual": {
+    "description": "outline of the placed element vs outline of the earlier part it replaces (its fit reference), metres",
+    "meanNewToOld": 19.17,
+    "maxNewToOld": 38.26,
+    "meanOldToNew": 17.03,
+    "maxOldToNew": 30.03,
+    "sizeAlongAcross": {
+     "new": [
+      144,
+      103.3
+     ],
+     "old": [
+      93.6,
+      85.4
+     ]
+    }
+   },
+   "replaces": [
+    "^PHOTO HALL 14 ",
+    "^ROOF LABEL H14$",
+    "^ARCH H14 SIGN$",
+    "^REFERENCE HALL 14 ",
+    "^HALL 14 entrance detail$",
+    "^PHOTO ROOF SIGN BOARD H14$"
+   ],
+   "cut": "all",
+   "footprint": [
+    [
+     -288.35,
+     -11.59
+    ],
+    [
+     -288.21,
+     -15.03
+    ],
+    [
+     -287.85,
+     -18.47
+    ],
+    [
+     -287.24,
+     -21.89
+    ],
+    [
+     -286.4,
+     -25.29
+    ],
+    [
+     -285.33,
+     -28.63
+    ],
+    [
+     -284.04,
+     -31.86
+    ],
+    [
+     -282.54,
+     -34.98
+    ],
+    [
+     -280.85,
+     -37.97
+    ],
+    [
+     -278.97,
+     -40.82
+    ],
+    [
+     -276.9,
+     -43.54
+    ],
+    [
+     -274.67,
+     -46.1
+    ],
+    [
+     -246.52,
+     -75.9
+    ],
+    [
+     -159.13,
+     -24.61
+    ],
+    [
+     -153.32,
+     -7.41
+    ],
+    [
+     -152.35,
+     -4.4
+    ],
+    [
+     -151.56,
+     -1.33
+    ],
+    [
+     -150.96,
+     1.79
+    ],
+    [
+     -150.56,
+     4.92
+    ],
+    [
+     -150.34,
+     8.09
+    ],
+    [
+     -150.33,
+     11.27
+    ],
+    [
+     -150.71,
+     28.38
+    ],
+    [
+     -160.29,
+     44.78
+    ],
+    [
+     -173.92,
+     52.84
+    ],
+    [
+     -177.05,
+     54.69
+    ],
+    [
+     -180.31,
+     56.3
+    ],
+    [
+     -183.67,
+     57.67
+    ],
+    [
+     -187.1,
+     58.8
+    ],
+    [
+     -190.61,
+     59.68
+    ],
+    [
+     -194.18,
+     60.31
+    ],
+    [
+     -197.8,
+     60.69
+    ],
+    [
+     -201.44,
+     60.81
+    ],
+    [
+     -205.11,
+     60.66
+    ],
+    [
+     -208.77,
+     60.25
+    ],
+    [
+     -212.43,
+     59.58
+    ],
+    [
+     -216.06,
+     58.62
+    ],
+    [
+     -223.88,
+     56.01
+    ],
+    [
+     -231.56,
+     52.96
+    ],
+    [
+     -239.07,
+     49.45
+    ],
+    [
+     -246.38,
+     45.49
+    ],
+    [
+     -253.44,
+     41.07
+    ],
+    [
+     -260.22,
+     36.22
+    ],
+    [
+     -266.67,
+     30.97
+    ],
+    [
+     -272.79,
+     25.37
+    ],
+    [
+     -275.23,
+     22.84
+    ],
+    [
+     -277.47,
+     20.17
+    ],
+    [
+     -279.52,
+     17.37
+    ],
+    [
+     -281.35,
+     14.46
+    ],
+    [
+     -282.98,
+     11.44
+    ],
+    [
+     -284.4,
+     8.34
+    ],
+    [
+     -285.61,
+     5.15
+    ],
+    [
+     -286.6,
+     1.89
+    ],
+    [
+     -287.38,
+     -1.42
+    ],
+    [
+     -287.92,
+     -4.78
+    ],
+    [
+     -288.25,
+     -8.18
+    ]
+   ],
+   "tags": {
+    "hall": "14"
+   },
+   "materials": {
+    "Blue-grey reflective glazing": "PM_Deep green low E glass",
+    "Hall roof · muted red from drone": "PM_Roof standing seam graphite",
+    "Light stone coping": "PM_Ivory coping",
+    "Light structural steel": "PM_Brushed silver structural steel",
+    "Hall cladding 0": "PM_Cladding 0",
+    "Hall cladding 1": "PM_Cladding 1",
+    "Hall cladding 2": "PM_Cladding 2",
+    "Hall cladding 3": "PM_Cladding 3",
+    "Hall cladding 4": "PM_Cladding 4",
+    "Hall cladding 5": "PM_Cladding 5"
+   },
+   "sourceNodes": 5,
+   "triangles": 2964
+  }
+ ],
+ "asset": {
+  "file": "venue-bm-elements.glb",
+  "bytes": 1381356
+ }
+}
