@@ -1,0 +1,4 @@
+{ "CC": { "expected": [-345.2, 129.0], "match": "^Convention parapet$" },
+  "Hall 14": { "expected": [-223.6, 4.9], "match": "^Hall 14 envelope$" },
+  "Hall 1": { "expected": [151.5, 232.7], "match": "^Hall 1 envelope$" },
+  "Hall 6": { "expected": [248.0, -277.2], "match": "^Hall 6 envelope$" } }

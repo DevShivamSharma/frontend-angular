@@ -63,6 +63,7 @@ export function pathName(json, parent, i, sep = ' ') {
   return names.join(sep);
 }
 
+const NORMALIZED = { 5120: v => Math.max(v / 127, -1), 5121: v => v / 255, 5122: v => Math.max(v / 32767, -1), 5123: v => v / 65535 };
 /** Transform the 8 corners of an accessor's min/max box; returns [minX..., maxX...] or undefined. */
 export function worldBox(json, node, matrix) {
   if (node.mesh === undefined) return undefined;
@@ -70,8 +71,11 @@ export function worldBox(json, node, matrix) {
   for (const primitive of json.meshes[node.mesh].primitives) {
     const accessor = json.accessors[primitive.attributes.POSITION];
     if (!accessor?.min || !accessor?.max) continue;
+    // KHR_mesh_quantization: min/max of a normalized integer accessor are the stored integers.
+    const unit = accessor.normalized ? NORMALIZED[accessor.componentType] : v => v;
+    const min = accessor.min.map(unit), max = accessor.max.map(unit);
     for (let corner = 0; corner < 8; corner++) {
-      const p = [corner & 1 ? accessor.max[0] : accessor.min[0], corner & 2 ? accessor.max[1] : accessor.min[1], corner & 4 ? accessor.max[2] : accessor.min[2]];
+      const p = [corner & 1 ? max[0] : min[0], corner & 2 ? max[1] : min[1], corner & 4 ? max[2] : min[2]];
       const w = [0, 1, 2].map(r => matrix[r] * p[0] + matrix[4 + r] * p[1] + matrix[8 + r] * p[2] + matrix[12 + r]);
       lo = lo ? lo.map((v, k) => Math.min(v, w[k])) : w.slice(); hi = hi ? hi.map((v, k) => Math.max(v, w[k])) : w.slice();
     }
