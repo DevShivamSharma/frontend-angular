@@ -12,6 +12,8 @@ import { venueBatchSemantics } from './venue-classify';
 export const VENUE_BM_ELEMENTS: Readonly<Record<string, boolean>> = {
   tunnel: true,
   forecourt: true,
+  amphitheatre1: true,
+  amphitheatre2: true,
   // The CAD Hall 14 is an oval of 144 x 103 m; the earlier drum is 94 x 85 m and carries the Hall 14 interior.
   hall14: false,
 };

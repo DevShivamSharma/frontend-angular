@@ -273,8 +273,228 @@
    "triangles": 135314
   },
   {
+   "id": "amphitheatre1",
+   "label": "Amphitheatre 1: sandstone seating bands",
+   "fit": {
+    "method": "grid",
+    "rotationDeg": 0,
+    "translationXZ": [
+     -8.66,
+     -4.76
+    ],
+    "movedBy": 9.88,
+    "newReference": "^North seating\\s*\\/?\\s*paving band ",
+    "oldReference": "^PHOTO VIDEO amphitheatre 1 seating with stair aisles$"
+   },
+   "residual": {
+    "description": "outline of the placed element vs outline of the earlier part it replaces (its fit reference), metres",
+    "meanNewToOld": 3.58,
+    "maxNewToOld": 6.65,
+    "meanOldToNew": 3.67,
+    "maxOldToNew": 6.87,
+    "sizeAlongAcross": {
+     "new": [
+      47.1,
+      60.7
+     ],
+     "old": [
+      37.6,
+      64
+     ]
+    }
+   },
+   "replaces": [
+    "^PHOTO VIDEO amphitheatre 1 seating with stair aisles$"
+   ],
+   "cut": "all",
+   "footprint": [
+    [
+     147.23,
+     -62.28
+    ],
+    [
+     169.71,
+     -100.53
+    ],
+    [
+     181.89,
+     -103.68
+    ],
+    [
+     192.53,
+     -97.58
+    ],
+    [
+     200.94,
+     -67.49
+    ],
+    [
+     201.71,
+     -64.4
+    ],
+    [
+     201.98,
+     -62.36
+    ],
+    [
+     201.86,
+     -60.37
+    ],
+    [
+     201.4,
+     -58.47
+    ],
+    [
+     200.57,
+     -56.71
+    ],
+    [
+     199.44,
+     -55.11
+    ],
+    [
+     198.02,
+     -53.77
+    ],
+    [
+     196.34,
+     -52.67
+    ],
+    [
+     194.4,
+     -51.92
+    ],
+    [
+     168.96,
+     -45.74
+    ],
+    [
+     160.86,
+     -43.77
+    ],
+    [
+     150.36,
+     -50.09
+    ]
+   ],
+   "tags": {},
+   "materials": {
+    "Agra sandstone · photograph palette": "PM_Video sandstone retaining walls",
+    "Grass / planted terrace": "PM_Video planted grass",
+    "Light stone coping": "PM_Video limestone coping"
+   },
+   "sourceNodes": 93,
+   "triangles": 5676
+  },
+  {
+   "id": "amphitheatre2",
+   "label": "Amphitheatre 2: sandstone seating bands",
+   "fit": {
+    "method": "grid",
+    "rotationDeg": 0,
+    "translationXZ": [
+     -6.32,
+     -6.59
+    ],
+    "movedBy": 9.13,
+    "newReference": "^South seating\\s*\\/?\\s*paving band ",
+    "oldReference": "^PHOTO VIDEO amphitheatre 2 seating with stair aisles$"
+   },
+   "residual": {
+    "description": "outline of the placed element vs outline of the earlier part it replaces (its fit reference), metres",
+    "meanNewToOld": 3.58,
+    "maxNewToOld": 6.63,
+    "meanOldToNew": 3.71,
+    "maxOldToNew": 6.87,
+    "sizeAlongAcross": {
+     "new": [
+      47.2,
+      60.6
+     ],
+     "old": [
+      37.6,
+      64
+     ]
+    }
+   },
+   "replaces": [
+    "^PHOTO VIDEO amphitheatre 2 seating with stair aisles$"
+   ],
+   "cut": "all",
+   "footprint": [
+    [
+     77.71,
+     58.12
+    ],
+    [
+     100.22,
+     19.85
+    ],
+    [
+     112.37,
+     16.7
+    ],
+    [
+     123.01,
+     22.8
+    ],
+    [
+     132.19,
+     56.05
+    ],
+    [
+     132.49,
+     58.08
+    ],
+    [
+     132.36,
+     60.07
+    ],
+    [
+     131.86,
+     61.96
+    ],
+    [
+     131.06,
+     63.72
+    ],
+    [
+     129.89,
+     65.32
+    ],
+    [
+     128.46,
+     66.65
+    ],
+    [
+     126.78,
+     67.74
+    ],
+    [
+     124.89,
+     68.48
+    ],
+    [
+     91.39,
+     76.62
+    ],
+    [
+     80.89,
+     70.31
+    ]
+   ],
+   "tags": {},
+   "materials": {
+    "Agra sandstone · photograph palette": "PM_Video sandstone retaining walls",
+    "Grass / planted terrace": "PM_Video planted grass",
+    "Light stone coping": "PM_Video limestone coping"
+   },
+   "sourceNodes": 96,
+   "triangles": 5435
+  },
+  {
    "id": "hall14",
-   "label": "Hall 14 drum (\"amphitheatre\")",
+   "label": "Hall 14 drum",
    "fit": {
     "method": "centre",
     "rotationDeg": 0,
@@ -555,6 +775,6 @@
  ],
  "asset": {
   "file": "venue-bm-elements.glb",
-  "bytes": 1381356
+  "bytes": 1727516
  }
 }
