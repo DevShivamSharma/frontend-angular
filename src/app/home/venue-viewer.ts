@@ -355,7 +355,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         // Covered walk, forecourt garden (and optionally Hall 14) from the Bharat Mandapam model, before interiors,
         // navigation and batching read the geometry. Without the asset the earlier parts stay as they are.
         try {
-            console.info('Bharat Mandapam elements', await prepareBmElements(root, asset, signal, classify));
+            console.info('Bharat Mandapam elements', await prepareBmElements(root, asset, signal));
         } catch (error) {
             signal.throwIfAborted();
             console.warn('Bharat Mandapam elements could not load; keeping the earlier parts.', error);

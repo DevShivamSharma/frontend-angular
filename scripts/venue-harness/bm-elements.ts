@@ -19,7 +19,7 @@ const manifest = JSON.parse(fs.readFileSync('src/assets/venue/venue-bm-elements.
 const flags = mode === 'all' ? Object.fromEntries(manifest.elements.map(e => [e.id, true])) : VENUE_BM_ELEMENTS;
 async function run(withElements: boolean) {
   const root = await loadGlb('src/assets/venue/IITF_2026_ARCHITECTURAL.glb') as T.Group;
-  const applied = withElements ? applyBmElements(root, await loadGlb('src/assets/venue/venue-bm-elements.glb'), manifest, flags, createVenueClassifier(destinations)) : undefined;
+  const applied = withElements ? applyBmElements(root, await loadGlb('src/assets/venue/venue-bm-elements.glb'), manifest, flags) : undefined;
   if (withElements && png) writePng(png, renderPlan(root, { x0: -260, z0: -140, x1: 240, z1: 260, step: .4 }));
   const halls = measureInteriorHalls(root);
   const nav = createVisitorNavigation(root, halls, new Map());

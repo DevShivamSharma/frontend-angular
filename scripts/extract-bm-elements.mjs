@@ -21,7 +21,8 @@ const OUT_GLB = 'src/assets/venue/venue-bm-elements.glb', OUT_JSON = 'src/assets
 
 /** The elements. `nodes` and `region` (X/Z box, prepared-model frame) select source nodes by name and centre.
  * `old` names the earlier model's parts (spaced names; also runtime objects of its photo passes) that the element
- * replaces inside its footprint; `fit` says how the element is placed on them. */
+ * replaces (all of them, or inside its footprint: `cut`); `inside` parts are always cut inside the footprint only.
+ * `fit` says how the element is placed on them; 'as <id>' reuses another element's transform. */
 const ELEMENTS = [
   {
     id: 'tunnel', label: 'Central covered walk (canopy with lattice)',
@@ -39,10 +40,20 @@ const ELEMENTS = [
     id: 'forecourt', label: 'Forecourt garden: sandstone shafts, lawns, benches, planting',
     nodes: /^(Forecourt (shaft|lawn)|Shaft (sandstone coursing|return stone bed joint)|Native (seats|paving)|Stone seat cap|Low planted-bed shrub|DWG planting bed|Planting bed edging|Planted surface)/,
     region: [-160, 100, 0, 212],
-    fitNew: /^Forecourt shaft /, fitOld: /^PHOTO CENTRAL GARDEN sandstone display portals$/, fit: 'grid',
+    // Placed with the walk's transform, so walk, garden, plaza and Hall 14 keep their exact CAD arrangement.
+    fit: 'as tunnel',
     // The whole earlier garden goes; leftover portals at its corners would mix the two designs.
     cut: 'all',
     old: ['^PHOTO CENTRAL GARDEN (hedges and trees|raised beds benches and lawns|sandstone display portals)$'],
+    tags: {},
+  },
+  {
+    id: 'plaza', label: 'Central plaza: patterned paving with rose bands, slab islands, ventilation grilles',
+    nodes: /^(Plaza patterned paving|Plaza solid slab islands|Vent grille|Pale ventilation louvre blade|Shaft (white louvre|vent inset|inset top|projecting coping))/,
+    region: [-80, -200, 300, 110],
+    fit: 'as tunnel',
+    // Laid over the earlier site ground (SITE_GROUND stays underneath); the planters standing on it go.
+    cut: 'all', old: [], inside: ['^SITE DETAIL decorative planters$'],
     tags: {},
   },
   {
@@ -65,30 +76,18 @@ const ELEMENTS = [
   {
     id: 'hall14', label: 'Hall 14 drum',
     nodes: /^Hall 14 /, region: [-300, -100, -100, 120],
-    fitNew: /^Hall 14 roof$/, fitOld: /^PHOTO HALL 14 standing seam roof$/, fit: 'centre',
+    fit: 'as tunnel',
     cut: 'all',
     old: ['^PHOTO HALL 14 ', '^ROOF LABEL H14$', '^ARCH H14 SIGN$', '^REFERENCE HALL 14 ', '^HALL 14 entrance detail$', '^PHOTO ROOF SIGN BOARD H14$'],
+    // The larger CAD drum covers part of the earlier CC-to-garden canopy.
+    inside: ['^PHOTO CC corrected garden connection '],
     tags: { hall: '14' },
+    // Interiors and the visitor fit Hall 14 to this roof (venue-interiors.ts).
+    roles: { '^Hall 14 roof$': 'hallRoof', '^Hall 14 (standing seams|roof coping)$': 'hallRoofPart' },
   },
 ];
-/** New material -> the earlier model's material it is drawn with (same Natural/Color palette, same batches). */
-const MATERIALS = {
-  tunnel: { 'Canopy warm bronze underside': 'PM_Precinct canopy steel', 'Light structural steel': 'PM_Precinct canopy steel',
-    'Charcoal roof / canopy': 'PM_Video graphite canopy roof', 'Light stone coping': 'PM_Precinct limestone' },
-  forecourt: { 'Grass / planted terrace': 'PM_Precinct roof grass', 'Light stone coping': 'PM_Precinct cream coping',
-    'Agra sandstone · photograph palette': 'PM_Precinct red sandstone', 'Forecourt shaft recessed panel · untextured reference pending': 'PM_Precinct display recess',
-    'Detailed foliage 0': 'PM_Precinct clipped planting', 'Detailed foliage 1': 'PM_Precinct clipped planting',
-    'Detailed foliage 2': 'PM_Precinct clipped planting', 'Detailed foliage 3': 'PM_Precinct clipped planting',
-    'Charcoal roof / canopy': 'PM_Precinct sandstone trim' },
-  amphitheatre1: { 'Agra sandstone · photograph palette': 'PM_Video sandstone retaining walls', 'Grass / planted terrace': 'PM_Video planted grass',
-    'Light stone coping': 'PM_Video limestone coping' },
-  amphitheatre2: { 'Agra sandstone · photograph palette': 'PM_Video sandstone retaining walls', 'Grass / planted terrace': 'PM_Video planted grass',
-    'Light stone coping': 'PM_Video limestone coping' },
-  hall14: { 'Blue-grey reflective glazing': 'PM_Deep green low E glass', 'Hall roof · muted red from drone': 'PM_Roof standing seam graphite',
-    'Light stone coping': 'PM_Ivory coping', 'Light structural steel': 'PM_Brushed silver structural steel',
-    'Hall cladding 0': 'PM_Cladding 0', 'Hall cladding 1': 'PM_Cladding 1', 'Hall cladding 2': 'PM_Cladding 2',
-    'Hall cladding 3': 'PM_Cladding 3', 'Hall cladding 4': 'PM_Cladding 4', 'Hall cladding 5': 'PM_Cladding 5' },
-};
+/** The CAD colours are kept (as vertex colours at run time); each material only chooses a shared finish. */
+const finishOf = name => /glazing/i.test(name) ? 'glass' : /steel|bronze|canopy|grille|louvre/i.test(name) ? 'metal' : 'matte';
 const spaced = name => name.replace(/_/g, ' ');
 
 // ---------- geometry of both models (GLTFLoader, as the viewer sees them) ----------
@@ -144,6 +143,16 @@ const outset = (polygon, d) => { const [cx, cz] = mean(polygon); return polygon.
 const manifest = { source: { file: 'bharat-mandapam.meshopt.glb', branch: 'claude/sweet-newton-zhejct', sha256: crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex') }, elements: [] };
 const fits = new Map();
 for (const element of ELEMENTS) {
+  if (element.fit.startsWith('as ')) {
+    const same = fits.get(element.fit.slice(3)), entry = manifest.elements.find(e => e.id === element.fit.slice(3));
+    fits.set(element.id, same);
+    const all = elementPoints(element), placed = hull(all.map(p => { const r = rotate(p, same.theta); return [r[0] + same.t[0], r[1] + same.t[1]]; }));
+    manifest.elements.push({ id: element.id, label: element.label, fit: { ...entry.fit, method: element.fit },
+      residual: { description: `placed with ${element.fit.slice(3)}'s transform: same arrangement as in the CAD model` },
+      replaces: element.old, cut: element.cut, inside: element.inside ?? [], roles: element.roles ?? {},
+      footprint: outset(placed, 1).map(p => p.map(v => +v.toFixed(2))), tags: element.tags });
+    continue;
+  }
   const newKey = elementPoints(element, o => element.fitNew.test(spaced(o.name)));
   const oldKey = pointsOf(oldScene, n => element.fitOld.test(n));
   if (!newKey.length || !oldKey.length) throw new Error(`${element.id}: fit geometry missing (new ${newKey.length}, old ${oldKey.length})`);
@@ -174,8 +183,8 @@ for (const element of ELEMENTS) {
       meanOldToNew: +(ba.reduce((s, v) => s + v, 0) / ba.length).toFixed(2), maxOldToNew: +max(ba).toFixed(2),
       sizeAlongAcross: { new: extent(all.map(place), along).map(v => +v.toFixed(1)), old: extent(oldKey, along).map(v => +v.toFixed(1)) },
     },
-    replaces: element.old, cut: element.cut, footprint: outset(placed, 1).map(p => p.map(v => +v.toFixed(2))),
-    tags: element.tags, materials: MATERIALS[element.id],
+    replaces: element.old, cut: element.cut, inside: element.inside ?? [], roles: element.roles ?? {},
+    footprint: outset(placed, 1).map(p => p.map(v => +v.toFixed(2))), tags: element.tags,
   });
 }
 
@@ -205,10 +214,9 @@ for (const element of ELEMENTS) {
       meshes.push({ ...mesh, primitives: mesh.primitives.map(p => {
         const key = `${element.id}:${p.material}`;
         if (!materialMap.has(key)) {
-          const m = json.materials[p.material], target = MATERIALS[element.id][m.name];
-          if (!target) throw new Error(`${element.id}: no material mapping for "${m.name}"`);
+          const m = json.materials[p.material];
           materialMap.set(key, materials.length);
-          materials.push({ ...m, name: `BM ${element.id} · ${m.name}`, extras: { ...m.extras, bmSourceMaterial: m.name, explorerMaterial: target } });
+          materials.push({ ...m, name: `BM ${element.id} · ${m.name}`, extras: { ...m.extras, bmSourceMaterial: m.name, bmFinish: finishOf(m.name) } });
         }
         return { ...p, material: materialMap.get(key), attributes: Object.fromEntries(Object.entries(p.attributes).map(([k, v]) => [k, keepAccessor(v)])),
           ...(p.indices !== undefined ? { indices: keepAccessor(p.indices) } : {}) };

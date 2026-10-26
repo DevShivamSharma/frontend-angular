@@ -104,6 +104,8 @@ export function createVisitorCollisionWorld(root: T.Object3D, portals: VisitorPo
       if (carveEntrances) {
         for (let p: T.Object3D | null = o; p; p = p.parent) if (!p.visible) return;
       }
+      // Flat paving, lawns and plaza slabs of the Bharat Mandapam elements (venue-bm-elements.ts) are ground.
+      if (o.userData['venueRole'] === 'ground') return;
       const attribute = o.geometry.getAttribute('position'), index = o.geometry.index;
       if (!attribute) return;
       const count = index?.count ?? attribute.count;

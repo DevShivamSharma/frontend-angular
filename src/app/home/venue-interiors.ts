@@ -63,14 +63,20 @@ export function measureInteriorHalls(root: T.Object3D): InteriorHall[] {
   const named = (name: string) => {
     let found: T.Object3D | undefined;
     root.traverse((o) => {
-      if (o.name.replace(/_/g, ' ') === name.replace(/_/g, ' ')) found = o;
+      if (o.name.replace(/_/g, ' ') === name.replace(/_/g, ' ') && !o.userData['supersededBySiteReference']) found = o;
     });
+    return found;
+  };
+  // A hall roof replaced by the Bharat Mandapam elements (venue-bm-elements.ts) is tagged with its role.
+  const tagged = (id: string, role: string) => {
+    const found: T.Object3D[] = [];
+    root.traverse((o) => { if (o.userData['hall'] === id && o.userData['venueRole'] === role) found.push(o); });
     return found;
   };
   for (const id of ['1', '2', '3', '4', '5', '6', '14']) {
     const roof = named(
       `PHOTO_HALL_${id} ${['1', '14'].includes(id) ? 'standing seam roof' : 'roof'}`,
-    );
+    ) ?? tagged(id, 'hallRoof')[0];
     if (!roof) continue;
     const points = pointsOf(roof),
       outline = hull(points.map((p) => [p.x, p.z]));
@@ -116,7 +122,8 @@ export function measureInteriorHalls(root: T.Object3D): InteriorHall[] {
       (entranceCenter.x - center.x) * c + (entranceCenter.z - center.z) * s,
       -(entranceCenter.x - center.x) * s + (entranceCenter.z - center.z) * c,
     ];
-    roof.userData['interiorRoof'] = `hall${id}`;
+    const roofParts = tagged(id, 'hallRoofPart');
+    for (const part of [roof, ...roofParts]) part.userData['interiorRoof'] = `hall${id}`;
     halls.push({
       id: `hall${id}`,
       label: `Hall ${id}`,
@@ -127,7 +134,7 @@ export function measureInteriorHalls(root: T.Object3D): InteriorHall[] {
       height: Math.min(...points.map((p) => p.y)) - 0.7,
       outline: localOutline,
       entrance,
-      roofs: [roof, named(`ROOF_LABEL_H${id}`)].filter((o): o is T.Object3D => !!o),
+      roofs: [roof, named(`ROOF_LABEL_H${id}`), ...roofParts].filter((o): o is T.Object3D => !!o),
     });
   }
   return halls;
