@@ -1,0 +1,72 @@
+/*
+ * How a pressable thing answers a finger or a click (after Emil Kowalski's design-engineering
+ * skills): it shrinks a little under the press, comes back with a strong ease-out, and only the
+ * properties that change are transitioned, never `all`. Hover looks are for a real pointer only:
+ * on a touch screen a tap would leave them stuck on.
+ */
+.p-button,
+.p-togglebutton,
+.p-paginator-page,
+.p-paginator-first,
+.p-paginator-prev,
+.p-paginator-next,
+.p-paginator-last,
+.cta,
+.tool,
+.sb,
+.opt,
+.row-delete {
+  transition:
+    transform var(--press-time) var(--ease-out),
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease,
+    filter 120ms ease,
+    opacity 120ms ease;
+}
+
+.p-button:active:not(:disabled, .p-disabled),
+.p-togglebutton:active:not(.p-disabled),
+.p-paginator-page:active,
+.cta:active,
+.sb:active:not(:disabled),
+.opt:active {
+  transform: scale(var(--press-scale));
+}
+
+/* Small icon-only targets show a deeper press: 3 % of 32 px is too little to see. */
+.p-button-icon-only:active:not(:disabled, .p-disabled),
+.tool:active:not(:disabled),
+.p-paginator-first:active,
+.p-paginator-prev:active,
+.p-paginator-next:active,
+.p-paginator-last:active {
+  transform: scale(var(--press-scale-small));
+}
+
+/* A button that is working says so: its words soften while the spinner turns. */
+.p-button.p-button-loading .p-button-label {
+  opacity: 0.7;
+  filter: blur(1px);
+  transition:
+    opacity 200ms ease,
+    filter 200ms ease;
+}
+
+/* Movement goes under reduced motion; colour and opacity changes stay, they explain. */
+@media (prefers-reduced-motion: reduce) {
+  .p-button:active,
+  .p-togglebutton:active,
+  .p-paginator-page:active,
+  .cta:active,
+  .tool:active,
+  .sb:active,
+  .opt:active {
+    transform: none;
+  }
+
+  .p-button.p-button-loading .p-button-label {
+    filter: none;
+  }
+}

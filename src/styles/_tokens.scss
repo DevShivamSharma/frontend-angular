@@ -45,6 +45,14 @@
   --app-shadow-up: 0 -4px 16px color-mix(in srgb, var(--palette-slate-900) 8%, transparent);
   --app-shadow-lg: 0 12px 32px -8px rgb(16 16 24 / 18%), 0 2px 6px rgb(16 16 24 / 6%);
 
+  // Motion, after Emil Kowalski's design-engineering notes: strong ease-out for what responds to
+  // a touch, short press feedback, and a subtle press scale.
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --press-time: 160ms;
+  --press-scale: 0.97;
+  --press-scale-small: 0.94;
+
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
