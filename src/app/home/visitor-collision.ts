@@ -104,6 +104,19 @@ export function createVisitorCollisionWorld(root: T.Object3D, portals: VisitorPo
       if (carveEntrances) {
         for (let p: T.Object3D | null = o; p; p = p.parent) if (!p.visible) return;
       }
+      // Bharat Mandapam model (venue-bharat-mandapam.ts): walkable ground and water are not walls; planting
+      // blocks as its bounding box instead of every leaf triangle.
+      if (o.userData['venueRole'] === 'ground' || o.userData['venueRole'] === 'water') return;
+      if (o.userData['venueCollider'] === 'box') {
+        const box = new T.Box3().setFromObject(o);
+        if (box.min.y > maxHeight || box.isEmpty()) return;
+        const corners = [[box.min.x, box.min.z], [box.max.x, box.min.z], [box.max.x, box.max.z], [box.min.x, box.max.z]];
+        corners.forEach(([x, z], i) => {
+          const [x2, z2] = corners[(i + 1) % 4];
+          add([new T.Vector3(x, box.min.y, z), new T.Vector3(x2, box.min.y, z2), new T.Vector3(x2, box.max.y, z2), new T.Vector3(x, box.max.y, z)], name);
+        });
+        return;
+      }
       const attribute = o.geometry.getAttribute('position'), index = o.geometry.index;
       if (!attribute) return;
       const count = index?.count ?? attribute.count;

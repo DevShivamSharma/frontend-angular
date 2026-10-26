@@ -32,6 +32,44 @@ export interface VisitorNavigation {
   geometry?: VisitorCollisionWorld;
   /** Assign only after the corresponding visible guard instances were created. */
   guards?: VisitorGuardPlacement[];
+  /** Height of the walkable surface (paving, roads, lawns), where the model's ground is not flat. */
+  groundAt?: (x: number, z: number) => number | undefined;
+}
+/** Top of the near-flat ground surfaces on a 1 m grid (the Bharat Mandapam paving sits up to 0.7 m above grade). */
+function groundHeightGrid(meshes: T.Mesh[]): (x: number, z: number) => number | undefined {
+  const box = new T.Box3();
+  for (const mesh of meshes) box.union(new T.Box3().setFromObject(mesh));
+  const x0 = Math.floor(box.min.x), z0 = Math.floor(box.min.z), width = Math.ceil(box.max.x) - x0 + 1, depth = Math.ceil(box.max.z) - z0 + 1;
+  const heights = new Float32Array(width * depth).fill(NaN);
+  const a = new T.Vector3(), b = new T.Vector3(), c = new T.Vector3(), normal = new T.Vector3(), e = new T.Vector3();
+  for (const mesh of meshes) {
+    const position = mesh.geometry.getAttribute('position'), index = mesh.geometry.index;
+    const count = index?.count ?? position.count;
+    for (let t = 0; t + 2 < count; t += 3) {
+      a.fromBufferAttribute(position, index ? index.getX(t) : t).applyMatrix4(mesh.matrixWorld);
+      b.fromBufferAttribute(position, index ? index.getX(t + 1) : t + 1).applyMatrix4(mesh.matrixWorld);
+      c.fromBufferAttribute(position, index ? index.getX(t + 2) : t + 2).applyMatrix4(mesh.matrixWorld);
+      normal.subVectors(b, a).cross(e.subVectors(c, a));
+      const area = normal.length();
+      if (area < 1e-6 || Math.abs(normal.y) / area < .9) continue;
+      const det = (b.x - a.x) * (c.z - a.z) - (c.x - a.x) * (b.z - a.z);
+      const set = (x: number, z: number) => {
+        const w1 = ((x - a.x) * (c.z - a.z) - (c.x - a.x) * (z - a.z)) / det, w2 = ((b.x - a.x) * (z - a.z) - (x - a.x) * (b.z - a.z)) / det;
+        if (w1 < -1e-6 || w2 < -1e-6 || w1 + w2 > 1 + 1e-6) return;
+        const y = a.y + w1 * (b.y - a.y) + w2 * (c.y - a.y), k = (Math.floor(x) - x0) * depth + Math.floor(z) - z0;
+        if (!(heights[k] >= y)) heights[k] = y;
+      };
+      for (let x = Math.floor(Math.min(a.x, b.x, c.x)); x <= Math.max(a.x, b.x, c.x); x++)
+        for (let z = Math.floor(Math.min(a.z, b.z, c.z)); z <= Math.max(a.z, b.z, c.z); z++) set(x + .5, z + .5);
+      set((a.x + b.x + c.x) / 3, (a.z + b.z + c.z) / 3);
+    }
+  }
+  return (x, z) => {
+    const i = Math.floor(x) - x0, j = Math.floor(z) - z0;
+    if (i < 0 || j < 0 || i >= width || j >= depth) return undefined;
+    const y = heights[i * depth + j];
+    return Number.isNaN(y) ? undefined : y;
+  };
 }
 const cross = (a: GroundPoint, b: GroundPoint, p: GroundPoint) =>
   (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
@@ -102,17 +140,26 @@ export function createPortal(hall: InteriorHall, obstacles: InteriorObstacle[], 
 /** Read the unbatched model once, before disconnected meshes are merged for rendering. */
 export function createVisitorNavigation(root: T.Group, halls: InteriorHall[], obstacles: Map<string, InteriorObstacle[]>, interiorLayer?: T.Group,
   arrival?: { position: T.Vector3; heading: number; label: string }): VisitorNavigation {
-  const points = new Map<string, GroundPoint[]>(), hazards: GroundPoint[][] = [];
+  const points = new Map<string, GroundPoint[]>(), hazards: GroundPoint[][] = [], groundSurfaces: T.Mesh[] = [];
   const bounds = new T.Box2();
   root.updateMatrixWorld(true);
   root.traverse(o => {
     if (!(o instanceof T.Mesh)) return;
     let name = o.name;
     for (let p = o.parent; p && p !== root; p = p.parent) name += ' ' + p.name;
-    const id = name.match(/PHOTO_HALL_(12A|14|12|11|10|[1-9])(?:_| ).*roof/i)?.[1];
-    const hazard = /(?:basin|water_body|reflecting_pool)/i.test(name) && !/spray|jet|lamp/i.test(name);
-    const ground = /SITE_GROUND/.test(name);
+    // The earlier model by name; the Bharat Mandapam model by the roles venue-bharat-mandapam.ts sets.
+    const role = o.userData['venueRole'];
+    const id = name.match(/PHOTO_HALL_(12A|14|12|11|10|[1-9])(?:_| ).*roof/i)?.[1] ?? (role === 'hallRoof' ? o.userData['hall'] as string : undefined);
+    const hazard = (/(?:basin|water_body|reflecting_pool)/i.test(name) && !/spray|jet|lamp/i.test(name)) || role === 'water';
+    const ground = /SITE_GROUND/.test(name) || role === 'ground';
+    if (role === 'ground' && o.visible) groundSurfaces.push(o);
     if (!id && !hazard && !ground) return;
+    // Ground in the Bharat Mandapam model is millions of vertices: its bounds come from the box.
+    if (role === 'ground' && !id && !hazard) {
+      const box = new T.Box3().setFromObject(o);
+      bounds.expandByPoint(new T.Vector2(box.min.x, box.min.z)).expandByPoint(new T.Vector2(box.max.x, box.max.z));
+      return;
+    }
     const polygon: GroundPoint[] = [], attribute = o.geometry.getAttribute('position'), p = new T.Vector3();
     for (let i = 0; i < attribute.count; i++) {
       p.fromBufferAttribute(attribute, i).applyMatrix4(o.matrixWorld);
@@ -131,7 +178,7 @@ export function createVisitorNavigation(root: T.Group, halls: InteriorHall[], ob
   const spawn = arrival?.position.clone() ?? new T.Vector3(.5 * -302 + Math.sqrt(3) / 2 * 151, .35,
     -Math.sqrt(3) / 2 * -302 + .5 * 151);
   bounds.expandByPoint(new T.Vector2(spawn.x, spawn.z)).expandByScalar(22);
-  return { portals, buildings,
+  return { portals, buildings, groundAt: groundSurfaces.length ? groundHeightGrid(groundSurfaces) : undefined,
     hazards, bounds, spawn, heading: arrival?.heading ?? Math.PI * 5 / 6, arrivalLabel: arrival?.label ?? 'Gate 6',
     geometry: createVisitorCollisionWorld(root, portals, interiorLayer,
       Math.max(3, ...halls.map(h => h.center.y + h.height))) };
@@ -144,6 +191,8 @@ export function visitorGroundHeight(nav: VisitorNavigation, point: T.Vector3, ha
     const local = worldToHall(hall, point);
     return hall.center.y + (hall.elevation?.(local.x, local.z) ?? 0);
   }
+  const ground = nav.groundAt?.(point.x, point.z);
+  if (ground !== undefined) return ground;
   return Math.hypot(point.x - nav.spawn.x, point.z - nav.spawn.z) < 34 ? nav.spawn.y : .24;
 }
 export function visitorBodyClear(nav: VisitorNavigation, point: T.Vector3, hall?: InteriorHall): boolean {

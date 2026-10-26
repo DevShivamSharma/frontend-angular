@@ -17,9 +17,11 @@ import { prepareReferenceMaterials } from './venue-reference-materials';
 import { prepareReferenceConcourse, prepareCoveredConcourseFloor } from './venue-reference-concourse';
 import { prepareReferenceCanopies } from './venue-reference-canopy';
 import { prepareGroundPhotoDetails, preparePhotoEntrances } from './venue-ground-photos';
-import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
+import { revealMappedRoads } from './venue-edge-detail';
+import { createVenueClassifier, isVenueCC, isVenueGround, venueBatchSemantics } from './venue-classify';
 import { COLOUR_MATERIALS, createVenueAppearance, INITIAL_APPEARANCE, INITIAL_SCENERY, VenueAppearance, VenueScenery } from './venue-appearance';
 import { Triple, Destination, VenueInformation, VENUE_MODEL, venueAsset } from './venue.models';
+import { hideSiteDetailDuplicates, prepareBharatMandapam } from './venue-bharat-mandapam';
 import { createVenueInteriors, InteriorState } from './venue-interiors';
 import { createVisitorNavigation } from './visitor-navigation';
 import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor';
@@ -199,27 +201,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const information = await loadInformation();
         signal.throwIfAborted();
         const { destinations } = information;
-        const hallIds = new Set(destinations.filter(d => d.hall).map(d => String(d.hall)));
-        const gateIds = new Set(destinations.filter(d => d.gate).map(d => d.id));
-        function ancestorMatches(o: T.Object3D, re: RegExp) { for (let n: T.Object3D | null = o; n; n = n.parent)
-            if (re.test(n.name))
-                return true; return false; }
-        function classify(o: T.Object3D) { for (let n: T.Object3D | null = o; n; n = n.parent) {
-            if (n.userData['destinationId']) return n.userData['destinationId'] as string;
-            if (gateIds.has(n.userData['gate_id'])) return n.userData['gate_id'] as string;
-            if (n.userData?.['hall'] && hallIds.has(String(n.userData['hall'])))
-                return 'hall' + n.userData['hall'];
-            const h = n.name.match(/^(?:PHOTO_)?HALL_(12A|14|12|11|10|[1-9])(?:[ _]|$)|^ROOF_LABEL_H(12A|14|12|11|10|[1-9])$/);
-            if (h)
-                return 'hall' + (h[1] || h[2]);
-            const sign = n.name.match(/^(?:ARCH_H|PHOTO_ROOF_SIGN_BOARD_H)(12A|14|12|11|10|[1-9])(?:_SIGN)?$/);
-            if (sign)
-                return 'hall' + sign[1];
-            if (/^PHOTO_MUSICAL_FOUNTAIN/.test(n.name))
-                return 'fountain';
-            if (/^PHOTO_CC|^ROOF_LABEL_CC|^ARCH_CC/.test(n.name))
-                return 'cc';
-        } return null; }
+        const classify = createVenueClassifier(destinations);
         function highlight(id: string) {
             if (id === highlighted) return;
             for (const mesh of destinationMeshes.get(highlighted ?? '') ?? []) {
@@ -350,33 +332,46 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         // Interior assets load before the model is attached. An early route exit
         // must still release these textures and geometry explicitly.
         cleanups.push(() => { if (root && !root.parent) disposeScene(root); });
-        prepareVenueSurfaceDetail(root);
-        prepareReferenceHall14(root);
-        prepareReferenceMaterials(root);
-        prepareVenueArchitecturalDetail(root);
-        prepareReferenceConcourse(root);
-        prepareReferenceCanopies(root);
-        prepareCoveredConcourseFloor(root);
-        prepareGroundPhotoDetails(root, new T.TextureLoader().load(asset('references/concourse-banner-photo.jpg'), () => invalidate()));
-        prepareVenueFountainJets(root);
+        // The earlier hand-built model gets its photo-reference passes (they patch its own named nodes); the
+        // Bharat Mandapam CAD model gets its metadata from venue-bharat-mandapam.ts instead.
+        const cadModel = VENUE_MODEL.kind === 'bharat-mandapam';
+        const cad = cadModel ? prepareBharatMandapam(root, destinations) : undefined;
+        if (!cadModel) {
+            prepareVenueSurfaceDetail(root);
+            prepareReferenceHall14(root);
+            prepareReferenceMaterials(root);
+            prepareVenueArchitecturalDetail(root);
+            prepareReferenceConcourse(root);
+            prepareReferenceCanopies(root);
+            prepareCoveredConcourseFloor(root);
+            prepareGroundPhotoDetails(root, new T.TextureLoader().load(asset('references/concourse-banner-photo.jpg'), () => invalidate()));
+            prepareVenueFountainJets(root);
+        }
         try {
             siteRegistration = await prepareVenueSiteDetail(root, asset, signal);
             globe?.setSiteDetail(siteRegistration);
-            const surfaces = mapSurfaces = takeMapSurfaces(root);
-            cleanups.push(() => { if (!surfaces.parent) disposeScene(surfaces); });
+            const surfaces = takeMapSurfaces(root);
+            // The SITE_SURFACE lawns/plazas trace the earlier campus layout; the CAD model draws its own.
+            if (cad) disposeScene(surfaces); else { mapSurfaces = surfaces; cleanups.push(() => { if (!surfaces.parent) disposeScene(surfaces); }); }
+            const site = root.getObjectByName('SITE_REFERENCE surroundings and property planting');
+            if (cad && site) console.info('Bharat Mandapam: site-detail duplicates', hideSiteDetailDuplicates(root, site, cad.campus));
         } catch (error) {
             signal.throwIfAborted();
             console.warn('Venue surroundings could not load; retaining the existing context.', error);
         }
-        try {
-            gate9 = await prepareGate9(root, asset, signal);
-        } catch (error) {
-            signal.throwIfAborted();
-            console.warn('Gate 9 detail could not load; retaining the existing entrance.', error);
+        // Gate 9's detail asset, the ITPO arrival and the Gate 9 finishes are registered to the earlier model;
+        // the CAD model has its own Gate 9 and ITPO office.
+        if (!cadModel) {
+            try {
+                gate9 = await prepareGate9(root, asset, signal);
+            } catch (error) {
+                signal.throwIfAborted();
+                console.warn('Gate 9 detail could not load; retaining the existing entrance.', error);
+            }
+            prepareItpoArrival(root);
+            prepareVenueRoadFinish(root);
+            prepareGate9Paving(root);
         }
-        prepareItpoArrival(root);
-        prepareVenueRoadFinish(root);
-        prepareGate9Paving(root);
         try {
             interiors=await createVenueInteriors({root,scene,camera,canvas,asset,signal,invalidate,shadowsChanged:()=>renderer.shadowMap.needsUpdate=true,exit:()=>leaveCommand(),daylight:()=>daylight,state:state=>{
                 controls.enabled=!state.walking&&!visitor?.active;
@@ -413,24 +408,17 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         const visitorNavigation = createVisitorNavigation(root, interiors?.halls ?? [], interiors?.obstacles ?? new Map(), interiors?.layer, gate9?.arrival);
         const onPedestrianPath = capturePedestrianPaths(root);
         preparePhotoEntrances(root, visitorNavigation.portals);
-        const venueLightSources = collectVenueLightSources(root, gate9?.lights ?? [], visitorNavigation.portals);
+        const venueLightSources = collectVenueLightSources(root, gate9?.lights ?? cad?.lights ?? [], visitorNavigation.portals, visitorNavigation.groundAt);
         // Export retains the authored venue metres, Y-up, not geographic east/south.
         // Do not rotate the glTF; W converts only the authored navigation coordinates.
-        batchVenue(root, classify, o => [
-            ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i),
-            ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/),
-            /label|sign|glass|glazing|light|spray/i.test(o.name),
-            isLegacyContextRoad(o),
-            !!o.userData['supersededBySiteReference'],
-            !!o.userData['mapSurroundingsReplacement']
-        ].join(':'));
+        batchVenue(root, classify, venueBatchSemantics);
         if (localMapReady) revealMappedRoads(root);
         scene.add(root);
         const replacedMaterials = new Set<T.Material>();
         root.traverse(o => {
             // The two rectangular placeholder slabs otherwise hide the local map.
             // SITE_GROUND and the authored campus roads remain intact.
-            if (globe && (o.name === 'OUTER_GROUND' || o.name === 'CONTEXT_GROUND')) o.visible = false;
+            if (globe && (o.name === 'OUTER_GROUND' || o.name === 'CONTEXT_GROUND' || o.userData['contextGround'])) o.visible = false;
             if (o.userData['cc_level']) { levelObjects.push(o); o.visible = false; }
             if (!(o instanceof T.Mesh)) return;
             pickMeshes.push(o as VenueMesh);
@@ -443,13 +431,13 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
                 meshes.push(o as VenueMesh);
                 destinationMeshes.set(destination, meshes);
             }
-            const sourceMaterials = Array.isArray(o.material) ? o.material : [o.material]; o.material = Array.isArray(o.material) ? o.material.map((m: T.Material) => m.clone()) : o.material.clone(); sourceMaterials.forEach((m: T.Material) => replacedMaterials.add(m)); const mats = Array.isArray(o.material) ? o.material : [o.material]; if (ancestorMatches(o, /^PHOTO_CC|^PHOTO_Swept|^PHOTO_Ramp|^PHOTO_ROOF_SIGN_BOARD_CC|^ROOF_LABEL_CC|^ARCH_CC_SIGN/))
-            ccMaterials.push(...mats); o.castShadow = !ancestorMatches(o, /GROUND|paving|water|lawns|floor plan/i) && !mats.every((m: T.MeshStandardMaterial) => ['paved_ground', 'context_ground', 'water', 'road', 'road_marking', 'supplied_floor_plan'].includes(m.userData['architecturalCategory'])); o.receiveShadow = true; mats.forEach((m: T.MeshStandardMaterial) => { if (m.map)
+            const sourceMaterials = Array.isArray(o.material) ? o.material : [o.material]; o.material = Array.isArray(o.material) ? o.material.map((m: T.Material) => m.clone()) : o.material.clone(); sourceMaterials.forEach((m: T.Material) => replacedMaterials.add(m)); const mats = Array.isArray(o.material) ? o.material : [o.material]; if (isVenueCC(o))
+            ccMaterials.push(...mats); o.castShadow = !isVenueGround(o) && !mats.every((m: T.MeshStandardMaterial) => ['paved_ground', 'context_ground', 'water', 'road', 'road_marking', 'supplied_floor_plan'].includes(m.userData['architecturalCategory'])); o.receiveShadow = true; mats.forEach((m: T.MeshStandardMaterial) => { if (m.map)
             m.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); }); originals.set(o, mats.map((m: T.MeshStandardMaterial) => ({ color: m.color.clone(), emissive: m.emissive?.clone() || new T.Color(0), emissiveIntensity: m.emissiveIntensity }))); if (o.userData['cc_level'])
             o.visible = false; });
         replacedMaterials.forEach(material => material.dispose());
         if (siteRegistration) prepareSiteDetailRendering(root, siteRegistration);
-        const appearance = createVenueAppearance(root, renderer, asset, signal);
+        const appearance = createVenueAppearance(root, renderer, asset, signal, cadModel);
         cleanups.push(() => appearance.dispose());
         if (siteRegistration) {
             const historical = historicalSurroundings = takeMapSurroundings(root);
@@ -746,8 +734,9 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
  * URL, same-origin CORS mode). The links go when the viewer does.
  */
 function preloadVenueAssets(asset: (path: string) => string, signal: AbortSignal): void {
-    const paths = ['venue-site-detail.glb', 'venue-site-detail.json', 'gate9-detail.glb', 'gate9-detail.json', 'characters/security-guard.glb',
-        ...(INITIAL_APPEARANCE === 'color' ? [COLOUR_MATERIALS] : []), ...(INITIAL_SCENERY === 'map' ? ['geography/venue-map-context.json'] : [])];
+    const legacy = VENUE_MODEL.kind !== 'bharat-mandapam';
+    const paths = ['venue-site-detail.glb', 'venue-site-detail.json', ...(legacy ? ['gate9-detail.glb', 'gate9-detail.json'] : []), 'characters/security-guard.glb',
+        ...(INITIAL_APPEARANCE === 'color' && VENUE_MODEL.kind !== 'bharat-mandapam' ? [COLOUR_MATERIALS] : []), ...(INITIAL_SCENERY === 'map' ? ['geography/venue-map-context.json'] : [])];
     const links = paths.map(path => Object.assign(document.createElement('link'), { rel: 'preload', as: 'fetch', crossOrigin: 'anonymous', href: asset(path) }));
     document.head.append(...links);
     signal.addEventListener('abort', () => links.forEach(link => link.remove()), { once: true });

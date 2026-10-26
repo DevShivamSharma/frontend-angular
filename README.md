@@ -59,7 +59,10 @@ and browser coverage is in `e2e/visitor-auto-walk.spec.ts`.
 ## Venue model loading
 
 The explorer opens on **Color → Map**; the satellite photos load only when Satellite is picked.
-It loads `IITF_2026_ARCHITECTURAL.meshopt.glb`, a lossless meshopt copy of the exported model
+It loads the Bharat Mandapam CAD model `bharat-mandapam.meshopt.glb` (38 MB, Git LFS: run `git lfs pull`),
+prepared from the supplied export by `scripts/prepare-bharat-mandapam.mjs`; see `docs/venue-model-swap.md`.
+`VENUE_MODEL` in `src/app/home/venue.models.ts` selects the model. The earlier model
+`IITF_2026_ARCHITECTURAL.meshopt.glb` (`PREVIOUS_VENUE_MODEL`) is a lossless meshopt copy of the exported model
 (40 MB instead of 63 MB) that `npm start` and `npm run build` write with
 `scripts/compress-venue-models.mjs` whenever the export is newer; it is gitignored, and the
 export is the fallback. The Color palette is `venue-colour-materials-web.glb` (2 MB instead of

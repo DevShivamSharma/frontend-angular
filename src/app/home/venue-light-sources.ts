@@ -69,7 +69,8 @@ function emitterPositions(mesh: T.Mesh): T.Vector3[] {
 }
 
 /** Capture actual fixture world positions before batching destroys their identities. */
-export function collectVenueLightSources(root: T.Group, gate9: Gate9Light[], portals: VisitorPortal[]): VenueLightSource[] {
+export function collectVenueLightSources(root: T.Group, gate9: Gate9Light[], portals: VisitorPortal[],
+    groundAt?: (x: number, z: number) => number | undefined): VenueLightSource[] {
   root.updateMatrixWorld(true);
   const sources: VenueLightSource[] = gate9.map((light, i) => ({ ...light, name: `Gate 9 ${light.kind} ${i}` }));
   const receivers: { mesh: T.Mesh; bounds: T.Box3 }[] = [];
@@ -139,6 +140,9 @@ export function collectVenueLightSources(root: T.Group, gate9: Gate9Light[], por
   const ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0);
   for (const source of sources) {
     const p = new T.Vector3(...source.position), at = source.aim ? new T.Vector3(...source.aim) : p;
+    // A ground height grid (Bharat Mandapam model) answers without ray tests against the large paving meshes.
+    const sampled = groundAt?.(at.x, at.z);
+    if (sampled !== undefined && sampled < p.y) { source.ground = [at.x, sampled + .035, at.z]; continue; }
     ray.set(new T.Vector3(at.x, p.y - .15, at.z), down); ray.far = Math.max(4, p.y + 10);
     const candidates = receivers.filter(({ bounds: b }) => at.x >= b.min.x && at.x <= b.max.x && at.z >= b.min.z && at.z <= b.max.z).map(r => r.mesh);
     const hit = ray.intersectObjects(candidates, false)[0];

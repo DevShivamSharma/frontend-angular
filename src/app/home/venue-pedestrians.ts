@@ -16,8 +16,27 @@ export function capturePedestrianPaths(root: T.Object3D) {
   const cells = new Map<string, T.Triangle[]>(), point = new T.Vector3();
   const candidates: PathCandidate[] = [];
   root.updateMatrixWorld(true);
+  // Bharat Mandapam paving (hundreds of thousands of slab triangles): a 1 m occupancy grid instead of triangles.
+  const paved = new Set<number>(), cell = (x: number, z: number) => (Math.floor(x) + 4096) * 8192 + Math.floor(z) + 4096;
   root.traverse(o => {
     if (!(o instanceof T.Mesh)) return;
+    if (o.userData['pedestrianSurface']) {
+      if (!o.visible) return;
+      const positions = o.geometry.getAttribute('position'), index = o.geometry.index, v = [new T.Vector3(), new T.Vector3(), new T.Vector3()];
+      for (let i = 0; i + 2 < (index?.count ?? positions.count); i += 3) {
+        for (let k = 0; k < 3; k++) v[k].fromBufferAttribute(positions, index ? index.getX(i + k) : i + k).applyMatrix4(o.matrixWorld);
+        const [a, b, c] = v, det = (b.x - a.x) * (c.z - a.z) - (c.x - a.x) * (b.z - a.z);
+        if (Math.abs(det) < 1e-6) continue;
+        for (let x = Math.floor(Math.min(a.x, b.x, c.x)); x <= Math.max(a.x, b.x, c.x); x++)
+          for (let z = Math.floor(Math.min(a.z, b.z, c.z)); z <= Math.max(a.z, b.z, c.z); z++) {
+            const px = x + .5, pz = z + .5;
+            const w1 = ((px - a.x) * (c.z - a.z) - (c.x - a.x) * (pz - a.z)) / det, w2 = ((b.x - a.x) * (pz - a.z) - (px - a.x) * (b.z - a.z)) / det;
+            if (w1 >= 0 && w2 >= 0 && w1 + w2 <= 1) paved.add(cell(px, pz));
+          }
+        paved.add(cell((a.x + b.x + c.x) / 3, (a.z + b.z + c.z) / 3));
+      }
+      return;
+    }
     const name = `${o.name} ${o.parent?.name}`;
     if (!(o.userData['continuousCoveredFloor'] || /PHOTO_PATH/.test(name)) || /drive|service|edge_inlay/i.test(name)) return;
     const positions = o.geometry.getAttribute('position'), index = o.geometry.index;
@@ -56,9 +75,19 @@ export function capturePedestrianPaths(root: T.Object3D) {
         }
     }
   });
+  if (paved.size) {
+    // Candidate walks along the campus axes every 8 m across the paved area; planPedestrianRoutes keeps the clear runs.
+    let minS = Infinity, maxS = -Infinity, minU = Infinity, maxU = -Infinity;
+    for (const k of paved) {
+      const x = Math.floor(k / 8192) - 4096 + .5, z = k % 8192 - 4096 + .5, s = x * S.x + z * S.z, u = x * U.x + z * U.z;
+      minS = Math.min(minS, s); maxS = Math.max(maxS, s); minU = Math.min(minU, u); maxU = Math.max(maxU, u);
+    }
+    for (let u = Math.ceil(minU / 8) * 8; u <= maxU; u += 8) candidates.push([S, U.clone().multiplyScalar(u).setY(.19), minS, maxS, 'Campus walk']);
+    for (let s = Math.ceil(minS / 8) * 8; s <= maxS; s += 8) candidates.push([U, S.clone().multiplyScalar(s).setY(.19), minU, maxU, 'Campus walk']);
+  }
   return Object.assign((p: T.Vector3) => {
     point.copy(p).setY(0);
-    return cells.get(`${Math.floor(p.x / 16)},${Math.floor(p.z / 16)}`)?.some(t => t.containsPoint(point)) ?? false;
+    return paved.has(cell(p.x, p.z)) || (cells.get(`${Math.floor(p.x / 16)},${Math.floor(p.z / 16)}`)?.some(t => t.containsPoint(point)) ?? false);
   }, { candidates });
 }
 
@@ -101,6 +130,9 @@ export function planPedestrianRoutes(nav: VisitorNavigation, onPath: PathTest = 
     const add = (end: number) => {
       if (start === undefined || end - start < 24) return;
       const route = { origin: origin.clone().addScaledVector(axis, start + 2), along: axis.clone(), length: end - start - 4, radius: 1.1, zone: zone ?? 'Covered concourse' };
+      // Raised paving (Bharat Mandapam model): walk on its surface, 5 cm lower like the authored .19 on .24 ground.
+      const middle = route.origin.clone().addScaledVector(axis, route.length / 2), ground = nav.groundAt?.(middle.x, middle.z);
+      if (ground !== undefined) route.origin.y = ground - .05;
       const perimeter = 2 * route.length + 2 * Math.PI * route.radius;
       for (let d = 0; d < perimeter; d += .5) {
         samplePedestrianRoute(route, d, point, tangent);

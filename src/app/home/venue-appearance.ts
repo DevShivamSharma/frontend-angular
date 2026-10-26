@@ -28,7 +28,8 @@ const MAP_FINISHES: [RegExp, string][] = [
  * Keep material instances stable for selection, clipping and the static batches.
  */
 export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
-    asset: (path: string) => string, signal: AbortSignal) {
+    asset: (path: string) => string, signal: AbortSignal, cadModel = false) {
+    if (cadModel) return createCadAppearance(root);
     const surfaces = new Map<T.MeshStandardMaterial, T.MeshStandardMaterial>();
     const ownedMaterials = new Set<T.Material>(), textures = new Set<T.Texture>();
     let disposed = false;
@@ -128,5 +129,40 @@ export function createVenueAppearance(root: T.Group, renderer: T.WebGLRenderer,
             }
         },
         dispose
+    };
+}
+
+/** The Bharat Mandapam CAD model ships its own coloured materials (no textures, no UVs), which are Color.
+ * Natural is the same set desaturated to the neutral architectural look. The site-detail layer keeps its own
+ * finishes, with the Color → Map tints above. No palette file is fetched. */
+function createCadAppearance(root: T.Group) {
+    const surfaces = new Map<T.MeshStandardMaterial, { natural: T.MeshStandardMaterial; color: T.MeshStandardMaterial }>();
+    const hsl = { h: 0, s: 0, l: 0 };
+    root.traverse(object => {
+        if (!(object instanceof T.Mesh)) return;
+        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+            if (!(material instanceof T.MeshStandardMaterial) || surfaces.has(material)) continue;
+            const color = material.clone(), natural = material.clone();
+            if (material.userData['architecturalCategory'] && !material.userData['siteDetail']) {
+                natural.color.getHSL(hsl);
+                natural.color.setHSL(hsl.h, hsl.s * .18, T.MathUtils.lerp(hsl.l, .5, .25));
+            }
+            surfaces.set(material, { natural, color });
+        }
+    });
+    return {
+        async apply(mode: VenueAppearance, scenery: VenueScenery = 'satellite') {
+            const map = mode === 'color' && scenery === 'map';
+            for (const [material, finishes] of surfaces) {
+                const source = mode === 'color' ? finishes.color : finishes.natural;
+                const { vertexColors, flatShading, clippingPlanes, side } = material;
+                material.copy(source);
+                Object.assign(material, { vertexColors, flatShading, clippingPlanes, side });
+                const finish = map && MAP_FINISHES.find(([name]) => name.test(source.name));
+                if (finish) material.color.set(finish[1]);
+                material.needsUpdate = true;
+            }
+        },
+        dispose() { for (const { natural, color } of surfaces.values()) { natural.dispose(); color.dispose(); } surfaces.clear(); }
     };
 }
