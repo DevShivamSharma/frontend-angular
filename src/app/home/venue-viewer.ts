@@ -19,7 +19,7 @@ import { prepareReferenceCanopies } from './venue-reference-canopy';
 import { prepareGroundPhotoDetails, preparePhotoEntrances } from './venue-ground-photos';
 import { isLegacyContextRoad, revealMappedRoads } from './venue-edge-detail';
 import { COLOUR_MATERIALS, createVenueAppearance, INITIAL_APPEARANCE, INITIAL_SCENERY, VenueAppearance, VenueScenery } from './venue-appearance';
-import { Triple, Destination, VenueInformation, venueAsset } from './venue.models';
+import { Triple, Destination, VenueInformation, VENUE_MODEL, venueAsset } from './venue.models';
 import { createVenueInteriors, InteriorState } from './venue-interiors';
 import { createVisitorNavigation } from './visitor-navigation';
 import { createVenueVisitor, VisitorInput, VisitorState } from './venue-visitor';
@@ -193,7 +193,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         // The meshopt copy (scripts/compress-venue-models.mjs, lossless) is a third smaller; the export is the fallback.
         const loadModel = (path: string) => new Promise<GLTF>((resolve, reject) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(asset(path), resolve, p => { if (p.total)
             events.progress(p.loaded / p.total * .95); }, reject));
-        const modelLoad = loadModel('IITF_2026_ARCHITECTURAL.meshopt.glb?v=outputs-20260927').catch(() => loadModel('IITF_2026_ARCHITECTURAL.glb?v=outputs-20260927'));
+        const modelLoad = loadModel(VENUE_MODEL.file).catch(error => VENUE_MODEL.fallback ? loadModel(VENUE_MODEL.fallback) : Promise.reject(error));
         modelLoad.catch(() => {});   // awaited below; this only keeps an early failure from reporting as unhandled
         preloadVenueAssets(asset, signal);
         const information = await loadInformation();

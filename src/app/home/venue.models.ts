@@ -7,4 +7,15 @@ export type HallFloor = 'GF' | 'FF' | 'details';
 export interface Hall { id: string; name: string; halls: string[]; floor: HallFloor; area: number | null; photos: string[]; category: string; }
 export const FLOOR_NAMES: Record<HallFloor, string> = { GF: 'Ground Floor', FF: 'First Floor', details: 'Hall details' };
 export const LEVEL_NAMES = ['', 'Ground floor', 'Podium level', 'Plenary level'];
+/**
+ * The one place that names the explorer's main 3D model, under src/assets/venue/.
+ * `file` is tried first; `fallback` (when set) is the plain export used if `file` cannot be fetched or decoded.
+ * Going back to the earlier model is this one object: swap it for PREVIOUS_VENUE_MODEL.
+ */
+export interface VenueModelSource { file: string; fallback?: string; }
+export const PREVIOUS_VENUE_MODEL: VenueModelSource = {
+    file: 'IITF_2026_ARCHITECTURAL.meshopt.glb?v=outputs-20260927',
+    fallback: 'IITF_2026_ARCHITECTURAL.glb?v=outputs-20260927'
+};
+export const VENUE_MODEL: VenueModelSource = PREVIOUS_VENUE_MODEL;
 export function venueAsset(path: string): string { return new URL('assets/venue/' + path, document.baseURI).href; }
