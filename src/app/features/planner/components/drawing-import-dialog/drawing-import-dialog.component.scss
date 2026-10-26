@@ -137,6 +137,11 @@
   fill-opacity: 0.85;
   stroke: #7f1d1d;
 }
+.stall.rule {
+  fill: #b45309;
+  fill-opacity: 0.85;
+  stroke: #78350f;
+}
 .stall.out {
   fill: transparent;
   stroke: #94a3b8;
@@ -282,6 +287,10 @@
 .key.hand {
   border-color: #64748b;
   border-style: dashed;
+}
+.key.rule {
+  background: #b45309;
+  border-color: #78350f;
 }
 .key.bad {
   background: #991b1b;

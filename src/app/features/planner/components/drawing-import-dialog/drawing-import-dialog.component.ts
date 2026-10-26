@@ -563,7 +563,8 @@ export class DrawingImportDialogComponent {
     if (!p.onFloor) return 'bad';
     // Not brought in for another reason (not a stall, no number): grey, never green.
     if (p.skip) return 'hand';
-    if (this.breaking()?.has(p.stall.key)) return 'bad';
+    // Inside the hall, but a rule of the hall stops it: hover to read which.
+    if (this.breaking()?.has(p.stall.key)) return 'rule';
     return 'ok';
   }
 
