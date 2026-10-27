@@ -10,19 +10,64 @@
       <p-button label="Try again" icon="pi pi-refresh" (onClick)="store.load(eventId())" />
     </app-empty-state>
   } @else {
-    <app-page-header
-      [title]="store.summary()?.name ?? 'Event'"
-      [subtitle]="subtitle()"
-      [backLink]="back().link"
-      [backLabel]="back().label"
-    >
-      @if (store.canManage()) {
-        <a actions class="p-button p-button-outlined" [routerLink]="['/events', eventId(), 'edit']">
-          <i class="pi pi-pencil" aria-hidden="true"></i>
-          Edit event
-        </a>
-      }
-    </app-page-header>
+    <header class="head">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a [routerLink]="back().link">{{ back().label }}</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{{ store.summary()?.name ?? 'Event' }}</span>
+      </nav>
+      <div class="head-row">
+        <div class="head-text">
+          <h1>{{ store.summary()?.name ?? 'Event' }}</h1>
+          @if (subtitle(); as text) {
+            <p class="subtitle">{{ text }}</p>
+          }
+          @if (store.summary(); as event) {
+            <div class="chips" aria-label="Status">
+              <p-tag
+                [value]="event.kind === 'internal' ? 'Internal event' : 'External event'"
+                severity="secondary"
+                [rounded]="true"
+              />
+              @if (event.approvalStatus; as status) {
+                <p-tag
+                  [value]="'Approval: ' + status"
+                  [severity]="severity(status)"
+                  [rounded]="true"
+                />
+              }
+              @if (event.bookingStatus; as status) {
+                <p-tag
+                  [value]="'Booking: ' + status"
+                  [severity]="severity(status)"
+                  [rounded]="true"
+                />
+              }
+            </div>
+          }
+        </div>
+        <div class="head-side">
+          @if (store.summary()) {
+            <dl class="stats">
+              <div>
+                <dt>Halls</dt>
+                <dd>{{ store.halls().length }}</dd>
+              </div>
+              <div>
+                <dt>Stalls</dt>
+                <dd>{{ stalls() }}</dd>
+              </div>
+            </dl>
+          }
+          @if (store.canManage()) {
+            <a class="p-button p-button-outlined" [routerLink]="['/events', eventId(), 'edit']">
+              <i class="pi pi-pencil" aria-hidden="true"></i>
+              Edit event
+            </a>
+          }
+        </div>
+      </div>
+    </header>
 
     @if (store.loading()) {
       <div class="skeleton" role="status" aria-label="Loading the event">
@@ -30,20 +75,6 @@
         <p-skeleton height="12rem" />
       </div>
     } @else if (store.summary(); as event) {
-      <div class="chips" aria-label="Status">
-        <p-tag
-          [value]="event.kind === 'internal' ? 'Internal event' : 'External event'"
-          severity="secondary"
-          [rounded]="true"
-        />
-        @if (event.approvalStatus; as status) {
-          <p-tag [value]="'Approval: ' + status" [severity]="severity(status)" [rounded]="true" />
-        }
-        @if (event.bookingStatus; as status) {
-          <p-tag [value]="'Booking: ' + status" [severity]="severity(status)" [rounded]="true" />
-        }
-      </div>
-
       <app-event-progress
         [eventId]="eventId()"
         [kind]="event.kind"
@@ -53,27 +84,31 @@
       />
       <p-tabs [value]="tab()" (valueChange)="onTab($event)">
         <p-tablist>
-          <p-tab value="details"
-            ><i class="pi pi-info-circle" aria-hidden="true"></i> Details</p-tab
-          >
           <p-tab value="halls">
-            <i class="pi pi-building" aria-hidden="true"></i> Halls
+            Hall plans
             @if (store.halls().length) {
               <span class="count">{{ store.halls().length }}</span>
             }
           </p-tab>
-          <p-tab value="rules"
-            ><i class="pi pi-sliders-h" aria-hidden="true"></i> Planning rules</p-tab
-          >
+          <p-tab value="details">Details</p-tab>
+          <p-tab value="rules">Planning rules</p-tab>
           @if (event.kind === 'internal' && store.canManage()) {
-            <p-tab value="config"><i class="pi pi-cog" aria-hidden="true"></i> Configuration</p-tab>
+            <p-tab value="config">
+              Booking setup
+              @if (bookingIncomplete(); as n) {
+                <span class="count">{{ n }} incomplete</span>
+              }
+            </p-tab>
+          }
+          @if (auth.isStaff()) {
+            <p-tab value="activity">Activity</p-tab>
           }
         </p-tablist>
         <p-tabpanels>
-          <p-tabpanel value="details"><app-event-details-card [event]="event" /></p-tabpanel>
           <p-tabpanel value="halls">
             <app-event-halls-tab [store]="store" [readonly]="!store.canManage()" />
           </p-tabpanel>
+          <p-tabpanel value="details"><app-event-details-card [event]="event" /></p-tabpanel>
           <p-tabpanel value="rules">
             <app-event-rules-tab
               [eventId]="eventId()"
@@ -83,7 +118,15 @@
           </p-tabpanel>
           @if (event.kind === 'internal' && store.canManage()) {
             <p-tabpanel value="config">
-              <app-event-config-tab [eventId]="eventId()" />
+              <app-event-config-tab
+                [eventId]="eventId()"
+                (incompleteChange)="bookingIncomplete.set($event)"
+              />
+            </p-tabpanel>
+          }
+          @if (auth.isStaff()) {
+            <p-tabpanel value="activity">
+              <app-event-activity-tab [eventId]="eventId()" [eventName]="event.name" />
             </p-tabpanel>
           }
         </p-tabpanels>

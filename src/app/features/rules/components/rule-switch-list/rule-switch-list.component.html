@@ -4,11 +4,26 @@
     <ul class="rules">
       @for (item of group.items; track item.id) {
         <li class="rule" [class.rule--changed]="eventMode() && item.overridden">
+          <div class="rule__switch">
+            <!-- A new switch is drawn when `revision` changes: a declined change leaves the old one off. -->
+            @for (version of [revision()]; track version) {
+              <p-toggleswitch
+                [ngModel]="item.enabled"
+                [disabled]="busy()"
+                [ariaLabelledBy]="'rule-label-' + item.id"
+                (onChange)="onToggle(item, $event.checked)"
+              />
+            }
+          </div>
           <div class="rule__text">
-            <span class="rule__label" [id]="'rule-label-' + item.id">{{ item.label }}</span>
-            <span class="rule__description text-muted">{{ item.description }}</span>
+            <span>
+              <span class="rule__label" [id]="'rule-label-' + item.id">{{ item.label }}</span>
+              @if (item.reference) {
+                <span class="rule__ref">{{ item.reference }}</span>
+              }
+            </span>
+            <span class="rule__description">{{ item.description }}</span>
             <span class="rule__tags">
-              <p-tag severity="secondary" [value]="item.reference" />
               @if (!item.available) {
                 <p-tag
                   severity="warn"
@@ -34,15 +49,6 @@
                 severity="secondary"
                 [disabled]="busy()"
                 (onClick)="reset.emit(item.id)"
-              />
-            }
-            <!-- A new switch is drawn when `revision` changes: a declined change leaves the old one off. -->
-            @for (version of [revision()]; track version) {
-              <p-toggleswitch
-                [ngModel]="item.enabled"
-                [disabled]="busy()"
-                [ariaLabelledBy]="'rule-label-' + item.id"
-                (onChange)="onToggle(item, $event.checked)"
               />
             }
           </div>

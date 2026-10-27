@@ -174,13 +174,12 @@
   }
 }
 
+// The prototype's active item: brand-tinted, brand-coloured, no card.
 .nav__link--active,
 .nav__link--active:hover {
-  background: var(--app-surface);
-  color: var(--app-text);
-  box-shadow:
-    0 0 0 1px var(--app-border),
-    0 1px 2px color-mix(in srgb, var(--palette-ink-900) 5%, transparent);
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
+  font-weight: 600;
 
   .pi {
     color: var(--app-brand);

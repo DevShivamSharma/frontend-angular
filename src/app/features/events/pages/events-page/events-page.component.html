@@ -10,17 +10,38 @@
 
   <section class="card card--flush" aria-label="Events">
     <div class="toolbar">
-      <p-iconfield class="toolbar__search">
-        <p-inputicon class="pi pi-search" />
-        <input
-          pInputText
-          type="search"
-          [formControl]="search"
-          placeholder="Search by event name or booking ID"
-          aria-label="Search by event name or booking ID"
-        />
-      </p-iconfield>
-      <span class="text-muted" aria-live="polite">
+      <div class="toolbar__field toolbar__field--grow">
+        <label class="toolbar__label" for="events-search">Find an event</label>
+        <p-iconfield>
+          <p-inputicon class="pi pi-search" />
+          <input
+            pInputText
+            id="events-search"
+            type="search"
+            [formControl]="search"
+            placeholder="Event name or booking ID"
+          />
+        </p-iconfield>
+      </div>
+      <div class="toolbar__field">
+        <span class="toolbar__label" id="events-view-label">View</span>
+        <p-selectbutton
+          class="view-seg"
+          [options]="viewOptions"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          [ngModel]="view()"
+          (ngModelChange)="view.set($event)"
+          ariaLabelledBy="events-view-label"
+        >
+          <ng-template #item let-option>
+            <i [class]="option.icon" aria-hidden="true"></i>
+            <span>{{ option.label }}</span>
+          </ng-template>
+        </p-selectbutton>
+      </div>
+      <span class="text-muted toolbar__count" aria-live="polite">
         @if (!loading() && !failed()) {
           {{ total() }} {{ total() === 1 ? 'event' : 'events' }}
         }
@@ -37,55 +58,129 @@
       </app-empty-state>
     } @else {
       @if (loading()) {
-        <app-card-skeleton [count]="6" [cover]="true" />
+        @if (view() === 'grid') {
+          <app-card-skeleton [count]="6" [cover]="true" />
+        } @else {
+          <app-table-skeleton [count]="8" [columns]="tableSkeleton()" />
+        }
       } @else if (events().length) {
-        <ul class="card-grid">
-          @for (event of events(); track event.id) {
-            <li class="item-card item-card--cover">
-              <img
-                class="item-card__cover"
-                [src]="placeholder"
-                alt=""
-                loading="lazy"
-                appImageFallback
-              />
-              <h2 class="item-card__title">
-                <a [routerLink]="[base(), event.id]">{{ event.name | titlecase }}</a>
-              </h2>
-              <p class="item-card__meta">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
-                {{ event.endDate ? (event.endDate | date: 'd MMM y') : '—' }}
-              </p>
-              @if (event.bookingId) {
+        @if (view() === 'grid') {
+          <ul class="card-grid">
+            @for (event of events(); track event.id) {
+              <li class="item-card item-card--cover">
+                <img
+                  class="item-card__cover"
+                  [src]="placeholder"
+                  alt=""
+                  loading="lazy"
+                  appImageFallback
+                />
+                <h2 class="item-card__title">
+                  <a [routerLink]="[base(), event.id]">{{ event.name | titlecase }}</a>
+                </h2>
                 <p class="item-card__meta">
-                  <i class="pi pi-hashtag" aria-hidden="true"></i>
-                  {{ event.bookingId }}
+                  <i class="pi pi-calendar" aria-hidden="true"></i>
+                  {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
+                  {{ event.endDate ? (event.endDate | date: 'd MMM y') : '—' }}
                 </p>
-              }
-              @if (isStaff() && event.organisation) {
-                <p class="item-card__meta">
-                  <i class="pi pi-building" aria-hidden="true"></i>
-                  {{ event.organisation }}
-                </p>
-              }
-              <div class="item-card__tags">
-                @if (event.bookingStatus) {
-                  <p-tag
-                    [value]="'Booking: ' + event.bookingStatus"
-                    [severity]="severity(event.bookingStatus)"
-                  />
+                @if (event.bookingId) {
+                  <p class="item-card__meta">
+                    <i class="pi pi-hashtag" aria-hidden="true"></i>
+                    {{ event.bookingId }}
+                  </p>
                 }
-                @if (event.approvalStatus) {
-                  <p-tag
-                    [value]="'Approval: ' + event.approvalStatus"
-                    [severity]="severity(event.approvalStatus)"
-                  />
+                @if (isStaff() && event.organisation) {
+                  <p class="item-card__meta">
+                    <i class="pi pi-building" aria-hidden="true"></i>
+                    {{ event.organisation }}
+                  </p>
                 }
-              </div>
-            </li>
-          }
-        </ul>
+                <div class="event-status-grid">
+                  <div class="event-status-grid__item">
+                    <span class="event-status-grid__label">Booking status</span>
+                    @if (event.bookingStatus) {
+                      <p-tag
+                        [value]="event.bookingStatus"
+                        [severity]="severity(event.bookingStatus)"
+                      />
+                    } @else {
+                      <span class="event-status-grid__empty">—</span>
+                    }
+                  </div>
+                  <div class="event-status-grid__item">
+                    <span class="event-status-grid__label">Approval status</span>
+                    @if (event.approvalStatus) {
+                      <p-tag
+                        [value]="event.approvalStatus"
+                        [severity]="severity(event.approvalStatus)"
+                      />
+                    } @else {
+                      <span class="event-status-grid__empty">—</span>
+                    }
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <caption class="visually-hidden">
+                Events
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="cell-no">Sr. no.</th>
+                  <th scope="col">Event</th>
+                  <th scope="col">Dates</th>
+                  @if (isStaff() && kind() === 'external') {
+                    <th scope="col">Organisation</th>
+                  }
+                  <th scope="col" class="cell-status cell-status--right">Booking status</th>
+                  <th scope="col" class="cell-status cell-status--right">Approval status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (event of events(); track event.id; let i = $index) {
+                  <tr>
+                    <td class="cell-no">{{ first() + i + 1 }}</td>
+                    <th scope="row" class="cell-name">
+                      <a class="cell-name__title" [routerLink]="[base(), event.id]">{{
+                        event.name | titlecase
+                      }}</a>
+                      @if (event.bookingId) {
+                        <span class="cell-name__note">{{ event.bookingId }}</span>
+                      }
+                    </th>
+                    <td class="nowrap">
+                      {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
+                      {{ event.endDate ? (event.endDate | date: 'd MMM y') : '—' }}
+                    </td>
+                    @if (isStaff() && kind() === 'external') {
+                      <td>{{ event.organisation || '—' }}</td>
+                    }
+                    <td class="cell-status cell-status--right">
+                      @if (event.bookingStatus) {
+                        <p-tag
+                          [value]="event.bookingStatus"
+                          [severity]="severity(event.bookingStatus)"
+                        />
+                      }
+                    </td>
+                    <td class="cell-status cell-status--right">
+                      @if (event.approvalStatus) {
+                        <p-tag
+                          [value]="event.approvalStatus"
+                          [severity]="severity(event.approvalStatus)"
+                        />
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
         <p-paginator
           class="list-footer"
           [first]="first()"

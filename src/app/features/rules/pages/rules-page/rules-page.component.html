@@ -4,20 +4,54 @@
     subtitle="One default set of rules for every hall. A hall, and then an event, can switch rules for itself."
   />
 
-  <section class="card scope" aria-label="Whose rules">
-    <label for="rules-scope">Rules for</label>
-    <p-select
-      inputId="rules-scope"
-      [options]="scopes()"
-      optionLabel="label"
-      optionValue="id"
-      [ngModel]="hallId()"
-      (ngModelChange)="chooseHall($event)"
-      [filter]="true"
-      filterBy="label"
-      appendTo="body"
-      styleClass="scope__select"
-    />
+  <div class="rules-layout" [class.rules-layout--nav]="showNav()">
+  @if (showNav()) {
+    <nav class="jump" aria-label="Sections of the rules">
+      <b>Sections</b>
+      @for (section of sections(); track section.id) {
+        <a
+          [href]="'#' + section.id"
+          [attr.aria-current]="
+            (activeSection() ?? sections()[0]?.id) === section.id ? 'true' : null
+          "
+          (click)="jumpTo($event, section.id)"
+        >
+          <span>{{ section.title }}</span>
+          <span>{{ section.on }}/{{ section.total }}</span>
+        </a>
+      }
+    </nav>
+  }
+  <div class="rules-main">
+  <section class="card card--flush rules-card" aria-label="Rules">
+    <div class="scope">
+      <div class="scope__field">
+        <label for="rules-scope">Rules for</label>
+        <p-select
+          inputId="rules-scope"
+          [options]="scopes()"
+          optionLabel="label"
+          optionValue="id"
+          [ngModel]="hallId()"
+          (ngModelChange)="chooseHall($event)"
+          [filter]="true"
+          filterBy="label"
+          appendTo="body"
+          styleClass="scope__select"
+        />
+      </div>
+      @if (hallId() === null) {
+        <p class="scope__note">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          Switch a rule off and it is not checked on any hall, unless an event switches it back on.
+        </p>
+      }
+    </div>
+    @if (showNav()) {
+      <div class="rules-body">
+        <app-rule-switch-list [items]="items()" (toggled)="onToggle($event)" />
+      </div>
+    }
   </section>
 
   @if (hallId() !== null) {
@@ -40,14 +74,6 @@
       </app-empty-state>
     </section>
   } @else {
-    <section class="card" aria-labelledby="rules-title">
-      <h2 id="rules-title" class="section-title">Rules</h2>
-      <p class="text-muted section-intro">
-        Switch a rule off and it is not checked on any hall, unless an event switches it back on.
-      </p>
-      <app-rule-switch-list [items]="items()" (toggled)="onToggle($event)" />
-    </section>
-
     @if (valuesForm(); as values) {
       <section class="card" aria-labelledby="values-title">
         <h2 id="values-title" class="section-title">Values</h2>
@@ -131,6 +157,8 @@
       }
     </section>
   }
+  </div>
+  </div>
 </div>
 
 @if (hasChanges()) {

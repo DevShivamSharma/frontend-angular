@@ -5,8 +5,8 @@
     backLink="/events"
     backLabel="Events"
   />
-  <app-event-form
-    mode="create"
+  <app-event-wizard-dialog
+    #wizard
     [organisations]="organisations()"
     [organisationsLoading]="organisationsLoading()"
     [submitting]="submitting()"

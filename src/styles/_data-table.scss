@@ -97,6 +97,17 @@
     white-space: nowrap;
   }
 
+  .cell-status--right {
+    width: 9rem;
+    text-align: right;
+    padding-right: var(--space-2);
+
+    > p-tag {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+
   .cell-state {
     display: inline-flex;
     align-items: center;

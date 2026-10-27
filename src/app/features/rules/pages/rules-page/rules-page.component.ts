@@ -37,7 +37,7 @@ import { HallRulesPanelComponent } from '../../components/hall-rules-panel/hall-
 import { ItpoHallsApiService } from '../../../halls/data/itpo-halls-api.service';
 import { FormsModule } from '@angular/forms';
 import { RulesApiService } from '../../data/rules-api.service';
-import { itemsOfRuleSet } from '../../domain/rule-items';
+import { groupItems, itemsOfRuleSet } from '../../domain/rule-items';
 import { createValuesForm, toRuleValues, ValuesForm } from '../../domain/rule-values.form';
 
 /** The rules every hall follows: which are on, their values, and the documents they come from. */
@@ -104,6 +104,29 @@ export class RulesPageComponent {
   protected readonly items = computed(() =>
     itemsOfRuleSet(this.catalogue()?.rules ?? [], this.switches()),
   );
+  /** The default rules are shown with a section list beside them; a hall's panel is not. */
+  protected readonly showNav = computed(
+    () => this.hallId() === null && !this.loading() && !this.loadFailed(),
+  );
+  /** The rule groups for the section list: how many of each group's rules are on. */
+  protected readonly sections = computed(() =>
+    groupItems(this.items())
+      .filter((g) => g.items.length)
+      .map((g) => ({
+        id: 'rule-group-' + g.group,
+        title: g.title,
+        on: g.items.filter((item) => item.enabled).length,
+        total: g.items.length,
+      })),
+  );
+  protected readonly activeSection = signal<string | null>(null);
+
+  protected jumpTo(event: Event, id: string): void {
+    event.preventDefault();
+    this.activeSection.set(id);
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   protected readonly hasChanges = computed(() => this.switchesChanged() || this.formChanged());
   protected readonly selectedProfile = computed(() => {
     this.formChanged();

@@ -14,6 +14,10 @@ export interface WizardStep {
   label: string;
   note?: string;
   requiredControls?: readonly string[];
+  /** Every form control shown on this step. */
+  controls?: readonly string[];
+  /** The form-group error keys shown on this step. */
+  groupErrors?: readonly string[];
 }
 
 export const WIZARD_STEPS: readonly WizardStep[] = [
@@ -21,12 +25,41 @@ export const WIZARD_STEPS: readonly WizardStep[] = [
     id: 'event',
     label: 'Event',
     requiredControls: ['organisationId', 'name', 'startDate', 'endDate'],
+    controls: ['organisationId', 'name', 'startDate', 'endDate', 'eventType'],
+    groupErrors: ['eventDates'],
   },
-  { id: 'description', label: 'Description and notes' },
-  { id: 'organiser', label: 'Format and organiser' },
-  { id: 'schedule', label: 'Exhibition days and timings' },
-  { id: 'numbers', label: 'Expected numbers' },
-  { id: 'settings', label: 'Settings' },
+  {
+    id: 'description',
+    label: 'Description and notes',
+    controls: ['description', 'productProfile', 'specificProductProfile', 'specialRequest', 'remarks'],
+  },
+  {
+    id: 'organiser',
+    label: 'Format and organiser',
+    controls: ['eventFormat', 'coOrganizerName', 'productCategory', 'fileNumber'],
+  },
+  {
+    id: 'schedule',
+    label: 'Exhibition days and timings',
+    controls: ['exhibitionStartDate', 'exhibitionEndDate', 'startTimeOfEvent', 'endTimeOfEvent'],
+    groupErrors: ['exhibitionDates'],
+  },
+  {
+    id: 'numbers',
+    label: 'Expected numbers',
+    controls: [
+      'expectedNumberOfVisitor',
+      'expectedNumberOfExhibitors',
+      'noOfStalls',
+      'noOfFnbStalls',
+      'maxCategoriesForRegistration',
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    controls: ['allowOverseasUser', 'isMarqueeEnabled', 'isSecondaryEnabled', 'visibility'],
+  },
   { id: 'halls', label: 'Halls', note: 'Added after the event is created' },
   { id: 'booking', label: 'Booking setup', note: 'Optional now' },
   { id: 'review', label: 'Review' },
@@ -65,4 +98,16 @@ export function wizardCompletedCount(
     .slice(0, PRE_CREATION_STEP_COUNT)
     .filter((step) => isValid(step.requiredControls ?? [])).length;
   return { done, total: PRE_CREATION_STEP_COUNT };
+}
+
+/** The first step showing an invalid control or a group error, so the user lands where it is visible; -1 if none. */
+export function firstInvalidStepIndex(
+  steps: readonly WizardStep[],
+  isControlInvalid: (name: string) => boolean,
+  hasGroupError: (key: string) => boolean,
+): number {
+  return steps.findIndex(
+    (step) =>
+      (step.controls ?? []).some(isControlInvalid) || (step.groupErrors ?? []).some(hasGroupError),
+  );
 }

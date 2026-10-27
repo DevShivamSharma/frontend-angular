@@ -1,0 +1,622 @@
+<p-dialog
+  [dismissableMask]="false"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="false"
+  [closeOnEscape]="false"
+  styleClass="wizard-dialog"
+  [style]="{ width: 'min(1100px, calc(100vw - 32px))', maxHeight: 'calc(100dvh - 48px)' }"
+>
+  <ng-template #header>
+    <div class="wizard-header">
+      <div class="wizard-header__text">
+        <h2 class="wizard-header__title">
+          {{ form.controls.name.value || 'New internal event' }}
+        </h2>
+        <div class="wizard-header__badges">
+          <span class="chip">Draft</span>
+          <span class="chip">Internal event</span>
+        </div>
+      </div>
+      <p-button
+        class="wizard-header__close"
+        icon="pi pi-times"
+        severity="secondary"
+        [text]="true"
+        [rounded]="true"
+        ariaLabel="Close"
+        [disabled]="submitting()"
+        (onClick)="cancel()"
+      />
+    </div>
+  </ng-template>
+
+  <div class="wizard-body">
+    <div class="wizard-nav-col">
+      <nav class="wizard-nav">
+        @for (step of steps; track step.id; let i = $index) {
+          <button
+            type="button"
+            class="wizard-nav__item"
+            [attr.aria-current]="i === stepIndex() ? 'step' : null"
+            [attr.data-state]="status(i)"
+            [disabled]="i > 0 && !eventStepValid()"
+            (click)="goTo(i)"
+          >
+            <span class="wizard-nav__mark" aria-hidden="true">
+              @if (status(i) === 'done') {
+                <i class="pi pi-check"></i>
+              } @else {
+                {{ i + 1 }}
+              }
+            </span>
+            <span class="wizard-nav__text">
+              <span class="wizard-nav__label">{{ step.label }}</span>
+              @if (step.note) {
+                <small class="wizard-nav__note">{{ step.note }}</small>
+              }
+            </span>
+          </button>
+        }
+      </nav>
+
+      <p class="wizard-nav__summary">
+        {{ completed().done }} of {{ completed().total }} required sections complete
+      </p>
+    </div>
+
+    <div class="wizard-step">
+      <header class="wizard-step__head">
+        <h3 class="wizard-step__title">{{ steps[stepIndex()].label }}</h3>
+        @if (subtitles[steps[stepIndex()].id]; as subtitle) {
+          <p class="wizard-step__subtitle">{{ subtitle }}</p>
+        }
+      </header>
+      @if (stepIndex() === 0) {
+        <form [formGroup]="form" class="form-grid" novalidate>
+          <app-form-field
+            class="form-grid__full"
+            label="Organisation"
+            inputId="event-wizard-organisation"
+            [control]="form.controls.organisationId"
+            [required]="true"
+            hint="The event is booked under this organisation."
+          >
+            <p-select
+              inputId="event-wizard-organisation"
+              formControlName="organisationId"
+              [options]="organisations()"
+              optionLabel="name"
+              optionValue="id"
+              [filter]="true"
+              filterBy="name"
+              [virtualScroll]="true"
+              [virtualScrollItemSize]="40"
+              scrollHeight="18rem"
+              [loading]="organisationsLoading()"
+              placeholder="Choose an organisation"
+              appendTo="body"
+            />
+          </app-form-field>
+
+          <app-form-field
+            class="form-grid__full"
+            label="Event name"
+            inputId="event-wizard-name"
+            [control]="form.controls.name"
+            [required]="true"
+          >
+            <input
+              pInputText
+              id="event-wizard-name"
+              formControlName="name"
+              maxlength="200"
+              autocomplete="off"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Starts"
+            inputId="event-wizard-start"
+            [control]="form.controls.startDate"
+            [required]="true"
+            hint="First day of the tenancy."
+          >
+            <p-datepicker
+              inputId="event-wizard-start"
+              formControlName="startDate"
+              dateFormat="dd M yy"
+              [showIcon]="true"
+              appendTo="body"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Ends"
+            inputId="event-wizard-end"
+            [control]="form.controls.endDate"
+            [required]="true"
+            hint="Last day of the tenancy."
+          >
+            <p-datepicker
+              inputId="event-wizard-end"
+              formControlName="endDate"
+              dateFormat="dd M yy"
+              [showIcon]="true"
+              appendTo="body"
+            />
+          </app-form-field>
+
+          @if (form.errors?.['eventDates']; as message) {
+            <p class="form-error form-grid__full" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+            </p>
+          }
+
+          <app-form-field
+            label="Event type"
+            inputId="event-wizard-type"
+            [control]="form.controls.eventType"
+            hint="Optional."
+          >
+            <p-select
+              inputId="event-wizard-type"
+              formControlName="eventType"
+              [options]="kinds"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              placeholder="Choose a type"
+              appendTo="body"
+            />
+          </app-form-field>
+        </form>
+      }
+
+      @if (stepIndex() === 1) {
+        <form [formGroup]="form" novalidate>
+          <div class="form-grid">
+            <app-form-field
+              class="form-grid__full"
+              label="Description"
+              inputId="event-wizard-description"
+              [control]="form.controls.description"
+            >
+              <textarea
+                pTextarea
+                id="event-wizard-description"
+                formControlName="description"
+                rows="4"
+                maxlength="5000"
+              ></textarea>
+            </app-form-field>
+            <app-form-field
+              label="Product profile"
+              inputId="event-wizard-profile"
+              [control]="form.controls.productProfile"
+            >
+              <input pInputText id="event-wizard-profile" formControlName="productProfile" />
+            </app-form-field>
+            <app-form-field
+              label="Specific product profile"
+              inputId="event-wizard-specific"
+              [control]="form.controls.specificProductProfile"
+            >
+              <input
+                pInputText
+                id="event-wizard-specific"
+                formControlName="specificProductProfile"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Special request"
+              inputId="event-wizard-request"
+              [control]="form.controls.specialRequest"
+            >
+              <input pInputText id="event-wizard-request" formControlName="specialRequest" />
+            </app-form-field>
+            <app-form-field
+              label="Remarks"
+              inputId="event-wizard-remarks"
+              [control]="form.controls.remarks"
+            >
+              <input pInputText id="event-wizard-remarks" formControlName="remarks" />
+            </app-form-field>
+          </div>
+        </form>
+      }
+
+      @if (stepIndex() === 2) {
+        <form [formGroup]="form" novalidate>
+          <div class="form-grid">
+            <app-form-field
+              label="Event format"
+              inputId="event-wizard-format"
+              [control]="form.controls.eventFormat"
+              hint="How the event runs, e.g. Exhibition, or Exhibition and conference."
+            >
+              <input
+                pInputText
+                id="event-wizard-format"
+                formControlName="eventFormat"
+                maxlength="70"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Co-organiser"
+              inputId="event-wizard-coorganizer"
+              [control]="form.controls.coOrganizerName"
+              hint="A partner organisation. Write &quot;None&quot; if there is none."
+            >
+              <input pInputText id="event-wizard-coorganizer" formControlName="coOrganizerName" />
+            </app-form-field>
+            <app-form-field
+              label="Product category"
+              inputId="event-wizard-category"
+              [control]="form.controls.productCategory"
+              hint="The fair whose categories the halls of this event can sell."
+            >
+              <p-select
+                inputId="event-wizard-category"
+                formControlName="productCategory"
+                [options]="categoryGroups()"
+                optionLabel="name"
+                optionValue="slug"
+                [filter]="true"
+                filterBy="name"
+                [showClear]="true"
+                placeholder="Choose a category group"
+                appendTo="body"
+              />
+            </app-form-field>
+            <app-form-field
+              label="File number"
+              inputId="event-wizard-file"
+              [control]="form.controls.fileNumber"
+              hint="The file reference for this event, e.g. ITPO/F&amp;E/2027/014."
+            >
+              <input
+                pInputText
+                id="event-wizard-file"
+                formControlName="fileNumber"
+                maxlength="150"
+              />
+            </app-form-field>
+          </div>
+        </form>
+      }
+
+      @if (stepIndex() === 3) {
+        <form [formGroup]="form" novalidate>
+          <div class="form-grid">
+            <app-form-field
+              label="Exhibition starts"
+              inputId="event-wizard-ex-start"
+              [control]="form.controls.exhibitionStartDate"
+            >
+              <p-datepicker
+                inputId="event-wizard-ex-start"
+                formControlName="exhibitionStartDate"
+                dateFormat="dd M yy"
+                [showIcon]="true"
+                appendTo="body"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Exhibition ends"
+              inputId="event-wizard-ex-end"
+              [control]="form.controls.exhibitionEndDate"
+            >
+              <p-datepicker
+                inputId="event-wizard-ex-end"
+                formControlName="exhibitionEndDate"
+                dateFormat="dd M yy"
+                [showIcon]="true"
+                appendTo="body"
+              />
+            </app-form-field>
+            @if (form.errors?.['exhibitionDates']; as message) {
+              <p class="form-error form-grid__full" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+              </p>
+            }
+            <app-form-field
+              label="Opens at"
+              inputId="event-wizard-time-start"
+              [control]="form.controls.startTimeOfEvent"
+            >
+              <input
+                pInputText
+                id="event-wizard-time-start"
+                type="time"
+                formControlName="startTimeOfEvent"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Closes at"
+              inputId="event-wizard-time-end"
+              [control]="form.controls.endTimeOfEvent"
+            >
+              <input
+                pInputText
+                id="event-wizard-time-end"
+                type="time"
+                formControlName="endTimeOfEvent"
+              />
+            </app-form-field>
+          </div>
+        </form>
+      }
+
+      @if (stepIndex() === 4) {
+        <form [formGroup]="form" novalidate>
+          <div class="form-grid">
+            <app-form-field
+              label="Expected visitors"
+              inputId="event-wizard-visitors"
+              [control]="form.controls.expectedNumberOfVisitor"
+            >
+              <p-inputnumber
+                inputId="event-wizard-visitors"
+                formControlName="expectedNumberOfVisitor"
+                [min]="0"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Expected exhibitors"
+              inputId="event-wizard-exhibitors"
+              [control]="form.controls.expectedNumberOfExhibitors"
+            >
+              <p-inputnumber
+                inputId="event-wizard-exhibitors"
+                formControlName="expectedNumberOfExhibitors"
+                [min]="0"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Number of stalls"
+              inputId="event-wizard-stalls"
+              [control]="form.controls.noOfStalls"
+            >
+              <p-inputnumber
+                inputId="event-wizard-stalls"
+                formControlName="noOfStalls"
+                [min]="0"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Number of F&B stalls"
+              inputId="event-wizard-fnb-stalls"
+              [control]="form.controls.noOfFnbStalls"
+            >
+              <p-inputnumber
+                inputId="event-wizard-fnb-stalls"
+                formControlName="noOfFnbStalls"
+                [min]="0"
+              />
+            </app-form-field>
+            <app-form-field
+              label="Categories an exhibitor may register for"
+              inputId="event-wizard-max-categories"
+              [control]="form.controls.maxCategoriesForRegistration"
+            >
+              <p-inputnumber
+                inputId="event-wizard-max-categories"
+                formControlName="maxCategoriesForRegistration"
+                [min]="0"
+                [max]="1000"
+              />
+            </app-form-field>
+          </div>
+        </form>
+      }
+
+      @if (stepIndex() === 5) {
+        <form [formGroup]="form" novalidate>
+          <div class="toggles">
+            <div class="toggle-row">
+              <p-toggleswitch inputId="event-wizard-overseas" formControlName="allowOverseasUser" />
+              <label for="event-wizard-overseas">Overseas users may register</label>
+            </div>
+            <div class="toggle-row">
+              <p-toggleswitch inputId="event-wizard-marquee" formControlName="isMarqueeEnabled" />
+              <label for="event-wizard-marquee">Marquee enabled</label>
+            </div>
+            <div class="toggle-row">
+              <p-toggleswitch
+                inputId="event-wizard-secondary"
+                formControlName="isSecondaryEnabled"
+              />
+              <label for="event-wizard-secondary">Secondary (multi-product) enabled</label>
+            </div>
+          </div>
+
+          <section class="card" aria-labelledby="event-wizard-visibility-title">
+            <h2 id="event-wizard-visibility-title">Public list</h2>
+            <p class="text-muted visibility-intro">
+              Whether the event shows in the public list of events.
+            </p>
+            <p-selectbutton
+              formControlName="visibility"
+              [options]="visibilityOptions"
+              optionLabel="label"
+              optionValue="value"
+              [allowEmpty]="false"
+              ariaLabelledBy="event-wizard-visibility-title"
+            />
+          </section>
+        </form>
+      }
+
+      @if (stepIndex() === 6) {
+        <app-empty-state
+          icon="pi-building"
+          title="Halls are added after the event is created"
+          message="Once you create the event, open it to add the halls it uses."
+        />
+      }
+
+      @if (stepIndex() === 7) {
+        <app-empty-state
+          icon="pi-building"
+          title="Booking setup is optional for now"
+          message="You can configure this after the event is created."
+        />
+      }
+
+      @if (stepIndex() === 8) {
+        @if (form.getRawValue(); as v) {
+          <div class="groups">
+            <section class="card" aria-labelledby="review-about-title">
+              <h2 id="review-about-title">About</h2>
+              <dl class="facts">
+                <div>
+                  <dt>Event name</dt>
+                  <dd>{{ v.name || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Organisation</dt>
+                  <dd>{{ organisationName(v.organisationId) }}</dd>
+                </div>
+                <div>
+                  <dt>Event type</dt>
+                  <dd>{{ v.eventType || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Event format</dt>
+                  <dd>{{ v.eventFormat || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Co-organiser</dt>
+                  <dd>{{ v.coOrganizerName || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Product category</dt>
+                  <dd>{{ v.productCategory || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>File number</dt>
+                  <dd>{{ v.fileNumber || '—' }}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="card" aria-labelledby="review-when-title">
+              <h2 id="review-when-title">When</h2>
+              <dl class="facts">
+                <div>
+                  <dt>Tenancy</dt>
+                  <dd>
+                    {{ v.startDate ? (v.startDate | date: 'd MMM y') : '—' }} –
+                    {{ v.endDate ? (v.endDate | date: 'd MMM y') : '—' }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Exhibition days</dt>
+                  <dd>
+                    {{ v.exhibitionStartDate ? (v.exhibitionStartDate | date: 'd MMM y') : '—' }} –
+                    {{ v.exhibitionEndDate ? (v.exhibitionEndDate | date: 'd MMM y') : '—' }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Open daily</dt>
+                  <dd>{{ v.startTimeOfEvent || '—' }} – {{ v.endTimeOfEvent || '—' }}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="card" aria-labelledby="review-expected-title">
+              <h2 id="review-expected-title">Expected</h2>
+              <dl class="facts">
+                <div>
+                  <dt>Visitors</dt>
+                  <dd>{{ v.expectedNumberOfVisitor !== null ? (v.expectedNumberOfVisitor | number) : '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Exhibitors</dt>
+                  <dd>{{ v.expectedNumberOfExhibitors !== null ? (v.expectedNumberOfExhibitors | number) : '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Stalls</dt>
+                  <dd>{{ v.noOfStalls !== null ? (v.noOfStalls | number) : '—' }}</dd>
+                </div>
+                <div>
+                  <dt>F&amp;B stalls</dt>
+                  <dd>{{ v.noOfFnbStalls !== null ? (v.noOfFnbStalls | number) : '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Max categories per exhibitor</dt>
+                  <dd>
+                    {{
+                      v.maxCategoriesForRegistration !== null
+                        ? (v.maxCategoriesForRegistration | number)
+                        : '—'
+                    }}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="card" aria-labelledby="review-settings-title">
+              <h2 id="review-settings-title">Settings</h2>
+              <dl class="facts">
+                <div>
+                  <dt>Overseas users may register</dt>
+                  <dd>{{ v.allowOverseasUser ? 'Yes' : 'No' }}</dd>
+                </div>
+                <div>
+                  <dt>Marquee enabled</dt>
+                  <dd>{{ v.isMarqueeEnabled ? 'Yes' : 'No' }}</dd>
+                </div>
+                <div>
+                  <dt>Secondary (multi-product) enabled</dt>
+                  <dd>{{ v.isSecondaryEnabled ? 'Yes' : 'No' }}</dd>
+                </div>
+                <div>
+                  <dt>Public list</dt>
+                  <dd>{{ visibilityLabel(v.visibility) }}</dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        }
+      }
+    </div>
+  </div>
+
+  @if (failure(); as message) {
+    <p class="problem" role="alert">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+    </p>
+  }
+
+  <ng-template #footer>
+    <div class="wizard-footer__nav">
+      <p-button
+        label="Back"
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="stepIndex() === 0 || submitting()"
+        (onClick)="back()"
+      />
+      @if (stepIndex() < steps.length - 1) {
+        <p-button
+          [label]="'Next: ' + steps[stepIndex() + 1].label"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          (onClick)="next()"
+        />
+      } @else {
+        <p-button
+          label="Create event"
+          icon="pi pi-check"
+          [loading]="submitting()"
+          [disabled]="submitting()"
+          (onClick)="submit()"
+        />
+      }
+    </div>
+  </ng-template>
+</p-dialog>

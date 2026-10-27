@@ -87,15 +87,124 @@
   gap: var(--space-3);
 }
 
+// Sizes are the redesign prototype's own (its rules layout, section list and filter bar).
+.rules-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.rules-layout--nav {
+  grid-template-columns: 200px minmax(0, 1fr);
+
+  @media (max-width: 60rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rules-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.jump {
+  position: sticky;
+  top: calc(var(--app-topbar-height) + 16px);
+  display: grid;
+  gap: 2px;
+
+  b {
+    padding: 0 10px 6px;
+    color: var(--app-muted);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  a {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--app-radius-sm);
+    color: var(--app-muted);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition:
+      background-color 0.2s,
+      color 0.2s;
+
+    &:hover {
+      background: var(--app-surface-hover);
+      color: var(--app-text);
+    }
+
+    &[aria-current='true'] {
+      background: var(--app-brand-soft);
+      color: var(--app-brand);
+      font-weight: 600;
+    }
+
+    span:last-child {
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  @media (max-width: 60rem) {
+    position: static;
+    display: flex;
+    overflow-x: auto;
+
+    b {
+      display: none;
+    }
+
+    a {
+      white-space: nowrap;
+    }
+  }
+}
+
 .scope {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px 18px;
 }
 
-.scope label {
-  font-weight: 500;
+.rules-layout--nav .scope {
+  border-bottom: 1px solid var(--app-border);
+}
+
+.scope__field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+
+  label {
+    font-weight: 500;
+  }
+}
+
+.scope__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 26rem;
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 13px;
+
+  .pi {
+    margin-top: 2px;
+  }
+}
+
+.rules-body {
+  padding: 4px 18px 8px;
 }
 
 :host ::ng-deep .scope__select {

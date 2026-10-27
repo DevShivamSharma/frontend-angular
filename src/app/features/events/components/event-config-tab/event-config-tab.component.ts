@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormControl,
@@ -27,6 +38,9 @@ import {
 } from '../../data/event-config-api.service';
 
 type Field = { key: string; label: string };
+/** Something a section still needs; `key` is the field it points at. */
+type Todo = { text: string; key: string };
+type SetupSection = { id: string; title: string; subtitle: string; todo: Todo[] };
 
 const COUNT = /^[0-9]+$/;
 const day = (v: Date | null) => v?.toISOString() ?? undefined;
@@ -143,13 +157,7 @@ export class EventConfigTabComponent {
   protected readonly failed = signal(false);
   protected readonly saving = signal(false);
   protected readonly messages = MESSAGES;
-  protected readonly sections = [
-    { id: 'cfg-booking', label: 'Booking' },
-    { id: 'cfg-site', label: 'Booking site' },
-    { id: 'cfg-marquee', label: 'Marquee' },
-    { id: 'cfg-fnb', label: 'Food & beverage' },
-    { id: 'cfg-extra', label: 'Branding, LED, sponsor' },
-  ];
+  protected readonly selected = signal('booking');
 
   protected readonly form = new FormGroup(
     {
@@ -174,7 +182,8 @@ export class EventConfigTabComponent {
       fnbInfo: new FormControl('', { nonNullable: true }),
       fnbSecurity: new FormControl(false, { nonNullable: true }),
       fnbType: new FormControl('', { nonNullable: true }),
-      fnbValue: new FormControl('', Validators.pattern(COUNT)),
+      // Checked only while the deposit applies; see syncFnbValue().
+      fnbValue: new FormControl(''),
       brandingStart: new FormControl<Date | null>(null),
       brandingEnd: new FormControl<Date | null>(null),
       ledStart: new FormControl<Date | null>(null),
@@ -199,7 +208,24 @@ export class EventConfigTabComponent {
   private record: EventConfigRecord | null = null;
   protected readonly exists = signal(false);
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  // `valid`, `errors` and `dirty` are not signals: this one ticks on every change of the form.
+  private readonly formEvents = toSignal(this.form.events);
+  protected readonly dirty = computed(() => (this.formEvents(), this.form.dirty));
+  protected readonly sections = computed(() => (this.formEvents(), this.build()));
+  protected readonly current = computed(
+    () => this.sections().find((s) => s.id === this.selected()) ?? this.sections()[0],
+  );
+  protected readonly incomplete = computed(() =>
+    this.sections().reduce((sum, s) => sum + s.todo.length, 0),
+  );
+  /** How many things are left to fill, for the tab's badge; told once the setup has loaded. */
+  readonly incompleteChange = output<number>();
+
   constructor() {
+    effect(() => {
+      if (!this.loading() && !this.failed()) this.incompleteChange.emit(this.incomplete());
+    });
     this.form.controls.isMarqueeEnabled.valueChanges.subscribe((on) => {
       this.require(this.form.controls.marqueeStart, on);
       this.require(this.form.controls.marqueeEnd, on);
@@ -211,7 +237,23 @@ export class EventConfigTabComponent {
     this.form.controls.showBranding.valueChanges.subscribe((on) =>
       this.require(this.form.controls.brandingPdf, on),
     );
+    this.form.controls.isFnb.valueChanges.subscribe(() => this.syncFnbValue());
+    this.form.controls.fnbSecurity.valueChanges.subscribe(() => this.syncFnbValue());
     void this.load();
+  }
+
+  private readonly wholeNumber = Validators.pattern(COUNT);
+
+  /**
+   * The deposit value must be a whole number only while F&B and its deposit are on. Off, the field
+   * is hidden, so an old saved value (a decimal, say) must not block saving the rest unseen.
+   */
+  private syncFnbValue(): void {
+    const value = this.form.controls.fnbValue;
+    const on = this.form.controls.isFnb.value && this.form.controls.fnbSecurity.value;
+    if (on) value.addValidators(this.wholeNumber);
+    else value.removeValidators(this.wholeNumber);
+    value.updateValueAndValidity({ emitEvent: false });
   }
 
   protected control(key: string): FormControl {
@@ -236,22 +278,78 @@ export class EventConfigTabComponent {
     return hit ? MESSAGES[hit] : null;
   }
 
-  /** The jump menu: scrolls a section into view and moves focus into it. */
-  protected jump(event: Event, id: string): void {
-    event.preventDefault();
-    const target = document.getElementById(id);
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    target?.focus({ preventScroll: true });
+  /** Moves focus into the field a "to complete" line points at. */
+  protected focusField(key: string): void {
+    this.host.nativeElement
+      .querySelector<HTMLElement>(
+        `[data-field="${key}"] input, [data-field="${key}"] textarea, [data-field="${key}"] [tabindex]:not([tabindex="-1"])`,
+      )
+      ?.focus();
   }
 
-  protected errors(): string[] {
-    // Each message already stands under its own field; none is repeated at the foot.
-    return [];
+  /** What each section still needs: the controls with an error, and the cross-checks it holds. */
+  private build(): SetupSection[] {
+    const c = this.form.controls;
+    const bad = (control: AbstractControl, text: string, key: string): Todo[] =>
+      control.invalid ? [{ text, key }] : [];
+    const cross = (error: string, key: string): Todo[] =>
+      this.form.errors?.[error] ? [{ text: MESSAGES[error], key }] : [];
+    return [
+      {
+        id: 'booking',
+        title: 'Booking',
+        subtitle: 'What one exhibitor can book, and when public booking runs.',
+        todo: [
+          ...bad(c.eventCategory, 'Choose the event category type.', 'eventCategory'),
+          ...bad(c.noOfStalls, 'Give the most stalls a user can book, from 1 to 200.', 'noOfStalls'),
+          ...cross('stallBeforeMarquee', 'stallStart'),
+          ...cross('stallDates', 'stallStart'),
+        ],
+      },
+      {
+        id: 'site',
+        title: 'Booking site',
+        subtitle: 'What the booking site shows exhibitors.',
+        todo: [
+          ...bad(c.sponsorPdf, 'Give the sponsor PDF link.', 'sponsorPdf'),
+          ...bad(c.brandingPdf, 'Give the branding PDF link.', 'brandingPdf'),
+        ],
+      },
+      {
+        id: 'extra',
+        title: 'Dates for extras',
+        subtitle: 'When branding, LED and sponsor booking run.',
+        todo: [
+          ...cross('ledDates', 'ledStart'),
+          ...cross('sponsorDates', 'sponsorStart'),
+          ...cross('brandingDates', 'brandingStart'),
+          ...bad(c.cartTimer, 'Give the cart timer as a whole number of minutes.', 'cartTimer'),
+        ],
+      },
+      {
+        id: 'marquee',
+        title: 'Marquee',
+        subtitle: 'Whether marquees apply, and when their registration and booking run.',
+        todo: [
+          ...bad(c.marqueeStart, 'Set when marquee registration starts.', 'marqueeStart'),
+          ...bad(c.marqueeEnd, 'Set when marquee registration ends.', 'marqueeEnd'),
+          ...bad(c.marqueeInfo, 'Set the marquee registration info.', 'marqueeInfo'),
+        ],
+      },
+      {
+        id: 'fnb',
+        title: 'Food and beverage',
+        subtitle: 'Whether food and beverage stalls apply, their dates and security deposit.',
+        todo: bad(c.fnbValue, 'Give the security value as a whole number.', 'fnbValue'),
+      },
+    ];
   }
 
   protected async save(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      const first = this.build().find((s) => s.todo.length);
+      if (first) this.selected.set(first.id);
       this.notifier.warn('Fill the highlighted fields correctly.');
       return;
     }

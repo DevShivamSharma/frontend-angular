@@ -1,18 +1,27 @@
+// Sizes are the redesign prototype's own (its event stepper card).
+$control: #8a8a94; // the prototype's control border: darker than --app-border-strong
+
 :host {
   display: block;
 }
 
 .progress {
-  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-md);
+  border-radius: var(--app-radius);
   background: var(--app-surface);
 }
 
 .steps {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-5);
+  gap: 4px 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -21,78 +30,86 @@
 .step {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  color: var(--app-muted);
-  font-size: 0.875rem;
-  font-weight: 500;
 
-  &.current {
-    color: var(--app-text);
+  // The short line joining a step to the one before it.
+  & + &::before {
+    content: '';
+    width: 20px;
+    height: 1px;
+    margin-right: 8px;
+    background: var(--app-border-strong);
+  }
+}
+
+.label {
+  display: grid;
+  padding: 6px 8px 6px 10px;
+
+  b {
+    font-size: 13px;
     font-weight: 600;
   }
 
-  &.done {
-    color: var(--app-success);
+  small {
+    color: var(--app-muted);
+    font-size: 12px;
   }
 }
 
-.dot {
-  display: inline-grid;
+.mark {
+  display: grid;
+  flex: none;
   place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 1.5px solid currentColor;
+  width: 24px;
+  height: 24px;
+  margin-left: 8px;
+  border: 1.5px solid $control;
   border-radius: 50%;
-  font-size: 0.75rem;
+  color: var(--app-muted);
+  font-size: 12px;
   font-weight: 700;
 
   .pi {
-    font-size: 0.75rem;
+    font-size: 11px;
   }
-}
 
-.current .dot {
-  background: var(--app-brand);
-  border-color: var(--app-brand);
-  color: var(--palette-white);
-}
+  [data-state='done'] > & {
+    border-color: var(--app-success);
+    background: var(--app-success);
+    color: #fff;
+  }
 
-.done .dot {
-  background: var(--app-success);
-  border-color: var(--app-success);
-  color: var(--palette-white);
-}
-
-.next {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-  color: var(--app-muted);
-  font-size: 0.875rem;
-
-  b {
+  [data-state='now'] > & {
+    border-color: var(--app-text);
     color: var(--app-text);
   }
 }
 
-.done-all {
-  color: var(--app-success);
+:host ::ng-deep .cta .p-button {
+  gap: 6px;
 }
 
-.go {
-  padding: 2px 12px;
-  border: 1px solid var(--app-brand);
-  border-radius: var(--app-radius-pill);
-  background: none;
-  color: var(--app-brand);
-  font: inherit;
+.done-all {
+  margin: 0;
+  color: var(--app-success);
+  font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
+}
 
-  &:hover,
-  &:focus-visible {
-    background: var(--app-brand-soft);
+// A phone: two steps a row, no connectors, the button full width.
+@media (max-width: 40rem) {
+  .steps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .step + .step::before {
+    display: none;
+  }
+
+  .cta,
+  :host ::ng-deep .cta .p-button {
+    width: 100%;
   }
 }

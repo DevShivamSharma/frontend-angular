@@ -1,12 +1,93 @@
+// Sizes are the redesign prototype's own (its .crumbs, .ph, .tabs and .count).
 :host {
   display: block;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--app-muted);
+  font-size: 13px;
+
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--app-text);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+}
+
+.head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.head-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--app-muted);
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: calc(var(--space-2) * -1);
+  margin-top: 4px;
+}
+
+.head-side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+
+  .p-button {
+    gap: 6px;
+  }
+}
+
+.stats {
+  display: flex;
+  gap: 24px;
+  margin: 0;
+
+  dt {
+    color: var(--app-muted);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 .skeleton {
@@ -15,21 +96,19 @@
   gap: var(--space-4);
 }
 
-p-tab i {
-  margin-right: var(--space-2);
-}
-
 .count {
-  margin-left: var(--space-2);
-  padding: 0 0.5rem;
+  min-width: 20px;
+  padding: 0 6px;
   border-radius: var(--app-radius-pill);
-  background: color-mix(in srgb, var(--app-brand) 14%, transparent);
-  color: var(--app-brand);
-  font-size: 0.75rem;
+  background: var(--app-surface-hover);
+  color: var(--app-muted);
+  font-size: 11px;
   font-weight: 600;
+  line-height: 18px;
+  text-align: center;
 }
 
-// The cards inside the tabs have their own surface; the tab strip and panels are only the frame.
+// The prototype's tab strip: a hairline under the row, the chosen tab underlined in the brand red.
 :host ::ng-deep {
   .p-tabs,
   .p-tablist-tab-list,
@@ -37,7 +116,32 @@ p-tab i {
     background: transparent;
   }
 
+  .p-tablist-tab-list {
+    gap: 2px;
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .p-tablist-active-bar {
+    display: none;
+  }
+
+  .p-tab {
+    gap: 8px;
+    min-height: 44px;
+    margin-bottom: -1px;
+    padding: 0 14px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: var(--app-muted);
+    font-weight: 500;
+  }
+
+  .p-tab.p-tab-active {
+    border-bottom-color: var(--app-brand);
+    color: var(--app-text);
+  }
+
   .p-tabpanels {
-    padding: var(--space-4) 0 0;
+    padding: 16px 0 0;
   }
 }

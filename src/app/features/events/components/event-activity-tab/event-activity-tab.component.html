@@ -1,0 +1,60 @@
+@if (forbidden()) {
+  <app-empty-state
+    icon="pi-lock"
+    title="Activity is visible to ITPO staff only."
+    message="Ask an ITPO administrator if you need to see the history of this event."
+  />
+} @else if (failed()) {
+  <app-empty-state
+    icon="pi-exclamation-triangle"
+    title="The activity could not be loaded"
+    message="Check your connection and try again."
+  >
+    <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
+  </app-empty-state>
+} @else if (loading()) {
+  <div class="card card--flush" role="status" aria-label="Loading activity">
+    @for (row of [1, 2, 3, 4]; track row) {
+      <div class="row">
+        <p-skeleton width="40%" height="1rem" />
+        <p-skeleton width="25%" height="0.75rem" />
+      </div>
+    }
+  </div>
+} @else if (items().length) {
+  <section class="card card--flush" aria-label="Activity">
+    <ul class="list">
+      @for (entry of items(); track entry.id) {
+        <li class="row">
+          <p class="title">
+            <strong>{{ actionLabel(entry.action) }}</strong>
+            @if (entry.hall.name) {
+              · {{ entry.hall.name }}
+            }
+          </p>
+          @if (entry.detail) {
+            <p class="detail">{{ entry.detail }}</p>
+          }
+          <p class="meta">{{ entry.actor.name ?? '—' }} · {{ entry.at | date: 'd MMM y, HH:mm' }}</p>
+        </li>
+      }
+    </ul>
+    @if (hasMore()) {
+      <div class="more">
+        <p-button
+          label="Load more"
+          severity="secondary"
+          [outlined]="true"
+          [loading]="loadingMore()"
+          (onClick)="loadMore()"
+        />
+      </div>
+    }
+  </section>
+} @else {
+  <app-empty-state
+    icon="pi-history"
+    title="No activity yet"
+    message="Saves, submissions, approvals and changes to this event show here as they happen."
+  />
+}

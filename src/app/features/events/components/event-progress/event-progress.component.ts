@@ -8,6 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { ButtonModule } from 'primeng/button';
 import { firstValueFrom } from 'rxjs';
 
 import { PlansApiService } from '../../../planner/data/plans-api.service';
@@ -17,7 +18,10 @@ import { EventConfigApiService } from '../../data/event-config-api.service';
 interface Step {
   id: string;
   label: string;
-  hint: string;
+  /** The button's words when this is the next step. */
+  cta: string;
+  /** Where the step stands, in a few words, under its label. */
+  note: string;
   tab: 'halls' | 'config' | 'details';
   done: boolean;
 }
@@ -29,6 +33,7 @@ interface Step {
  */
 @Component({
   selector: 'app-event-progress',
+  imports: [ButtonModule],
   templateUrl: './event-progress.component.html',
   styleUrl: './event-progress.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,35 +57,47 @@ export class EventProgressComponent {
     if (list === null) return [];
     const halls = this.halls();
     const every = (test: (s: HallPlanStatus) => boolean) => list.length > 0 && list.every(test);
+    const count = (test: (s: HallPlanStatus) => boolean) => list.filter(test).length;
+    const of = (n: number, word: string) => (list.length ? `${n} of ${list.length} ${word}` : '');
+    const isPlanned = (s: HallPlanStatus) => s.status === 'planned' && s.stalls > 0;
+    const isPublished = (s: HallPlanStatus) => !!s.published && s.published.revision === s.revision;
+    const isSent = (s: HallPlanStatus) => s.status === 'pending' || s.status === 'approved';
+    const isApproved = (s: HallPlanStatus) => s.status === 'approved';
+    const hallsNote = halls === 1 ? '1 hall' : halls ? `${halls} halls` : 'None yet';
     if (this.kind() === 'internal') {
+      const configured = this.configured();
       return [
         {
           id: 'halls',
-          label: 'Add halls',
-          hint: 'Pick the halls the event uses.',
+          label: 'Halls added',
+          cta: 'Add the halls',
+          note: hallsNote,
           tab: 'halls',
           done: halls > 0,
         },
         {
           id: 'config',
-          label: 'Set the configuration',
-          hint: 'Booking dates, limits and options.',
+          label: 'Booking setup',
+          cta: 'Finish the booking setup',
+          note: configured === true ? 'Saved' : configured === false ? 'Not saved yet' : '',
           tab: 'config',
-          done: this.configured() === true,
+          done: configured === true,
         },
         {
           id: 'plan',
-          label: 'Plan the stalls',
-          hint: 'Draw or import each hall’s stalls.',
+          label: 'Hall plans',
+          cta: 'Plan the stalls',
+          note: of(count(isPlanned), 'planned'),
           tab: 'halls',
-          done: every((s) => s.status === 'planned' && s.stalls > 0),
+          done: every(isPlanned),
         },
         {
           id: 'publish',
-          label: 'Publish',
-          hint: 'Write the stalls so they can be booked.',
+          label: 'Published',
+          cta: 'Publish the plans',
+          note: of(count(isPublished), 'published'),
           tab: 'halls',
-          done: every((s) => !!s.published && s.published.revision === s.revision),
+          done: every(isPublished),
         },
       ];
     }
@@ -88,30 +105,34 @@ export class EventProgressComponent {
       {
         id: 'halls',
         label: 'Halls booked',
-        hint: 'The organiser’s halls.',
+        cta: 'View the halls',
+        note: hallsNote,
         tab: 'halls',
         done: halls > 0,
       },
       {
         id: 'plan',
         label: 'Organiser plans',
-        hint: 'The organiser draws and sends each hall.',
+        cta: 'View the plans',
+        note: of(count(isSent), 'sent'),
         tab: 'halls',
-        done: every((s) => s.status === 'pending' || s.status === 'approved'),
+        done: every(isSent),
       },
       {
         id: 'approve',
         label: 'ITPO approves',
-        hint: 'Review and approve each hall’s plan.',
+        cta: 'Review the plans',
+        note: of(count(isApproved), 'approved'),
         tab: 'halls',
-        done: every((s) => s.status === 'approved'),
+        done: every(isApproved),
       },
       {
         id: 'publish',
         label: 'Published',
-        hint: 'The organiser publishes the approved plans.',
+        cta: 'View the plans',
+        note: of(count(isPublished), 'published'),
         tab: 'halls',
-        done: every((s) => !!s.published && s.published.revision === s.revision),
+        done: every(isPublished),
       },
     ];
   });

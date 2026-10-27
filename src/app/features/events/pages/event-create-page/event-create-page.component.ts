@@ -1,4 +1,5 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
@@ -14,7 +15,7 @@ import { ConfirmService } from '../../../../core/confirm/confirm.service';
 import { NotifierService } from '../../../../core/notification/notifier.service';
 import { HasUnsavedChanges } from '../../../../shared/guards/unsaved-changes.guard';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
-import { EventFormComponent } from '../../components/event-form/event-form.component';
+import { EventWizardDialogComponent } from '../../components/event-wizard-dialog/event-wizard-dialog.component';
 import { EventsApiService } from '../../data/events-api.service';
 import { CreateEventPayload, Organisation } from '../../data/events.models';
 import { ItpoEventsApiService } from '../../data/itpo-events-api.service';
@@ -22,19 +23,19 @@ import { ItpoEventsApiService } from '../../data/itpo-events-api.service';
 /** Creates an internal event under an organisation, then opens it to add halls. */
 @Component({
   selector: 'app-event-create-page',
-  imports: [PageHeaderComponent, EventFormComponent],
+  imports: [PageHeaderComponent, EventWizardDialogComponent],
   templateUrl: './event-create-page.component.html',
   styleUrl: './event-create-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EventCreatePageComponent implements HasUnsavedChanges {
+export class EventCreatePageComponent implements HasUnsavedChanges, AfterViewInit {
   private readonly api = inject(EventsApiService);
   private readonly itpo = inject(ItpoEventsApiService);
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(NotifierService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly form = viewChild.required(EventFormComponent);
+  private readonly wizard = viewChild.required(EventWizardDialogComponent);
 
   protected readonly organisations = signal<Organisation[]>([]);
   protected readonly organisationsLoading = signal(true);
@@ -59,8 +60,12 @@ export class EventCreatePageComponent implements HasUnsavedChanges {
       });
   }
 
+  ngAfterViewInit(): void {
+    this.wizard().open();
+  }
+
   hasUnsavedChanges(): boolean {
-    return !this.saved && this.form().hasUnsavedChanges();
+    return !this.saved && this.wizard().hasUnsavedChanges();
   }
 
   protected async create(payload: CreateEventPayload): Promise<void> {
@@ -82,7 +87,7 @@ export class EventCreatePageComponent implements HasUnsavedChanges {
       },
       error: (error: unknown) => {
         this.submitting.set(false);
-        if (!(error instanceof ApiError && this.form().applyError(error))) {
+        if (!(error instanceof ApiError && this.wizard().applyError(error))) {
           this.failure.set(
             error instanceof ApiError ? error.message : 'The event could not be created.',
           );

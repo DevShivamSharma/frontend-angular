@@ -160,13 +160,15 @@
               label="Event format"
               inputId="event-format"
               [control]="active.controls.eventFormat"
+              hint="How the event runs, e.g. Exhibition, or Exhibition and conference."
             >
               <input pInputText id="event-format" formControlName="eventFormat" maxlength="70" />
             </app-form-field>
             <app-form-field
-              label="Co-organizer"
+              label="Co-organiser"
               inputId="event-coorganizer"
               [control]="active.controls.coOrganizerName"
+              hint="A partner organisation. Write &quot;None&quot; if there is none."
             >
               <input pInputText id="event-coorganizer" formControlName="coOrganizerName" />
             </app-form-field>
@@ -193,6 +195,7 @@
               label="File number"
               inputId="event-file"
               [control]="active.controls.fileNumber"
+              hint="The file reference for this event, e.g. ITPO/F&amp;E/2027/014."
             >
               <input pInputText id="event-file" formControlName="fileNumber" maxlength="150" />
             </app-form-field>

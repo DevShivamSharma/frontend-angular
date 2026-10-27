@@ -4,11 +4,10 @@
       @for (step of steps(); track step.id; let i = $index) {
         <li
           class="step"
-          [class.done]="step.done"
-          [class.current]="next()?.index === i"
+          [attr.data-state]="step.done ? 'done' : next()?.index === i ? 'now' : null"
           [attr.aria-current]="next()?.index === i ? 'step' : null"
         >
-          <span class="dot" aria-hidden="true">
+          <span class="mark" aria-hidden="true">
             @if (step.done) {
               <i class="pi pi-check"></i>
             } @else {
@@ -16,22 +15,30 @@
             }
           </span>
           <span class="label">
-            {{ step.label }}
-            <span class="visually-hidden">{{ step.done ? ' (done)' : '' }}</span>
+            <b>
+              {{ step.label }}
+              <span class="visually-hidden">{{ step.done ? ' (done)' : '' }}</span>
+            </b>
+            @if (step.note) {
+              <small>{{ step.note }}</small>
+            }
           </span>
         </li>
       }
     </ol>
     @if (next(); as n) {
-      <p class="next">
-        <b>Next:</b> {{ n.step.label }}. {{ n.step.hint }}
-        @if (canAct()) {
-          <button type="button" class="go" (click)="go()(n.step.tab)">Go</button>
-        }
-      </p>
+      @if (canAct()) {
+        <p-button
+          class="cta"
+          [label]="n.step.cta"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          (onClick)="go()(n.step.tab)"
+        />
+      }
     } @else {
-      <p class="next done-all">
-        <i class="pi pi-check-circle" aria-hidden="true"></i> Every step is done.
+      <p class="done-all">
+        <i class="pi pi-check-circle" aria-hidden="true"></i> Every step is done
       </p>
     }
   </section>

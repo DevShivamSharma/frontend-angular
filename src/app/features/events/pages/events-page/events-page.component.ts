@@ -11,13 +11,14 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 
@@ -27,6 +28,7 @@ import { NotifierService } from '../../../../core/notification/notifier.service'
 import { ImageFallbackDirective } from '../../../../shared/ui/placeholder-image/image-fallback.directive';
 import { PLACEHOLDER_IMAGE } from '../../../../shared/ui/placeholder-image/placeholder-image';
 import { CardSkeletonComponent } from '../../../../shared/ui/card-skeleton/card-skeleton.component';
+import { TableSkeletonComponent } from '../../../../shared/ui/table-skeleton/table-skeleton.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { statusSeverity } from '../../domain/event-status';
@@ -42,6 +44,7 @@ const PAGE_SIZE = 15;
 @Component({
   selector: 'app-events-page',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     RouterLink,
     DatePipe,
@@ -51,8 +54,10 @@ const PAGE_SIZE = 15;
     InputIconModule,
     InputTextModule,
     PaginatorModule,
+    SelectButtonModule,
     TagModule,
     CardSkeletonComponent,
+    TableSkeletonComponent,
     ImageFallbackDirective,
     EmptyStateComponent,
     PageHeaderComponent,
@@ -72,6 +77,20 @@ export class EventsPageComponent {
   protected readonly search = new FormControl('', { nonNullable: true });
 
   protected readonly isStaff = this.auth.isStaff;
+  protected readonly viewOptions = [
+    { label: 'List', value: 'table', icon: 'pi pi-list' },
+    { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
+  ];
+  protected readonly view = signal<'grid' | 'table'>('table');
+  /** Placeholder columns while the list loads as a table, matching the visible table columns. */
+  protected readonly tableSkeleton = computed(() => [
+    { width: '1.5rem' },
+    { width: '55%' },
+    { width: '40%', hideSmall: true },
+    ...(this.isStaff() && this.kind() === 'external' ? [{ width: '8rem' }] : []),
+    { width: '10rem' },
+    { width: '10rem' },
+  ]);
   /** Which events this page lists; set by the route. */
   readonly kind = input.required<EventListKind>();
   protected readonly title = computed(() =>
