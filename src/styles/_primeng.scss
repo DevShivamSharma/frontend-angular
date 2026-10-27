@@ -445,3 +445,13 @@ p-datepicker {
   --p-toggleswitch-checked-hover-background: color-mix(in srgb, var(--app-success) 88%, black);
   --p-toggleswitch-checked-border-color: var(--app-success);
 }
+
+/* A drawer for working on one thing beside a list: wide enough for a small table. It is placed
+   under <body>, so it is styled here and not in the page that opens it. */
+.p-drawer.people-drawer {
+  width: min(34rem, 100vw);
+
+  .p-drawer-content {
+    padding-top: var(--space-2);
+  }
+}

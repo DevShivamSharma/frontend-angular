@@ -109,13 +109,15 @@
                       </th>
                       <td class="cell-status">
                         <span class="cell-state">
-                          <p-toggleswitch
-                            [ngModel]="category.active"
-                            (onChange)="toggle(category, $event.checked)"
-                            [ariaLabel]="
-                              (category.active ? 'Deactivate ' : 'Activate ') + category.name
-                            "
-                          />
+                          @for (version of [redraw()]; track version) {
+                            <p-toggleswitch
+                              [ngModel]="category.active"
+                              (onChange)="toggle(category, $event.checked)"
+                              [ariaLabel]="
+                                (category.active ? 'Deactivate ' : 'Activate ') + category.name
+                              "
+                            />
+                          }
                           <span class="badge" [class.badge--off]="!category.active">{{
                             category.active ? 'Active' : 'Inactive'
                           }}</span>

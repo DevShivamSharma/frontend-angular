@@ -2,7 +2,7 @@
   <section class="rule-group" [attr.aria-labelledby]="'rule-group-' + group.group">
     <h3 class="rule-group__title" [id]="'rule-group-' + group.group">{{ group.title }}</h3>
     <ul class="rules">
-      @for (item of group.items; track item.id + '@' + revision()) {
+      @for (item of group.items; track item.id) {
         <li class="rule" [class.rule--changed]="eventMode() && item.overridden">
           <div class="rule__text">
             <span class="rule__label" [id]="'rule-label-' + item.id">{{ item.label }}</span>
@@ -36,12 +36,15 @@
                 (onClick)="reset.emit(item.id)"
               />
             }
-            <p-toggleswitch
-              [ngModel]="item.enabled"
-              [disabled]="busy()"
-              [ariaLabelledBy]="'rule-label-' + item.id"
-              (onChange)="onToggle(item, $event.checked)"
-            />
+            <!-- A new switch is drawn when `revision` changes: a declined change leaves the old one off. -->
+            @for (version of [revision()]; track version) {
+              <p-toggleswitch
+                [ngModel]="item.enabled"
+                [disabled]="busy()"
+                [ariaLabelledBy]="'rule-label-' + item.id"
+                (onChange)="onToggle(item, $event.checked)"
+              />
+            }
           </div>
         </li>
       }

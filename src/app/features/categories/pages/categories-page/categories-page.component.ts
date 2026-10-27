@@ -93,6 +93,8 @@ export class CategoriesPageComponent {
     { label: 'Groups', value: 'groups' },
   ];
   protected readonly view = signal<'categories' | 'groups'>('categories');
+  /** Bumped to draw the switches as the data has them, after a change was declined or refused. */
+  protected readonly redraw = signal(0);
   protected readonly groups = signal<CategoryGroup[]>([]);
   protected readonly group = signal<string | null>(null);
   protected readonly status = signal<CategoryQuery['status']>('all');
@@ -224,7 +226,7 @@ export class CategoriesPageComponent {
       danger: !active,
     });
     if (!go) {
-      this.categories.update((list) => [...list]);
+      this.redraw.update((n) => n + 1);
       return;
     }
     this.api.setActive(category.id, active).subscribe({
@@ -241,7 +243,7 @@ export class CategoriesPageComponent {
         }
       },
       error: (error: unknown) => {
-        this.categories.update((list) => [...list]);
+        this.redraw.update((n) => n + 1);
         this.notifier.fromError(error, 'The category could not be changed');
       },
     });

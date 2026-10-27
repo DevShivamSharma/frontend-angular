@@ -6,7 +6,11 @@ export interface AppDialogOptions<D> {
   data?: D;
   /** CSS width; dialogs stay within the screen on phones. */
   width?: string;
-  /** False: a click outside does not close it (Escape still does). */
+  /**
+   * True: a click outside closes it. Off by default, as a dialog's `disableClose` is in Angular
+   * Material: a stray click on the dim background must not throw away what was typed or answer a
+   * question. Escape still closes every dialog, for keyboard users.
+   */
   dismissable?: boolean;
 }
 
@@ -35,7 +39,7 @@ export class AppDialog {
     component: Type<unknown>,
     options: AppDialogOptions<D> = {},
   ): DynamicDialogRef | null {
-    const dismissable = options.dismissable ?? true;
+    const dismissable = options.dismissable ?? false;
     const ref = this.dialogs.open(component, {
       data: options.data,
       modal: true,

@@ -73,6 +73,8 @@ export class GroupsPanelComponent {
   ];
   protected readonly show = signal<Show>('all');
   protected readonly query = signal('');
+  /** Bumped to draw the switches as the data has them, after a change was declined or refused. */
+  protected readonly redraw = signal(0);
   /** Placeholder columns while the list loads: number, name, status, action. */
   protected readonly skeleton = [
     { width: '1.5rem' },
@@ -149,7 +151,7 @@ export class GroupsPanelComponent {
       danger: !active,
     });
     if (!go) {
-      this.groups.update((list) => [...list]);
+      this.redraw.update((n) => n + 1);
       return;
     }
     this.api.setGroupActive(group.id, active).subscribe({
@@ -159,7 +161,7 @@ export class GroupsPanelComponent {
         this.changed.emit();
       },
       error: (error: unknown) => {
-        this.groups.update((list) => [...list]);
+        this.redraw.update((n) => n + 1);
         this.notifier.fromError(error, 'The group could not be changed');
       },
     });

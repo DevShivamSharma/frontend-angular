@@ -1,5 +1,6 @@
 <p-dialog
   closeAriaLabel="Close"
+  [dismissableMask]="false"
   [header]="'Categories of ' + (hall()?.name ?? 'the hall')"
   [(visible)]="visible"
   [modal]="true"

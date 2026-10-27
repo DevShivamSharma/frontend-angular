@@ -21,6 +21,7 @@ interface RawPage {
 export class CategoriesApiService {
   private readonly http = inject(HttpClient);
   private readonly url = `${inject(API_CONFIG).itpoAdmin}/admin/master`;
+  private readonly master = `${inject(API_CONFIG).ems}/category-master`;
 
   /**
    * The groups ITPO keeps: by default only the active ones, which is what every picker offers;
@@ -54,14 +55,18 @@ export class CategoriesApiService {
       .pipe(map(toGroup));
   }
 
-  /** Removes a category from ITPO's master for good; deactivating is the way to keep it. */
+  /**
+   * Removes a category for good. ITPO's own delete only switches it off (that is Deactivate), so
+   * this goes to the portal's service, which deletes the row, and refuses while halls or stalls
+   * still use it.
+   */
   deleteCategory(id: number): Observable<void> {
-    return this.http.delete(`${this.url}/code-master/delete/${id}`).pipe(map(() => undefined));
+    return this.http.delete(`${this.master}/categories/${id}`).pipe(map(() => undefined));
   }
 
-  /** Removes a group for good. */
+  /** Removes a group for good, once it holds no category and no event uses it. */
   deleteGroup(id: number): Observable<void> {
-    return this.http.delete(`${this.url}/types/delete/${id}`).pipe(map(() => undefined));
+    return this.http.delete(`${this.master}/groups/${id}`).pipe(map(() => undefined));
   }
 
   /** How many categories a group holds, active or not. */

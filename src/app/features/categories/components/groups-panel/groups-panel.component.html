@@ -56,11 +56,13 @@
             </th>
             <td class="cell-status">
               <span class="cell-state">
-                <p-toggleswitch
-                  [ngModel]="group.active"
-                  (onChange)="toggle(group, $event.checked)"
-                  [ariaLabel]="(group.active ? 'Deactivate ' : 'Activate ') + group.name"
-                />
+                @for (version of [redraw()]; track version) {
+                  <p-toggleswitch
+                    [ngModel]="group.active"
+                    (onChange)="toggle(group, $event.checked)"
+                    [ariaLabel]="(group.active ? 'Deactivate ' : 'Activate ') + group.name"
+                  />
+                }
                 <span class="badge" [class.badge--off]="!group.active">{{
                   group.active ? 'Active' : 'Inactive'
                 }}</span>
@@ -99,6 +101,7 @@
 
 <p-dialog
   closeAriaLabel="Close"
+  [dismissableMask]="false"
   header="New group"
   [(visible)]="visible"
   [modal]="true"

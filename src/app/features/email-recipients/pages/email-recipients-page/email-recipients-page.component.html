@@ -6,322 +6,157 @@
     <p-button actions label="New list" icon="pi pi-plus" (onClick)="openNew()" />
   </app-page-header>
 
-  <!-- TEMPORARY: compare looks. Keep one layout and one design, delete this bar and the rest. -->
-  <div class="lab">
-    <span class="lab__label">Layout</span>
-    <p-selectbutton
-      class="filter-seg"
-      [options]="layouts"
-      optionLabel="label"
-      optionValue="value"
-      [allowEmpty]="false"
-      [ngModel]="layout()"
-      (ngModelChange)="layout.set($event)"
-      ariaLabel="Page layout"
-    />
-    <span class="lab__label">Design</span>
-    <p-selectbutton
-      class="filter-seg"
-      [options]="designs"
-      optionLabel="label"
-      optionValue="value"
-      [allowEmpty]="false"
-      [ngModel]="design()"
-      (ngModelChange)="design.set($event)"
-      ariaLabel="Page design"
-    />
-  </div>
+  <section class="card card--flush list" aria-label="Email lists">
+    <div class="filters">
+      <p-iconfield class="filters__search">
+        <p-inputicon class="pi pi-search" />
+        <input
+          pInputText
+          type="search"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+          placeholder="Search lists"
+          aria-label="Search lists"
+        />
+      </p-iconfield>
+      @if (!loading() && !failed() && empty() > 0) {
+        <span class="alert" role="status">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          {{ empty() }} {{ empty() === 1 ? 'list has' : 'lists have' }} nobody, so its emails go
+          nowhere
+        </span>
+      }
+      <span class="text-muted filters__count" aria-live="polite">
+        @if (!loading() && !failed()) {
+          {{ shown().length }} {{ shown().length === 1 ? 'list' : 'lists' }}
+        }
+      </span>
+    </div>
 
-  @if (listsFailed()) {
-    <section class="card">
+    @if (failed()) {
       <app-empty-state
         icon="pi-exclamation-triangle"
         title="The lists could not be loaded"
         message="Check your connection and try again."
       >
-        <p-button label="Try again" icon="pi pi-refresh" (onClick)="loadLists()" />
+        <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
       </app-empty-state>
-    </section>
-  } @else {
-    @switch (layout()) {
-      @case ('pills') {
-        @if (!listsLoading() && !lists().length) {
-          <section class="card">
-            <ng-container *ngTemplateOutlet="noLists" />
-          </section>
-        } @else {
-          <nav class="pills" aria-label="Email lists">
-            @for (list of lists(); track list.slug) {
-              <button
-                type="button"
-                class="pill"
-                [class.is-off]="!list.active"
-                [attr.aria-current]="slug() === list.slug ? 'true' : null"
-                (click)="open(list.slug)"
-              >
-                <span
-                  class="dot"
-                  [class.dot--off]="!list.active"
-                  [class.dot--warn]="list.active && list.recipients === 0"
-                  aria-hidden="true"
-                ></span>
-                {{ list.name }}
-                <span
-                  class="pill__count"
-                  [attr.aria-label]="list.recipients + ' addresses switched on'"
-                  >{{ list.recipients }}</span
-                >
-              </button>
-            }
-          </nav>
-          <section class="card card--flush detail" [attr.aria-busy]="detailLoading()">
-            <ng-container *ngTemplateOutlet="detailBody" />
-          </section>
-        }
-      }
-      @case ('table') {
-        <section class="card card--flush">
-          @if (listsLoading()) {
-            <app-table-skeleton
-              [count]="4"
-              [columns]="[{ width: '40%' }, { width: '30%' }, { width: '3rem' }, { width: '5rem' }]"
-            />
-          } @else if (lists().length) {
-            <div class="data-table-wrap">
-              <table class="data-table">
-                <caption class="visually-hidden">
-                  Email lists
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">List</th>
-                    <th scope="col">Slug</th>
-                    <th scope="col" class="cell-count">People</th>
-                    <th scope="col" class="cell-status">Status</th>
-                    <th scope="col" class="cell-actions"><span class="th-short">Open</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (list of lists(); track list.slug) {
-                    <tr class="row-link" [class.is-off]="!list.active" (click)="openInDrawer(list.slug)">
-                      <th scope="row" class="cell-name">
-                        <button
-                          type="button"
-                          class="link-row"
-                          (click)="openInDrawer(list.slug); $event.stopPropagation()"
-                        >
-                          {{ list.name }}
-                        </button>
-                        @if (list.system) {
-                          <span class="cell-name__note">Used by the portal</span>
-                        }
-                      </th>
-                      <td><code class="slug-code">{{ list.slug }}</code></td>
-                      <td class="cell-count">
-                        <span class="count" [class.count--none]="list.active && list.recipients === 0">
-                          <i class="pi pi-users" aria-hidden="true"></i>{{ list.recipients }}
-                        </span>
-                      </td>
-                      <td class="cell-status">
-                        @if (!list.active) {
-                          <span class="badge badge--off">Off</span>
-                        } @else if (list.recipients === 0) {
-                          <span class="badge badge--warn">Nobody on it</span>
-                        } @else {
-                          <span class="badge">On</span>
-                        }
-                      </td>
-                      <td class="cell-actions">
-                        <i class="pi pi-chevron-right" aria-hidden="true"></i>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          } @else {
-            <ng-container *ngTemplateOutlet="noLists" />
-          }
-        </section>
-      }
-      @case ('accordion') {
-        <div class="accordion">
-          @if (listsLoading()) {
-            <section class="card card--flush">
-              <app-table-skeleton [count]="3" [columns]="[{ width: '60%' }, { width: '2rem' }]" />
-            </section>
-          } @else if (lists().length) {
-            @for (list of lists(); track list.slug) {
-              <section class="card card--flush acc" [class.is-open]="slug() === list.slug">
-                <button
-                  type="button"
-                  class="acc__head"
-                  [class.is-off]="!list.active"
-                  [attr.aria-expanded]="slug() === list.slug"
-                  (click)="open(list.slug)"
-                >
-                  <span
-                    class="dot"
-                    [class.dot--off]="!list.active"
-                    [class.dot--warn]="list.active && list.recipients === 0"
-                    aria-hidden="true"
-                  ></span>
-                  <span class="list-row__main">
-                    <span class="list-row__name">{{ list.name }}</span>
-                    <span class="list-row__slug">{{ list.slug }}</span>
-                  </span>
-                  <span class="list-row__meta">
-                    @if (!list.active) {
-                      <span class="badge badge--off">Off</span>
-                    }
-                    <span
-                      class="count"
-                      [class.count--none]="list.active && list.recipients === 0"
-                      [attr.aria-label]="list.recipients + ' addresses switched on'"
-                    >
-                      <i class="pi pi-users" aria-hidden="true"></i>{{ list.recipients }}
-                    </span>
-                  </span>
-                  <i
-                    class="pi"
-                    [class.pi-chevron-down]="slug() === list.slug"
-                    [class.pi-chevron-right]="slug() !== list.slug"
-                    aria-hidden="true"
-                  ></i>
-                </button>
-                @if (slug() === list.slug) {
-                  <div class="acc__body" [attr.aria-busy]="detailLoading()">
-                    <ng-container *ngTemplateOutlet="detailBody" />
-                  </div>
-                }
-              </section>
-            }
-          } @else {
-            <section class="card">
-              <ng-container *ngTemplateOutlet="noLists" />
-            </section>
-          }
-        </div>
-      }
-      @case ('select') {
-        @if (!listsLoading() && !lists().length) {
-          <section class="card">
-            <ng-container *ngTemplateOutlet="noLists" />
-          </section>
-        } @else {
-          <section class="card picker">
-            <label class="picker__label" for="list-pick">List</label>
-            <p-select
-              inputId="list-pick"
-              class="picker__select"
-              [options]="lists()"
-              optionLabel="name"
-              optionValue="slug"
-              [ngModel]="slug()"
-              (ngModelChange)="open($event)"
-              [loading]="listsLoading()"
-              placeholder="Choose a list"
-            >
-              <ng-template #item let-list>
-                <span class="picker__item">
-                  <span
-                    class="dot"
-                    [class.dot--off]="!list.active"
-                    [class.dot--warn]="list.active && list.recipients === 0"
-                    aria-hidden="true"
-                  ></span>
-                  {{ list.name }}
-                  <span class="count" [class.count--none]="list.active && list.recipients === 0">
-                    <i class="pi pi-users" aria-hidden="true"></i>{{ list.recipients }}
-                  </span>
-                </span>
-              </ng-template>
-            </p-select>
-          </section>
-          <section class="card card--flush detail" [attr.aria-busy]="detailLoading()">
-            <ng-container *ngTemplateOutlet="detailBody" />
-          </section>
-        }
-      }
-      @default {
-      <div class="split">
-        <nav class="card card--flush lists" aria-label="Email lists">
-          <h2 class="lists__title">Lists</h2>
-          @if (listsLoading()) {
-            <app-table-skeleton [count]="4" [columns]="[{ width: '70%' }, { width: '2rem' }]" />
-          } @else if (lists().length) {
-            <ul class="lists__items">
-              @for (list of lists(); track list.slug) {
-                <li>
-                  <button
-                    type="button"
-                    class="list-row"
-                    [class.is-off]="!list.active"
-                    [attr.aria-current]="slug() === list.slug ? 'true' : null"
-                    (click)="open(list.slug)"
-                  >
-                    <span
-                      class="dot"
-                      [class.dot--off]="!list.active"
-                      [class.dot--warn]="list.active && list.recipients === 0"
-                      aria-hidden="true"
-                    ></span>
-                    <span class="list-row__main">
-                      <span class="list-row__name">{{ list.name }}</span>
-                      <span class="list-row__slug">{{ list.slug }}</span>
-                    </span>
-                    <span class="list-row__meta">
-                      @if (!list.active) {
-                        <span class="badge badge--off">Off</span>
+    } @else if (loading()) {
+      <app-table-skeleton [count]="5" [columns]="skeleton" />
+    } @else if (shown().length) {
+      <div class="data-table-wrap">
+        <table class="data-table lists-table">
+          <caption class="visually-hidden">
+            Email lists
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="cell-no">Sr. no.</th>
+              <th scope="col">List</th>
+              <th scope="col" class="cell-people">People</th>
+              <th scope="col" class="cell-status">Status</th>
+              <th scope="col" class="cell-actions"><span class="th-short">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (list of shown(); track list.slug; let i = $index) {
+              <tr [class.is-off]="!list.active">
+                <td class="cell-no">{{ i + 1 }}</td>
+                <th scope="row" class="cell-name">
+                  <button type="button" class="row-open" (click)="openList(list.slug)">
+                    <span class="cell-name__title">
+                      {{ list.name }}
+                      @if (list.system) {
+                        <span class="tag">Used by the portal</span>
                       }
-                      <span
-                        class="count"
-                        [class.count--none]="list.active && list.recipients === 0"
-                        [attr.aria-label]="list.recipients + ' addresses switched on'"
-                      >
-                        <i class="pi pi-users" aria-hidden="true"></i>{{ list.recipients }}
-                      </span>
                     </span>
+                    <span class="slug-text">{{ list.slug }}</span>
                   </button>
-                </li>
-              }
-            </ul>
-          } @else {
-            <app-empty-state
-              icon="pi-envelope"
-              title="No lists yet"
-              message="Add a list, then the people who should get its emails."
-            />
-          }
-        </nav>
-
-        <section class="card card--flush detail" [attr.aria-busy]="detailLoading()">
-          <ng-container *ngTemplateOutlet="detailBody" />
-        </section>
+                </th>
+                <td class="cell-people">
+                  <span class="people" [class.people--none]="list.active && list.recipients === 0">
+                    <i class="pi pi-users" aria-hidden="true"></i>
+                    {{ list.recipients }}
+                    <span class="visually-hidden">
+                      {{ list.recipients === 1 ? 'address' : 'addresses' }} get emails
+                    </span>
+                  </span>
+                </td>
+                <td class="cell-status">
+                  <span class="cell-state">
+                    @for (version of [redraw()]; track version) {
+                      <p-toggleswitch
+                        [ngModel]="list.active"
+                        (onChange)="toggleList(list, $event.checked)"
+                        [ariaLabel]="(list.active ? 'Switch off ' : 'Switch on ') + list.name"
+                      />
+                    }
+                    <span class="badge" [class.badge--off]="!list.active">{{
+                      list.active ? 'On' : 'Off'
+                    }}</span>
+                  </span>
+                </td>
+                <td class="cell-actions">
+                  <p-button
+                    icon="pi pi-users"
+                    severity="secondary"
+                    [text]="true"
+                    [rounded]="true"
+                    pTooltip="Manage people"
+                    tooltipPosition="left"
+                    [ariaLabel]="'Manage the people on ' + list.name"
+                    (onClick)="openList(list.slug)"
+                  />
+                  <p-button
+                    icon="pi pi-trash"
+                    severity="secondary"
+                    [text]="true"
+                    [rounded]="true"
+                    styleClass="row-delete"
+                    [disabled]="list.system"
+                    [pTooltip]="
+                      list.system
+                        ? 'The portal sends to this list itself. Switch it off instead.'
+                        : 'Delete the list'
+                    "
+                    tooltipPosition="left"
+                    [ariaLabel]="'Delete ' + list.name"
+                    (onClick)="deleteList(list)"
+                  />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
-      }
+    } @else {
+      <app-empty-state
+        icon="pi-envelope"
+        [title]="query() ? 'No list matches your search' : 'No lists yet'"
+        [message]="
+          query()
+            ? 'Try a different name or slug.'
+            : 'Add a list, then the people who get its emails.'
+        "
+      />
     }
-  }
+  </section>
 </div>
 
-<ng-template #detailBody>
-  @if (detailFailed()) {
-    <app-empty-state
-      icon="pi-exclamation-triangle"
-      title="This list could not be loaded"
-      message="Check your connection and try again."
-    />
-  } @else if (selected(); as list) {
-    <header class="detail__head">
-      <div class="detail__titles">
-        <h2>
-          {{ list.name }}
-          @if (list.system) {
-            <span class="badge badge--info">Used by the portal</span>
-          }
-        </h2>
+<p-drawer
+  position="right"
+  [visible]="drawerOpen()"
+  (visibleChange)="drawerChanged($event)"
+  [modal]="true"
+  [dismissible]="false"
+  ariaCloseLabel="Close"
+  styleClass="people-drawer"
+>
+  <ng-template #header>
+    <div class="drawer-head">
+      @if (selected(); as list) {
+        <h2 class="drawer-head__title">{{ list.name }}</h2>
         <p class="slug">
-          <span class="slug__label">Slug</span>
           <code>{{ list.slug }}</code>
           <p-button
             [icon]="copied() ? 'pi pi-check' : 'pi pi-copy'"
@@ -330,105 +165,58 @@
             [rounded]="true"
             size="small"
             [pTooltip]="copied() ? 'Copied' : 'Copy the slug'"
-            tooltipPosition="top"
+            tooltipPosition="bottom"
             ariaLabel="Copy the slug"
-            (onClick)="copySlug()"
+            (onClick)="copySlug(list.slug)"
           />
         </p>
-        @if (list.description) {
-          <p class="text-muted">{{ list.description }}</p>
-        }
-      </div>
-      <div class="detail__tools">
-        <label class="switch-row" [attr.for]="'list-on'">
+      } @else {
+        <h2 class="drawer-head__title">Email list</h2>
+      }
+    </div>
+  </ng-template>
+
+  @if (detailFailed()) {
+    <app-empty-state
+      icon="pi-exclamation-triangle"
+      title="This list could not be loaded"
+      message="Check your connection and try again."
+    />
+  } @else if (selected(); as list) {
+    @if (list.description) {
+      <p class="text-muted drawer-note">{{ list.description }}</p>
+    }
+
+    <div class="drawer-state" [class.drawer-state--off]="!list.active">
+      @for (version of [redraw()]; track version) {
+        <label class="switch-row" for="list-on">
           <p-toggleswitch
             inputId="list-on"
             [ngModel]="list.active"
-            (onChange)="toggleList($event.checked)"
+            (onChange)="toggleList(list, $event.checked)"
           />
           <span>{{ list.active ? 'List is on' : 'List is off' }}</span>
         </label>
-        <p-button
-          icon="pi pi-trash"
-          severity="secondary"
-          [text]="true"
-          [rounded]="true"
-          styleClass="row-delete"
-          [disabled]="list.system"
-          [pTooltip]="
-            list.system
-              ? 'The portal sends to this list itself. Switch it off instead.'
-              : 'Delete the list'
-          "
-          tooltipPosition="left"
-          [ariaLabel]="'Delete ' + list.name"
-          (onClick)="deleteList()"
-        />
-      </div>
-    </header>
+      }
+      <span class="text-muted">
+        @if (!list.active) {
+          Emails that use it go to nobody.
+        } @else {
+          {{ list.recipients }} of {{ list.people.length }}
+          {{ list.people.length === 1 ? 'address gets' : 'addresses get' }} emails
+        }
+      </span>
+    </div>
 
-    @if (!list.active) {
-      <p class="notice notice--off" role="status">
-        <i class="pi pi-pause-circle" aria-hidden="true"></i>
-        This list is off. Emails that use it go to nobody.
-      </p>
-    } @else if (nobody()) {
-      <p class="notice notice--warn" role="status">
+    @if (list.active && list.recipients === 0) {
+      <p class="notice" role="status">
         <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-        Nobody is on this list yet, so nobody is told. Add an address below.
+        Nobody is told yet. Add an address below.
       </p>
     }
 
-    @if (design() === 'chips') {
-      <div class="add add--chips">
-        <label class="chips-label" for="recipient-email">
-          Email addresses <span class="required" aria-hidden="true">*</span>
-        </label>
-        <div class="chips" (click)="chipInput.focus()">
-          @for (email of chips(); track email) {
-            <span class="chip">
-              {{ email }}
-              <button
-                type="button"
-                class="chip__drop"
-                [attr.aria-label]="'Remove ' + email + ' before adding'"
-                (click)="dropChip(email); $event.stopPropagation()"
-              >
-                <i class="pi pi-times" aria-hidden="true"></i>
-              </button>
-            </span>
-          }
-          <input
-            #chipInput
-            #recipientEmail
-            id="recipient-email"
-            class="chips__input"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            [placeholder]="chips().length ? '' : 'Type or paste addresses, then press Enter'"
-            (keydown)="chipKey($event, chipInput)"
-            (paste)="chipPasted(chipInput)"
-            (blur)="takeChips(chipInput)"
-          />
-        </div>
-        <p-button
-          class="add__submit"
-          [label]="
-            chips().length > 1 ? 'Add ' + chips().length + ' addresses' : 'Add'
-          "
-          icon="pi pi-plus"
-          [loading]="working()"
-          (onClick)="addChips(chipInput)"
-        />
-        <p class="add__hint">
-          Separate addresses with Enter, a comma or a space. Pasting a whole column works too.
-        </p>
-      </div>
-    } @else {
     <form class="add" [formGroup]="addForm" (ngSubmit)="addPerson()" novalidate>
       <app-form-field
-        class="add__email"
         label="Email address"
         inputId="recipient-email"
         [control]="addForm.controls.email"
@@ -437,19 +225,13 @@
         <input
           pInputText
           id="recipient-email"
-          #recipientEmail
           type="email"
           formControlName="email"
           autocomplete="off"
           placeholder="name@example.com"
         />
       </app-form-field>
-      <app-form-field
-        class="add__name"
-        label="Name"
-        inputId="recipient-name"
-        [control]="addForm.controls.name"
-      >
+      <app-form-field label="Name" inputId="recipient-name" [control]="addForm.controls.name">
         <input
           pInputText
           id="recipient-name"
@@ -458,18 +240,8 @@
           placeholder="Optional"
         />
       </app-form-field>
-      <p-button
-        class="add__submit"
-        type="submit"
-        label="Add"
-        icon="pi pi-plus"
-        [loading]="working()"
-      />
-      <p class="add__hint">
-        Press Enter to add. Switch an address off to pause it without removing it.
-      </p>
+      <p-button type="submit" label="Add address" icon="pi pi-plus" [loading]="working()" />
     </form>
-    }
     @if (addFailure(); as message) {
       <p class="problem" role="alert">
         <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
@@ -477,203 +249,6 @@
     }
 
     @if (list.people.length) {
-      @switch (design()) {
-        @case ('cards') {
-          <div class="stats">
-            <div class="stat">
-              <span class="stat__n">{{ list.people.length }}</span>
-              <span class="stat__l">Total</span>
-            </div>
-            <div class="stat stat--on">
-              <span class="stat__n">{{ list.recipients }}</span>
-              <span class="stat__l">Getting emails</span>
-            </div>
-            <div class="stat">
-              <span class="stat__n">{{ paused() }}</span>
-              <span class="stat__l">Paused</span>
-            </div>
-          </div>
-          <ul class="people">
-            @for (person of list.people; track person.id) {
-              <li class="person-card" [class.is-off]="!person.active">
-                <span class="avatar avatar--lg" aria-hidden="true">{{ initial(person) }}</span>
-                <span class="person__text">
-                  <span class="person-card__title">{{ person.name || person.email }}</span>
-                  @if (person.name) {
-                    <span class="person-card__note">{{ person.email }}</span>
-                  }
-                  <span class="badge person-card__state" [class.badge--off]="!person.active">{{
-                    person.active ? 'Gets emails' : 'Paused'
-                  }}</span>
-                </span>
-                <span class="person-card__tools">
-                  <p-toggleswitch
-                    [ngModel]="person.active"
-                    (onChange)="togglePerson(person, $event.checked)"
-                    [ariaLabel]="(person.active ? 'Switch off ' : 'Switch on ') + person.email"
-                  />
-                  <p-button
-                    icon="pi pi-trash"
-                    severity="secondary"
-                    [text]="true"
-                    [rounded]="true"
-                    styleClass="row-delete"
-                    pTooltip="Remove"
-                    tooltipPosition="left"
-                    [ariaLabel]="'Remove ' + person.email"
-                    (onClick)="removePerson(person)"
-                  />
-                </span>
-              </li>
-            }
-          </ul>
-        }
-        @case ('dense') {
-          <div class="bar">
-            <p-selectbutton
-              class="filter-seg"
-              [options]="showOptions"
-              optionLabel="label"
-              optionValue="value"
-              [allowEmpty]="false"
-              [ngModel]="show()"
-              (ngModelChange)="show.set($event)"
-              ariaLabel="Show addresses"
-            />
-            <p-iconfield class="bar__search">
-              <p-inputicon class="pi pi-search" />
-              <input
-                pInputText
-                type="search"
-                [ngModel]="query()"
-                (ngModelChange)="query.set($event)"
-                placeholder="Search addresses"
-                aria-label="Search addresses"
-              />
-            </p-iconfield>
-          </div>
-          @if (ticked().length) {
-            <div class="bulk" role="status">
-              <strong>{{ ticked().length }} selected</strong>
-              <p-button
-                label="Pause"
-                icon="pi pi-pause"
-                severity="secondary"
-                size="small"
-                [text]="true"
-                (onClick)="pauseTicked(false)"
-              />
-              <p-button
-                label="Switch on"
-                icon="pi pi-play"
-                severity="secondary"
-                size="small"
-                [text]="true"
-                (onClick)="pauseTicked(true)"
-              />
-              <p-button
-                label="Remove"
-                icon="pi pi-trash"
-                severity="danger"
-                size="small"
-                [text]="true"
-                (onClick)="removeTicked()"
-              />
-              <p-button
-                class="bulk__clear"
-                label="Clear"
-                severity="secondary"
-                size="small"
-                [text]="true"
-                (onClick)="tickAll(false)"
-              />
-            </div>
-          }
-          @if (visible().length) {
-            <div class="data-table-wrap">
-              <table class="data-table data-table--dense">
-                <caption class="visually-hidden">
-                  People on
-                  {{
-                    list.name
-                  }}
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col" class="cell-tick">
-                      <p-checkbox
-                        [binary]="true"
-                        [ngModel]="allTicked()"
-                        [indeterminate]="ticked().length > 0 && !allTicked()"
-                        (onChange)="tickAll($event.checked)"
-                        ariaLabel="Select every address shown"
-                      />
-                    </th>
-                    <th scope="col">Address</th>
-                    <th scope="col" class="cell-status">Status</th>
-                    <th scope="col" class="cell-actions">
-                      <span class="th-short">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (person of visible(); track person.id) {
-                    <tr [class.is-off]="!person.active" [class.is-ticked]="isTicked(person)">
-                      <td class="cell-tick">
-                        <p-checkbox
-                          [binary]="true"
-                          [ngModel]="isTicked(person)"
-                          (onChange)="tick(person, $event.checked)"
-                          [ariaLabel]="'Select ' + person.email"
-                        />
-                      </td>
-                      <th scope="row" class="cell-name">
-                        <span class="cell-name__title">{{ person.email }}</span>
-                        @if (person.name) {
-                          <span class="cell-name__note">{{ person.name }}</span>
-                        }
-                      </th>
-                      <td class="cell-status">
-                        <span class="cell-state">
-                          <p-toggleswitch
-                            [ngModel]="person.active"
-                            (onChange)="togglePerson(person, $event.checked)"
-                            [ariaLabel]="
-                              (person.active ? 'Switch off ' : 'Switch on ') + person.email
-                            "
-                          />
-                          <span class="badge" [class.badge--off]="!person.active">{{
-                            person.active ? 'Gets emails' : 'Paused'
-                          }}</span>
-                        </span>
-                      </td>
-                      <td class="cell-actions">
-                        <p-button
-                          icon="pi pi-trash"
-                          severity="secondary"
-                          [text]="true"
-                          [rounded]="true"
-                          styleClass="row-delete"
-                          pTooltip="Remove"
-                          tooltipPosition="left"
-                          [ariaLabel]="'Remove ' + person.email"
-                          (onClick)="removePerson(person)"
-                        />
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          } @else {
-            <app-empty-state
-              icon="pi-search"
-              title="No matches"
-              message="Try another word, or show All."
-            />
-          }
-        }
-        @default {
       <div class="data-table-wrap">
         <table class="data-table">
           <caption class="visually-hidden">
@@ -686,7 +261,7 @@
             <tr>
               <th scope="col" class="cell-no">Sr. no.</th>
               <th scope="col">Address</th>
-              <th scope="col" class="cell-status">Status</th>
+              <th scope="col" class="cell-status">Active</th>
               <th scope="col" class="cell-actions"><span class="th-short">Actions</span></th>
             </tr>
           </thead>
@@ -695,29 +270,19 @@
               <tr [class.is-off]="!person.active">
                 <td class="cell-no">{{ i + 1 }}</td>
                 <th scope="row" class="cell-name">
-                  <span class="person">
-                    <span class="avatar" aria-hidden="true">{{ initial(person) }}</span>
-                    <span class="person__text">
-                      <span class="cell-name__title">{{ person.email }}</span>
-                      @if (person.name) {
-                        <span class="cell-name__note">{{ person.name }}</span>
-                      }
-                    </span>
-                  </span>
+                  <span class="cell-name__title">{{ person.email }}</span>
+                  @if (person.name) {
+                    <span class="cell-name__note">{{ person.name }}</span>
+                  }
                 </th>
                 <td class="cell-status">
-                  <span class="cell-state">
+                  @for (version of [redraw()]; track version) {
                     <p-toggleswitch
                       [ngModel]="person.active"
                       (onChange)="togglePerson(person, $event.checked)"
-                      [ariaLabel]="
-                        (person.active ? 'Switch off ' : 'Switch on ') + person.email
-                      "
+                      [ariaLabel]="(person.active ? 'Pause ' : 'Switch on ') + person.email"
                     />
-                    <span class="badge" [class.badge--off]="!person.active">{{
-                      person.active ? 'Gets emails' : 'Paused'
-                    }}</span>
-                  </span>
+                  }
                 </td>
                 <td class="cell-actions">
                   <p-button
@@ -737,18 +302,6 @@
           </tbody>
         </table>
       </div>
-        }
-      }
-      <div class="list-foot">
-        <span class="text-muted" aria-live="polite">
-          {{ list.recipients }} of {{ list.people.length }}
-          {{ list.people.length === 1 ? 'address' : 'addresses' }}
-          {{ list.recipients === 1 ? 'gets' : 'get' }} emails
-        </span>
-        @if (list.people.length > list.recipients) {
-          <span class="badge badge--off">{{ list.people.length - list.recipients }} paused</span>
-        }
-      </div>
     } @else {
       <app-empty-state
         icon="pi-envelope"
@@ -756,41 +309,14 @@
         message="Add the people who should get these emails."
       />
     }
-  } @else if (detailLoading() || listsLoading()) {
-    <app-table-skeleton [count]="5" [columns]="skeleton" />
   } @else {
-    <app-empty-state
-      icon="pi-envelope"
-      title="Choose a list"
-      message="Pick a list to see who gets its emails."
-    />
+    <app-table-skeleton [count]="4" [columns]="peopleSkeleton" />
   }
-</ng-template>
-
-<ng-template #noLists>
-  <app-empty-state
-    icon="pi-envelope"
-    title="No lists yet"
-    message="Add a list, then the people who should get its emails."
-  />
-</ng-template>
-
-@if (layout() === 'table') {
-  <p-drawer
-    header="Email list"
-    position="right"
-    [visible]="drawerOpen()"
-    (visibleChange)="drawerOpen.set($event)"
-    [style]="{ width: '46rem', maxWidth: '100vw' }"
-  >
-    <div class="detail detail--drawer" [attr.aria-busy]="detailLoading()">
-      <ng-container *ngTemplateOutlet="detailBody" />
-    </div>
-  </p-drawer>
-}
+</p-drawer>
 
 <p-dialog
   closeAriaLabel="Close"
+  [dismissableMask]="false"
   header="New list"
   [visible]="dialogOpen()"
   (visibleChange)="dialogOpen.set($event)"
