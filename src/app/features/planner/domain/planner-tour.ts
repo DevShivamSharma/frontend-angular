@@ -227,7 +227,7 @@ export function plannerTour(options: PlannerTourOptions): TourStep<PlannerTourCt
       title: 'Draw a booth',
       body: [
         'Drag on the floor for a booth of any size, or click once for a 3 × 3 m booth.',
-        'A booth that breaks a rule of the hall — on a passage, against a wall, facing the closed side of another booth — is not made, and a message says why.',
+        'A booth that breaks a rule of the hall — on a passage, against a wall, an open side blocked by another booth — is not made, and a message says why.',
       ],
       action: {
         prompt: 'A 3 × 3 m booth is drawn in the zone.',
@@ -330,7 +330,7 @@ export function plannerTour(options: PlannerTourOptions): TourStep<PlannerTourCt
       },
       title: 'Open a side',
       body: [
-        'A booth’s open sides face the visitors. Each open side needs the passage width clear in front of it, and it may not face the closed side of another booth; the rules check both.',
+        'A booth’s open sides face the visitors. Each open side needs the passage width clear in front of it; the rules check it.',
       ],
       action: {
         prompt: 'Another side is opened too.',
