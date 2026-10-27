@@ -2,8 +2,25 @@
  * A plain data table for lists that are read across (number, name, state, action): real table
  * semantics, rows tall enough for a finger, a header that stays put while the page scrolls.
  */
+:root {
+  /* The filter bar above a table: a control, the bar's padding and its border. */
+  --table-filters-height: calc(var(--control-height) + 2 * var(--space-3) + 0.25rem);
+}
+
+/* The filter bar stays under the topbar while the page scrolls; the table header sits right under it. */
+.sticky-filters {
+  position: sticky;
+  top: var(--app-topbar-height);
+  z-index: 2;
+  box-sizing: border-box;
+  min-height: var(--table-filters-height);
+  background: var(--app-surface);
+}
+
 .data-table-wrap {
-  overflow-x: auto;
+  /* `auto` would make this a scroll container and the header could no longer stick to the page;
+     the phone breakpoint below brings horizontal scrolling back. */
+  overflow-x: clip;
 }
 
 .data-table {
@@ -21,7 +38,7 @@
 
   thead th {
     position: sticky;
-    top: 0;
+    top: calc(var(--app-topbar-height) + var(--table-filters-height));
     z-index: 1;
     padding-block: var(--space-2);
     background: var(--app-surface-2);
@@ -154,14 +171,27 @@
   }
 }
 
-/* A filter, not a call to action: the chosen option is marked quietly, not in the brand colour. */
+/*
+ * A filter, not a call to action: the chosen option is marked quietly, not in the brand colour.
+ * PrimeNG draws a selectbutton with a border on each segment (none on the left of all but the
+ * first), so a border on the chosen one left it open on one side and square in the middle. Here
+ * the segments share the track colour as their border, and the chosen one is lifted with a ring.
+ */
 .filter-seg.p-selectbutton,
 .filter-seg .p-selectbutton {
+  .p-togglebutton {
+    border-color: var(--app-surface-2);
+  }
+
   .p-togglebutton.p-togglebutton-checked {
+    position: relative;
+    z-index: 1;
+    border-radius: var(--app-radius-md);
     background: var(--app-surface);
-    border-color: var(--app-border-strong);
     color: var(--app-text);
-    box-shadow: var(--app-shadow-sm);
+    box-shadow:
+      0 0 0 1px var(--app-border-strong),
+      var(--app-shadow-sm);
   }
 
   .p-togglebutton:not(.p-togglebutton-checked) {
@@ -171,6 +201,15 @@
 }
 
 @media (max-width: 40rem) {
+  /* A phone's filters wrap into several rows: too tall to keep on screen. */
+  .sticky-filters {
+    position: static;
+  }
+
+  .data-table-wrap {
+    overflow-x: auto;
+  }
+
   .data-table {
     th,
     td {

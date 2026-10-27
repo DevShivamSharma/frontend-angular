@@ -3,6 +3,10 @@
 }
 
 .toolbar {
+  position: sticky;
+  top: var(--app-topbar-height);
+  z-index: 2;
+  background: var(--app-surface);
   display: flex;
   flex-wrap: wrap;
   align-items: center;

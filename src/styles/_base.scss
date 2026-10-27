@@ -109,7 +109,9 @@ a {
 
 .card--flush {
   padding: 0;
-  overflow: hidden;
+  /* `clip`, not `hidden`: it rounds the corners without making the card a scroll container, so a
+     sticky toolbar or table header inside it still sticks to the page. */
+  overflow: clip;
 }
 
 .text-muted {
