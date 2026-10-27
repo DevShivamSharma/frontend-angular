@@ -141,7 +141,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             p: Triple;
             t: Triple;
             radius?: number;
-        }> = { overview: { p: [-720, 600, 640], t: [-65, 12, 0] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
+        }> = { overview: { p: [378.8, -406.5, 497.2], t: [-54.2, 4.6, 12] }, cc: { p: [-350, -20, 112], t: [-284, -228, 23] }, fountain: { p: [-295, 276, 95], t: [-201, 182, 0] } };
         let root: T.Group | undefined, tween: Tween | null = null, level = 0, globe: Awaited<ReturnType<typeof createGlobeContext>> | undefined;
         let prepared = false, localMapReady = false;
         let mapSurfaces: T.Group | undefined, scenery: VenueScenery = INITIAL_SCENERY, appearanceMode: VenueAppearance = 'natural';
@@ -259,7 +259,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
             controls.maxPolarAngle = Math.PI * .49;
             resetLevel();highlight(id);const v=views[id];if(!v)return;
             const target=W(...v.t),eye=W(...v.p);
-            const radius=v.radius ?? (({overview:490,cc:110,hall1:70,hall14:70,hall6:86,hall11:74,hall12A:74,hall12:56,fountain:72} as Record<string,number>)[id]||62);
+            const radius=v.radius ?? (({overview:360,cc:110,hall1:70,hall14:70,hall6:86,hall11:74,hall12A:74,hall12:56,fountain:72} as Record<string,number>)[id]||62);
             const fit=radius/Math.tan(T.MathUtils.degToRad(camera.fov/2))*Math.max(.78,1/camera.aspect);
             if(eye.distanceTo(target)<fit)eye.sub(target).setLength(fit).add(target);
             fly(eye,target);
@@ -301,7 +301,7 @@ export function createVenueViewer(canvas: HTMLCanvasElement, loadInformation: ()
         controls.addEventListener('change', invalidate);
         camera.position.copy(W(...views['overview'].p));
         controls.target.copy(W(...views['overview'].t));
-        const initialFit = 510 / Math.tan(T.MathUtils.degToRad(camera.fov / 2)) * Math.max(.78, 1 / camera.aspect);
+        const initialFit = 360 / Math.tan(T.MathUtils.degToRad(camera.fov / 2)) * Math.max(.78, 1 / camera.aspect);
         camera.position.sub(controls.target).setLength(initialFit).add(controls.target);
         controls.update();
         try {

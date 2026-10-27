@@ -199,7 +199,7 @@ h1 small{display:block;font-size:11px;font-weight:400;letter-spacing:.4px;color:
 /* One row only: the search box first, the chips take whatever room is left after it, and pills that would
    overflow simply clip away behind the fade; nothing wraps to a second line, and the row stops short of the
    3D | Image switch at the top right. */
-:host(.overlay[data-ui=maps]) .map-head{left:16px;right:176px;top:16px;bottom:auto;transform:none;flex-wrap:nowrap;align-items:center;gap:8px;width:auto;padding:0;border-radius:0;background:none}
+:host(.overlay[data-ui=maps]) .map-head{left:16px;right:176px;top:16px;bottom:auto;transform:none;flex-wrap:nowrap;align-items:center;gap:8px;width:auto;padding:0;border-radius:0;background:none;box-shadow:none}
 /* The search box widens a touch past Google's 408 px to hold the view tools; it never shrinks onto the chips. */
 :host(.overlay[data-ui=maps]) .map-search{display:flex;flex:0 0 auto;width:min(548px,100%);height:48px;padding:0 8px 0 16px;border-radius:24px;background:#fff;box-shadow:var(--lift)}
 /* As on Google Maps desktop: the field first, then the magnifier, then the teal directions diamond. */

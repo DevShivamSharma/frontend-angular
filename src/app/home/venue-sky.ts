@@ -2,6 +2,8 @@ import * as T from 'three';
 
 /** Low afternoon light stays visible above the venue's usual eye-level views. */
 export const VENUE_SUN_DIRECTION = new T.Vector3(-.91, .14, -.37).normalize();
+/** Where the sun is drawn in the sky: ahead of the opening camera, so tilting up finds it. The light itself still comes from VENUE_SUN_DIRECTION. */
+export const VENUE_SKY_SUN_DIRECTION = new T.Vector3(-.11, .191, .976).normalize();
 export const VENUE_MOON_DIRECTION = new T.Vector3(-.84, .13, -.51).normalize();
 
 type SkyMode = 'day' | 'night' | 'space';
@@ -109,15 +111,22 @@ vec3 daySky(vec3 direction) {
   float sunlight = 1.0 - overcast * 0.92;
   color += vec3(0.12, 0.09, 0.045) * exp(-sunAngle * 4.0) * sunlight;
   color += vec3(0.28, 0.23, 0.15) * exp(-sunAngle * 33.0) * sunlight;
-  // A solar diameter near the real 0.53 degrees; its halo remains broader.
-  float solarDisc = (1.0 - smoothstep(0.0041, 0.0054, sunAngle)) * (1.0 - overcast);
-  color = mix(color, vec3(1.0, 0.985, 0.93), solarDisc);
   vec3 cloud = cloudLayers(direction, sunDirection);
   vec3 cloudColor = mix(vec3(0.94, 0.94, 0.91), vec3(0.58, 0.66, 0.72), cloud.y * 0.72);
   cloudColor = mix(cloudColor, mix(vec3(0.52, 0.55, 0.59), vec3(0.33, 0.36, 0.40), cloud.y), overcast);
   cloudColor += vec3(0.075, 0.066, 0.048) * exp(-sunAngle * 9.0) * (1.0 - cloud.x) * sunlight;
   color = mix(color, cloudColor, cloud.x * 0.93);
   color = mix(color, mix(vec3(0.89, 0.91, 0.92), vec3(0.48, 0.51, 0.55), overcast), cloud.z);
+  // A stylised sun, about four times the real disc, so it reads at screen size; a tight bloom
+  // blends it into the sky instead of leaving a hard-edged coin. It is drawn over the clouds,
+  // so a thin cloud softens it instead of hiding it.
+  float sunClear = 1.0 - cloud.x * 0.25 - cloud.z * 0.1;
+  // The halo stays well below white so the disc keeps its edge against it.
+  color += vec3(0.38, 0.26, 0.10) * exp(-sunAngle * 48.0) * sunlight * sunClear;
+  color += vec3(0.20, 0.13, 0.05) * exp(-sunAngle * 12.0) * sunlight * sunClear;
+  float solarDisc = (1.0 - smoothstep(0.0165, 0.0195, sunAngle)) * (1.0 - overcast);
+  vec3 sunColor = mix(vec3(1.0, 0.98, 0.82), vec3(1.0, 0.90, 0.58), smoothstep(0.006, 0.0185, sunAngle));
+  color = mix(color, sunColor, solarDisc * sunClear);
   // Below-horizon haze avoids a black seam during elevated orbital views.
   color = mix(mix(vec3(0.64, 0.71, 0.74), vec3(0.50, 0.53, 0.56), overcast), color, smoothstep(-0.18, 0.015, direction.y));
   return color;
@@ -219,7 +228,7 @@ export function createVenueSky(renderer: T.WebGLRenderer) {
   const quad = new T.PlaneGeometry(2, 2);
   const bakeMaterial = new T.ShaderMaterial({ vertexShader: fullscreenVertex, fragmentShader: bakeFragment,
     depthTest: false, depthWrite: false, toneMapped: false,
-    uniforms: { skyMode: { value: 0 }, overcast: { value: 0 }, sunDirection: { value: VENUE_SUN_DIRECTION.clone() },
+    uniforms: { skyMode: { value: 0 }, overcast: { value: 0 }, sunDirection: { value: VENUE_SKY_SUN_DIRECTION.clone() },
       moonDirection: { value: VENUE_MOON_DIRECTION.clone() } } });
   const bakeScene = new T.Scene(), bakeCamera = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const bakeMesh = new T.Mesh(quad, bakeMaterial); bakeMesh.frustumCulled = false; bakeScene.add(bakeMesh);
