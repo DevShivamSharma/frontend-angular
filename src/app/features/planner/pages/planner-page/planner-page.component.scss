@@ -704,19 +704,35 @@
 }
 
 /* Over the empty floor, not in the way of the first stroke once it starts. */
+/* The backdrop covers the whole screen, above the menu and the tools, and below the dialogs the
+   choices open. It is not dismissed by a click: one of the ways to begin has to be chosen. */
+.begin-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--palette-black) 48%, transparent);
+}
+
+.begin__leave {
+  display: inline-block;
+  margin-top: 14px;
+  color: var(--app-on-surface-variant);
+  font: var(--app-label-medium);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .begin {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 5;
-  width: min(34rem, calc(100% - 32px));
+  width: min(34rem, 100%);
   padding: 20px;
   border: 1px solid var(--app-outline-variant);
   border-radius: var(--app-radius-xl);
   background: var(--app-surface-container-lowest);
   box-shadow: var(--app-level3);
   text-align: center;
-  transform: translate(-50%, -50%);
 
   h2 {
     margin: 0 0 4px;

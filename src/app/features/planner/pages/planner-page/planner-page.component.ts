@@ -308,6 +308,8 @@ export class PlannerPageComponent implements HasUnsavedChanges {
   });
 
   constructor() {
+    // The first way to begin takes focus when the choice appears, so the keyboard starts there.
+    effect(() => this.beginFirst()?.nativeElement.focus());
     // The planner takes the width: the navigation shrinks to icons while it is open.
     const layout = inject(LayoutService);
     layout.focus.set(true);
@@ -1287,6 +1289,27 @@ export class PlannerPageComponent implements HasUnsavedChanges {
   });
 
   /** Nothing is drawn yet: the floor offers the three ways to begin. */
+  private readonly beginFirst = viewChild<ElementRef<HTMLButtonElement>>('beginFirst');
+
+  /** Tab stays among the ways to begin while the backdrop is up. */
+  protected trapBegin(event: KeyboardEvent): void {
+    if (event.key !== 'Tab') return;
+    const items = [
+      ...(event.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('button, a[href]'),
+    ];
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   protected readonly emptyPlan = computed(() => {
     const p = this.store.plan();
     return !p.stalls.length && !p.zones.length && !p.objects.length && !p.seats.length;

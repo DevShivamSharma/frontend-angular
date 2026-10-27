@@ -1284,25 +1284,37 @@
 
       <div class="stage" [class.split]="splitView()">
         @if (canEdit() && emptyPlan() && tool() === 'select') {
-          <div class="begin" role="group" aria-label="Ways to begin">
-            <h2>Start this hall's plan</h2>
-            <p class="muted">Pick how you want to begin. You can mix them later.</p>
-            <div class="begin__actions">
-              <button type="button" class="begin__card" (click)="autoBooths()">
-                <app-icon name="auto_awesome" />
-                <b>Auto-booths</b>
-                <span>Fill a zone with booths of one size.</span>
-              </button>
-              <button type="button" class="begin__card" (click)="importFile.click()">
-                <app-icon name="upload_file" />
-                <b>Import a plan</b>
-                <span>Read the stalls from a CAD drawing (PDF or DXF).</span>
-              </button>
-              <button type="button" class="begin__card" (click)="setTool('booth')">
-                <app-icon name="storefront" />
-                <b>Draw a booth</b>
-                <span>Drag on the floor, one booth at a time (B).</span>
-              </button>
+          <!-- A choice is needed before anything else: the backdrop stays, and a click on it does nothing. -->
+          <div class="begin-scrim" (keydown)="trapBegin($event)">
+            <div
+              class="begin"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="begin-title"
+              aria-describedby="begin-hint"
+            >
+              <h2 id="begin-title">Start this hall's plan</h2>
+              <p class="muted" id="begin-hint">
+                Pick how you want to begin. You can mix them later.
+              </p>
+              <div class="begin__actions">
+                <button #beginFirst type="button" class="begin__card" (click)="autoBooths()">
+                  <app-icon name="auto_awesome" />
+                  <b>Auto-booths</b>
+                  <span>Fill a zone with booths of one size.</span>
+                </button>
+                <button type="button" class="begin__card" (click)="importFile.click()">
+                  <app-icon name="upload_file" />
+                  <b>Import a plan</b>
+                  <span>Read the stalls from a CAD drawing (PDF or DXF).</span>
+                </button>
+                <button type="button" class="begin__card" (click)="setTool('booth')">
+                  <app-icon name="storefront" />
+                  <b>Draw a booth</b>
+                  <span>Drag on the floor, one booth at a time (B).</span>
+                </button>
+              </div>
+              <a class="begin__leave" [routerLink]="backLink()">Not now, back to the hall</a>
             </div>
           </div>
         }
