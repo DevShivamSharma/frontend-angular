@@ -1,0 +1,84 @@
+import { newHelper, notesProblem, readNotes, sameNotes, toNotesFields } from './hall-notes';
+
+const ROW = {
+  helper_text: [
+    {
+      positionX: 200,
+      positionY: -40,
+      image: [
+        { url: 'assets/images/toilet-male.svg', label: 'Gents', width: 30, height: 30 },
+        { url: 'assets/images/toilet-female.svg', label: 'Ladies' },
+      ],
+    },
+  ],
+  exit_labels: JSON.stringify([{ text: 'Gate 4', positionX: 60, positionY: 100, color: 'red' }]),
+  legends: [
+    { label: 'Passage', colorCode: '#ffd700', visibleInViewMode: true },
+    { label: 'Not for sale', htmlContent: 'NFS', visibleInBookMode: false },
+  ],
+};
+
+describe('hall notes', () => {
+  it('should read ITPO’s pixels as metres, and its text columns as lists', () => {
+    const notes = readNotes(ROW);
+
+    expect(notes.helpers[0]).toEqual(
+      jasmine.objectContaining({ x: 10, y: -2, kind: 'toilet-male', label: 'Gents' }),
+    );
+    expect(notes.labels[0]).toEqual(jasmine.objectContaining({ text: 'Gate 4', x: 3, y: 5 }));
+    expect(notes.legends.map((l) => [l.label, l.color, l.visible])).toEqual([
+      ['Passage', '#ffd700', true],
+      ['Not for sale', null, false],
+    ]);
+  });
+
+  it('should save in ITPO’s pixels, keeping what this portal does not edit', () => {
+    const notes = readNotes(ROW);
+    notes.helpers[0] = { ...notes.helpers[0], x: 12.5, label: 'Toilets' };
+    const fields = toNotesFields(notes);
+
+    expect(fields.helper_text[0]).toEqual(
+      jasmine.objectContaining({ positionX: 250, positionY: -40 }),
+    );
+    const images = fields.helper_text[0]['image'] as Record<string, unknown>[];
+    expect(images[0]).toEqual({
+      url: 'assets/images/toilet-male.svg',
+      label: 'Toilets',
+      width: 30,
+      height: 30,
+    });
+    expect(images[1]['label']).toBe('Ladies');
+    expect(fields.exit_labels[0]).toEqual({
+      text: 'Gate 4',
+      positionX: 60,
+      positionY: 100,
+      color: 'red',
+    });
+    expect(fields.legends[1]).toEqual(
+      jasmine.objectContaining({ htmlContent: 'NFS', visibleInBookMode: false }),
+    );
+  });
+
+  it('should give a new helper SelfCare’s icon and a 40 px size', () => {
+    const fields = toNotesFields({
+      helpers: [newHelper('stairs', { x: 1, y: 2 })],
+      labels: [],
+      legends: [],
+    });
+
+    expect(fields.helper_text[0]).toEqual({
+      positionX: 20,
+      positionY: 40,
+      image: [{ width: 40, height: 40, url: 'assets/images/stairs.svg', label: 'Stairs' }],
+    });
+  });
+
+  it('should say what is missing, and see an unchanged copy as the same', () => {
+    const notes = readNotes(ROW);
+    expect(notesProblem(notes)).toBeNull();
+    expect(sameNotes(notes, readNotes(ROW))).toBe(true);
+    expect(notesProblem({ ...notes, labels: [{ ...notes.labels[0], text: ' ' }] })).toBe(
+      'Give every text label its words.',
+    );
+  });
+});

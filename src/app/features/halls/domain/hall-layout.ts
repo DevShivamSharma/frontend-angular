@@ -1,3 +1,5 @@
+import { HallNotes, readNotes } from './hall-notes';
+
 /**
  * A hall's layout as ITPO keeps it (`T_HALL_LAYOUTS`): a grid of 1 m cells, `columns` across and
  * `rows` down, with rectangles marking what cannot be used. ITPO's own are the walls and cut
@@ -20,6 +22,8 @@ export interface HallLayout {
   /** The layout as ITPO sent it, so what this portal does not touch is saved back as it was. */
   data: Record<string, unknown>;
   areas: LayoutArea[];
+  /** Its helpers, text labels and legend (ITPO's `helper_text`, `exit_labels` and `legends`). */
+  notes: HallNotes;
 }
 
 export const PILLAR_FILL = '#6b7280';
@@ -307,5 +311,6 @@ export function parseLayout(raw: unknown, hallId: number): HallLayout | null {
     rows: Math.round(rows),
     data: data as Record<string, unknown>,
     areas: (Array.isArray(list) ? list : []).map(toArea).filter((a): a is LayoutArea => a !== null),
+    notes: readNotes(row),
   };
 }

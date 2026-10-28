@@ -155,3 +155,116 @@
     font-size: var(--text-base);
   }
 }
+
+/* Helpers, text labels and legend: a group each, one row per item. */
+.notes {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.notes__group {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--app-border);
+
+  h3 {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: 600;
+  }
+}
+
+.notes__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.notes__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.notes__empty {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.note-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-sm);
+
+  > input[pInputText] {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
+
+  .note-row__wide {
+    flex-basis: 14rem;
+  }
+}
+
+/* The one a click on the layout will put in place. */
+.note-row--picked {
+  border-color: var(--app-brand);
+  background: var(--app-brand-soft);
+}
+
+.note-row__kind {
+  flex: 0 0 9rem;
+  color: var(--app-muted);
+  font-size: var(--text-sm);
+}
+
+.note-row__color {
+  flex: none;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 2px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  cursor: pointer;
+}
+
+.note-row__code {
+  flex: none;
+  min-width: var(--control-height);
+  padding: 0 var(--space-2);
+  color: var(--app-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+}
+
+.note-row__show {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--app-muted);
+  font-size: var(--text-sm);
+}
+
+:host ::ng-deep .note-row .p-inputnumber {
+  flex: 0 0 6.5rem;
+  width: 6.5rem;
+}
+
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--app-danger);
+  font-size: var(--text-sm);
+}
+

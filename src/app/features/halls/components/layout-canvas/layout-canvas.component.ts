@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 
 import { isOutside, isPillar, LayoutArea } from '../../domain/hall-layout';
+import { HallNotes, NO_NOTES } from '../../domain/hall-notes';
 
 /** More cells than this and the metre grid is drawn every few metres, so it stays readable. */
 const FINE_GRID_LIMIT = 6000;
@@ -26,15 +27,37 @@ export class LayoutCanvasComponent {
   /** The wall line chosen to be moved (its place in the list of areas); drawn highlighted. */
   readonly selected = input<number | null>(null);
   readonly label = input('Layout of the hall');
+  /** The helpers and text labels to draw, where they stand (in metres; they may be outside the grid). */
+  readonly notes = input<HallNotes>(NO_NOTES);
+  /** The helper or label about to be placed: drawn highlighted. */
+  readonly picked = input<{ type: 'helper' | 'label'; index: number } | null>(null);
 
   readonly cellClicked = output<{ x: number; y: number }>();
 
   protected readonly hover = signal<{ x: number; y: number } | null>(null);
 
-  protected readonly viewBox = computed(() => `0 0 ${this.columns()} ${this.rows()}`);
-  protected readonly ratio = computed(() => `${this.columns()} / ${this.rows()}`);
+  /** The drawing's extent: the grid, grown to hold the helpers and labels outside it. */
+  private readonly bounds = computed(() => {
+    const { helpers, labels } = this.notes();
+    const points = [...helpers, ...labels];
+    const pad = this.noteSize() * 2;
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    const left = Math.min(0, ...xs.map((x) => x - pad));
+    const top = Math.min(0, ...ys.map((y) => y - pad));
+    const right = Math.max(this.columns(), ...xs.map((x) => x + pad));
+    const bottom = Math.max(this.rows(), ...ys.map((y) => y + pad));
+    return { left, top, width: right - left, height: bottom - top };
+  });
+  protected readonly viewBox = computed(() => {
+    const b = this.bounds();
+    return `${b.left} ${b.top} ${b.width} ${b.height}`;
+  });
+  protected readonly ratio = computed(() => `${this.bounds().width} / ${this.bounds().height}`);
   /** Width over height, so the SVG can be no taller than the screen allows without being letterboxed. */
-  protected readonly aspect = computed(() => this.columns() / this.rows());
+  protected readonly aspect = computed(() => this.bounds().width / this.bounds().height);
+  /** A helper's and a label's size, in metres: readable on a small hall and a big one alike. */
+  protected readonly noteSize = computed(() => Math.max(0.8, Math.max(this.columns(), this.rows()) / 50));
   protected readonly gridStep = computed(() =>
     this.columns() * this.rows() <= FINE_GRID_LIMIT
       ? 1

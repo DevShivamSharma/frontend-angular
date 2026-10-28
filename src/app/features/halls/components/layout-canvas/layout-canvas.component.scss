@@ -56,3 +56,35 @@
   stroke-dasharray: 0.8 0.5;
   pointer-events: none;
 }
+
+/* Helpers and text labels: drawn over the plan, outside the grid too; never in the way of a click. */
+.note,
+.note__label {
+  pointer-events: none;
+}
+
+.note__dot {
+  fill: var(--app-brand);
+  stroke: var(--app-surface);
+  stroke-width: 0.15;
+}
+
+.note__text,
+.note__label {
+  fill: var(--app-text);
+  font-family: var(--app-font-body);
+  font-weight: 600;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--app-surface);
+  stroke-width: 0.25;
+}
+
+.note--picked .note__dot {
+  fill: var(--app-text);
+}
+
+.note__label.note--picked {
+  fill: var(--app-brand);
+}
+
