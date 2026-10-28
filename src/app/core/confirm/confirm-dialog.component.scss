@@ -23,7 +23,7 @@
     border-radius: 50%;
     background: var(--confirm-tint, var(--app-brand-soft));
     color: var(--confirm-accent, var(--app-brand));
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
   }
 
   &__title {

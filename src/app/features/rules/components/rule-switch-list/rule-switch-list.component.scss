@@ -6,7 +6,7 @@
 .rule-group__title {
   margin: 0;
   padding: 14px 0 6px;
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 600;
   scroll-margin-top: calc(var(--app-topbar-height) + 16px);
 }
@@ -48,13 +48,13 @@
 .rule__ref {
   margin-left: 6px;
   color: var(--app-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 400;
 }
 
 .rule__description {
   color: var(--app-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .rule__tags {

@@ -13,7 +13,7 @@
 .tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid var(--app-outline-variant);
+  border-bottom: 1px solid var(--app-border);
 }
 
 .tab {
@@ -21,13 +21,13 @@
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   font: var(--app-label-large);
   cursor: pointer;
 
   &.on {
-    border-bottom-color: var(--app-primary);
-    color: var(--app-primary);
+    border-bottom-color: var(--app-brand);
+    color: var(--app-brand);
   }
 }
 
@@ -36,7 +36,7 @@
   gap: 8px;
   margin: 0;
   padding: 12px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-lg);
 }
 
@@ -65,7 +65,7 @@ label {
 
 .error {
   margin: 0;
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 
 .small {

@@ -21,132 +21,135 @@
   } @else if (store().halls().length) {
     <ul class="halls">
       @for (hall of store().halls(); track hall.eventHallId) {
+        <!-- A hall: thumbnail beside the name, its stalls, plan and prices in a strip, then the planner. -->
         <li class="hall">
-          <img
-            class="cover"
-            [src]="hall.coverImage ?? placeholder"
-            alt=""
-            loading="lazy"
-            appImageFallback
-          />
-          <div class="body">
-            <div class="head">
-              <div class="titles">
-                <h2>{{ hall.name }}</h2>
-                <p class="meta">
-                  <b>{{ hall.stallCount }}</b> {{ hall.forStallFnb ? 'F&B stalls' : 'stalls' }}
-                </p>
-              </div>
-              @if (!readonly()) {
-                <p-button
-                  icon="pi pi-ellipsis-v"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="secondary"
-                  [ariaLabel]="'More for ' + hall.name"
-                  (onClick)="menuHall.set(hall); menu.toggle($event)"
-                />
-              }
+          <div class="head">
+            <img
+              class="thumb"
+              [src]="hall.coverImage ?? placeholder"
+              alt=""
+              loading="lazy"
+              appImageFallback
+            />
+            <div class="titles">
+              <h2>{{ hall.name }}</h2>
+              <p class="meta">{{ hall.forStallFnb ? 'Food and beverage hall' : 'Exhibition hall' }}</p>
             </div>
-            <dl class="facts">
-              <div>
-                <dt>Plan</dt>
-                <dd>
-                  @if (statusOf(hall); as plan) {
-                    <p-tag
-                      [value]="statusLabel(plan.status)"
-                      [severity]="statusSeverity(plan.status)"
-                    />
-                  } @else {
-                    <p-tag value="Not started" severity="secondary" />
-                  }
-                </dd>
-              </div>
-              <div>
-                <dt>Prices</dt>
-                <dd>
-                  <p-tag
-                    [value]="hall.isPriceAdded ? 'Added' : 'Not added'"
-                    [severity]="hall.isPriceAdded ? 'success' : 'warn'"
-                  />
-                </dd>
-              </div>
-            </dl>
-            @if (statusOf(hall); as plan) {
-              @if (plan.status === 'rejected' && plan.review) {
-                <div class="banner" role="note">
-                  <b>Sent back:</b> {{ plan.review.note }}
-                  @for (file of plan.review.attachments ?? []; track file.id) {
-                    <button type="button" class="link" (click)="download(hall, file)">
-                      {{ file.name }}
-                    </button>
-                  }
-                </div>
-              }
-              @if (plan.canSubmit || plan.canWithdraw || plan.canApprove || plan.canReopen) {
-                <div class="workflow">
-                  @if (plan.canSubmit) {
-                    <p-button
-                      label="Send for approval"
-                      size="small"
-                      [disabled]="plan.violations > 0 || working() === hall.eventHallId"
-                      [title]="
-                        plan.violations > 0
-                          ? plan.violations + ' rule(s) are broken: fix them in the planner first'
-                          : ''
-                      "
-                      (onClick)="send(hall, plan)"
-                    />
-                  }
-                  @if (plan.canWithdraw) {
-                    <p-button
-                      label="Withdraw"
-                      size="small"
-                      severity="secondary"
-                      [outlined]="true"
-                      [disabled]="working() === hall.eventHallId"
-                      (onClick)="withdraw(hall)"
-                    />
-                  }
-                  @if (plan.canApprove) {
-                    <p-button
-                      label="Approve"
-                      size="small"
-                      [disabled]="plan.violations > 0 || working() === hall.eventHallId"
-                      (onClick)="approve(hall, plan)"
-                    />
-                    <p-button
-                      label="Reject"
-                      size="small"
-                      severity="danger"
-                      [outlined]="true"
-                      [disabled]="working() === hall.eventHallId"
-                      (onClick)="reject(hall, plan)"
-                    />
-                  }
-                  @if (plan.canReopen) {
-                    <p-button
-                      label="Reopen"
-                      size="small"
-                      severity="secondary"
-                      [outlined]="true"
-                      [disabled]="working() === hall.eventHallId"
-                      (onClick)="reopen(hall)"
-                    />
-                  }
-                </div>
-              }
-            }
-            @if (plannerBase(); as base) {
-              <a
-                class="cta"
-                [routerLink]="[base, store().summary()?.id, 'halls', hall.eventHallId, 'planner']"
-              >
-                <i class="pi pi-th-large" aria-hidden="true"></i>
-                {{ plannerLabel() }}
-              </a>
+            @if (!readonly()) {
+              <p-button
+                icon="pi pi-ellipsis-v"
+                [text]="true"
+                [rounded]="true"
+                severity="secondary"
+                [ariaLabel]="'More for ' + hall.name"
+                (onClick)="menuHall.set(hall); menu.toggle($event)"
+              />
             }
           </div>
+          <dl class="facts">
+            <div>
+              <dt>{{ hall.forStallFnb ? 'F&B stalls' : 'Stalls' }}</dt>
+              <dd>{{ hall.stallCount }}</dd>
+            </div>
+            <div>
+              <dt>Plan</dt>
+              @if (statusOf(hall); as plan) {
+                <dd [attr.data-tone]="statusSeverity(plan.status)">{{ statusLabel(plan.status) }}</dd>
+              } @else {
+                <dd data-tone="secondary">Not started</dd>
+              }
+            </div>
+            <div>
+              <dt>Prices</dt>
+              <dd [attr.data-tone]="hall.isPriceAdded ? 'success' : 'warn'">
+                {{ hall.isPriceAdded ? 'Added' : 'Not added' }}
+              </dd>
+            </div>
+          </dl>
+          @if (statusOf(hall); as plan) {
+            @if (
+              (plan.status === 'rejected' && plan.review) ||
+              plan.canSubmit ||
+              plan.canWithdraw ||
+              plan.canApprove ||
+              plan.canReopen
+            ) {
+              <div class="actions">
+                @if (plan.status === 'rejected' && plan.review) {
+                  <div class="banner" role="note">
+                    <b>Sent back:</b> {{ plan.review.note }}
+                    @for (file of plan.review.attachments ?? []; track file.id) {
+                      <button type="button" class="link" (click)="download(hall, file)">
+                        {{ file.name }}
+                      </button>
+                    }
+                  </div>
+                }
+                @if (plan.canSubmit || plan.canWithdraw || plan.canApprove || plan.canReopen) {
+                  <div class="workflow">
+                    @if (plan.canSubmit) {
+                      <p-button
+                        label="Send for approval"
+                        size="small"
+                        [disabled]="plan.violations > 0 || working() === hall.eventHallId"
+                        [title]="
+                          plan.violations > 0
+                            ? plan.violations + ' rule(s) are broken: fix them in the planner first'
+                            : ''
+                        "
+                        (onClick)="send(hall, plan)"
+                      />
+                    }
+                    @if (plan.canWithdraw) {
+                      <p-button
+                        label="Withdraw"
+                        size="small"
+                        severity="secondary"
+                        [outlined]="true"
+                        [disabled]="working() === hall.eventHallId"
+                        (onClick)="withdraw(hall)"
+                      />
+                    }
+                    @if (plan.canApprove) {
+                      <p-button
+                        label="Approve"
+                        size="small"
+                        [disabled]="plan.violations > 0 || working() === hall.eventHallId"
+                        (onClick)="approve(hall, plan)"
+                      />
+                      <p-button
+                        label="Reject"
+                        size="small"
+                        severity="danger"
+                        [outlined]="true"
+                        [disabled]="working() === hall.eventHallId"
+                        (onClick)="reject(hall, plan)"
+                      />
+                    }
+                    @if (plan.canReopen) {
+                      <p-button
+                        label="Reopen"
+                        size="small"
+                        severity="secondary"
+                        [outlined]="true"
+                        [disabled]="working() === hall.eventHallId"
+                        (onClick)="reopen(hall)"
+                      />
+                    }
+                  </div>
+                }
+              </div>
+            }
+          }
+          @if (plannerBase(); as base) {
+            <a
+              class="cta"
+              [routerLink]="[base, store().summary()?.id, 'halls', hall.eventHallId, 'planner']"
+            >
+              <span><i class="pi pi-th-large" aria-hidden="true"></i> {{ plannerLabel() }}</span>
+              <i class="pi pi-arrow-right" aria-hidden="true"></i>
+            </a>
+          }
         </li>
       }
     </ul>

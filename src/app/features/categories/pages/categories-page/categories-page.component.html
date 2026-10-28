@@ -35,32 +35,50 @@
                 aria-label="Search categories"
               />
             </p-iconfield>
-            <div class="filters__group">
-              <label for="category-group-filter">Group</label>
-              <p-select
-                inputId="category-group-filter"
-                [options]="groups()"
-                optionLabel="name"
-                optionValue="slug"
-                [ngModel]="group()"
-                (ngModelChange)="chooseGroup($event)"
-                [filter]="true"
-                filterBy="name"
-                placeholder="Choose a group"
-                appendTo="body"
-                styleClass="filters__select"
+            <div class="filters__end">
+              <div class="filters__group">
+                <label class="visually-hidden" for="category-group-filter">Group</label>
+                <p-select
+                  inputId="category-group-filter"
+                  [options]="groups()"
+                  optionLabel="name"
+                  optionValue="slug"
+                  [ngModel]="group()"
+                  (ngModelChange)="chooseGroup($event)"
+                  [filter]="true"
+                  filterBy="name"
+                  placeholder="Choose a group"
+                  appendTo="body"
+                  styleClass="filters__select"
+                />
+              </div>
+              <p-selectbutton
+                class="filter-seg"
+                [options]="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                [allowEmpty]="false"
+                [ngModel]="status()"
+                (ngModelChange)="chooseStatus($event)"
+                ariaLabel="Show"
               />
+              <span class="visually-hidden" id="categories-display-label">Categories display mode</span>
+              <p-selectbutton
+                class="view-seg"
+                [options]="displayOptions"
+                optionLabel="label"
+                optionValue="value"
+                [allowEmpty]="false"
+                [ngModel]="display()"
+                (ngModelChange)="chooseDisplay($event)"
+                ariaLabelledBy="categories-display-label"
+              >
+                <ng-template #item let-option>
+                  <i [class]="option.icon" aria-hidden="true"></i>
+                  <span>{{ option.label }}</span>
+                </ng-template>
+              </p-selectbutton>
             </div>
-            <p-selectbutton
-              class="filter-seg"
-              [options]="statusOptions"
-              optionLabel="label"
-              optionValue="value"
-              [allowEmpty]="false"
-              [ngModel]="status()"
-              (ngModelChange)="chooseStatus($event)"
-              ariaLabel="Show"
-            />
           </div>
 
           @if (groupsFailed()) {
@@ -79,8 +97,52 @@
               <p-button label="Try again" icon="pi pi-refresh" (onClick)="retry()" />
             </app-empty-state>
           } @else if (loading()) {
-            <app-table-skeleton [count]="10" [columns]="skeleton" />
+            @if (display() === 'grid') {
+              <app-card-skeleton [count]="6" />
+            } @else {
+              <app-table-skeleton [count]="10" [columns]="skeleton" />
+            }
           } @else if (categories().length) {
+            @if (display() === 'grid') {
+              <!-- A category: its name and description, then its switch and Delete, as the row has them. -->
+              <ul class="card-grid">
+                @for (category of categories(); track category.id) {
+                  <li class="item-card category-card" [class.is-off]="!category.active">
+                    <h2 class="item-card__title">{{ category.name }}</h2>
+                    <p class="item-card__meta category-card__note">
+                      {{ category.description || 'No description' }}
+                    </p>
+                    <div class="category-card__foot">
+                      <span class="cell-state">
+                        @for (version of [redraw()]; track version) {
+                          <p-toggleswitch
+                            [ngModel]="category.active"
+                            (onChange)="toggle(category, $event.checked)"
+                            [ariaLabel]="
+                              (category.active ? 'Deactivate ' : 'Activate ') + category.name
+                            "
+                          />
+                        }
+                        <span class="badge" [class.badge--off]="!category.active">{{
+                          category.active ? 'Active' : 'Inactive'
+                        }}</span>
+                      </span>
+                      <p-button
+                        icon="pi pi-trash"
+                        severity="secondary"
+                        [text]="true"
+                        [rounded]="true"
+                        styleClass="row-delete"
+                        pTooltip="Delete"
+                        tooltipPosition="left"
+                        [ariaLabel]="'Delete ' + category.name"
+                        (onClick)="remove(category)"
+                      />
+                    </div>
+                  </li>
+                }
+              </ul>
+            } @else {
             <div class="data-table-wrap">
               <table class="data-table">
                 <caption class="visually-hidden">
@@ -141,6 +203,7 @@
                 </tbody>
               </table>
             </div>
+            }
             <div class="list-foot">
               <span class="text-muted" aria-live="polite">
                 Showing {{ first() + 1 }}–{{ first() + categories().length }} of {{ total() }}

@@ -12,13 +12,28 @@
 }
 
 .filters__search {
-  flex: 0 1 18rem;
+  flex: 1 1 22rem;
+  max-width: 36rem;
+}
+
+:host ::ng-deep .filters__search input {
+  width: 100%;
+}
+
+/* The filters keep together at the right, as on the Halls and Events lists. */
+.filters__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
   margin-left: auto;
 }
 
 @media (max-width: 40rem) {
-  .filters__search {
+  .filters__search,
+  .filters__end {
     flex: 1 1 100%;
+    max-width: none;
     margin-left: 0;
   }
 }

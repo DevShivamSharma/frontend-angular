@@ -32,7 +32,7 @@ export class NotifierService {
   }
 
   /** What went wrong with an API call, in the words the API used. */
-  fromError(error: unknown, summary = 'Something went wrong'): void {
+  fromError(error: unknown, summary = 'Something went wrong. Please try again.'): void {
     this.error(summary, error instanceof ApiError ? error.message : undefined);
   }
 }

@@ -19,8 +19,8 @@
   gap: 2px 12px;
   min-height: 40px;
   padding: 4px 8px;
-  border-bottom: 1px solid var(--app-outline-variant);
-  background: var(--app-surface-container-lowest);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 .group {
   display: flex;
@@ -33,7 +33,7 @@
   width: 1px;
   height: 20px;
   margin: 0 6px;
-  background: var(--app-outline-variant);
+  background: var(--app-border);
 }
 .tools {
   display: flex;
@@ -54,7 +54,7 @@
   border: 0;
   border-radius: var(--app-radius-2xs);
   background: none;
-  color: var(--app-on-surface);
+  color: var(--app-text);
   cursor: pointer;
 }
 /* Holds the hidden name below: without it, that name escapes the toolbar's scroll and
@@ -71,7 +71,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--app-error);
+  background: var(--app-danger);
 }
 .tool app-icon,
 .mini app-icon {
@@ -94,16 +94,16 @@
 .tool:focus-visible,
 .mini:hover:not(:disabled):not(.soon),
 .mini:focus-visible {
-  background: var(--app-surface-container);
+  background: var(--app-surface-2);
 }
 .tool.on,
 .mini.on {
-  background: var(--app-on-surface);
+  background: var(--app-text);
   color: var(--app-surface);
 }
 .tool.on:hover,
 .mini.on:hover {
-  background: var(--app-on-surface) !important;
+  background: var(--app-text) !important;
 }
 .tool.auto {
   color: light-dark(var(--palette-green-700), var(--palette-green-400));
@@ -112,7 +112,7 @@
   color: light-dark(var(--palette-purple-700), var(--palette-purple-400));
 }
 .danger {
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 .tool:disabled,
 .mini:disabled {
@@ -130,7 +130,7 @@
   align-self: start;
   gap: 8px;
   padding: 2px 4px 0 12px;
-  border-left: 1px solid var(--app-outline-variant);
+  border-left: 1px solid var(--app-border);
 }
 /* Save and Publish sit on the toolbar line, as tall as its buttons. */
 .actions .save,
@@ -203,8 +203,8 @@
   color: light-dark(var(--palette-red-900), var(--palette-red-100));
 }
 .publish.quiet {
-  background: var(--app-surface-container);
-  color: var(--app-on-surface);
+  background: var(--app-surface-2);
+  color: var(--app-text);
 }
 .busy {
   position: absolute;
@@ -243,20 +243,20 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--app-surface-container-lowest);
+  background: var(--app-surface);
 }
 .left {
-  border-right: 1px solid var(--app-outline-variant);
+  border-right: 1px solid var(--app-border);
 }
 .right {
-  border-left: 1px solid var(--app-outline-variant);
+  border-left: 1px solid var(--app-border);
 }
 .side-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 10px 10px 14px;
-  border-bottom: 1px solid var(--app-outline-variant);
+  border-bottom: 1px solid var(--app-border);
 }
 .side-head h2 {
   margin: 0;
@@ -285,7 +285,7 @@
   text-decoration: none;
 }
 .back:hover {
-  background: var(--app-surface-container);
+  background: var(--app-surface-2);
 }
 .title {
   display: grid;
@@ -299,9 +299,9 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
-  background: var(--app-surface-container-lowest);
+  background: var(--app-surface);
 }
 .card-title {
   display: flex;
@@ -341,7 +341,7 @@
   justify-content: center;
   gap: 8px;
   padding: 8px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
   background: none;
   color: inherit;
@@ -352,9 +352,9 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }
 .search input {
   flex: 1;
@@ -363,12 +363,12 @@
   border: 0;
   outline: none;
   background: none;
-  color: var(--app-on-surface);
+  color: var(--app-text);
   font: var(--app-body-medium);
 }
 .search:focus-within {
-  border-color: var(--app-primary);
-  box-shadow: 0 0 0 3px var(--app-ring, color-mix(in srgb, var(--app-primary) 28%, transparent));
+  border-color: var(--app-brand);
+  box-shadow: inset 0 0 0 1px var(--app-brand);
 }
 .stage {
   position: relative;
@@ -385,13 +385,13 @@
 .split .canvas.second {
   left: 50%;
   right: 0;
-  border-left: 2px solid var(--app-outline-variant);
+  border-left: 2px solid var(--app-border);
 }
 .reopen {
   position: absolute;
   top: 12px;
   padding: 8px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
   background: var(--palette-white);
   color: var(--palette-slate-700);
@@ -411,7 +411,7 @@
   bottom: 12px;
   width: min(370px, calc(100% - 200px));
   padding: 10px 14px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
   background: var(--palette-white);
   box-shadow: var(--app-shadow-md);
@@ -479,7 +479,7 @@
 }
 .zones li.on,
 .tree button.on {
-  background: var(--app-secondary-container);
+  background: var(--app-surface-hover);
 }
 .zone,
 .tree button {
@@ -499,7 +499,7 @@
   cursor: pointer;
 }
 .tree button:hover {
-  background: var(--app-surface-container);
+  background: var(--app-surface-2);
 }
 .zname {
   flex: 1;
@@ -510,13 +510,13 @@
 .x {
   border: 0;
   background: none;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   padding: 6px;
   border-radius: var(--app-radius-xs);
   cursor: pointer;
 }
 .x:hover {
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 .legend li {
   display: flex;
@@ -543,10 +543,10 @@
   grid-template-columns: 1fr auto;
   gap: 6px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .stats dt {
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }
 .stats dd {
   margin: 0;
@@ -558,12 +558,12 @@
   color: var(--palette-green-600);
 }
 .stats .bad {
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 .stats.total {
   grid-template-columns: 1fr auto;
   padding-top: 8px;
-  border-top: 1px solid var(--app-outline-variant);
+  border-top: 1px solid var(--app-border);
 }
 
 .load-error {
@@ -584,7 +584,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--app-primary);
+  color: var(--app-brand);
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
@@ -600,17 +600,17 @@
 
 .chip {
   padding: 3px 10px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-pill);
   background: none;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   font: var(--app-label-medium);
   cursor: pointer;
 
   &.on {
-    border-color: var(--app-primary);
-    background: var(--app-primary-container);
-    color: var(--app-primary);
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
+    color: var(--app-brand);
   }
 }
 
@@ -660,8 +660,8 @@
   display: none;
   margin: 0;
   padding: 6px 12px;
-  background: var(--app-primary-container);
-  color: var(--app-on-primary-container);
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
   font: var(--app-body-small);
 }
 
@@ -693,12 +693,12 @@
 }
 
 .save-state {
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   font: var(--app-label-medium);
   white-space: nowrap;
 
   &.unsaved {
-    color: var(--app-error);
+    color: var(--app-danger);
     font-weight: 700;
   }
 }
@@ -719,7 +719,7 @@
 .begin__leave {
   display: inline-block;
   margin-top: 14px;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   font: var(--app-label-medium);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -728,9 +728,9 @@
 .begin {
   width: min(34rem, 100%);
   padding: 20px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-xl);
-  background: var(--app-surface-container-lowest);
+  background: var(--app-surface);
   box-shadow: var(--app-level3);
   text-align: center;
 
@@ -755,27 +755,27 @@
   gap: 4px;
   justify-items: center;
   padding: 14px 10px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-lg);
   background: none;
-  color: var(--app-on-surface);
+  color: var(--app-text);
   font: inherit;
   cursor: pointer;
 
   app-icon {
-    color: var(--app-primary);
-    font-size: 1.5rem;
+    color: var(--app-brand);
+    font-size: var(--text-2xl);
   }
 
   span {
-    color: var(--app-on-surface-variant);
+    color: var(--app-muted);
     font: var(--app-body-small);
   }
 
   &:hover,
   &:focus-visible {
-    border-color: var(--app-primary);
-    background: var(--app-primary-container);
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
   }
 }
 
@@ -804,11 +804,11 @@
   &:hover,
   &:focus-visible,
   &:active {
-    background: color-mix(in srgb, var(--app-primary) 28%, transparent);
+    background: color-mix(in srgb, var(--app-brand) 28%, transparent);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--app-primary);
+    outline: 2px solid var(--app-brand);
     outline-offset: -2px;
   }
 }
@@ -839,7 +839,7 @@
 
   .actions {
     border-left: 0;
-    border-top: 1px solid var(--app-outline-variant);
+    border-top: 1px solid var(--app-border);
     justify-content: flex-end;
     padding: 6px 4px 0;
   }
@@ -864,10 +864,10 @@
     align-self: center;
     min-height: 44px;
     padding: 0 14px;
-    border: 1px solid var(--app-outline);
+    border: 1px solid var(--app-border-strong);
     border-radius: var(--app-radius-md);
-    background: var(--app-surface-container-lowest);
-    color: var(--app-on-surface);
+    background: var(--app-surface);
+    color: var(--app-text);
     font: var(--app-label-large);
     cursor: pointer;
   }
@@ -892,7 +892,7 @@
     max-height: 82dvh;
     margin: 0 auto;
     border-radius: var(--app-radius-xl) var(--app-radius-xl) 0 0;
-    background: var(--app-surface-container-lowest);
+    background: var(--app-surface);
     box-shadow: var(--app-level3);
   }
 
@@ -901,7 +901,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--app-outline-variant);
+    border-bottom: 1px solid var(--app-border);
 
     h2 {
       margin: 0;
@@ -916,7 +916,7 @@
     height: 44px;
     border: 0;
     background: none;
-    color: var(--app-on-surface);
+    color: var(--app-text);
     cursor: pointer;
   }
 
@@ -933,7 +933,7 @@
 
   .sgroup__title {
     margin: 0 0 6px;
-    color: var(--app-on-surface-variant);
+    color: var(--app-muted);
     font: var(--app-label-medium);
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -961,22 +961,22 @@
     place-items: center;
     min-height: 64px;
     padding: 8px 4px;
-    border: 1px solid var(--app-outline-variant);
+    border: 1px solid var(--app-border);
     border-radius: var(--app-radius-md);
     background: none;
-    color: var(--app-on-surface);
+    color: var(--app-text);
     font: var(--app-label-medium);
     text-align: center;
     cursor: pointer;
 
     app-icon {
-      font-size: 1.25rem;
+      font-size: var(--text-xl);
     }
 
     &.on {
-      border-color: var(--app-primary);
-      background: var(--app-primary-container);
-      color: var(--app-primary);
+      border-color: var(--app-brand);
+      background: var(--app-brand-soft);
+      color: var(--app-brand);
     }
 
     &:disabled {
@@ -1000,5 +1000,133 @@
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
+  }
+}
+
+/* The tool row, as the redesign: names beside the main tools, a caret on the ones that open a menu. */
+.groups .tool app-icon {
+  font-size: 18px;
+}
+
+.groups .tool .caret {
+  margin-left: -1px;
+  color: var(--app-muted);
+  font-size: var(--text-base);
+}
+
+.groups .tool.labelled {
+  width: auto;
+  height: 34px;
+  padding: 0 9px;
+  gap: 6px;
+}
+
+/* The row keeps its words on a desktop too, over the icon-only rule above. */
+.groups .tool.labelled > span {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* A narrower desktop: the minor tools keep to the icon, their name in the tip. */
+@media (max-width: 1600px) {
+  .groups .tool.labelled.minor {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .groups .tool.labelled.minor > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .groups .tool.minor .caret {
+    display: none;
+  }
+}
+
+.groups .spacer {
+  min-width: 12px;
+}
+
+.tour-anchor {
+  display: inline-flex;
+}
+
+.tool-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.tool-menu {
+  position: fixed;
+  z-index: 41;
+  display: grid;
+  min-width: 15rem;
+  padding: 4px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+  box-shadow: 0 8px 24px rgb(16 16 24 / 14%);
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--app-radius-2xs);
+    background: none;
+    color: var(--app-text);
+    font: inherit;
+    font-size: var(--text-sm);
+    text-align: left;
+    cursor: pointer;
+
+    app-icon {
+      font-size: var(--text-lg);
+      color: var(--app-muted);
+    }
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      background: var(--app-surface-hover);
+    }
+
+    &.on {
+      background: var(--app-brand-soft);
+      color: var(--app-brand);
+
+      app-icon {
+        color: inherit;
+      }
+    }
+
+    &.danger,
+    &.danger app-icon {
+      color: var(--app-danger);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+  }
+
+  kbd {
+    margin-left: auto;
+    color: var(--app-muted);
+    font: inherit;
+    font-size: var(--text-xs);
   }
 }

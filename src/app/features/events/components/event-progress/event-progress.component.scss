@@ -6,11 +6,9 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 }
 
 .progress {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px 24px;
+  display: grid;
+  justify-items: start;
+  gap: 14px;
   margin-bottom: 20px;
   padding: 16px 20px;
   border: 1px solid var(--app-border);
@@ -21,8 +19,7 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 .steps {
   display: flex;
   flex-wrap: wrap;
-  flex: 1 1 42rem;
-  justify-content: space-between;
+  width: 100%;
   gap: 8px 10px;
   margin: 0;
   padding: 0;
@@ -33,28 +30,61 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   display: flex;
   align-items: center;
 
-  // The short line joining a step to the one before it.
+  // The line joining a step to the one before it, stretched to fill the row.
+  & + & {
+    flex: 1 1 0;
+  }
+
   & + &::before {
     content: '';
-    width: 20px;
+    flex: 1 1 20px;
+    min-width: 20px;
     height: 1px;
     margin-right: 8px;
     background: var(--app-border-strong);
   }
 }
 
+.step-btn {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 6px 10px 6px 8px;
+  border: 0;
+  border-radius: var(--app-radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+
+  &:hover {
+    background: var(--app-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--app-ring);
+  }
+
+  [data-state='now'] > & {
+    background: var(--app-brand-soft);
+  }
+}
+
 .label {
   display: grid;
-  padding: 6px 8px 6px 10px;
+  padding-left: 10px;
 
   b {
-    font-size: 14px;
+    font-size: var(--text-base);
     font-weight: 600;
   }
 
   small {
     color: var(--app-muted);
-    font-size: 13px;
+    font-size: var(--text-sm);
   }
 }
 
@@ -64,26 +94,25 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   place-items: center;
   width: 28px;
   height: 28px;
-  margin-left: 8px;
   border: 1.5px solid $control;
   border-radius: 50%;
   color: var(--app-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 700;
 
   .pi {
-    font-size: 11px;
+    font-size: var(--text-2xs);
   }
 
-  [data-state='done'] > & {
+  [data-state='done'] & {
     border-color: var(--app-success);
     background: var(--app-success);
     color: #fff;
   }
 
-  [data-state='now'] > & {
-    border-color: var(--app-text);
-    color: var(--app-text);
+  [data-state='now'] & {
+    border-color: var(--app-brand);
+    color: var(--app-brand);
   }
 }
 
@@ -94,7 +123,7 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 .done-all {
   margin: 0;
   color: var(--app-success);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 

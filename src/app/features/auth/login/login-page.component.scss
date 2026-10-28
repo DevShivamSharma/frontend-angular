@@ -1,119 +1,271 @@
+// The login design's warm paper, mixed into the surface so dark mode stays dark.
+$paper: #c8a26a;
+
 :host {
   display: block;
 }
 
 .login {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-  min-height: 100vh;
-}
-
-// The brand side: dark, with a soft glow of the ITPO red, and the product's one line of copy.
-.login__brand {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: var(--space-6) var(--space-7);
+  min-height: 100vh;
   overflow: hidden;
-  background:
-    radial-gradient(
-      60rem 40rem at 10% 110%,
-      color-mix(in srgb, var(--palette-brand-600) 55%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      40rem 30rem at 100% 0%,
-      color-mix(in srgb, var(--palette-plum-700) 35%, transparent),
-      transparent 55%
-    ),
-    var(--palette-ink-950);
-  color: var(--palette-white);
+  background: color-mix(in srgb, $paper 7%, var(--app-surface));
+  color: var(--app-text);
 
-  img {
-    padding: 0.375rem;
-    border-radius: var(--app-radius-md);
-    background: var(--palette-white);
+  // The red line along the top edge.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 1;
+    height: 3px;
+    background: var(--app-brand);
+  }
+}
+
+.login__scene {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
-  h2 {
-    max-width: 22rem;
-    font-size: 2.25rem;
-    line-height: 1.1;
-    letter-spacing: -0.03em;
+  // A sand wash over the top, behind the header.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 45%;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, $paper 22%, var(--app-surface)),
+      transparent
+    );
   }
+}
 
-  p {
-    max-width: 26rem;
-    color: color-mix(in srgb, var(--palette-white) 72%, transparent);
-    font-size: var(--text-lg);
-  }
+:host-context([data-theme='dark']) .login__scene canvas {
+  opacity: 0.25;
+}
+
+.login__top,
+.login__main,
+.login__bottom {
+  position: relative;
+}
+
+.login__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px clamp(16px, 4vw, 48px);
+}
+
+.login__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login__logo {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, $paper 30%, var(--app-border));
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+  box-shadow: 0 1px 2px rgb(60 40 10 / 6%);
 }
 
 .login__brand-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.login__panel {
   display: grid;
-  place-items: center;
-  padding: var(--space-5) var(--space-4);
-  background: var(--app-surface);
+  gap: 2px;
+
+  b {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  small {
+    color: var(--app-muted);
+    font-size: var(--text-xs);
+  }
 }
 
-.login__form {
+.login__main {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 16px 48px;
+}
+
+.login__card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 28px;
   width: 100%;
-  max-width: 23rem;
+  max-width: 432px;
+  padding: 40px 40px 32px;
+  border: 1px solid color-mix(in srgb, $paper 25%, var(--app-border));
+  border-radius: 20px;
+  background: var(--app-surface);
+  box-shadow:
+    0 1px 2px rgb(60 40 10 / 5%),
+    0 32px 64px -24px rgb(60 40 10 / 22%);
 }
 
 .login__heading {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  margin-bottom: var(--space-2);
+  gap: 8px;
 
   h1 {
-    font-size: var(--text-2xl);
+    margin: 8px 0 0;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+  }
+
+  p {
+    margin: 0;
+    color: var(--app-muted);
+    font-size: 15px;
+    line-height: 1.55;
   }
 }
 
-.login__logo {
-  display: none;
-  margin-bottom: var(--space-3);
+.login__mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
+
+  .pi {
+    font-size: 22px;
+  }
 }
 
-.login__help {
-  font-size: var(--text-sm);
+.login__form {
+  display: flex;
+  flex-direction: column;
+  // Room under each field for its one-line message, so the card keeps its height when one shows.
+  gap: 28px;
+}
+
+.login__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid color-mix(in srgb, $paper 18%, var(--app-border));
+  color: var(--app-muted);
   text-align: center;
+
+  p {
+    margin: 0;
+    font-size: var(--text-base);
+  }
+
+  .login__only {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: var(--text-sm);
+  }
 }
 
+.login__bottom {
+  padding: 20px clamp(16px, 4vw, 48px);
+  color: var(--app-muted);
+  font-size: var(--text-xs);
+}
+
+// The fields and button at the design's size: 48 px fields with an icon, a 52 px red button.
 :host ::ng-deep {
+  .login__form .p-iconfield,
   .login__password,
-  .login__password-input {
+  .login__password-input,
+  .login__form input[pInputText] {
     width: 100%;
+  }
+
+  .login__form input[pInputText],
+  .login__password-input {
+    height: 48px;
+    border-radius: 12px;
+    background: color-mix(in srgb, $paper 3%, var(--app-surface));
+    font-size: var(--text-lg);
+  }
+
+  // The browser's own autofill colour (light blue) gives way to the field's.
+  .login__form input:-webkit-autofill,
+  .login__form input:-webkit-autofill:hover,
+  .login__form input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 100px color-mix(in srgb, $paper 3%, var(--app-surface)) inset;
+    -webkit-text-fill-color: var(--app-text);
+    caret-color: var(--app-text);
+  }
+
+  .login__form .field__hint {
+    color: var(--app-warning);
+    font-weight: 500;
+  }
+
+  // A field's error or hint sits in the gap below it instead of pushing the card taller.
+  .login__form .field {
+    position: relative;
+  }
+
+  .login__form .field__error,
+  .login__form .field__hint {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    line-height: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .login__form .p-inputicon {
+    color: color-mix(in srgb, $paper 45%, var(--app-muted));
+  }
+
+  .login__form .field__label {
+    font-size: var(--text-base);
+    font-weight: 600;
   }
 
   .login__submit {
     width: 100%;
+    height: 52px;
+    gap: 10px;
     justify-content: center;
+    border-radius: 12px;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--app-brand) 60%, transparent);
   }
 }
 
-@media (max-width: 52rem) {
-  .login {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .login__brand {
-    display: none;
-  }
-
-  .login__logo {
-    display: block;
+@media (max-width: 30rem) {
+  .login__card {
+    padding: 28px 20px 24px;
   }
 }

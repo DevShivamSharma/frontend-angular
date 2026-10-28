@@ -62,7 +62,7 @@ input[pInputText] {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   font: var(--app-label-small);
   text-transform: uppercase;
 }
@@ -70,7 +70,7 @@ input[pInputText] {
 .or::after {
   content: '';
   flex: 1;
-  border-top: 1px solid var(--app-outline-variant);
+  border-top: 1px solid var(--app-border);
 }
 .small {
   font: var(--app-body-small);
@@ -103,11 +103,11 @@ input[pInputText] {
 .note {
   padding: 10px;
   border-radius: var(--app-radius-sm);
-  background: var(--app-surface-container);
+  background: var(--app-surface-2);
 }
 .summary {
   padding: 14px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-lg);
 }
 .summary h3 {
@@ -122,10 +122,10 @@ dl {
   grid-template-columns: 1fr auto;
   gap: 4px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 dt {
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }
 dd {
   margin: 0;
@@ -134,13 +134,13 @@ dd {
   font-variant-numeric: tabular-nums;
 }
 dd.bad {
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 .preview {
   width: 100%;
   height: 260px;
   background: var(--palette-slate-50);
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
 }
 .region {

@@ -68,11 +68,11 @@
 }
 .count {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--app-primary);
+  color: var(--app-brand);
 }
 .close {
   margin: -4px;
@@ -92,7 +92,7 @@ h2 {
   align-items: center;
   gap: 8px;
   margin: 4px 0 0;
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 700;
   color: var(--palette-gray-900);
 }
@@ -110,7 +110,7 @@ kbd {
   display: grid;
   gap: 6px;
   margin-top: 6px;
-  font-size: 14px;
+  font-size: var(--text-base);
   line-height: 1.6;
   color: var(--palette-gray-600);
 }
@@ -127,7 +127,7 @@ kbd {
   background: var(--palette-amber-50);
   color: var(--palette-amber-900);
   box-shadow: inset 0 0 0 1px var(--palette-amber-200);
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 500;
 }
 .callout i {
@@ -148,7 +148,7 @@ kbd {
 .fill {
   height: 100%;
   border-radius: var(--app-radius-pill);
-  background: var(--app-primary);
+  background: var(--app-brand);
   transition: width 300ms ease;
 }
 .foot {
@@ -173,14 +173,14 @@ kbd {
   cursor: pointer;
 }
 .foot button i {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .link {
   padding: 0;
   border: 0;
   background: none;
   white-space: nowrap;
-  font-size: 12px !important;
+  font-size: var(--text-xs) !important;
   font-weight: 500 !important;
   color: var(--palette-gray-500);
 }
@@ -189,14 +189,14 @@ kbd {
 }
 .playing {
   color: var(--palette-gray-500);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .primary {
   border-radius: var(--app-radius-sm);
-  font-size: 14px !important;
+  font-size: var(--text-base) !important;
   padding: 6px 14px;
   border: 0;
-  background: var(--app-primary);
+  background: var(--app-brand);
   color: var(--app-on-primary, #fff);
   font-weight: 600 !important;
 }

@@ -45,6 +45,8 @@
               }
             </div>
           }
+        </div>
+        <div class="head-side">
           @if (store.summary()) {
             <dl class="stats" aria-label="Event summary">
               <div>
@@ -57,8 +59,6 @@
               </div>
             </dl>
           }
-        </div>
-        <div class="head-side">
           @if (store.canManage()) {
             <a class="p-button p-button-outlined" [routerLink]="['/events', eventId(), 'edit']">
               <i class="pi pi-pencil" aria-hidden="true"></i>

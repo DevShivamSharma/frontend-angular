@@ -14,8 +14,8 @@
   gap: 12px;
   flex-wrap: wrap;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--app-outline-variant);
-  background: var(--app-surface-container-lowest);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 .back {
   display: inline-grid;
@@ -23,10 +23,10 @@
   width: 32px;
   height: 32px;
   border-radius: var(--app-radius-2xs);
-  color: var(--app-on-surface);
+  color: var(--app-text);
 }
 .back:hover {
-  background: var(--app-surface-container);
+  background: var(--app-surface-2);
 }
 .title {
   flex: 1;
@@ -38,7 +38,7 @@ h1 {
 }
 .muted {
   margin: 0;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   font: var(--app-body-small);
 }
 .status {
@@ -48,8 +48,8 @@ h1 {
   padding: 4px 10px;
   border-radius: var(--app-radius-pill);
   font: var(--app-label-medium);
-  background: var(--app-surface-container);
-  color: var(--app-on-surface);
+  background: var(--app-surface-2);
+  color: var(--app-text);
 }
 .status.wait {
   background: light-dark(var(--palette-sky-100), var(--palette-sky-900));
@@ -79,8 +79,8 @@ h1 {
   cursor: pointer;
 }
 .btn.quiet {
-  background: var(--app-surface-container);
-  color: var(--app-on-surface);
+  background: var(--app-surface-2);
+  color: var(--app-text);
 }
 .btn.approve {
   background: var(--palette-green-600);
@@ -107,8 +107,8 @@ h1 {
   align-items: center;
   gap: 1px;
   padding: 4px 8px;
-  border-bottom: 1px solid var(--app-outline-variant);
-  background: var(--app-surface-container-lowest);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 .icon {
   display: inline-grid;
@@ -118,21 +118,21 @@ h1 {
   border: 0;
   border-radius: var(--app-radius-2xs);
   background: none;
-  color: var(--app-on-surface);
+  color: var(--app-text);
   cursor: pointer;
 }
 .icon:hover {
-  background: var(--app-surface-container);
+  background: var(--app-surface-2);
 }
 .icon.on {
-  background: var(--app-on-surface);
+  background: var(--app-text);
   color: var(--app-surface);
 }
 .divider {
   width: 1px;
   height: 20px;
   margin: 0 6px;
-  background: var(--app-outline-variant);
+  background: var(--app-border);
 }
 .sr {
   position: absolute;
@@ -152,7 +152,7 @@ h1 {
   place-content: center;
   justify-items: center;
   gap: 8px;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }
 .side {
   overflow-y: auto;
@@ -160,12 +160,12 @@ h1 {
   display: grid;
   align-content: start;
   gap: 12px;
-  border-left: 1px solid var(--app-outline-variant);
-  background: var(--app-surface-container-lowest);
+  border-left: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 .card {
   padding: 12px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
 }
 h2 {
@@ -186,13 +186,13 @@ h2 {
   color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .bad {
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 blockquote {
   margin: 6px 0;
   padding: 6px 10px;
-  border-left: 3px solid var(--app-error);
-  background: var(--app-surface-container);
+  border-left: 3px solid var(--app-danger);
+  background: var(--app-surface-2);
   font: var(--app-body-small);
 }
 .findings {
@@ -217,7 +217,7 @@ blockquote {
   font: var(--app-body-small);
 }
 .stats dt {
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }
 .stats dd {
   margin: 0;
@@ -231,6 +231,6 @@ blockquote {
   }
   .side {
     border-left: 0;
-    border-top: 1px solid var(--app-outline-variant);
+    border-top: 1px solid var(--app-border);
   }
 }

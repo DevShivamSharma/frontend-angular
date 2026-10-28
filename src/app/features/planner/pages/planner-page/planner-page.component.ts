@@ -248,17 +248,22 @@ export class PlannerPageComponent implements HasUnsavedChanges {
 
   /** Line, Rect, Circle and Polyline, two to a column as the ribbon shows them. */
   protected readonly drawTools: Array<
-    Array<{ id: PlannerTool; label: string; icon: string; tip: string }>
+    Array<{ id: PlannerTool; label: string; icon: string; svg: string; tip: string }>
   > = [
     [
-      { id: 'line', label: 'Line', icon: 'line', tip: 'Line (L)' },
-      { id: 'rect', label: 'Rect', icon: 'crop_square', tip: 'Rectangle (R)' },
+      { id: 'line', label: 'Line', icon: 'line', svg: 'minus_line', tip: 'Line (L)' },
+      { id: 'rect', label: 'Rect', icon: 'crop_square', svg: 'square', tip: 'Rectangle (R)' },
     ],
     [
-      { id: 'circle', label: 'Circle', icon: 'circle', tip: 'Circle (C)' },
-      { id: 'polyline', label: 'Polyline', icon: 'polyline', tip: 'Polyline' },
+      { id: 'circle', label: 'Circle', icon: 'circle', svg: 'circle_outline', tip: 'Circle (C)' },
+      { id: 'polyline', label: 'Polyline', icon: 'polyline', svg: 'spline', tip: 'Polyline' },
     ],
   ];
+
+  /** A drawing tool is chosen: the Draw menu shows it pressed. */
+  protected readonly drawing = computed(() =>
+    ['zone-poly', 'text', 'line', 'rect', 'circle', 'polyline'].includes(this.tool()),
+  );
 
   /** A zone, or one drawn rectangle, can become a booth. */
   protected readonly canMakeBooth = computed(() => {
@@ -552,6 +557,23 @@ export class PlannerPageComponent implements HasUnsavedChanges {
   protected sheetClick(event: Event): void {
     const button = (event.target as HTMLElement).closest('button.sbtn');
     if (button && !(button as HTMLButtonElement).disabled) this.toolsOpen.set(false);
+  }
+
+  /** The open menu of the tool row (Seats, Draw, Edit, Measure, More), shown under its button. */
+  protected readonly toolMenu = signal<string | null>(null);
+  protected readonly toolMenuAt = signal({ x: 0, y: 0 });
+
+  protected openToolMenu(menu: string, event: MouseEvent): void {
+    if (this.toolMenu() === menu) return this.toolMenu.set(null);
+    const at = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.toolMenuAt.set({ x: at.left, y: at.bottom + 4 });
+    this.toolMenu.set(menu);
+  }
+
+  /** As the phone's menu: a chosen item closes it, a disabled one does not. */
+  protected toolMenuClick(event: Event): void {
+    const button = (event.target as HTMLElement).closest('button');
+    if (button && !button.disabled) this.toolMenu.set(null);
   }
 
   protected showShortcuts(): void {

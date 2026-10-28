@@ -60,7 +60,7 @@ export const WIZARD_STEPS: readonly WizardStep[] = [
     label: 'Settings',
     controls: ['allowOverseasUser', 'isMarqueeEnabled', 'isSecondaryEnabled', 'visibility'],
   },
-  { id: 'halls', label: 'Halls', note: 'Added after the event is created' },
+  { id: 'halls', label: 'Halls', note: 'Optional now' },
   { id: 'booking', label: 'Booking setup', note: 'Optional now' },
   { id: 'review', label: 'Review' },
 ];

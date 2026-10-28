@@ -28,7 +28,7 @@ label {
   place-items: center;
   padding: 12px;
   border-radius: var(--app-radius-md);
-  background: var(--app-surface-container-low);
+  background: var(--app-surface-2);
   max-height: 160px;
   overflow: hidden;
 }
@@ -46,7 +46,7 @@ label {
 .summary {
   margin: 0;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .seat-btn {
   --p-button-primary-background: var(--palette-purple-600);

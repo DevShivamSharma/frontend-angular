@@ -22,8 +22,8 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 .wizard-header__title {
   margin: 0;
   overflow: hidden;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -32,7 +32,13 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 .wizard-header__badges {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
+}
+
+.wizard-header__kind {
+  color: var(--app-muted);
+  font-size: var(--text-xs);
 }
 
 .chip {
@@ -43,7 +49,7 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   border-radius: var(--app-radius-pill);
   background: var(--app-surface-hover);
   color: var(--app-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
   line-height: 18px;
   white-space: nowrap;
@@ -54,14 +60,15 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   margin-left: auto;
 }
 
+/* The rail and the step fill the dialog between its header and footer: the rail stays put and
+   only the step scrolls, whatever the screen's height. */
 .wizard-body {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius);
+  grid-template-columns: 236px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
   background: var(--app-surface);
-  box-shadow: var(--app-shadow);
-  overflow: hidden;
 }
 
 .wizard-nav-col {
@@ -69,9 +76,11 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
+  min-height: 0;
   padding: 12px 10px;
   border-right: 1px solid var(--app-border);
   background: var(--app-surface-2);
+  overflow-y: auto;
 }
 
 .wizard-nav {
@@ -91,7 +100,7 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   background: none;
   color: var(--app-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 500;
   text-align: left;
   cursor: pointer;
@@ -120,7 +129,7 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   height: 22px;
   border: 1.5px solid $control;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 700;
 
   .pi {
@@ -147,7 +156,7 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 .wizard-nav__note {
   display: block;
   color: var(--app-muted);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 400;
 }
 
@@ -155,16 +164,17 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   margin: 0;
   padding: 0 10px;
   color: var(--app-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .wizard-step {
   display: grid;
   align-content: start;
   gap: 16px;
-  min-height: 420px;
-  padding: 18px 20px 20px;
+  min-height: 0;
+  padding: 20px 24px 28px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .wizard-step .form-grid {
@@ -190,7 +200,7 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 .wizard-step__subtitle {
   margin: 0;
   color: var(--app-muted);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .form-error {
@@ -202,30 +212,44 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 
 .problem {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--space-2);
-  margin: 0 var(--space-5) var(--space-3);
+  margin: 0;
+  padding: var(--space-2) var(--space-5);
+  border-top: 1px solid var(--app-border);
   color: var(--app-danger);
   font-size: var(--text-sm);
 }
 
 :host ::ng-deep {
   .wizard-dialog.p-dialog {
+    --text-sm: var(--text-xs);
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius);
     box-shadow: var(--app-shadow-lg);
   }
 
   .wizard-dialog .p-dialog-header {
-    padding: 16px 20px 8px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--app-border);
   }
 
   .wizard-dialog .p-dialog-content {
-    padding: 8px 20px 16px;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
   }
 
   .wizard-dialog .p-button {
     gap: 6px;
+  }
+
+  .wizard-dialog .field__error {
+    font-size: var(--text-xs);
   }
 
   .wizard-dialog .p-dialog-footer {
@@ -253,6 +277,11 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   .p-datepicker-input {
     border-color: $control;
   }
+
+  // The calendar button keeps the field's border colour (the global joined-date rule is more specific).
+  .wizard-dialog .p-datepicker .p-datepicker-dropdown {
+    border-color: $control;
+  }
 }
 
 .wizard-footer__nav {
@@ -260,69 +289,262 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
   gap: var(--space-2);
 }
 
-.visibility-intro {
-  margin-bottom: var(--space-3);
-  font-size: 0.875rem;
-}
-
+/* Settings: one switch a row, what it does under its name (the reference's toggles). */
 .toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-6);
+  display: grid;
 }
 
 .toggle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--app-border);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.toggle-row__text {
+  display: grid;
+  gap: 2px;
+
+  label {
+    font-weight: 600;
+  }
+
+  small {
+    color: var(--app-muted);
+    font-size: var(--text-xs);
+  }
+}
+
+/* Halls: ITPO's halls as cards to tick. */
+.halls-step {
+  display: grid;
+  gap: 12px;
+}
+
+.halls-step__note,
+.halls-step__state {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: var(--text-xs);
+}
+
+.halls-step__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.hall-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hall-pick__card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 8px 8px 12px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--app-surface-2);
+  }
+
+  /* One border in every state: chosen, and keyboard focus, colour it; nothing is drawn outside it.
+     (Focus is checked on the box itself, so a mouse click leaves no ring behind.) */
+  &[data-on],
+  &:has(input:focus-visible) {
+    border-color: var(--app-brand);
+    box-shadow: inset 0 0 0 1px var(--app-brand);
+  }
+}
+
+.hall-pick__photo {
+  width: 100%;
+  height: 112px;
+  border-radius: var(--app-radius-xs);
+  background: var(--app-surface-hover);
+  object-fit: cover;
+}
+
+.hall-pick__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 4px;
+
+  b {
+    font-weight: 600;
+  }
+
+  small {
+    color: var(--app-muted);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.hall-pick__category {
+  color: var(--app-success);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.hall-pick__tick {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid $control;
+  border-radius: 50%;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+
+  .pi {
+    font-size: var(--text-xs);
+    font-weight: 700;
+  }
+
+  [data-on] > & {
+    border-color: var(--app-brand);
+    background: var(--app-brand);
+    color: var(--app-surface);
+  }
+}
+
+/* Review: one list of the sections, as the reference. */
+.review-note {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-height: var(--control-height);
-}
-
-.groups {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.groups h2 {
-  margin-bottom: var(--space-3);
-  color: var(--app-muted);
-  font-family: var(--app-font-body);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.facts {
-  display: flex;
-  flex-direction: column;
+  gap: 8px;
   margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--app-radius-sm);
+  font-weight: 500;
 
-  div {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--app-border);
+  &[data-tone='ok'] {
+    background: color-mix(in srgb, var(--app-success) 12%, transparent);
+    color: var(--app-success);
+  }
 
-    &:last-child {
-      border-bottom: 0;
+  &[data-tone='bad'] {
+    background: color-mix(in srgb, var(--app-danger) 10%, transparent);
+    color: var(--app-danger);
+  }
+}
+
+.review-list {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--app-border);
+
+    &:first-child {
+      border-top: 0;
     }
   }
+}
 
-  dt {
-    flex: none;
-    color: var(--app-muted);
-    font-size: 0.875rem;
+.review-list__mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid $control;
+  border-radius: 50%;
+  color: var(--app-muted);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+
+  .pi {
+    font-size: 10px;
   }
 
-  dd {
-    margin: 0;
-    min-width: 0;
-    font-weight: 500;
-    text-align: right;
-    overflow-wrap: anywhere;
+  [data-state='done'] > & {
+    border-color: var(--app-success);
+    background: var(--app-success);
+    color: #fff;
+  }
+
+  [data-state='todo'] > & {
+    border-color: var(--app-danger);
+    color: var(--app-danger);
+  }
+
+  [data-state='optional'] > & {
+    border-style: dashed;
+  }
+}
+
+.review-list__text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+
+  small {
+    color: var(--app-muted);
+    font-size: var(--text-xs);
+  }
+}
+
+/* A short screen (a laptop): the steps keep to one column that fits, without a scrollbar of its own. */
+@media (max-height: 760px) {
+  .wizard-nav__item {
+    padding-block: 5px;
+  }
+
+  .wizard-nav__note {
+    display: none;
+  }
+}
+
+/* A phone: the steps become a row above the step, which still scrolls on its own. */
+@media (max-width: 40rem) {
+  .wizard-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .wizard-nav-col {
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+    overflow-x: auto;
+  }
+
+  .wizard-nav {
+    display: flex;
+  }
+
+  .wizard-nav__item {
+    white-space: nowrap;
+  }
+
+  .wizard-nav__summary,
+  .wizard-nav__note {
+    display: none;
   }
 }

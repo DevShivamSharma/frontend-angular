@@ -35,19 +35,19 @@ label {
   justify-content: center;
   gap: 8px;
   padding: 18px;
-  border: 2px dashed var(--app-outline);
+  border: 2px dashed var(--app-border-strong);
   border-radius: var(--app-radius-lg);
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 
   &.over {
-    border-color: var(--app-primary);
-    background: var(--app-primary-container);
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
   }
 }
 
 .browse {
   display: inline;
-  color: var(--app-primary);
+  color: var(--app-brand);
   font: var(--app-label-large);
   text-decoration: underline;
   cursor: pointer;
@@ -60,7 +60,7 @@ label {
   }
 
   &:focus-within {
-    outline: 2px solid var(--app-primary);
+    outline: 2px solid var(--app-brand);
   }
 }
 
@@ -76,7 +76,7 @@ label {
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    border: 1px solid var(--app-outline-variant);
+    border: 1px solid var(--app-border);
     border-radius: var(--app-radius-sm);
   }
 }
@@ -93,13 +93,13 @@ label {
   padding: 2px;
   border: 0;
   background: none;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   cursor: pointer;
 }
 
 .error {
   margin: 0;
-  color: var(--app-error);
+  color: var(--app-danger);
   font: var(--app-body-small);
 }
 

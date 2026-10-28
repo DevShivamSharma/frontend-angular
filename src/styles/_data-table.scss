@@ -63,6 +63,17 @@
     }
   }
 
+  /* The same room at both edges of the card: the first column's left, the last column's right. */
+  th:first-child,
+  td:first-child {
+    padding-left: var(--space-5);
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: var(--space-5);
+  }
+
   /* The running number: narrow, quiet, digits lined up. */
   .cell-no {
     width: 4.5rem;
@@ -85,6 +96,17 @@
     line-height: 1.35;
   }
 
+  /* A name that opens the row reads as a name, not a link line: underlined only when pointed at. */
+  a.cell-name__title {
+    text-decoration: none;
+    text-underline-offset: 3px;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
+
   .cell-name__note {
     display: block;
     margin-top: 2px;
@@ -100,7 +122,6 @@
   .cell-status--right {
     width: 9rem;
     text-align: right;
-    padding-right: var(--space-2);
 
     > p-tag {
       display: flex;
@@ -179,6 +200,50 @@
   .p-paginator {
     padding: 0;
     background: none;
+  }
+}
+
+/* The List / Grid switch of a list page: one group, the chosen view filled in the brand red. Its
+   edge is an outline drawn inside the box, over the buttons: a border left a hairline of background
+   between it and the chosen button's fill at fractional pixel sizes. */
+.view-seg.p-selectbutton {
+  display: inline-flex;
+  outline: 1px solid var(--app-border-strong);
+  outline-offset: -1px;
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+
+  .p-togglebutton {
+    gap: var(--space-2);
+    min-height: calc(var(--control-height) - 2px);
+    padding: 0 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .p-togglebutton:not(.p-togglebutton-checked) {
+    color: var(--app-muted);
+  }
+
+  .p-togglebutton.p-togglebutton-checked {
+    border-color: transparent;
+    background: var(--app-brand);
+    color: var(--p-button-primary-color);
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  .p-togglebutton-content {
+    gap: var(--space-2);
+  }
+
+  .p-togglebutton:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: -3px;
   }
 }
 

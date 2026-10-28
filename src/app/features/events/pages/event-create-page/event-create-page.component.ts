@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { ApiError } from '../../../../core/http/api-error';
 import { ConfirmService } from '../../../../core/confirm/confirm.service';
@@ -16,6 +17,7 @@ import { NotifierService } from '../../../../core/notification/notifier.service'
 import { HasUnsavedChanges } from '../../../../shared/guards/unsaved-changes.guard';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { EventWizardDialogComponent } from '../../components/event-wizard-dialog/event-wizard-dialog.component';
+import { EventConfigApiService, EventConfigBody } from '../../data/event-config-api.service';
 import { EventsApiService } from '../../data/events-api.service';
 import { CreateEventPayload, Organisation } from '../../data/events.models';
 import { ItpoEventsApiService } from '../../data/itpo-events-api.service';
@@ -30,6 +32,7 @@ import { ItpoEventsApiService } from '../../data/itpo-events-api.service';
 })
 export class EventCreatePageComponent implements HasUnsavedChanges, AfterViewInit {
   private readonly api = inject(EventsApiService);
+  private readonly config = inject(EventConfigApiService);
   private readonly itpo = inject(ItpoEventsApiService);
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
@@ -79,11 +82,12 @@ export class EventCreatePageComponent implements HasUnsavedChanges, AfterViewIni
     }
     this.submitting.set(true);
     this.failure.set(null);
+    const hallIds = this.wizard().chosenHallIds();
+    const booking = this.wizard().bookingBody();
     this.api.create(payload).subscribe({
       next: (event) => {
         this.saved = true;
-        this.notifier.success('Event created', 'Now add the halls it uses.');
-        void this.router.navigate(['/events', event.id]);
+        void this.finish(event.id, hallIds, booking);
       },
       error: (error: unknown) => {
         this.submitting.set(false);
@@ -94,6 +98,45 @@ export class EventCreatePageComponent implements HasUnsavedChanges, AfterViewIni
         }
       },
     });
+  }
+
+  /**
+   * The wizard's halls and booking setup, sent once the event exists, through the same calls the
+   * event page makes. The event stands either way; what could not be saved is said, to finish there.
+   */
+  private async finish(
+    eventId: string,
+    hallIds: number[],
+    booking: Omit<EventConfigBody, 'eventId'> | null,
+  ): Promise<void> {
+    const added: string[] = [];
+    if (hallIds.length) {
+      try {
+        await firstValueFrom(this.api.addHalls(eventId, hallIds.map((hallId) => ({ hallId }))));
+        added.push(`${hallIds.length} ${hallIds.length === 1 ? 'hall' : 'halls'} added`);
+      } catch (error) {
+        this.notifier.fromError(
+          error,
+          'The event was created, but its halls could not be added. Add them from the event.',
+        );
+      }
+    }
+    if (booking) {
+      try {
+        await firstValueFrom(this.config.create({ ...booking, eventId }));
+        added.push('booking setup saved');
+      } catch (error) {
+        this.notifier.fromError(
+          error,
+          'The event was created, but its booking setup could not be saved. Finish it from the event.',
+        );
+      }
+    }
+    this.notifier.success(
+      'Event created',
+      added.length ? `${added.join(', ')}.` : 'Now add the halls it uses.',
+    );
+    void this.router.navigate(['/events', eventId]);
   }
 
   protected cancel(): void {

@@ -25,6 +25,7 @@ import { UrlState } from '../../../../core/navigation/url-state';
 import { ConfirmService } from '../../../../core/confirm/confirm.service';
 import { ApiError } from '../../../../core/http/api-error';
 import { NotifierService } from '../../../../core/notification/notifier.service';
+import { CardSkeletonComponent } from '../../../../shared/ui/card-skeleton/card-skeleton.component';
 import { TableSkeletonComponent } from '../../../../shared/ui/table-skeleton/table-skeleton.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
@@ -56,6 +57,7 @@ const PAGE_SIZE = 15;
     PaginatorModule,
     ToggleSwitchModule,
     TableSkeletonComponent,
+    CardSkeletonComponent,
     EmptyStateComponent,
     PageHeaderComponent,
     CategoryDialogComponent,
@@ -93,6 +95,12 @@ export class CategoriesPageComponent {
     { label: 'Groups', value: 'groups' },
   ];
   protected readonly view = signal<'categories' | 'groups'>('categories');
+  protected readonly displayOptions = [
+    { label: 'List', value: 'list', icon: 'pi pi-list' },
+    { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
+  ];
+  /** The categories as a list or a grid; kept between visits, as on the Halls page. */
+  protected readonly display = signal<CategoriesDisplay>(readDisplay());
   /** Bumped to draw the switches as the data has them, after a change was declined or refused. */
   protected readonly redraw = signal(0);
   protected readonly groups = signal<CategoryGroup[]>([]);
@@ -159,6 +167,15 @@ export class CategoriesPageComponent {
   protected chooseView(view: 'categories' | 'groups'): void {
     this.view.set(view);
     this.url.write({ view: view === 'groups' ? 'groups' : null });
+  }
+
+  protected chooseDisplay(display: CategoriesDisplay): void {
+    this.display.set(display);
+    try {
+      localStorage.setItem(DISPLAY_KEY, display);
+    } catch {
+      // Storage may be blocked; the view still changes for this visit.
+    }
   }
 
   protected chooseGroup(slug: string): void {
@@ -307,5 +324,17 @@ export class CategoriesPageComponent {
           this.notifier.fromError(error, 'The categories could not be loaded');
         },
       });
+  }
+}
+
+type CategoriesDisplay = 'list' | 'grid';
+
+const DISPLAY_KEY = 'ems.categories-display';
+
+function readDisplay(): CategoriesDisplay {
+  try {
+    return localStorage.getItem(DISPLAY_KEY) === 'grid' ? 'grid' : 'list';
+  } catch {
+    return 'list';
   }
 }

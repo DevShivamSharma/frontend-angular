@@ -8,6 +8,8 @@ export interface NavItem {
   group: string;
   /** Only ITPO staff see it. */
   staffOnly: boolean;
+  /** What an organiser sees it called, when that differs from `label`. */
+  organiserLabel?: string;
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
@@ -24,6 +26,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     route: '/external-events',
     group: 'Events',
     staffOnly: false,
+    organiserLabel: 'My events',
   },
   { label: 'Halls', icon: 'pi-building', route: '/halls', group: 'Setup', staffOnly: true },
   {

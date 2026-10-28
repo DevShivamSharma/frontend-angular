@@ -14,7 +14,6 @@ import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import type { MenuItem } from 'primeng/api';
-import { TagModule } from 'primeng/tag';
 
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ConfirmService } from '../../../../core/confirm/confirm.service';
@@ -55,7 +54,6 @@ import { AddHallsDialogComponent } from '../add-halls-dialog/add-halls-dialog.co
     RouterLink,
     MenuModule,
     ButtonModule,
-    TagModule,
     EmptyStateComponent,
     ImageFallbackDirective,
     AddHallsDialogComponent,

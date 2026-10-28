@@ -80,7 +80,7 @@ h2 {
 
 .section-intro {
   margin-bottom: var(--space-4);
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 .params,
@@ -95,7 +95,7 @@ h2 {
 }
 
 .param__label {
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   font-weight: 500;
 }
 
@@ -112,7 +112,7 @@ h2 {
 
   dt {
     color: var(--app-muted);
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
   }
 
   dd {
@@ -170,7 +170,7 @@ h2 {
 
 .images-intro {
   margin-bottom: var(--space-3);
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 /* On a phone the page's side padding is smaller: the bar reaches the edge, not past it. */

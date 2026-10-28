@@ -2,6 +2,18 @@
   display: block;
 }
 
+// Match the primary action color used by Create event and the selected view.
+:host ::ng-deep app-page-header a.p-button {
+  border-color: var(--app-brand);
+  background: var(--app-brand);
+  color: var(--app-surface);
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--app-brand) 85%, black);
+    background: color-mix(in srgb, var(--app-brand) 85%, black);
+  }
+}
+
 .toolbar {
   position: sticky;
   top: var(--app-topbar-height);
@@ -31,49 +43,75 @@
   margin-left: auto;
 }
 
-.toolbar__label {
-  color: var(--app-text);
-  font-size: var(--text-base);
-  font-weight: 500;
-}
-
 .toolbar__count {
   display: flex;
   align-items: center;
   min-height: var(--control-height);
   white-space: nowrap;
 }
+// The card's tint (warm ivory, as the event cards), mixed into the surface so it follows light and dark mode.
+$card-tint: #c8a26a;
 
-:host ::ng-deep .view-seg {
-  display: inline-flex;
-  border: 1px solid var(--app-border-strong);
-  border-radius: var(--app-radius-sm);
-  background: var(--app-surface);
+// A hall card: a thumbnail beside the name, then area, status and facilities in a strip below.
+.hall-card {
+  gap: 0;
+  padding: 0;
   overflow: hidden;
+  background: color-mix(in srgb, $card-tint 4%, var(--app-surface));
+}
 
-  .p-togglebutton {
-    gap: var(--space-2);
-    min-height: calc(var(--control-height) - 2px);
-    padding: 0 14px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
+.hall-card__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: var(--space-4);
+}
+
+.hall-card__thumbnail {
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: 0 0 auto;
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface-2);
+  object-fit: cover;
+}
+
+.hall-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.hall-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: auto 0 0;
+  border-top: 1px solid var(--app-border);
+  background: color-mix(in srgb, $card-tint 8%, var(--app-surface));
+
+  > div {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    min-width: 0;
+    padding: 10px var(--space-4);
   }
 
-  .p-togglebutton:not(.p-togglebutton-checked) {
+  > div + div {
+    border-left: 1px solid var(--app-border);
+  }
+
+  dt {
     color: var(--app-muted);
+    font-size: var(--text-xs);
   }
 
-  .p-togglebutton.p-togglebutton-checked {
-    border-color: transparent;
-    background: var(--app-text);
-    color: var(--app-surface);
+  dd {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
     font-weight: 600;
-    box-shadow: none;
-  }
-
-  .p-togglebutton-content {
-    gap: var(--space-2);
   }
 }
 

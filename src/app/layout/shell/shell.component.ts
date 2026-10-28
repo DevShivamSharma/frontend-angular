@@ -56,7 +56,14 @@ export class ShellComponent {
   protected readonly drawerOpen = signal(false);
 
   protected readonly navGroups = computed(() =>
-    groupNav(NAV_ITEMS.filter((item) => !item.staffOnly || this.auth.isStaff())),
+    groupNav(
+      this.auth.isStaff()
+        ? NAV_ITEMS
+        : NAV_ITEMS.filter((item) => !item.staffOnly).map((item) => ({
+            ...item,
+            label: item.organiserLabel ?? item.label,
+          })),
+    ),
   );
 
   private readonly layout = inject(LayoutService);
@@ -115,7 +122,7 @@ export class ShellComponent {
       styleClass: 'user-menu__role',
     },
     { separator: true },
-    { label: 'Sign out', icon: 'pi pi-sign-out', command: () => this.signOut() },
+    { label: 'Log out', icon: 'pi pi-sign-out', command: () => this.signOut() },
   ]);
 
   protected toggleCollapsed(): void {
@@ -136,9 +143,9 @@ export class ShellComponent {
 
   private async signOut(): Promise<void> {
     const go = await this.confirm.ask({
-      header: 'Sign out',
-      message: 'Sign out of the portal?',
-      acceptLabel: 'Sign out',
+      header: 'Log out',
+      message: 'Log out of the portal?',
+      acceptLabel: 'Log out',
       icon: 'pi pi-sign-out',
     });
     if (go) {

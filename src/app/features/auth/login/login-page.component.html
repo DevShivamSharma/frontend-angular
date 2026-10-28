@@ -1,68 +1,95 @@
 <div class="login">
-  <section class="login__brand" aria-hidden="true">
-    <img src="itpo-logo.svg" alt="" width="48" height="48" />
-    <div class="login__brand-text">
-      <h2>Stall Planning Portal</h2>
-      <p>Set up halls, run ITPO's own events and keep the planning rules in one place.</p>
-    </div>
-  </section>
+  <!-- A hall floor drawn in perspective, with a few stalls standing on it. -->
+  <div class="login__scene" aria-hidden="true">
+    <canvas #scene></canvas>
+  </div>
 
-  <main class="login__panel">
-    <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <header class="login__top">
+    <div class="login__brand">
+      <span class="login__logo"><img src="itpo-logo.svg" alt="" width="28" height="28" /></span>
+      <span class="login__brand-text">
+        <b>Stall Planning Portal</b>
+        <small>India Trade Promotion Organisation</small>
+      </span>
+    </div>
+  </header>
+
+  <main class="login__main">
+    <div class="login__card">
       <div class="login__heading">
-        <img class="login__logo" src="itpo-logo.svg" alt="ITPO" width="48" height="48" />
-        <h1>Sign in</h1>
-        <p class="text-muted">Use your ITPO account.</p>
+        <span class="login__mark" aria-hidden="true"><i class="pi pi-th-large"></i></span>
+        <h1>Log in to your account</h1>
+        <p>Plan halls, place stalls and manage ITPO events in one place.</p>
       </div>
 
-      @if (failure(); as message) {
-        <p-message severity="error" variant="outlined" role="alert">{{ message }}</p-message>
-      }
+      <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        @if (failure(); as message) {
+          <p-message severity="error" variant="outlined" role="alert">{{ message }}</p-message>
+        }
 
-      <app-form-field
-        label="Email"
-        inputId="login-email"
-        [control]="form.controls.email"
-        [required]="true"
-      >
-        <input
-          pInputText
-          id="login-email"
-          type="email"
-          formControlName="email"
-          autocomplete="username"
-          inputmode="email"
-          autofocus
-        />
-      </app-form-field>
+        <app-form-field
+          label="Email"
+          inputId="login-email"
+          [control]="form.controls.email"
+        >
+          <p-iconfield>
+            <p-inputicon class="pi pi-envelope" />
+            <input
+              pInputText
+              id="login-email"
+              type="email"
+              formControlName="email"
+              autocomplete="username"
+              inputmode="email"
+              placeholder="name@itpo.gov.in"
+              autofocus
+            />
+          </p-iconfield>
+        </app-form-field>
 
-      <app-form-field
-        label="Password"
-        inputId="login-password"
-        [control]="form.controls.password"
-        [required]="true"
-      >
-        <p-password
+        <app-form-field
+          label="Password"
           inputId="login-password"
-          formControlName="password"
-          autocomplete="current-password"
-          [feedback]="false"
-          [toggleMask]="true"
-          styleClass="login__password"
-          inputStyleClass="login__password-input"
+          [control]="form.controls.password"
+          [hint]="capsLock() ? 'Caps Lock is on.' : undefined"
+        >
+          <p-iconfield (keyup)="checkCapsLock($event)" (keydown)="checkCapsLock($event)">
+            <p-inputicon class="pi pi-lock" />
+            <p-password
+              inputId="login-password"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              [feedback]="false"
+              [toggleMask]="true"
+              styleClass="login__password"
+              inputStyleClass="login__password-input"
+            />
+          </p-iconfield>
+        </app-form-field>
+
+        <p-button
+          type="submit"
+          label="Log in"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          styleClass="login__submit"
+          [loading]="submitting()"
+          [disabled]="submitting()"
         />
-      </app-form-field>
+      </form>
 
-      <p-button
-        type="submit"
-        label="Sign in"
-        icon="pi pi-sign-in"
-        styleClass="login__submit"
-        [loading]="submitting()"
-        [disabled]="submitting()"
-      />
-
-      <p class="login__help text-muted">Need access? Contact ITPO.</p>
-    </form>
+      <div class="login__foot">
+        <p class="login__only">
+          <i class="pi pi-shield" aria-hidden="true"></i>
+          Authorised ITPO staff and registered organisers only
+        </p>
+        <p>Need access? Contact ITPO.</p>
+      </div>
+    </div>
   </main>
+
+  <footer class="login__bottom">
+    <span>© India Trade Promotion Organisation · Bharat Mandapam, New Delhi</span>
+  </footer>
 </div>

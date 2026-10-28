@@ -38,11 +38,11 @@ label {
   display: grid;
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
-  background: var(--app-surface-container-low);
+  background: var(--app-surface-2);
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .preview p {
   margin: 0;

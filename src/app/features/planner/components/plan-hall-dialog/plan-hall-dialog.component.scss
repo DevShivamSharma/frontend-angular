@@ -65,17 +65,17 @@ input[pInputText] {
   gap: 12px;
   align-items: center;
   padding: 10px;
-  border: 2px solid var(--app-outline-variant);
+  border: 2px solid var(--app-border);
   border-radius: var(--app-radius-lg);
-  background: var(--app-surface-container-lowest);
-  color: var(--app-on-surface);
+  background: var(--app-surface);
+  color: var(--app-text);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 .option.on {
-  border-color: var(--app-primary);
-  background: color-mix(in srgb, var(--app-primary) 6%, var(--app-surface-container-lowest));
+  border-color: var(--app-brand);
+  background: color-mix(in srgb, var(--app-brand) 6%, var(--app-surface));
 }
 .option svg {
   width: 150px;
@@ -107,12 +107,12 @@ input[pInputText] {
   gap: 4px 12px;
   font: var(--app-body-small);
   font-variant-numeric: tabular-nums;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }
 .check-state {
   font: var(--app-body-small);
   color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .bad {
-  color: var(--app-error) !important;
+  color: var(--app-danger) !important;
 }

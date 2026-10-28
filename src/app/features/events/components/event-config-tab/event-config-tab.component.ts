@@ -135,6 +135,11 @@ const MESSAGES: Record<string, string> = {
 export class EventConfigTabComponent {
   readonly eventId = input.required<string>();
   readonly readonly = input(false);
+  /**
+   * Before the event exists (the create wizard): nothing is loaded or saved here; the wizard takes
+   * the filled-in setup with draftBody() and sends it once the event is created.
+   */
+  readonly draft = input(false);
 
   private readonly api = inject(EventConfigApiService);
   private readonly events = inject(ItpoEventsApiService);
@@ -350,12 +355,17 @@ export class EventConfigTabComponent {
       this.form.markAllAsTouched();
       const first = this.build().find((s) => s.todo.length);
       if (first) this.selected.set(first.id);
-      this.notifier.warn('Fill the highlighted fields correctly.');
+      const n = first?.todo.length ?? 0;
+      this.notifier.warn(
+        first
+          ? `${n} ${n === 1 ? 'field needs' : 'fields need'} fixing in ${first.title}.`
+          : 'Some fields need fixing.',
+      );
       return;
     }
     const go = await this.confirm.ask({
-      header: 'Save the configuration',
-      message: 'Save the stall booking configuration of this event?',
+      header: 'Save the booking setup',
+      message: 'Save the stall booking setup of this event?',
       acceptLabel: 'Save',
     });
     if (!go) return;
@@ -367,10 +377,10 @@ export class EventConfigTabComponent {
           ? this.api.update(this.record.id, body)
           : this.api.create(body),
       );
-      this.notifier.success('Configuration saved');
+      this.notifier.success('Booking setup saved');
       await this.loadRecord();
     } catch (error) {
-      this.notifier.fromError(error, 'The configuration could not be saved');
+      this.notifier.fromError(error, 'The booking setup could not be saved');
     } finally {
       this.saving.set(false);
     }
@@ -382,10 +392,10 @@ export class EventConfigTabComponent {
     try {
       const groups = await firstValueFrom(this.categoriesApi.groups());
       this.types.set(categoryGroups(groups).map((g) => ({ name: g.name, slug: g.slug })));
-      await this.loadRecord();
+      if (!this.draft()) await this.loadRecord();
     } catch (error) {
       this.failed.set(true);
-      this.notifier.fromError(error, 'The configuration could not be loaded');
+      this.notifier.fromError(error, 'The booking setup could not be loaded');
     } finally {
       this.loading.set(false);
     }
@@ -483,6 +493,13 @@ export class EventConfigTabComponent {
   }
 
   /** The body ITPO takes, as SelfCare builds it: what does not apply is left out. */
+  /** The setup filled in on the wizard, ready to send for the new event; null if untouched or not complete. */
+  draftBody(): Omit<EventConfigBody, 'eventId'> | null {
+    if (!this.form.dirty || this.form.invalid) return null;
+    const { eventId: _, ...body } = this.body();
+    return body;
+  }
+
   private body(): EventConfigBody {
     const v = this.form.getRawValue();
     const marquee = v.isMarqueeEnabled;

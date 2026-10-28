@@ -66,11 +66,16 @@
                   <button type="button" class="row-open" (click)="openList(list.slug)">
                     <span class="cell-name__title">
                       {{ list.name }}
+                    </span>
+                    <span class="cell-name__meta">
+                      <span class="slug-text">{{ list.slug }}</span>
                       @if (list.system) {
-                        <span class="tag">Used by the portal</span>
+                        <span class="tag">
+                          <i class="pi pi-lock" aria-hidden="true"></i>
+                          Used by the portal
+                        </span>
                       }
                     </span>
-                    <span class="slug-text">{{ list.slug }}</span>
                   </button>
                 </th>
                 <td class="cell-people">

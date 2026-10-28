@@ -15,7 +15,6 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { TagModule } from 'primeng/tag';
 import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { UrlState } from '../../../../core/navigation/url-state';
@@ -44,7 +43,6 @@ const PAGE_SIZE = 10;
     InputTextModule,
     PaginatorModule,
     SelectButtonModule,
-    TagModule,
     CardSkeletonComponent,
     TableSkeletonComponent,
     ImageFallbackDirective,
@@ -63,7 +61,8 @@ export class HallsPageComponent {
   protected readonly placeholder = PLACEHOLDER_IMAGE;
   protected readonly pageSize = PAGE_SIZE;
   protected readonly search = new FormControl('', { nonNullable: true });
-  protected readonly view = signal<'list' | 'grid'>('grid');
+  /** List or grid; kept between visits, as the sidebar's width is. */
+  protected readonly view = signal<HallsView>(readView());
   protected readonly viewOptions = [
     { label: 'List', value: 'list', icon: 'pi pi-list' },
     { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
@@ -106,6 +105,15 @@ export class HallsPageComponent {
   }
 
   /** The cover picture (else the first) as a small image for the row; none when the hall has no pictures. */
+  protected chooseView(view: HallsView): void {
+    this.view.set(view);
+    try {
+      localStorage.setItem(VIEW_KEY, view);
+    } catch {
+      // Storage may be blocked; the view still changes for this visit.
+    }
+  }
+
   protected thumbnail(hall: ItpoHall): string | null {
     return (hall.images.find((image) => image.kind === 'cover') ?? hall.images[0])?.url ?? null;
   }
@@ -137,5 +145,17 @@ export class HallsPageComponent {
           this.notifier.fromError(error, 'The halls could not be loaded');
         },
       });
+  }
+}
+
+type HallsView = 'list' | 'grid';
+
+const VIEW_KEY = 'ems.halls-view';
+
+function readView(): HallsView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid';
+  } catch {
+    return 'grid';
   }
 }

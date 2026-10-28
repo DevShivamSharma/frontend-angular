@@ -1,14 +1,5 @@
+<!-- Laid out as the Categories tab: search first, the filter at the right. -->
 <div class="filters sticky-filters">
-  <p-selectbutton
-    class="filter-seg"
-    [options]="showOptions"
-    optionLabel="label"
-    optionValue="value"
-    [allowEmpty]="false"
-    [ngModel]="show()"
-    (ngModelChange)="show.set($event)"
-    ariaLabel="Show groups"
-  />
   <p-iconfield class="filters__search">
     <p-inputicon class="pi pi-search" />
     <input
@@ -20,6 +11,18 @@
       aria-label="Search groups"
     />
   </p-iconfield>
+  <div class="filters__end">
+    <p-selectbutton
+      class="filter-seg"
+      [options]="showOptions"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      [ngModel]="show()"
+      (ngModelChange)="show.set($event)"
+      ariaLabel="Show groups"
+    />
+  </div>
 </div>
 
 @if (failed()) {

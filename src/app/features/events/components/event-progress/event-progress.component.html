@@ -7,22 +7,22 @@
           [attr.data-state]="step.done ? 'done' : next()?.index === i ? 'now' : null"
           [attr.aria-current]="next()?.index === i ? 'step' : null"
         >
-          <span class="mark" aria-hidden="true">
-            @if (step.done) {
-              <i class="pi pi-check"></i>
-            } @else {
-              {{ i + 1 }}
-            }
-          </span>
-          <span class="label">
-            <b>
-              {{ step.label }}
-              <span class="visually-hidden">{{ step.done ? ' (done)' : '' }}</span>
-            </b>
-            @if (step.note) {
-              <small>{{ step.note }}</small>
-            }
-          </span>
+          <!-- Each step opens the tab where it is done. -->
+          <button type="button" class="step-btn" (click)="go()(step.tab)">
+            <span class="mark" aria-hidden="true">
+              @if (step.done) {
+                <i class="pi pi-check"></i>
+              } @else {
+                {{ i + 1 }}
+              }
+            </span>
+            <span class="label">
+              <b>
+                {{ step.label }}
+                <span class="visually-hidden">{{ step.done ? ' (done)' : '' }}</span>
+              </b>
+            </span>
+          </button>
         </li>
       }
     </ol>

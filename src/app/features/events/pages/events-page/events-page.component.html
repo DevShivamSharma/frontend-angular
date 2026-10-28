@@ -54,7 +54,7 @@
     } @else {
       @if (loading()) {
         @if (view() === 'grid') {
-          <app-card-skeleton [count]="6" [cover]="true" />
+          <app-card-skeleton [count]="6" />
         } @else {
           <app-table-skeleton [count]="8" [columns]="tableSkeleton()" />
         }
@@ -62,37 +62,35 @@
         @if (view() === 'grid') {
           <ul class="card-grid">
             @for (event of events(); track event.id) {
-              <li class="item-card item-card--cover">
-                <img
-                  class="item-card__cover"
-                  [src]="placeholder"
-                  alt=""
-                  loading="lazy"
-                  appImageFallback
-                />
-                <h2 class="item-card__title">
-                  <a [routerLink]="[base(), event.id]">{{ event.name | titlecase }}</a>
-                </h2>
-                <p class="item-card__meta">
-                  <i class="pi pi-calendar" aria-hidden="true"></i>
-                  {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
-                  {{ event.endDate ? (event.endDate | date: 'd MMM y') : '—' }}
-                </p>
-                @if (event.bookingId) {
-                  <p class="item-card__meta">
-                    <i class="pi pi-hashtag" aria-hidden="true"></i>
-                    {{ event.bookingId }}
-                  </p>
-                }
-                @if (isStaff() && event.organisation) {
-                  <p class="item-card__meta">
-                    <i class="pi pi-building" aria-hidden="true"></i>
-                    {{ event.organisation }}
-                  </p>
-                }
+              <li class="item-card event-card">
+                <div class="event-card__body">
+                  <!-- The start date at a glance; the full range is read out below. -->
+                  <span class="event-card__date" aria-hidden="true">
+                    <span class="event-card__month">{{ event.startDate ? (event.startDate | date: 'MMM') : '—' }}</span>
+                    <span class="event-card__day">{{ event.startDate ? (event.startDate | date: 'd') : '' }}</span>
+                  </span>
+                  <div class="event-card__text">
+                    <h2 class="item-card__title">
+                      <a [routerLink]="[base(), event.id]" [title]="event.name | titlecase">{{ event.name | titlecase }}</a>
+                    </h2>
+                    <p class="item-card__meta">
+                      {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
+                      {{ event.endDate ? (event.endDate | date: 'd MMM y') : '—' }}
+                    </p>
+                    @if (event.bookingId) {
+                      <p class="item-card__meta event-card__id">{{ event.bookingId }}</p>
+                    }
+                    @if (isStaff() && event.organisation) {
+                      <p class="item-card__meta event-card__org" [title]="event.organisation">
+                        <i class="pi pi-building" aria-hidden="true"></i>
+                        <span>{{ event.organisation }}</span>
+                      </p>
+                    }
+                  </div>
+                </div>
                 <div class="event-status-grid">
                   <div class="event-status-grid__item">
-                    <span class="event-status-grid__label">Booking status</span>
+                    <span class="event-status-grid__label">Booking</span>
                     @if (event.bookingStatus) {
                       <span class="event-status" [attr.data-severity]="severity(event.bookingStatus)">{{ event.bookingStatus }}</span>
                     } @else {
@@ -100,7 +98,7 @@
                     }
                   </div>
                   <div class="event-status-grid__item">
-                    <span class="event-status-grid__label">Approval status</span>
+                    <span class="event-status-grid__label">Approval</span>
                     @if (event.approvalStatus) {
                       <span class="event-status" [attr.data-severity]="severity(event.approvalStatus)">{{ event.approvalStatus }}</span>
                     } @else {

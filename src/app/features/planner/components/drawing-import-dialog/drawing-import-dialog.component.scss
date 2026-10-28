@@ -13,8 +13,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--app-primary) 14%, transparent);
-  color: var(--app-primary);
+  background: color-mix(in srgb, var(--app-brand) 14%, transparent);
+  color: var(--app-brand);
   flex: 0 0 auto;
 }
 .reading,
@@ -28,8 +28,8 @@
 .failed {
   padding: 12px;
   border-radius: var(--app-radius-md);
-  background: color-mix(in srgb, var(--app-error) 10%, transparent);
-  color: var(--app-error);
+  background: color-mix(in srgb, var(--app-danger) 10%, transparent);
+  color: var(--app-danger);
   font: var(--app-body-medium);
   font-weight: 600;
 }
@@ -37,7 +37,7 @@
   color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .match span {
-  color: var(--app-on-surface);
+  color: var(--app-text);
 }
 .match.warn {
   color: light-dark(var(--palette-amber-700), var(--palette-amber-400));
@@ -45,8 +45,8 @@
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid var(--app-outline-variant);
-  border-top-color: var(--app-primary);
+  border: 2px solid var(--app-border);
+  border-top-color: var(--app-brand);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex: 0 0 auto;
@@ -91,7 +91,7 @@
 .preview {
   width: 100%;
   aspect-ratio: 4 / 3;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
   background: light-dark(var(--palette-slate-100), var(--palette-slate-900));
 }
@@ -154,17 +154,17 @@
   stroke: var(--palette-cyan-700);
 }
 .stall.picked {
-  stroke: var(--app-primary);
+  stroke: var(--app-brand);
   stroke-width: 0.35;
-  fill: var(--app-primary);
+  fill: var(--app-brand);
   fill-opacity: 0.12;
 }
 .preview:focus-visible {
-  outline: 2px solid var(--app-primary);
+  outline: 2px solid var(--app-brand);
   outline-offset: 2px;
 }
 .tag {
-  fill: var(--app-on-surface);
+  fill: var(--app-text);
   font-weight: 700;
   text-anchor: middle;
   dominant-baseline: middle;
@@ -177,7 +177,7 @@
   display: grid;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
 }
 .one-head {
@@ -198,7 +198,7 @@
 .why {
   margin: 0;
   padding-left: 18px;
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 .name {
   display: grid;
@@ -208,7 +208,7 @@
 .name input {
   max-width: 240px;
   padding: 4px 8px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-xs);
   background: transparent;
   color: inherit;
@@ -222,7 +222,7 @@
 .size input {
   width: 90px;
   padding: 4px 8px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-xs);
   background: transparent;
   color: inherit;
@@ -248,7 +248,7 @@
   font-variant-numeric: tabular-nums;
 }
 .stats dt {
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }
 .stats dd {
   margin: 0;
@@ -259,7 +259,7 @@
   color: light-dark(var(--palette-green-700), var(--palette-green-400));
 }
 .bad {
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 .legend {
   list-style: none;
@@ -318,9 +318,9 @@ details summary {
 .ai {
   margin: 0 0 12px;
   padding: 10px 12px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
-  background: var(--app-surface-container-low);
+  background: var(--app-surface-2);
 }
 
 .ai__head {
@@ -359,7 +359,7 @@ details summary {
     cursor: pointer;
 
     &:hover {
-      background: var(--app-surface-container-high);
+      background: var(--app-surface-hover);
     }
   }
 }
@@ -367,12 +367,12 @@ details summary {
 .ai__kind {
   padding: 1px 8px;
   border-radius: var(--app-radius-pill);
-  background: var(--app-surface-container-high);
+  background: var(--app-surface-hover);
   font: var(--app-label-small);
 
   &[data-kind='missing'] {
     background: var(--app-error-container);
-    color: var(--app-on-error-container);
+    color: var(--app-danger);
   }
 }
 
@@ -381,7 +381,7 @@ details summary {
   font: var(--app-body-medium);
 
   b.ok {
-    color: var(--app-tertiary);
+    color: var(--app-success);
   }
 
   b.rule {
@@ -389,7 +389,7 @@ details summary {
   }
 
   b.bad {
-    color: var(--app-error);
+    color: var(--app-danger);
   }
 }
 
@@ -420,17 +420,17 @@ details summary {
 
 .chip {
   padding: 3px 10px;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-pill);
   background: none;
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   font: var(--app-label-medium);
   cursor: pointer;
 
   &.on {
-    border-color: var(--app-primary);
-    background: var(--app-primary-container);
-    color: var(--app-primary);
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
+    color: var(--app-brand);
   }
 }
 

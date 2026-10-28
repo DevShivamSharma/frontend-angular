@@ -35,7 +35,7 @@ input[type='color'] {
   width: 44px;
   height: 30px;
   padding: 0;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-xs);
   background: none;
 }
@@ -60,10 +60,10 @@ textarea {
 }
 .side {
   padding: 6px 0;
-  border: 1px solid var(--app-outline-variant);
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-xs);
   background: var(--app-surface);
-  color: var(--app-on-surface);
+  color: var(--app-text);
   font: var(--app-label-small);
   text-transform: capitalize;
   cursor: pointer;
@@ -91,10 +91,10 @@ dl {
   grid-template-columns: 1fr auto;
   gap: 4px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 dt {
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }
 dd {
   margin: 0;

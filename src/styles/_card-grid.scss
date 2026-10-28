@@ -30,7 +30,7 @@
 
   &__title {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--text-lg);
     font-weight: 600;
     overflow-wrap: anywhere;
 
@@ -65,11 +65,11 @@
     gap: var(--space-2);
     margin: 0;
     color: var(--app-muted);
-    font-size: 0.875rem;
+    font-size: var(--text-base);
 
     .pi {
       flex: none;
-      font-size: 0.875rem;
+      font-size: var(--text-base);
     }
   }
 
@@ -110,7 +110,7 @@
     display: grid;
     place-items: center;
     color: var(--app-muted);
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
   }
 }
 

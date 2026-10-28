@@ -13,8 +13,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--app-primary) 14%, transparent);
-  color: var(--app-primary);
+  background: color-mix(in srgb, var(--app-brand) 14%, transparent);
+  color: var(--app-brand);
   flex: 0 0 auto;
 }
 .body {
@@ -28,7 +28,7 @@
 .group {
   margin: 0 0 8px;
   font: var(--app-title-small);
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -49,7 +49,7 @@
   flex: 0 0 auto;
 }
 .waiting {
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   flex: 0 0 auto;
 }
 .rule {
@@ -62,13 +62,13 @@
 }
 .ref {
   font: var(--app-body-small);
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   margin-left: 4px;
 }
 .value {
   font: var(--app-body-medium);
   font-weight: 600;
-  color: var(--app-primary);
+  color: var(--app-brand);
 }
 .small {
   font: var(--app-body-small);
@@ -76,5 +76,5 @@
 .off summary {
   cursor: pointer;
   font: var(--app-label-medium);
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
 }

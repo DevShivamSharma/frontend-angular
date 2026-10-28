@@ -1,7 +1,18 @@
-<i
-  [class]="cls()"
-  [style.font-size.px]="size()"
-  [attr.aria-hidden]="label() ? null : 'true'"
-  [attr.aria-label]="label()"
-  [attr.role]="label() ? 'img' : null"
-></i>
+@if (svg(); as paths) {
+  <svg
+    viewBox="0 0 24 24"
+    [style.font-size.px]="size()"
+    [attr.aria-hidden]="label() ? null : 'true'"
+    [attr.aria-label]="label()"
+    [attr.role]="label() ? 'img' : null"
+    [innerHTML]="paths"
+  ></svg>
+} @else {
+  <i
+    [class]="cls()"
+    [style.font-size.px]="size()"
+    [attr.aria-hidden]="label() ? null : 'true'"
+    [attr.aria-label]="label()"
+    [attr.role]="label() ? 'img' : null"
+  ></i>
+}

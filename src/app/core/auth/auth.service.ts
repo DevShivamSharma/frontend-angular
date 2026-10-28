@@ -118,7 +118,7 @@ export class AuthService {
     }
     const returnUrl = this.router.url;
     this.clear();
-    this.notifier.info('You have been signed out', 'Please sign in again to continue.');
+    this.notifier.info('You have been logged out', 'Please log in again to continue.');
     void this.router.navigate(
       ['/login'],
       returnUrl.startsWith('/login') ? {} : { queryParams: { returnUrl } },

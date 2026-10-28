@@ -5,3 +5,14 @@
   line-height: 1;
   vertical-align: middle;
 }
+
+// A Lucide icon: one em square in the text colour, as the redesign's 2 px line icons.
+svg {
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

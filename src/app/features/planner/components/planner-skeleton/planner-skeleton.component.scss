@@ -76,7 +76,7 @@
   background: var(--app-surface);
   box-shadow: var(--app-shadow);
   color: var(--app-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 @keyframes pulse {

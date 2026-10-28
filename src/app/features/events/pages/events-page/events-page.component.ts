@@ -25,8 +25,6 @@ import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { UrlState } from '../../../../core/navigation/url-state';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { NotifierService } from '../../../../core/notification/notifier.service';
-import { ImageFallbackDirective } from '../../../../shared/ui/placeholder-image/image-fallback.directive';
-import { PLACEHOLDER_IMAGE } from '../../../../shared/ui/placeholder-image/placeholder-image';
 import { CardSkeletonComponent } from '../../../../shared/ui/card-skeleton/card-skeleton.component';
 import { TableSkeletonComponent } from '../../../../shared/ui/table-skeleton/table-skeleton.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
@@ -58,7 +56,6 @@ const PAGE_SIZE = 15;
     TagModule,
     CardSkeletonComponent,
     TableSkeletonComponent,
-    ImageFallbackDirective,
     EmptyStateComponent,
     PageHeaderComponent,
   ],
@@ -72,7 +69,6 @@ export class EventsPageComponent {
   private readonly notifier = inject(NotifierService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly placeholder = PLACEHOLDER_IMAGE;
   protected readonly pageSize = PAGE_SIZE;
   protected readonly search = new FormControl('', { nonNullable: true });
 

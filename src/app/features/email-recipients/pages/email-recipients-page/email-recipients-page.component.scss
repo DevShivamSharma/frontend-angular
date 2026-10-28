@@ -82,6 +82,14 @@
   }
 }
 
+.cell-name__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
 .slug-text {
   color: var(--app-muted);
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
@@ -90,15 +98,22 @@
 }
 
 .tag {
-  display: inline-block;
-  margin-left: var(--space-2);
-  padding: 1px 8px;
-  border-radius: var(--app-radius-pill);
-  background: var(--app-surface-hover);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-2);
   color: var(--app-muted);
   font-size: var(--text-xs);
-  font-weight: 500;
-  vertical-align: middle;
+  font-weight: 600;
+  line-height: 1.35;
+
+  .pi {
+    color: var(--app-brand);
+    font-size: var(--text-2xs);
+  }
 }
 
 .people {

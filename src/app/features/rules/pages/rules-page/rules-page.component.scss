@@ -8,7 +8,7 @@
 
 .section-intro {
   margin-bottom: var(--space-4);
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 .section-head {
@@ -21,7 +21,7 @@
 
 .profile-description {
   margin-top: var(--space-3);
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 .reference {
@@ -118,7 +118,7 @@
   b {
     padding: 0 10px 6px;
     color: var(--app-muted);
-    font-size: 12px;
+    font-size: var(--text-xs);
     font-weight: 600;
   }
 
@@ -129,7 +129,7 @@
     padding: 8px 10px;
     border-radius: var(--app-radius-sm);
     color: var(--app-muted);
-    font-size: 13px;
+    font-size: var(--text-sm);
     font-weight: 500;
     text-decoration: none;
     transition:
@@ -196,7 +196,7 @@
   max-width: 26rem;
   margin: 0;
   color: var(--app-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 
   .pi {
     margin-top: 2px;

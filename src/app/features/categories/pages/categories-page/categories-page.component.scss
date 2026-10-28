@@ -11,7 +11,7 @@ p-tabs {
   margin-top: var(--space-4);
 }
 
-/* Search first; group and status filters follow in one aligned row. */
+/* Search first, taking the room; the group and status filters keep together at the right. */
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -39,14 +39,30 @@ p-tabs {
 }
 
 .filters__search {
-  flex: 0 1 20rem;
-  margin-left: 0;
+  flex: 1 1 14rem;
+  max-width: 36rem;
+}
+
+:host ::ng-deep .filters__search input {
+  width: 100%;
+}
+
+/* The filters keep together at the right, as on the Halls and Events lists. */
+.filters__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
 }
 
 @media (max-width: 40rem) {
   .filters__group,
-  .filters__search {
+  .filters__search,
+  .filters__end {
     flex: 1 1 100%;
+    max-width: none;
+    margin-left: 0;
   }
 
   .filters__search {
@@ -57,4 +73,51 @@ p-tabs {
     flex: 1;
     width: auto;
   }
+}
+// The cards' warm tint, as the Events and Halls cards, mixed into the surface so dark mode stays dark.
+$card-tint: #c8a26a;
+
+/* A category card: name, a two-line description, then its switch and Delete along the bottom. */
+.category-card {
+  gap: 6px;
+  padding: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, $card-tint 4%, var(--app-surface));
+
+  .item-card__title {
+    padding: var(--space-4) var(--space-4) 0;
+  }
+
+  &.is-off .item-card__title {
+    color: var(--app-muted);
+  }
+}
+
+.category-card__note {
+  display: -webkit-box;
+  min-height: 2.6em;
+  overflow: hidden;
+  padding: 0 var(--space-4);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: var(--text-sm);
+  line-height: 1.3;
+}
+
+.category-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding: 8px var(--space-3) 8px var(--space-4);
+  border-top: 1px solid var(--app-border);
+  background: color-mix(in srgb, $card-tint 8%, var(--app-surface));
+}
+
+.cell-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
 }

@@ -6,7 +6,7 @@
   [closable]="false"
   [closeOnEscape]="false"
   styleClass="wizard-dialog"
-  [style]="{ width: 'min(1100px, calc(100vw - 32px))', maxHeight: 'calc(100dvh - 48px)' }"
+  [style]="{ width: 'min(1100px, calc(100vw - 32px))', height: 'min(760px, calc(100dvh - 48px))' }"
 >
   <ng-template #header>
     <div class="wizard-header">
@@ -16,7 +16,7 @@
         </h2>
         <div class="wizard-header__badges">
           <span class="chip">Draft</span>
-          <span class="chip">Internal event</span>
+          <span class="wizard-header__kind">Internal event</span>
         </div>
       </div>
       <p-button
@@ -416,171 +416,167 @@
         <form [formGroup]="form" novalidate>
           <div class="toggles">
             <div class="toggle-row">
+              <span class="toggle-row__text">
+                <label for="event-wizard-overseas">Overseas exhibitors may register</label>
+                <small>Exhibitors from outside India can register on SelfCare.</small>
+              </span>
               <p-toggleswitch inputId="event-wizard-overseas" formControlName="allowOverseasUser" />
-              <label for="event-wizard-overseas">Overseas users may register</label>
             </div>
             <div class="toggle-row">
+              <span class="toggle-row__text">
+                <label for="event-wizard-marquee">Marquee stalls</label>
+                <small>Stalls in a temporary marquee outside the halls; dates are set in booking setup.</small>
+              </span>
               <p-toggleswitch inputId="event-wizard-marquee" formControlName="isMarqueeEnabled" />
-              <label for="event-wizard-marquee">Marquee enabled</label>
             </div>
             <div class="toggle-row">
+              <span class="toggle-row__text">
+                <label for="event-wizard-secondary">Multi-product (secondary) categories</label>
+                <small>An exhibitor may pick a category covering more than one product.</small>
+              </span>
               <p-toggleswitch
                 inputId="event-wizard-secondary"
                 formControlName="isSecondaryEnabled"
               />
-              <label for="event-wizard-secondary">Secondary (multi-product) enabled</label>
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-row__text">
+                <label for="event-wizard-public">Show in the public list of events</label>
+                <small>Visible on the public events calendar once created.</small>
+              </span>
+              <p-toggleswitch
+                inputId="event-wizard-public"
+                [ngModel]="form.controls.visibility.value === 'show'"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setPublic($event)"
+              />
             </div>
           </div>
-
-          <section class="card" aria-labelledby="event-wizard-visibility-title">
-            <h2 id="event-wizard-visibility-title">Public list</h2>
-            <p class="text-muted visibility-intro">
-              Whether the event shows in the public list of events.
-            </p>
-            <p-selectbutton
-              formControlName="visibility"
-              [options]="visibilityOptions"
-              optionLabel="label"
-              optionValue="value"
-              [allowEmpty]="false"
-              ariaLabelledBy="event-wizard-visibility-title"
-            />
-          </section>
         </form>
       }
 
       @if (stepIndex() === 6) {
-        <app-empty-state
-          icon="pi-building"
-          title="Halls are added after the event is created"
-          message="Once you create the event, open it to add the halls it uses."
-        />
+        <div class="halls-step">
+          <p class="halls-step__note">
+            @if (form.controls.startDate.value && form.controls.endDate.value) {
+              For {{ form.controls.startDate.value | date: 'd MMM y' }} to
+              {{ form.controls.endDate.value | date: 'd MMM y' }}.
+            }
+            <span class="halls-step__count">
+              @if (chosenHalls().length) {
+                {{ chosenHalls().length }} chosen · {{ chosenArea() | number }} m² bookable
+              } @else {
+                None chosen yet
+              }
+            </span>
+          </p>
+          @if (hallsLoading()) {
+            <p class="halls-step__state" role="status">Loading the halls…</p>
+          } @else if (hallsFailed()) {
+            <app-empty-state
+              icon="pi-exclamation-triangle"
+              title="The halls could not be loaded"
+              message="Check your connection and try again, or add the halls after the event is created."
+            >
+              <p-button label="Try again" icon="pi pi-refresh" (onClick)="loadHalls()" />
+            </app-empty-state>
+          } @else if (!halls().length) {
+            <app-empty-state
+              icon="pi-building"
+              title="No halls to choose from"
+              message="ITPO has no active halls yet."
+            />
+          } @else {
+            <ul class="hall-pick">
+              @for (hall of halls(); track hall.id) {
+                @let on = chosenHalls().includes(hall.id);
+                <li>
+                  <label class="hall-pick__card" [attr.data-on]="on || null">
+                    <input
+                      type="checkbox"
+                      class="visually-hidden"
+                      [checked]="on"
+                      (change)="toggleHall(hall.id)"
+                    />
+                    <img
+                      class="hall-pick__photo"
+                      [src]="thumbnail(hall) ?? placeholder"
+                      appImageFallback
+                      alt=""
+                      loading="lazy"
+                    />
+                    <span class="hall-pick__text">
+                      <b>{{ hall.name }}</b>
+                      <small>
+                        {{ hall.hallAreaCapacity !== null ? (hall.hallAreaCapacity | number) + ' m² bookable' : '—' }}
+                      </small>
+                      <span class="hall-pick__category">{{ hall.hallCategory?.name ?? '' }}</span>
+                    </span>
+                    <span class="hall-pick__tick" aria-hidden="true">
+                      @if (on) {
+                        <i class="pi pi-check"></i>
+                      }
+                    </span>
+                  </label>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       }
 
-      @if (stepIndex() === 7) {
-        <app-empty-state
-          icon="pi-building"
-          title="Booking setup is optional for now"
-          message="You can configure this after the event is created."
+      <!-- Booking setup: the event page's own form, kept alive across steps so nothing typed is lost. -->
+      <div class="booking-step" [hidden]="stepIndex() !== 7">
+        <app-event-config-tab
+          eventId=""
+          [draft]="true"
+          (incompleteChange)="bookingIncomplete.set($event)"
         />
-      }
+      </div>
 
       @if (stepIndex() === 8) {
-        @if (form.getRawValue(); as v) {
-          <div class="groups">
-            <section class="card" aria-labelledby="review-about-title">
-              <h2 id="review-about-title">About</h2>
-              <dl class="facts">
-                <div>
-                  <dt>Event name</dt>
-                  <dd>{{ v.name || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>Organisation</dt>
-                  <dd>{{ organisationName(v.organisationId) }}</dd>
-                </div>
-                <div>
-                  <dt>Event type</dt>
-                  <dd>{{ v.eventType || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>Event format</dt>
-                  <dd>{{ v.eventFormat || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>Co-organiser</dt>
-                  <dd>{{ v.coOrganizerName || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>Product category</dt>
-                  <dd>{{ v.productCategory || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>File number</dt>
-                  <dd>{{ v.fileNumber || '—' }}</dd>
-                </div>
-              </dl>
-            </section>
-
-            <section class="card" aria-labelledby="review-when-title">
-              <h2 id="review-when-title">When</h2>
-              <dl class="facts">
-                <div>
-                  <dt>Tenancy</dt>
-                  <dd>
-                    {{ v.startDate ? (v.startDate | date: 'd MMM y') : '—' }} –
-                    {{ v.endDate ? (v.endDate | date: 'd MMM y') : '—' }}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Exhibition days</dt>
-                  <dd>
-                    {{ v.exhibitionStartDate ? (v.exhibitionStartDate | date: 'd MMM y') : '—' }} –
-                    {{ v.exhibitionEndDate ? (v.exhibitionEndDate | date: 'd MMM y') : '—' }}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Open daily</dt>
-                  <dd>{{ v.startTimeOfEvent || '—' }} – {{ v.endTimeOfEvent || '—' }}</dd>
-                </div>
-              </dl>
-            </section>
-
-            <section class="card" aria-labelledby="review-expected-title">
-              <h2 id="review-expected-title">Expected</h2>
-              <dl class="facts">
-                <div>
-                  <dt>Visitors</dt>
-                  <dd>{{ v.expectedNumberOfVisitor !== null ? (v.expectedNumberOfVisitor | number) : '—' }}</dd>
-                </div>
-                <div>
-                  <dt>Exhibitors</dt>
-                  <dd>{{ v.expectedNumberOfExhibitors !== null ? (v.expectedNumberOfExhibitors | number) : '—' }}</dd>
-                </div>
-                <div>
-                  <dt>Stalls</dt>
-                  <dd>{{ v.noOfStalls !== null ? (v.noOfStalls | number) : '—' }}</dd>
-                </div>
-                <div>
-                  <dt>F&amp;B stalls</dt>
-                  <dd>{{ v.noOfFnbStalls !== null ? (v.noOfFnbStalls | number) : '—' }}</dd>
-                </div>
-                <div>
-                  <dt>Max categories per exhibitor</dt>
-                  <dd>
-                    {{
-                      v.maxCategoriesForRegistration !== null
-                        ? (v.maxCategoriesForRegistration | number)
-                        : '—'
-                    }}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-
-            <section class="card" aria-labelledby="review-settings-title">
-              <h2 id="review-settings-title">Settings</h2>
-              <dl class="facts">
-                <div>
-                  <dt>Overseas users may register</dt>
-                  <dd>{{ v.allowOverseasUser ? 'Yes' : 'No' }}</dd>
-                </div>
-                <div>
-                  <dt>Marquee enabled</dt>
-                  <dd>{{ v.isMarqueeEnabled ? 'Yes' : 'No' }}</dd>
-                </div>
-                <div>
-                  <dt>Secondary (multi-product) enabled</dt>
-                  <dd>{{ v.isSecondaryEnabled ? 'Yes' : 'No' }}</dd>
-                </div>
-                <div>
-                  <dt>Public list</dt>
-                  <dd>{{ visibilityLabel(v.visibility) }}</dd>
-                </div>
-              </dl>
-            </section>
-          </div>
+        @if (reviewProblems(); as problems) {
+          <p class="review-note" data-tone="bad">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+            {{ problems }} {{ problems === 1 ? 'item needs' : 'items need' }} attention. Open a section
+            below to complete it.
+          </p>
+        } @else {
+          <p class="review-note" data-tone="ok">
+            <i class="pi pi-check-circle" aria-hidden="true"></i> Every required section is complete.
+          </p>
         }
+        <ul class="review-list">
+          @for (row of reviewRows(); track row.index) {
+            <li [attr.data-state]="row.state">
+              <span class="review-list__mark" aria-hidden="true">
+                @switch (row.state) {
+                  @case ('done') {
+                    <i class="pi pi-check"></i>
+                  }
+                  @case ('optional') {
+                    <i class="pi pi-clock"></i>
+                  }
+                  @default {
+                    !
+                  }
+                }
+              </span>
+              <span class="review-list__text">
+                <b>{{ row.label }}</b>
+                <small>{{ row.summary || '—' }}</small>
+              </span>
+              <p-button
+                label="Edit"
+                icon="pi pi-pencil"
+                size="small"
+                [text]="true"
+                severity="secondary"
+                (onClick)="goTo(row.index)"
+              />
+            </li>
+          }
+        </ul>
       }
     </div>
   </div>

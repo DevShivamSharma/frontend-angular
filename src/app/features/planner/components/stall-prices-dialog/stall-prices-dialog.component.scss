@@ -19,14 +19,14 @@ table {
 th,
 td {
   padding: 6px 10px;
-  border-bottom: 1px solid var(--app-outline-variant);
+  border-bottom: 1px solid var(--app-border);
   text-align: left;
 }
 
 th {
   position: sticky;
   top: 0;
-  background: var(--app-surface-container-lowest);
+  background: var(--app-surface);
   font: var(--app-label-medium);
 }
 
@@ -37,12 +37,12 @@ th {
 }
 
 .how {
-  color: var(--app-on-surface-variant);
+  color: var(--app-muted);
   font: var(--app-body-small);
 }
 
 .warn {
-  color: var(--app-error);
+  color: var(--app-danger);
 }
 
 .small {

@@ -19,7 +19,7 @@
         />
       </p-iconfield>
       <div class="toolbar__view">
-        <span class="toolbar__label" id="halls-view-label">View</span>
+        <span class="visually-hidden" id="halls-view-label">Halls display mode</span>
         <p-selectbutton
           class="view-seg"
           [options]="viewOptions"
@@ -27,7 +27,7 @@
           optionValue="value"
           [allowEmpty]="false"
           [ngModel]="view()"
-          (ngModelChange)="view.set($event)"
+          (ngModelChange)="chooseView($event)"
           ariaLabelledBy="halls-view-label"
         >
           <ng-template #item let-option>
@@ -36,11 +36,11 @@
           </ng-template>
         </p-selectbutton>
       </div>
-      <span class="text-muted toolbar__count" aria-live="polite">
+      <!-- <span class="text-muted toolbar__count" aria-live="polite">
         @if (!loading() && !failed()) {
           {{ total() }} {{ total() === 1 ? 'hall' : 'halls' }}
         }
-      </span>
+      </span> -->
     </div>
 
     @if (failed()) {
@@ -54,7 +54,7 @@
     } @else {
       @if (loading()) {
         @if (view() === 'grid') {
-          <app-card-skeleton [count]="6" [media]="true" />
+          <app-card-skeleton [count]="6" />
         } @else {
           <app-table-skeleton [count]="8" [columns]="tableSkeleton" />
         }
@@ -62,37 +62,54 @@
         @if (view() === 'grid') {
           <ul class="card-grid">
             @for (hall of halls(); track hall.id) {
-              <li class="item-card item-card--media">
-                <img
-                  class="item-card__media"
-                  [src]="thumbnail(hall) ?? placeholder"
-                  alt=""
-                  loading="lazy"
-                  appImageFallback
-                />
-                <div class="item-card__body">
-                  <h2 class="item-card__title">
-                    <a [routerLink]="['/halls', hall.id]">{{ hall.name }}</a>
-                  </h2>
-                  <p class="item-card__meta">
-                    {{ hall.hallCategory?.name || 'No category' }}
-                    @if (hall.hallAreaCapacity !== null && hall.hallAreaCapacity !== undefined) {
-                      · {{ hall.hallAreaCapacity }} sqm
-                    }
-                  </p>
-                  <div class="item-card__tags">
-                    <p-tag
-                      [value]="hall.isActive ? 'Enabled' : 'Disabled'"
-                      [severity]="hall.isActive ? 'success' : 'secondary'"
-                    />
-                    @if (hall.isVipLounge) {
-                      <p-tag value="VIP lounge" severity="info" />
-                    }
-                    @if (hall.isAvailableForFnB) {
-                      <p-tag value="F&B" severity="secondary" />
-                    }
+              <li class="item-card hall-card">
+                <div class="hall-card__head">
+                  <img
+                    class="hall-card__thumbnail"
+                    [src]="thumbnail(hall) ?? placeholder"
+                    alt=""
+                    loading="lazy"
+                    appImageFallback
+                  />
+                  <div class="hall-card__text">
+                    <h2 class="item-card__title">
+                      <a [routerLink]="['/halls', hall.id]">{{ hall.name }}</a>
+                    </h2>
+                    <p class="item-card__meta">{{ hall.hallCategory?.name || 'No category' }}</p>
                   </div>
                 </div>
+                <dl class="hall-card__stats">
+                  <div>
+                    <dt>Area</dt>
+                    <dd>
+                      @if (hall.hallAreaCapacity !== null && hall.hallAreaCapacity !== undefined) {
+                        {{ hall.hallAreaCapacity }} sqm
+                      } @else {
+                        —
+                      }
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Status</dt>
+                    <dd class="hall-table__status" [class.hall-table__status--active]="hall.isActive">
+                      {{ hall.isActive ? 'Enabled' : 'Disabled' }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Facilities</dt>
+                    <dd>
+                      @if (hall.isVipLounge && hall.isAvailableForFnB) {
+                        VIP lounge, F&amp;B
+                      } @else if (hall.isVipLounge) {
+                        VIP lounge
+                      } @else if (hall.isAvailableForFnB) {
+                        F&amp;B
+                      } @else {
+                        —
+                      }
+                    </dd>
+                  </div>
+                </dl>
               </li>
             }
           </ul>

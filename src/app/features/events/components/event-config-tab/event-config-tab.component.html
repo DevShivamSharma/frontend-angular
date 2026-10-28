@@ -1,14 +1,14 @@
 <section class="config" aria-label="Booking setup">
   @if (loading()) {
-    <p class="loading text-muted" role="status">Loading the configuration…</p>
+    <p class="loading text-muted" role="status">Loading the booking setup…</p>
   } @else if (failed()) {
     <p class="loading text-muted" role="alert">
-      The configuration could not be loaded. Reload the page.
+      The booking setup could not be loaded. Reload the page.
     </p>
   } @else {
     <form [formGroup]="form" class="form" (ngSubmit)="save()">
       <div class="setup">
-        <nav class="steps" aria-label="Sections of the configuration">
+        <nav class="steps" aria-label="Sections of the booking setup">
           @for (s of sections(); track s.id; let i = $index) {
             <button
               type="button"
@@ -280,7 +280,7 @@
         </div>
       </div>
 
-      @if (!readonly()) {
+      @if (!readonly() && !draft()) {
         <div class="actions">
           <span class="save-note text-muted">
             @if (dirty()) {
