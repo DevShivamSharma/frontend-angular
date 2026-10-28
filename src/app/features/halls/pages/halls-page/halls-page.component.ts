@@ -15,7 +15,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subscription, debounceTime, distinctUntilChanged, forkJoin, map } from 'rxjs';
 
 import { UrlState } from '../../../../core/navigation/url-state';
 import { NotifierService } from '../../../../core/notification/notifier.service';
@@ -25,6 +25,9 @@ import { CardSkeletonComponent } from '../../../../shared/ui/card-skeleton/card-
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { TableSkeletonComponent } from '../../../../shared/ui/table-skeleton/table-skeleton.component';
+import { EventCalendarComponent } from '../../../events/components/event-calendar/event-calendar.component';
+import { EventListKind, EventSummary } from '../../../events/data/events.models';
+import { ItpoEventsApiService } from '../../../events/data/itpo-events-api.service';
 import { ItpoHall } from '../../data/halls.models';
 import { ItpoHallsApiService } from '../../data/itpo-halls-api.service';
 
@@ -44,6 +47,7 @@ const PAGE_SIZE = 10;
     PaginatorModule,
     SelectButtonModule,
     CardSkeletonComponent,
+    EventCalendarComponent,
     TableSkeletonComponent,
     ImageFallbackDirective,
     EmptyStateComponent,
@@ -55,6 +59,7 @@ const PAGE_SIZE = 10;
 })
 export class HallsPageComponent {
   private readonly api = inject(ItpoHallsApiService);
+  private readonly eventsApi = inject(ItpoEventsApiService);
   private readonly notifier = inject(NotifierService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -66,7 +71,12 @@ export class HallsPageComponent {
   protected readonly viewOptions = [
     { label: 'List', value: 'list', icon: 'pi pi-list' },
     { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
+    { label: 'Calendar', value: 'calendar', icon: 'pi pi-calendar' },
   ];
+
+  /** Every event, internal and external, for the calendar; loaded the first time it is shown. */
+  protected readonly events = signal<EventSummary[] | null>(null);
+  protected readonly eventsFailed = signal(false);
   protected readonly tableSkeleton = [
     { width: '2rem' },
     { width: '35%' },
@@ -93,6 +103,7 @@ export class HallsPageComponent {
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.fetch(0));
     this.fetch(this.url.firstRow('page', PAGE_SIZE));
+    if (this.view() === 'calendar') this.fetchEvents();
   }
 
   protected onPage(event: PaginatorState): void {
@@ -112,6 +123,24 @@ export class HallsPageComponent {
     } catch {
       // Storage may be blocked; the view still changes for this visit.
     }
+    if (view === 'calendar' && this.events() === null) this.fetchEvents();
+  }
+
+  /** Internal and external events together, from the same list the events pages use.
+   *  shortcut: the first EVENTS_SIZE of each kind only; page through them if ITPO has more. */
+  protected fetchEvents(): void {
+    this.eventsFailed.set(false);
+    const page = (kind: EventListKind) =>
+      this.eventsApi.events({ kind, page: 1, size: EVENTS_SIZE }).pipe(map((p) => p.items));
+    forkJoin([page('internal'), page('external')])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ([internal, external]) => this.events.set([...internal, ...external]),
+        error: (error: unknown) => {
+          this.eventsFailed.set(true);
+          this.notifier.fromError(error, 'The events could not be loaded');
+        },
+      });
   }
 
   protected thumbnail(hall: ItpoHall): string | null {
@@ -148,13 +177,15 @@ export class HallsPageComponent {
   }
 }
 
-type HallsView = 'list' | 'grid';
+type HallsView = 'list' | 'grid' | 'calendar';
 
 const VIEW_KEY = 'ems.halls-view';
+const EVENTS_SIZE = 100;
 
 function readView(): HallsView {
   try {
-    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid';
+    const view = localStorage.getItem(VIEW_KEY);
+    return view === 'list' || view === 'calendar' ? view : 'grid';
   } catch {
     return 'grid';
   }

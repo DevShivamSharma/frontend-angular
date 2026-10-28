@@ -8,16 +8,19 @@
 
   <section class="card card--flush" aria-label="Halls">
     <div class="toolbar">
-      <p-iconfield class="toolbar__search">
-        <p-inputicon class="pi pi-search" />
-        <input
-          pInputText
-          type="search"
-          [formControl]="search"
-          placeholder="Search halls by name"
-          aria-label="Search halls by name"
-        />
-      </p-iconfield>
+      <!-- The search finds halls; the calendar shows events, so it has none. -->
+      @if (view() !== 'calendar') {
+        <p-iconfield class="toolbar__search">
+          <p-inputicon class="pi pi-search" />
+          <input
+            pInputText
+            type="search"
+            [formControl]="search"
+            placeholder="Search halls by name"
+            aria-label="Search halls by name"
+          />
+        </p-iconfield>
+      }
       <div class="toolbar__view">
         <span class="visually-hidden" id="halls-view-label">Halls display mode</span>
         <p-selectbutton
@@ -43,7 +46,21 @@
       </span> -->
     </div>
 
-    @if (failed()) {
+    @if (view() === 'calendar') {
+      @if (eventsFailed()) {
+        <app-empty-state
+          icon="pi-exclamation-triangle"
+          title="The events could not be loaded"
+          message="Check your connection and try again."
+        >
+          <p-button label="Try again" icon="pi pi-refresh" (onClick)="fetchEvents()" />
+        </app-empty-state>
+      } @else if (events(); as list) {
+        <app-event-calendar [events]="list" />
+      } @else {
+        <app-table-skeleton [count]="6" [columns]="tableSkeleton" />
+      }
+    } @else if (failed()) {
       <app-empty-state
         icon="pi-exclamation-triangle"
         title="The halls could not be loaded"
