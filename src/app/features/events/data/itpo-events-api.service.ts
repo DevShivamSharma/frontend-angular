@@ -112,6 +112,8 @@ function toSummary(raw: Raw): EventSummary {
     approvalStatus: text(raw['approvalStatus']),
     startDate: text(raw['tenancyPeriodStartDate']),
     endDate: text(raw['tenancyPeriodEndDate']),
+    eventType: text(raw['eventType']),
+    visible: flag(raw['visibilityStatus']),
   };
 }
 
@@ -123,7 +125,6 @@ const num = (value: unknown): number | null => {
 function toEventDetails(raw: Raw): EventDetails {
   return {
     ...toSummary(raw),
-    eventType: text(raw['eventType']),
     eventFormat: text(raw['eventFormat']),
     coOrganizer: text(raw['coOrganizerName']),
     bookingDate: text(raw['bookingDate']),
@@ -147,7 +148,6 @@ function toEventDetails(raw: Raw): EventDetails {
     allowOverseasUser: flag(raw['allowOverseasUser']),
     isMarqueeEnabled: flag(raw['isMarqueeEnabled']),
     isSecondaryEnabled: flag(raw['isSecondaryCatEnabled']),
-    visible: flag(raw['visibilityStatus']),
   };
 }
 

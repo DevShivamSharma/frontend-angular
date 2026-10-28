@@ -247,6 +247,34 @@
   }
 }
 
+/* The redesign's quieter switch (events list views, calendar months): the chosen option outlined
+   on a grey fill, not filled in red. */
+.view-seg--quiet.p-selectbutton {
+  gap: 2px;
+  padding: 2px;
+  outline: 0;
+  border: 1px solid var(--app-border);
+
+  .p-togglebutton {
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: var(--app-radius-xs);
+    font-size: var(--text-sm);
+    font-weight: 500;
+  }
+
+  .p-togglebutton:not(.p-togglebutton-checked):hover {
+    color: var(--app-text);
+  }
+
+  .p-togglebutton.p-togglebutton-checked {
+    background: var(--app-surface-hover);
+    color: var(--app-text);
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px var(--app-border-strong);
+  }
+}
+
 /* A quiet segmented filter with a visible track and a clearly selected surface. */
 .filter-seg.p-selectbutton,
 .filter-seg .p-selectbutton {

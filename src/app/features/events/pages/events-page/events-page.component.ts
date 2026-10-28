@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -25,11 +25,13 @@ import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { UrlState } from '../../../../core/navigation/url-state';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { NotifierService } from '../../../../core/notification/notifier.service';
+import { EventCalendarComponent } from '../../components/event-calendar/event-calendar.component';
 import { CardSkeletonComponent } from '../../../../shared/ui/card-skeleton/card-skeleton.component';
 import { TableSkeletonComponent } from '../../../../shared/ui/table-skeleton/table-skeleton.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { statusSeverity } from '../../domain/event-status';
+import { eventByline, eventStage } from '../../domain/event-stage';
 import { ItpoEventsApiService } from '../../data/itpo-events-api.service';
 import { EventListKind, EventSummary } from '../../data/events.models';
 
@@ -55,6 +57,7 @@ const PAGE_SIZE = 15;
     SelectButtonModule,
     TagModule,
     CardSkeletonComponent,
+    EventCalendarComponent,
     TableSkeletonComponent,
     EmptyStateComponent,
     PageHeaderComponent,
@@ -68,6 +71,7 @@ export class EventsPageComponent {
   private readonly auth = inject(AuthService);
   private readonly notifier = inject(NotifierService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   protected readonly pageSize = PAGE_SIZE;
   protected readonly search = new FormControl('', { nonNullable: true });
@@ -76,17 +80,16 @@ export class EventsPageComponent {
   protected readonly viewOptions = [
     { label: 'List', value: 'table', icon: 'pi pi-list' },
     { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
+    { label: 'Calendar', value: 'calendar', icon: 'pi pi-calendar' },
   ];
-  protected readonly view = signal<'grid' | 'table'>('table');
+  protected readonly view = signal<'grid' | 'table' | 'calendar'>('table');
   /** Placeholder columns while the list loads as a table, matching the visible table columns. */
-  protected readonly tableSkeleton = computed(() => [
-    { width: '1.5rem' },
-    { width: '55%' },
-    { width: '40%', hideSmall: true },
-    ...(this.isStaff() && this.kind() === 'external' ? [{ width: '8rem' }] : []),
-    { width: '10rem' },
-    { width: '10rem' },
-  ]);
+  protected readonly tableSkeleton = [
+    { width: '60%' },
+    { width: '10rem', hideSmall: true },
+    { width: '5rem' },
+    { width: '1rem' },
+  ];
   /** Which events this page lists; set by the route. */
   readonly kind = input.required<EventListKind>();
   protected readonly title = computed(() =>
@@ -110,6 +113,31 @@ export class EventsPageComponent {
   protected readonly canCreate = computed(() => this.isStaff() && this.kind() === 'internal');
 
   protected readonly events = signal<EventSummary[]>([]);
+  /** The stage tab. shortcut: it filters and counts the loaded page only; needs a stage filter in the API to cover every page. */
+  protected readonly tab = signal('all');
+  /** The stages a list is split by: an internal event is drafted then published, an external one approved then published. */
+  private readonly stages = computed(() => {
+    const approval = (status: string) => (event: EventSummary) =>
+      event.approvalStatus?.toLowerCase() === status;
+    return this.kind() === 'internal'
+      ? [
+          { id: 'drafts', label: 'Drafts', has: (event: EventSummary) => !event.visible },
+          { id: 'published', label: 'Published', has: (event: EventSummary) => !!event.visible },
+        ]
+      : [
+          { id: 'pending', label: 'Pending approval', has: approval('pending') },
+          { id: 'approved', label: 'Approved', has: approval('approved') },
+          { id: 'published', label: 'Published', has: (event: EventSummary) => !!event.visible },
+        ];
+  });
+  protected readonly tabs = computed(() => [
+    { id: 'all', label: 'All', count: this.events().length },
+    ...this.stages().map((stage) => ({ ...stage, count: this.events().filter(stage.has).length })),
+  ]);
+  protected readonly shown = computed(() => {
+    const stage = this.stages().find((s) => s.id === this.tab());
+    return stage ? this.events().filter(stage.has) : this.events();
+  });
   protected readonly total = signal(0);
   protected readonly first = signal(0);
   protected readonly loading = signal(true);
@@ -129,6 +157,7 @@ export class EventsPageComponent {
     effect(() => {
       this.kind();
       untracked(() => {
+        this.tab.set('all');
         this.fetch(this.startAt);
         this.startAt = 0;
       });
@@ -145,6 +174,14 @@ export class EventsPageComponent {
   }
 
   protected readonly severity = statusSeverity;
+
+  protected readonly byline = eventByline;
+  protected readonly stage = eventStage;
+
+  /** The whole row opens the event; the name stays a real link for keyboard and new-tab use. */
+  protected open(event: EventSummary): void {
+    void this.router.navigate([this.base(), event.id]);
+  }
 
   private fetch(first: number): void {
     this.request?.unsubscribe();

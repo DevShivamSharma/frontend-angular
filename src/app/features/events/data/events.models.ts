@@ -87,11 +87,13 @@ export interface EventSummary {
   approvalStatus: string | null;
   startDate: string | null;
   endDate: string | null;
+  eventType: string | null;
+  /** Whether the event shows in the public list; null when ITPO did not say. */
+  visible: boolean | null;
 }
 
 /** An event's own details, as ITPO's event detail gives them. */
 export interface EventDetails extends EventSummary {
-  eventType: string | null;
   eventFormat: string | null;
   coOrganizer: string | null;
   bookingDate: string | null;
@@ -115,8 +117,6 @@ export interface EventDetails extends EventSummary {
   allowOverseasUser: boolean | null;
   isMarqueeEnabled: boolean | null;
   isSecondaryEnabled: boolean | null;
-  /** Whether the event shows in the public list; null when ITPO did not say. */
-  visible: boolean | null;
 }
 
 /** A hall in an event, as ITPO's event detail gives it. */

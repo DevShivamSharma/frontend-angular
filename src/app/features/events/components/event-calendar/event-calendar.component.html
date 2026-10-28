@@ -1,0 +1,82 @@
+<div class="cal">
+  <div class="cal__top">
+    <div class="cal__nav">
+      <p-button icon="pi pi-chevron-left" [text]="true" [rounded]="true" ariaLabel="Earlier" (onClick)="move(-1)" />
+      <p-button icon="pi pi-chevron-right" [text]="true" [rounded]="true" ariaLabel="Later" (onClick)="move(1)" />
+      <h2 class="cal__range">{{ from() | date: 'MMM y' }} – {{ lastMonth() | date: 'MMM y' }}</h2>
+    </div>
+    <ul class="cal__legend" aria-label="Colours">
+      <li data-severity="info">Draft</li>
+      <li data-severity="warn">Pending approval</li>
+      <li data-severity="success">Approved or published</li>
+    </ul>
+    <p-selectbutton
+      class="view-seg view-seg--quiet"
+      [options]="spanOptions"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      [ngModel]="span()"
+      (ngModelChange)="span.set($event)"
+      ariaLabelledBy="cal-span-label"
+    />
+    <span class="visually-hidden" id="cal-span-label">Months shown</span>
+  </div>
+
+  <div class="cal__scroll">
+    <div class="cal__head">
+      <span class="cal__label">Event</span>
+      <div class="cal__track">
+        @for (month of months(); track month.start.getTime(); let first = $first) {
+          <span class="cal__month" [style.width.%]="month.width">
+            {{ month.start | date: 'MMM' }}
+            @if (first || month.start.getMonth() === 0) {
+              <small>{{ month.start | date: 'y' }}</small>
+            }
+          </span>
+        }
+      </div>
+    </div>
+
+    <ul class="cal__rows">
+      @for (row of rows(); track row.event.id) {
+        <li class="cal__row">
+          <div class="cal__label">
+            <a class="cal__name" [routerLink]="link(row.event)">{{ row.event.name }}</a>
+            <div class="cal__meta">
+              @if (row.stage; as s) {
+                <span class="stage-chip" [attr.data-severity]="s.severity">{{ s.label }}</span>
+              }
+              <span>{{ byline(row.event) }}</span>
+            </div>
+          </div>
+          <div class="cal__track" aria-hidden="true">
+            @for (month of months(); track month.start.getTime()) {
+              <span class="cal__cell" [style.width.%]="month.width"></span>
+            }
+            @if (today() !== null) {
+              <span class="cal__today" [style.left.%]="today()"></span>
+            }
+            <span
+              class="cal__pill"
+              [attr.data-severity]="row.stage?.severity"
+              [style.left.%]="row.left"
+              [style.width.%]="row.width"
+            ></span>
+            <span
+              class="cal__what"
+              [class.cal__what--flip]="row.flip"
+              [style.left.%]="row.flip ? null : row.left + row.width"
+              [style.right.%]="row.flip ? 100 - row.left : null"
+            >
+              <b>{{ row.event.name }}</b>
+              <small>{{ row.event.startDate | date: 'd MMM' }} – {{ row.event.endDate | date: 'd MMM' }}</small>
+            </span>
+          </div>
+        </li>
+      } @empty {
+        <li class="cal__empty text-muted">No events in these months.</li>
+      }
+    </ul>
+  </div>
+</div>

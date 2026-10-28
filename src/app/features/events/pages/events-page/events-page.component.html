@@ -8,8 +8,20 @@
     }
   </app-page-header>
 
-  <section class="card card--flush" aria-label="Events">
-    <div class="toolbar">
+  <div class="toolbar">
+        <div class="stage-tabs" role="tablist" aria-label="Events by stage">
+          @for (t of tabs(); track t.id) {
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="tab() === t.id"
+              aria-controls="events-panel"
+              (click)="tab.set(t.id)"
+            >
+              {{ t.label }} <span class="stage-tabs__count">{{ loading() ? '' : t.count }}</span>
+            </button>
+          }
+        </div>
       <div class="toolbar__field toolbar__field--grow">
         <label class="visually-hidden" for="events-search">Search events</label>
         <p-iconfield>
@@ -19,14 +31,14 @@
             id="events-search"
             type="search"
             [formControl]="search"
-            placeholder="Event name or booking ID"
+            placeholder="Search by name, organiser or date"
           />
         </p-iconfield>
       </div>
       <div class="toolbar__field toolbar__field--view">
         <span class="visually-hidden" id="events-view-label">Events display mode</span>
         <p-selectbutton
-          class="view-seg"
+          class="view-seg view-seg--quiet"
           [options]="viewOptions"
           optionLabel="label"
           optionValue="value"
@@ -41,7 +53,9 @@
           </ng-template>
         </p-selectbutton>
       </div>
-    </div>
+  </div>
+
+  <section id="events-panel" class="card card--flush" aria-label="Events">
 
     @if (failed()) {
       <app-empty-state
@@ -56,12 +70,12 @@
         @if (view() === 'grid') {
           <app-card-skeleton [count]="6" />
         } @else {
-          <app-table-skeleton [count]="8" [columns]="tableSkeleton()" />
+          <app-table-skeleton [count]="8" [columns]="tableSkeleton" />
         }
       } @else if (events().length) {
         @if (view() === 'grid') {
           <ul class="card-grid">
-            @for (event of events(); track event.id) {
+            @for (event of shown(); track event.id) {
               <li class="item-card event-card">
                 <div class="event-card__body">
                   <!-- The start date at a glance; the full range is read out below. -->
@@ -107,8 +121,12 @@
                   </div>
                 </div>
               </li>
+            } @empty {
+              <li class="text-muted">No events in this tab on this page.</li>
             }
           </ul>
+        } @else if (view() === 'calendar') {
+          <app-event-calendar [events]="shown()" />
         } @else {
           <div class="data-table-wrap">
             <table class="data-table">
@@ -117,45 +135,55 @@
               </caption>
               <thead>
                 <tr>
-                  <th scope="col" class="cell-no">Sr. no.</th>
                   <th scope="col">Event</th>
-                  <th scope="col">Dates</th>
-                  @if (isStaff() && kind() === 'external') {
-                    <th scope="col">Organisation</th>
-                  }
-                  <th scope="col" class="cell-status cell-status--right">Booking status</th>
-                  <th scope="col" class="cell-status cell-status--right">Approval status</th>
+                  <th scope="col">Tenancy</th>
+                  <th scope="col">Stage</th>
+                  <th scope="col"><span class="visually-hidden">Open</span></th>
                 </tr>
               </thead>
               <tbody>
-                @for (event of events(); track event.id; let i = $index) {
-                  <tr>
-                    <td class="cell-no">{{ first() + i + 1 }}</td>
-                    <th scope="row" class="cell-name">
-                      <a class="cell-name__title" [routerLink]="[base(), event.id]">{{
-                        event.name | titlecase
-                      }}</a>
-                      @if (event.bookingId) {
-                        <span class="cell-name__note">{{ event.bookingId }}</span>
-                      }
+                @for (event of shown(); track event.id) {
+                  <tr class="event-row" (click)="open(event)">
+                    <th scope="row">
+                      <div class="event-who">
+                        <!-- The start date at a glance; the full range is in the Tenancy column. -->
+                        <span class="date-tile" aria-hidden="true">
+                          @if (event.startDate) {
+                            <small>{{ event.startDate | date: 'MMM' }}</small>
+                            <b>{{ event.startDate | date: 'd' }}</b>
+                          } @else {
+                            <small>—</small>
+                          }
+                        </span>
+                        <div class="event-who__text">
+                          <a class="cell-name__title" [routerLink]="[base(), event.id]" (click)="$event.stopPropagation()">{{
+                            event.name | titlecase
+                          }}</a>
+                          <span class="cell-name__note">{{ byline(event) || event.bookingId }}</span>
+                        </div>
+                      </div>
                     </th>
                     <td class="nowrap">
-                      {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
-                      {{ event.endDate ? (event.endDate | date: 'd MMM y') : '—' }}
-                    </td>
-                    @if (isStaff() && kind() === 'external') {
-                      <td>{{ event.organisation || '—' }}</td>
-                    }
-                    <td class="cell-status cell-status--right">
-                      @if (event.bookingStatus) {
-                        <span class="event-status" [attr.data-severity]="severity(event.bookingStatus)">{{ event.bookingStatus }}</span>
+                      @if (event.startDate && event.endDate) {
+                        <!-- One year shown once when both ends share it: "5 Nov – 29 Nov 2026". -->
+                        {{ event.startDate | date: (event.startDate.slice(0, 4) === event.endDate.slice(0, 4) ? 'd MMM' : 'd MMM y') }}
+                        – {{ event.endDate | date: 'd MMM y' }}
+                      } @else {
+                        —
                       }
                     </td>
-                    <td class="cell-status cell-status--right">
-                      @if (event.approvalStatus) {
-                        <span class="event-status" [attr.data-severity]="severity(event.approvalStatus)">{{ event.approvalStatus }}</span>
+                    <td>
+                      @if (stage(event); as s) {
+                        <span class="stage-chip" [attr.data-severity]="s.severity">{{ s.label }}</span>
                       }
                     </td>
+                    <td class="cell-go">
+                      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="text-muted">No events in this tab on this page.</td>
                   </tr>
                 }
               </tbody>
