@@ -97,10 +97,28 @@ $control: #8a8a94; // the redesign prototype's control border
 }
 
 .event-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: var(--app-radius-pill);
+  background: color-mix(in srgb, currentColor 10%, transparent);
   color: var(--app-muted);
   font-size: var(--text-sm);
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.event-status::before {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  content: '';
 }
 
 .event-status[data-severity='success'] {

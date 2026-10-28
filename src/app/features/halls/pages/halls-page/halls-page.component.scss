@@ -8,7 +8,7 @@
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4);
@@ -18,6 +18,7 @@
 
 .toolbar__search {
   flex: 1 1 22rem;
+  max-width: 58rem;
 }
 
 :host ::ng-deep .toolbar__search input {
@@ -34,6 +35,13 @@
   color: var(--app-text);
   font-size: var(--text-base);
   font-weight: 500;
+}
+
+.toolbar__count {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  white-space: nowrap;
 }
 
 :host ::ng-deep .view-seg {
