@@ -11,7 +11,7 @@ p-tabs {
   margin-top: var(--space-4);
 }
 
-/* One line of filters: what to look at on the left, the search at the right. */
+/* Search first; group and status filters follow in one aligned row. */
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -39,8 +39,8 @@ p-tabs {
 }
 
 .filters__search {
-  flex: 0 1 18rem;
-  margin-left: auto;
+  flex: 0 1 20rem;
+  margin-left: 0;
 }
 
 @media (max-width: 40rem) {

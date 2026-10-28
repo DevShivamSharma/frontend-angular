@@ -25,6 +25,16 @@
       <p-tabpanel value="categories">
         <section class="card card--flush list" aria-label="Categories">
           <div class="filters sticky-filters">
+            <p-iconfield class="filters__search">
+              <p-inputicon class="pi pi-search" />
+              <input
+                pInputText
+                type="search"
+                [formControl]="search"
+                placeholder="Search categories"
+                aria-label="Search categories"
+              />
+            </p-iconfield>
             <div class="filters__group">
               <label for="category-group-filter">Group</label>
               <p-select
@@ -51,16 +61,6 @@
               (ngModelChange)="chooseStatus($event)"
               ariaLabel="Show"
             />
-            <p-iconfield class="filters__search">
-              <p-inputicon class="pi pi-search" />
-              <input
-                pInputText
-                type="search"
-                [formControl]="search"
-                placeholder="Search categories"
-                aria-label="Search categories"
-              />
-            </p-iconfield>
           </div>
 
           @if (groupsFailed()) {
