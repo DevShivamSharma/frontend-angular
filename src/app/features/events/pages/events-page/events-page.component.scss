@@ -131,3 +131,41 @@ $control: #8a8a94; // the redesign prototype's control border
 .event-status-grid__empty {
   color: var(--app-muted);
 }
+
+.data-table {
+  .cell-name__title {
+    color: var(--app-text);
+    font-size: var(--text-base);
+    font-weight: 700;
+    text-decoration-color: color-mix(in srgb, var(--app-brand) 55%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition:
+      color 160ms var(--ease-out),
+      text-decoration-color 160ms var(--ease-out);
+
+    &:hover {
+      color: var(--app-brand);
+      text-decoration-color: currentColor;
+    }
+
+    &:focus-visible {
+      border-radius: var(--app-radius-2xs);
+      outline: 2px solid var(--app-ring);
+      outline-offset: 2px;
+    }
+  }
+
+  .cell-name__note {
+    margin-top: 4px;
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    letter-spacing: 0.015em;
+  }
+
+  td.nowrap {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+}
