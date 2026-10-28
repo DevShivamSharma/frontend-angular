@@ -92,7 +92,8 @@ export class PlannerAssistantComponent {
   protected readonly working = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly listening = signal(false);
-  protected readonly voiceOn = signal(this.speechAvailable());
+  protected readonly canSpeak = this.speechAvailable();
+  protected readonly voiceOn = signal(this.canSpeak);
   protected readonly canListen = recognitionCtor() !== null;
 
   /** The conversation as the model sees it. */
@@ -117,6 +118,7 @@ export class PlannerAssistantComponent {
     effect(() => {
       this.items();
       this.thinking();
+      this.working();
       const el = this.logEl()?.nativeElement;
       if (el) queueMicrotask(() => (el.scrollTop = el.scrollHeight));
     });

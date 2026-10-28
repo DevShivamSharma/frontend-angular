@@ -1,32 +1,55 @@
 <section class="panel" aria-label="AI Assistant">
   <header class="head">
     <app-icon name="auto_awesome" class="spark" />
-    <h2>AI Assistant</h2>
-    <button
-      type="button"
-      class="icon-btn"
-      (click)="toggleVoice()"
-      [attr.aria-pressed]="voiceOn()"
-      [attr.aria-label]="voiceOn() ? 'Stop reading answers aloud' : 'Read answers aloud'"
-      [title]="voiceOn() ? 'Answers are read aloud' : 'Answers are not read aloud'"
-    >
-      <app-icon [name]="voiceOn() ? 'volume_up' : 'volume_off'" />
-    </button>
-    <button type="button" class="icon-btn" (click)="closed.emit()" aria-label="Close the assistant">
-      <app-icon name="close" />
-    </button>
+    <div class="head__copy">
+      <h2>AI Assistant</h2>
+      <p>Plan this hall by text or voice</p>
+    </div>
+    <div class="head__tools">
+      <button
+        type="button"
+        class="icon-btn"
+        (click)="toggleVoice()"
+        [disabled]="!canSpeak"
+        [attr.aria-pressed]="voiceOn()"
+        [attr.aria-label]="voiceOn() ? 'Mute spoken replies' : 'Turn on spoken replies'"
+        [title]="
+          canSpeak
+            ? voiceOn()
+              ? 'Spoken replies are on'
+              : 'Spoken replies are off'
+            : 'Speech output is unavailable in this browser'
+        "
+      >
+        <app-icon [name]="voiceOn() ? 'volume_up' : 'volume_off'" />
+      </button>
+      <button
+        type="button"
+        class="icon-btn"
+        (click)="closed.emit()"
+        aria-label="Close the assistant"
+        title="Close assistant"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
   </header>
 
-  <div class="log" #log aria-live="polite">
+  <div class="log" #log role="log" aria-live="polite" aria-relevant="additions text">
     @if (!items().length) {
       <div class="empty">
+        <span class="empty__eyebrow">START WITH A TASK</span>
+        <h3>What would you like to do?</h3>
         <p>
-          Ask about this hall, or tell me what to do: make zones, fill them with booths, change
-          booths, save, show it in 3D. Type, or press the microphone and speak in Hindi or English.
+          Ask about this hall or describe a change. You can type in English or Hindi, or speak your
+          request.
         </p>
+        <span class="prompt-label">Try a prompt</span>
         <div class="chips">
           @for (s of suggestions; track s) {
-            <button type="button" class="chip" (click)="send(s)">{{ s }}</button>
+            <button type="button" class="chip" (click)="send(s)" [disabled]="working()">
+              {{ s }}
+            </button>
           }
         </div>
       </div>
@@ -69,6 +92,16 @@
         }
       }
     }
+    @if (!working() && !error() && items().length === 2) {
+      <div class="followups" aria-label="Suggested next prompts">
+        <span class="prompt-label">Try another request</span>
+        <div class="chips">
+          @for (s of suggestions; track s) {
+            <button type="button" class="chip" (click)="send(s)">{{ s }}</button>
+          }
+        </div>
+      </div>
+    }
     @if (thinking()) {
       <p class="msg typing" aria-label="The assistant is thinking">
         <span></span><span></span><span></span>
@@ -84,7 +117,11 @@
     }
   </div>
 
-  <form class="ask" (submit)="$event.preventDefault(); send(draft())">
+  <form
+    class="ask"
+    aria-label="Ask the planning assistant"
+    (submit)="$event.preventDefault(); send(draft())"
+  >
     @if (canListen) {
       <button
         type="button"
