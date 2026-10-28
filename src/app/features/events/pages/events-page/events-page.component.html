@@ -11,7 +11,7 @@
   <section class="card card--flush" aria-label="Events">
     <div class="toolbar">
       <div class="toolbar__field toolbar__field--grow">
-        <label class="toolbar__label" for="events-search">Find an event</label>
+        <label class="visually-hidden" for="events-search">Search events</label>
         <p-iconfield>
           <p-inputicon class="pi pi-search" />
           <input
@@ -24,7 +24,7 @@
         </p-iconfield>
       </div>
       <div class="toolbar__field toolbar__field--view">
-        <span class="toolbar__label" id="events-view-label">View</span>
+        <span class="visually-hidden" id="events-view-label">Events display mode</span>
         <p-selectbutton
           class="view-seg"
           [options]="viewOptions"

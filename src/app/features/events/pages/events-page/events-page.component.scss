@@ -17,7 +17,7 @@ $control: #8a8a94; // the redesign prototype's control border
   border-bottom: 1px solid var(--app-border);
 }
 
-// A label over its control; every label on one line, every control on the next.
+// Keep the search and view controls aligned, wrapping only when the toolbar gets narrow.
 .toolbar__field {
   display: grid;
   gap: 6px;
