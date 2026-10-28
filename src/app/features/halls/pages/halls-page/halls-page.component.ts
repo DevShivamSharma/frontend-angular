@@ -7,13 +7,14 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 
@@ -24,6 +25,7 @@ import { PLACEHOLDER_IMAGE } from '../../../../shared/ui/placeholder-image/place
 import { CardSkeletonComponent } from '../../../../shared/ui/card-skeleton/card-skeleton.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
+import { TableSkeletonComponent } from '../../../../shared/ui/table-skeleton/table-skeleton.component';
 import { ItpoHall } from '../../data/halls.models';
 import { ItpoHallsApiService } from '../../data/itpo-halls-api.service';
 
@@ -33,6 +35,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-halls-page',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,
@@ -40,8 +43,10 @@ const PAGE_SIZE = 10;
     InputIconModule,
     InputTextModule,
     PaginatorModule,
+    SelectButtonModule,
     TagModule,
     CardSkeletonComponent,
+    TableSkeletonComponent,
     ImageFallbackDirective,
     EmptyStateComponent,
     PageHeaderComponent,
@@ -58,6 +63,19 @@ export class HallsPageComponent {
   protected readonly placeholder = PLACEHOLDER_IMAGE;
   protected readonly pageSize = PAGE_SIZE;
   protected readonly search = new FormControl('', { nonNullable: true });
+  protected readonly view = signal<'list' | 'grid'>('grid');
+  protected readonly viewOptions = [
+    { label: 'List', value: 'list', icon: 'pi pi-list' },
+    { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
+  ];
+  protected readonly tableSkeleton = [
+    { width: '2rem' },
+    { width: '35%' },
+    { width: '20%', hideSmall: true },
+    { width: '8rem', hideSmall: true },
+    { width: '7rem' },
+    { width: '10rem', hideSmall: true },
+  ];
 
   protected readonly halls = signal<ItpoHall[]>([]);
   protected readonly total = signal(0);

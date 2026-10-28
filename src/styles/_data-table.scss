@@ -182,16 +182,25 @@
   }
 }
 
-/*
- * A filter, not a call to action: the chosen option is marked quietly, not in the brand colour.
- * PrimeNG draws a selectbutton with a border on each segment (none on the left of all but the
- * first), so a border on the chosen one left it open on one side and square in the middle. Here
- * the segments share the track colour as their border, and the chosen one is lifted with a ring.
- */
+/* A quiet segmented filter with a visible track and a clearly selected surface. */
 .filter-seg.p-selectbutton,
 .filter-seg .p-selectbutton {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface-hover);
+
   .p-togglebutton {
-    border-color: var(--app-surface-2);
+    border: 0;
+    border-radius: var(--app-radius-sm);
+    background: transparent;
+    color: var(--app-muted);
+    transition:
+      color 140ms var(--ease-out),
+      background 140ms var(--ease-out),
+      box-shadow 140ms var(--ease-out);
   }
 
   .p-togglebutton.p-togglebutton-checked {
@@ -206,8 +215,10 @@
   }
 
   .p-togglebutton:not(.p-togglebutton-checked) {
-    background: var(--app-surface-2);
-    color: var(--app-muted);
+    &:hover {
+      background: color-mix(in srgb, var(--app-text) 6%, var(--app-surface));
+      color: var(--app-text);
+    }
   }
 }
 
