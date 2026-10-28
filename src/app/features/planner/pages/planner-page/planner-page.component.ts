@@ -563,17 +563,63 @@ export class PlannerPageComponent implements HasUnsavedChanges {
   protected readonly toolMenu = signal<string | null>(null);
   protected readonly toolMenuAt = signal({ x: 0, y: 0 });
 
+  /** The button that opened the menu: focus goes back to it when the menu closes. */
+  private toolMenuTrigger: HTMLElement | null = null;
+
   protected openToolMenu(menu: string, event: MouseEvent): void {
-    if (this.toolMenu() === menu) return this.toolMenu.set(null);
-    const at = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    if (this.toolMenu() === menu) return this.closeToolMenu();
+    this.toolMenuTrigger = event.currentTarget as HTMLElement;
+    const at = this.toolMenuTrigger.getBoundingClientRect();
     this.toolMenuAt.set({ x: at.left, y: at.bottom + 4 });
     this.toolMenu.set(menu);
+    // As a menu does, its first item takes focus, so the arrow keys work at once.
+    setTimeout(() => this.toolMenuItems()[0]?.focus());
+  }
+
+  protected closeToolMenu(): void {
+    this.toolMenu.set(null);
+    this.toolMenuTrigger?.focus();
+  }
+
+  private toolMenuItems(): HTMLButtonElement[] {
+    return [
+      ...this.host.nativeElement.querySelectorAll<HTMLButtonElement>(
+        '.tool-menu [role="menuitem"]:not(:disabled)',
+      ),
+    ];
+  }
+
+  /** Arrow keys, Home and End move through the menu; Escape closes it; Tab leaves it. Kept from the planner's own keys. */
+  protected toolMenuKey(event: KeyboardEvent): void {
+    const items = this.toolMenuItems();
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    const focus = (i: number) => items[(i + items.length) % items.length]?.focus();
+    event.stopPropagation();
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        return focus(at + 1);
+      case 'ArrowUp':
+        event.preventDefault();
+        return focus(at - 1);
+      case 'Home':
+        event.preventDefault();
+        return focus(0);
+      case 'End':
+        event.preventDefault();
+        return focus(items.length - 1);
+      case 'Escape':
+        event.preventDefault();
+        return this.closeToolMenu();
+      case 'Tab':
+        this.toolMenu.set(null);
+    }
   }
 
   /** As the phone's menu: a chosen item closes it, a disabled one does not. */
   protected toolMenuClick(event: Event): void {
     const button = (event.target as HTMLElement).closest('button');
-    if (button && !button.disabled) this.toolMenu.set(null);
+    if (button && !button.disabled) this.closeToolMenu();
   }
 
   protected showShortcuts(): void {

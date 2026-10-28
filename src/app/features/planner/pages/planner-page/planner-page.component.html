@@ -14,7 +14,7 @@
     <app-tour-overlay />
     <nav class="ribbon" aria-label="Tools">
       <!-- One row, as the redesign: the main tools by name, the rest in a menu under Seats, Draw, Edit, Measure or More. -->
-      <div class="groups" role="toolbar" aria-label="Planner tools" (keydown.escape)="toolMenu.set(null)">
+      <div class="groups" role="toolbar" aria-label="Planner tools" (keydown.escape)="toolMenu() && closeToolMenu()">
         <div class="group" data-tour="fill-group">
           <button
             data-tour="select-tool"
@@ -224,14 +224,15 @@
 
       <!-- The open menu of the row above; it sits outside the row, whose scroll would clip it. -->
       @if (toolMenu(); as menu) {
-        <div class="tool-menu-backdrop" (click)="toolMenu.set(null)"></div>
+        <div class="tool-menu-backdrop" (click)="closeToolMenu()"></div>
         <div
           class="tool-menu"
           role="menu"
+          [attr.aria-label]="menu"
           [style.left.px]="toolMenuAt().x"
           [style.top.px]="toolMenuAt().y"
           (click)="toolMenuClick($event)"
-          (keydown.escape)="toolMenu.set(null)"
+          (keydown)="toolMenuKey($event)"
         >
           @switch (menu) {
             @case ('seats') {

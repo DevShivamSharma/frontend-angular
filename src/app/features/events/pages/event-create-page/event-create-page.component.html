@@ -9,6 +9,8 @@
     #wizard
     [organisations]="organisations()"
     [organisationsLoading]="organisationsLoading()"
+    [organisationsFailed]="organisationsFailed()"
+    (retryOrganisations)="loadOrganisations()"
     [submitting]="submitting()"
     [failure]="failure()"
     (created)="create($event)"

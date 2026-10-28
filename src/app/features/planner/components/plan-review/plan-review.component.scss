@@ -224,7 +224,7 @@ blockquote {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-@media (max-width: 900px) {
+@media (max-width: 56rem) {
   .body {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(360px, 1fr) auto;

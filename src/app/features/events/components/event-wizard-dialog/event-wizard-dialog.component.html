@@ -99,6 +99,19 @@
               appendTo="body"
             />
           </app-form-field>
+          @if (organisationsFailed()) {
+            <p class="form-error form-grid__full" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              The organisations could not be loaded.
+              <p-button
+                label="Try again"
+                icon="pi pi-refresh"
+                size="small"
+                [text]="true"
+                (onClick)="retryOrganisations.emit()"
+              />
+            </p>
+          }
 
           <app-form-field
             class="form-grid__full"

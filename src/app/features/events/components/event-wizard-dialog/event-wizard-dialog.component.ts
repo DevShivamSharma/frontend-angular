@@ -77,6 +77,9 @@ export class EventWizardDialogComponent {
   readonly visible = model(false);
   readonly organisations = input<Organisation[]>([]);
   readonly organisationsLoading = input(false);
+  /** The organisations could not be loaded: said under the field, with a retry. */
+  readonly organisationsFailed = input(false);
+  readonly retryOrganisations = output<void>();
   readonly submitting = input(false);
   readonly failure = input<string | null>(null);
   readonly created = output<CreateEventPayload>();

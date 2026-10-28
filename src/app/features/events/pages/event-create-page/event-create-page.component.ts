@@ -42,12 +42,19 @@ export class EventCreatePageComponent implements HasUnsavedChanges, AfterViewIni
 
   protected readonly organisations = signal<Organisation[]>([]);
   protected readonly organisationsLoading = signal(true);
+  protected readonly organisationsFailed = signal(false);
   protected readonly submitting = signal(false);
   protected readonly failure = signal<string | null>(null);
 
   private saved = false;
 
   constructor() {
+    this.loadOrganisations();
+  }
+
+  protected loadOrganisations(): void {
+    this.organisationsLoading.set(true);
+    this.organisationsFailed.set(false);
     this.itpo
       .organisations()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -58,6 +65,7 @@ export class EventCreatePageComponent implements HasUnsavedChanges, AfterViewIni
         },
         error: (error: unknown) => {
           this.organisationsLoading.set(false);
+          this.organisationsFailed.set(true);
           this.notifier.fromError(error, 'The organisations could not be loaded');
         },
       });

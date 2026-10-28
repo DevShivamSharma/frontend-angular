@@ -8,11 +8,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
 
 import { ConfirmService } from '../../../../core/confirm/confirm.service';
 import { ApiError } from '../../../../core/http/api-error';
 import { NotifierService } from '../../../../core/notification/notifier.service';
 import { HasUnsavedChanges } from '../../../../shared/guards/unsaved-changes.guard';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { EventFormComponent } from '../../components/event-form/event-form.component';
 import { EventsApiService } from '../../data/events-api.service';
@@ -23,7 +25,7 @@ import { KnownEvent } from '../../domain/event.form';
 /** Changes an event: only what the user changes is sent. */
 @Component({
   selector: 'app-event-edit-page',
-  imports: [PageHeaderComponent, EventFormComponent],
+  imports: [PageHeaderComponent, EventFormComponent, EmptyStateComponent, ButtonModule],
   templateUrl: './event-edit-page.component.html',
   styleUrl: './event-edit-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,12 +43,19 @@ export class EventEditPageComponent implements OnInit, HasUnsavedChanges {
 
   protected readonly known = signal<KnownEvent | null>(null);
   protected readonly loading = signal(true);
+  protected readonly failed = signal(false);
   protected readonly submitting = signal(false);
   protected readonly failure = signal<string | null>(null);
 
   private saved = false;
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  protected load(): void {
+    this.loading.set(true);
+    this.failed.set(false);
     this.itpo.event(this.eventId()).subscribe({
       next: (event) => {
         this.known.set(event);
@@ -54,6 +63,7 @@ export class EventEditPageComponent implements OnInit, HasUnsavedChanges {
       },
       error: (error: unknown) => {
         this.loading.set(false);
+        this.failed.set(true);
         this.notifier.fromError(error, 'The event could not be loaded');
       },
     });

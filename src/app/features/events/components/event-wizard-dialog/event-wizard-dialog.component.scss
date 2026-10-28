@@ -205,7 +205,9 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 
 .form-error {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
+  margin: 0;
   color: var(--app-danger);
   font-size: var(--text-sm);
 }
@@ -512,7 +514,7 @@ $control: #8a8a94; // the prototype's control border: darker than --app-border-s
 }
 
 /* A short screen (a laptop): the steps keep to one column that fits, without a scrollbar of its own. */
-@media (max-height: 760px) {
+@media (max-height: 48rem) {
   .wizard-nav__item {
     padding-block: 5px;
   }
