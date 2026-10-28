@@ -26,7 +26,10 @@ $control: #8a8a94; // the redesign prototype's control border
 
 .toolbar__field--grow {
   flex: 1 1 22rem;
-  max-width: 40rem;
+}
+
+.toolbar__field--view {
+  margin-left: auto;
 }
 
 .toolbar__label {
@@ -37,13 +40,6 @@ $control: #8a8a94; // the redesign prototype's control border
 
 :host ::ng-deep .toolbar__field--grow input {
   width: 100%;
-}
-
-.toolbar__count {
-  display: flex;
-  align-items: center;
-  min-height: var(--control-height);
-  white-space: nowrap;
 }
 
 // The chosen view is filled dark, not in the brand red the global selectbutton uses.
@@ -100,8 +96,27 @@ $control: #8a8a94; // the redesign prototype's control border
   min-width: 0;
 }
 
-.event-status-grid__item p-tag {
-  max-width: 100%;
+.event-status {
+  color: var(--app-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.event-status[data-severity='success'] {
+  color: var(--app-success);
+}
+
+.event-status[data-severity='warn'] {
+  color: var(--app-warning);
+}
+
+.event-status[data-severity='danger'] {
+  color: var(--app-danger);
+}
+
+.event-status[data-severity='info'] {
+  color: var(--app-brand);
 }
 
 .event-status-grid__label {

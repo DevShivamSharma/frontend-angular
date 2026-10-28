@@ -23,7 +23,7 @@
           />
         </p-iconfield>
       </div>
-      <div class="toolbar__field">
+      <div class="toolbar__field toolbar__field--view">
         <span class="toolbar__label" id="events-view-label">View</span>
         <p-selectbutton
           class="view-seg"
@@ -41,11 +41,6 @@
           </ng-template>
         </p-selectbutton>
       </div>
-      <span class="text-muted toolbar__count" aria-live="polite">
-        @if (!loading() && !failed()) {
-          {{ total() }} {{ total() === 1 ? 'event' : 'events' }}
-        }
-      </span>
     </div>
 
     @if (failed()) {
@@ -99,10 +94,7 @@
                   <div class="event-status-grid__item">
                     <span class="event-status-grid__label">Booking status</span>
                     @if (event.bookingStatus) {
-                      <p-tag
-                        [value]="event.bookingStatus"
-                        [severity]="severity(event.bookingStatus)"
-                      />
+                      <span class="event-status" [attr.data-severity]="severity(event.bookingStatus)">{{ event.bookingStatus }}</span>
                     } @else {
                       <span class="event-status-grid__empty">—</span>
                     }
@@ -110,10 +102,7 @@
                   <div class="event-status-grid__item">
                     <span class="event-status-grid__label">Approval status</span>
                     @if (event.approvalStatus) {
-                      <p-tag
-                        [value]="event.approvalStatus"
-                        [severity]="severity(event.approvalStatus)"
-                      />
+                      <span class="event-status" [attr.data-severity]="severity(event.approvalStatus)">{{ event.approvalStatus }}</span>
                     } @else {
                       <span class="event-status-grid__empty">—</span>
                     }
@@ -161,18 +150,12 @@
                     }
                     <td class="cell-status cell-status--right">
                       @if (event.bookingStatus) {
-                        <p-tag
-                          [value]="event.bookingStatus"
-                          [severity]="severity(event.bookingStatus)"
-                        />
+                        <span class="event-status" [attr.data-severity]="severity(event.bookingStatus)">{{ event.bookingStatus }}</span>
                       }
                     </td>
                     <td class="cell-status cell-status--right">
                       @if (event.approvalStatus) {
-                        <p-tag
-                          [value]="event.approvalStatus"
-                          [severity]="severity(event.approvalStatus)"
-                        />
+                        <span class="event-status" [attr.data-severity]="severity(event.approvalStatus)">{{ event.approvalStatus }}</span>
                       }
                     </td>
                   </tr>
