@@ -9,7 +9,8 @@ $control: #8a8a94; // the redesign prototype's control border
   position: sticky;
   top: var(--app-topbar-height);
   z-index: 2;
-  background: var(--app-bg);
+  // On the page's own ground, so it does not show as a white band; opaque, so the cards scroll under it.
+  background: var(--app-canvas);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -28,7 +29,7 @@ $control: #8a8a94; // the redesign prototype's control border
 }
 
 .toolbar__field--grow {
-  flex: 0 1 22rem;
+  flex: 0 1 20rem;
 }
 
 :host ::ng-deep .toolbar__field--grow input {

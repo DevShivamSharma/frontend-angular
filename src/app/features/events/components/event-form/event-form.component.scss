@@ -41,7 +41,8 @@ h2 {
   position: sticky;
   bottom: 0;
   z-index: 50;
-  margin: 0 calc(var(--space-5) * -1);
+  /* Edge to edge, and down to the bottom of the content area, past the page's own padding. */
+  margin: 0 calc(var(--page-gap) * -1) calc(var(--space-7) * -1);
   background: color-mix(in srgb, var(--app-surface) 86%, transparent);
   backdrop-filter: saturate(160%) blur(14px);
   border-top: 1px solid var(--app-border);
@@ -88,6 +89,6 @@ h2 {
 /* On a phone the page's side padding is smaller: the bar reaches the edge, not past it. */
 @media (max-width: 40rem) {
   .actionbar {
-    margin: 0 calc(var(--space-3) * -1);
+    margin: 0 calc(var(--space-3) * -1) calc(var(--space-6) * -1);
   }
 }

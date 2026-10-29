@@ -33,6 +33,7 @@ import { FormFieldComponent } from '../../../../shared/forms/form-field/form-fie
 import { HasUnsavedChanges } from '../../../../shared/guards/unsaved-changes.guard';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { applyServerErrors } from '../../../../shared/utils/form.util';
+import { HallNotesEditorComponent } from '../../components/hall-notes-editor/hall-notes-editor.component';
 import { HallImagesEditorComponent } from '../../components/hall-images-editor/hall-images-editor.component';
 import { CornerEditorComponent } from '../../components/corner-editor/corner-editor.component';
 import { HallCanvasComponent } from '../../components/hall-canvas/hall-canvas.component';
@@ -42,6 +43,7 @@ import { HallCategory } from '../../data/halls.models';
 import { ItpoHallsApiService } from '../../data/itpo-halls-api.service';
 import { isNtaCategory } from '../../domain/hall-category';
 import { createImageGroup, ImageGroup, toImagePayloads } from '../../domain/hall-images.form';
+import { HallNotes, NO_NOTES, notesProblem, toNotesPayload } from '../../domain/hall-notes';
 import { buildHallPayload } from '../../domain/hall-payload';
 import { Corner } from '../../domain/hall-shape.model';
 import { defaultParams, HALL_SHAPES, outlineOf, shapeById } from '../../domain/hall-shapes';
@@ -69,6 +71,7 @@ type CategoriesState = 'loading' | 'ready' | 'failed';
     HallCanvasComponent,
     CornerEditorComponent,
     HallImagesEditorComponent,
+    HallNotesEditorComponent,
   ],
   templateUrl: './hall-create-page.component.html',
   styleUrl: './hall-create-page.component.scss',
@@ -129,6 +132,17 @@ export class HallCreatePageComponent implements HasUnsavedChanges {
     };
   });
 
+  /** The helpers, text labels and legend put on the hall. */
+  protected readonly notes = signal<HallNotes>(NO_NOTES);
+  protected readonly notesProblem = computed(() => notesProblem(this.notes()));
+  /** The grid the outline fits in, in whole metres: what a note's place is measured on. */
+  protected readonly grid = computed(() => {
+    const ring = this.outline().ring;
+    if (!ring) return { columns: 1, rows: 1 };
+    const { width, depth } = extent(ring);
+    return { columns: Math.max(1, Math.ceil(width)), rows: Math.max(1, Math.ceil(depth)) };
+  });
+
   protected readonly categories = signal<HallCategory[]>([]);
   protected readonly categoriesState = signal<CategoriesState>('loading');
   protected readonly submitting = signal(false);
@@ -151,7 +165,9 @@ export class HallCreatePageComponent implements HasUnsavedChanges {
   }
 
   hasUnsavedChanges(): boolean {
-    return !this.submitted && (this.form.dirty || this.corners().length > 0);
+    return (
+      !this.submitted && (this.form.dirty || this.corners().length > 0 || this.notes() !== NO_NOTES)
+    );
   }
 
   protected loadCategories(): void {
@@ -189,7 +205,7 @@ export class HallCreatePageComponent implements HasUnsavedChanges {
   protected async submit(): Promise<void> {
     this.form.markAllAsTouched();
     const ring = this.outline().ring;
-    if (this.form.invalid || !ring) {
+    if (this.form.invalid || !ring || this.notesProblem()) {
       return;
     }
 
@@ -208,6 +224,7 @@ export class HallCreatePageComponent implements HasUnsavedChanges {
       ring,
       this.isNta(),
       toImagePayloads(this.form.controls.images.controls),
+      toNotesPayload(this.notes()),
     );
 
     const go = await this.confirm.ask({

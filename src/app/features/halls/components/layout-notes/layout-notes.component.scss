@@ -1,0 +1,67 @@
+:host {
+  display: contents;
+}
+
+/* In a view the notes never get in the way of a click; in an editor they can be pressed. */
+.note {
+  pointer-events: none;
+  outline: none;
+}
+
+.note--draggable {
+  pointer-events: all;
+  cursor: grab;
+}
+
+.note--dragging {
+  cursor: grabbing;
+}
+
+.note__hit {
+  fill: transparent;
+  stroke: none;
+}
+
+.note--chosen .note__hit {
+  fill: color-mix(in srgb, var(--app-brand) 10%, transparent);
+  stroke: var(--app-brand);
+  stroke-width: 0.12;
+  stroke-dasharray: 0.5 0.3;
+}
+
+.note:focus-visible .note__hit {
+  stroke: var(--app-brand);
+  stroke-width: 0.2;
+}
+
+.note__icon {
+  stroke: var(--app-surface);
+  stroke-width: 0.12;
+}
+
+.note__glyph {
+  fill: #fff;
+  stroke: none;
+}
+
+.note__glyph .line {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.note__caption,
+.note__label {
+  fill: var(--app-text);
+  font-family: var(--app-font-body);
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--app-surface);
+  stroke-width: 0.25;
+}
+
+.note__caption {
+  text-anchor: middle;
+}

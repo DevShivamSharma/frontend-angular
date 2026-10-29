@@ -1,6 +1,6 @@
 <svg
   class="canvas"
-  [class.canvas--editable]="editable()"
+  [class.canvas--editable]="editable() || placing()"
   [attr.viewBox]="viewBox()"
   [style.aspect-ratio]="ratio()"
   [style.--aspect]="aspect()"
@@ -74,28 +74,14 @@
 
   <rect class="frame" x="0" y="0" [attr.width]="columns()" [attr.height]="rows()" />
 
-  <!-- The helpers (a marker with its caption) and the text labels, as SelfCare places them. -->
-  @for (helper of notes().helpers; track $index; let i = $index) {
-    <g
-      class="note"
-      [class.note--picked]="picked()?.type === 'helper' && picked()?.index === i"
-      [attr.transform]="'translate(' + helper.x + ' ' + helper.y + ')'"
-    >
-      <circle class="note__dot" [attr.r]="noteSize() * 0.6" />
-      <text class="note__text" [attr.y]="noteSize() * 1.9" [attr.font-size]="noteSize()">
-        {{ helper.label }}
-      </text>
-    </g>
-  }
-  @for (label of notes().labels; track $index; let i = $index) {
-    <text
-      class="note__label"
-      [class.note--picked]="picked()?.type === 'label' && picked()?.index === i"
-      [attr.x]="label.x"
-      [attr.y]="label.y"
-      [attr.font-size]="noteSize() * 1.1"
-    >
-      {{ label.text }}
-    </text>
-  }
+  <!-- The helpers and the text labels, as SelfCare places them. -->
+  <svg:g
+    app-layout-notes
+    [notes]="notes()"
+    [size]="noteSize()"
+    [draggable]="notesEditable()"
+    [chosen]="chosenNote()"
+    (choose)="noteChosen.emit($event)"
+    (moved)="noteMoved.emit($event)"
+  />
 </svg>

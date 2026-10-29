@@ -12,11 +12,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { ConfirmService } from '../../../../core/confirm/confirm.service';
 import { NotifierService } from '../../../../core/notification/notifier.service';
@@ -40,20 +38,8 @@ import {
   setLine,
   togglePillar,
 } from '../../domain/hall-layout';
-import {
-  HallNotes,
-  HELPER_KINDS,
-  LayoutHelper,
-  LayoutLabel,
-  LayoutLegend,
-  MAX_NOTES,
-  newHelper,
-  newLabel,
-  newLegend,
-  NO_NOTES,
-  notesProblem,
-  sameNotes,
-} from '../../domain/hall-notes';
+import { HallNotes, NO_NOTES, notesProblem, sameNotes } from '../../domain/hall-notes';
+import { HallNotesEditorComponent } from '../hall-notes-editor/hall-notes-editor.component';
 import { LayoutCanvasComponent } from '../layout-canvas/layout-canvas.component';
 
 /**
@@ -67,13 +53,12 @@ import { LayoutCanvasComponent } from '../layout-canvas/layout-canvas.component'
     FormsModule,
     ButtonModule,
     InputNumberModule,
-    InputTextModule,
     SelectModule,
     SelectButtonModule,
     SkeletonModule,
-    ToggleSwitchModule,
     EmptyStateComponent,
     LayoutCanvasComponent,
+    HallNotesEditorComponent,
   ],
   templateUrl: './hall-layout-panel.component.html',
   styleUrl: './hall-layout-panel.component.scss',
@@ -102,11 +87,6 @@ export class HallLayoutPanelComponent implements OnInit {
   protected readonly tool = signal<LayoutTool>('pillar');
   /** The helpers, text labels and legend being edited. */
   protected readonly notes = signal<HallNotes>(NO_NOTES);
-  /** The helper or label a click on the layout puts in place. */
-  protected readonly picked = signal<{ type: 'helper' | 'label'; index: number } | null>(null);
-  protected readonly helperKind = signal(HELPER_KINDS[0].kind);
-  protected readonly helperKinds = [...HELPER_KINDS];
-  protected readonly maxNotes = MAX_NOTES;
   /** The wall line chosen to be moved: its place in the list of areas. */
   protected readonly selected = signal<number | null>(null);
   /** Which side gets the metres when the grid changes. */
@@ -211,7 +191,6 @@ export class HallLayoutPanelComponent implements OnInit {
       labels: layout.notes.labels.map((l) => ({ ...l })),
       legends: layout.notes.legends.map((l) => ({ ...l })),
     });
-    this.picked.set(null);
     this.selected.set(null);
     this.tool.set('pillar');
     this.side.set(GROW_END);
@@ -222,16 +201,8 @@ export class HallLayoutPanelComponent implements OnInit {
     this.editing.set(false);
   }
 
-  /** A click on the layout: puts or takes away a pillar, chooses the wall line there, or puts the picked helper or label there. */
+  /** A click on the layout: puts or takes away a pillar, chooses the wall line there, */
   protected place(cell: { x: number; y: number }): void {
-    if (this.tool() === 'notes') {
-      const picked = this.picked();
-      const at = { x: cell.x + 0.5, y: cell.y + 0.5 };
-      if (picked?.type === 'helper') this.patchHelper(picked.index, at);
-      if (picked?.type === 'label') this.patchLabel(picked.index, at);
-      this.picked.set(null);
-      return;
-    }
     if (this.tool() === 'wall') {
       this.selected.set(lineAt(this.areas(), { x: cell.x + 0.5, y: cell.y + 0.5 }, 1.5));
       return;
@@ -244,78 +215,6 @@ export class HallLayoutPanelComponent implements OnInit {
   protected chooseTool(tool: LayoutTool): void {
     this.tool.set(tool);
     this.selected.set(null);
-    this.picked.set(null);
-  }
-
-  // --- helpers, text labels and legend ---
-
-  /** The middle of the grid: where a new helper or label starts, picked so the next click places it. */
-  private middle(): { x: number; y: number } {
-    return { x: Math.round(this.columns() / 2), y: Math.round(this.rows() / 2) };
-  }
-
-  protected addHelper(): void {
-    this.notes.update((n) => ({
-      ...n,
-      helpers: [...n.helpers, newHelper(this.helperKind(), this.middle())],
-    }));
-    this.picked.set({ type: 'helper', index: this.notes().helpers.length - 1 });
-  }
-
-  protected addLabel(): void {
-    this.notes.update((n) => ({ ...n, labels: [...n.labels, newLabel(this.middle())] }));
-    this.picked.set({ type: 'label', index: this.notes().labels.length - 1 });
-  }
-
-  protected addLegend(): void {
-    this.notes.update((n) => ({ ...n, legends: [...n.legends, newLegend()] }));
-  }
-
-  protected patchHelper(index: number, change: Partial<LayoutHelper>): void {
-    this.notes.update((n) => ({
-      ...n,
-      helpers: n.helpers.map((h, i) => (i === index ? { ...h, ...change } : h)),
-    }));
-  }
-
-  protected patchLabel(index: number, change: Partial<LayoutLabel>): void {
-    this.notes.update((n) => ({
-      ...n,
-      labels: n.labels.map((l, i) => (i === index ? { ...l, ...change } : l)),
-    }));
-  }
-
-  protected patchLegend(index: number, change: Partial<LayoutLegend>): void {
-    this.notes.update((n) => ({
-      ...n,
-      legends: n.legends.map((l, i) => (i === index ? { ...l, ...change } : l)),
-    }));
-  }
-
-  protected removeNote(type: 'helper' | 'label' | 'legend', index: number): void {
-    const keep = <T>(list: T[]) => list.filter((_, i) => i !== index);
-    this.notes.update((n) =>
-      type === 'helper'
-        ? { ...n, helpers: keep(n.helpers) }
-        : type === 'label'
-          ? { ...n, labels: keep(n.labels) }
-          : { ...n, legends: keep(n.legends) },
-    );
-    this.picked.set(null);
-  }
-
-  /** The next click on the layout puts this helper or label there; a second press cancels. */
-  protected pick(type: 'helper' | 'label', index: number): void {
-    this.picked.set(this.isPicked(type, index) ? null : { type, index });
-  }
-
-  protected isPicked(type: 'helper' | 'label', index: number): boolean {
-    const picked = this.picked();
-    return picked?.type === type && picked.index === index;
-  }
-
-  protected kindLabel(kind: string): string {
-    return HELPER_KINDS.find((k) => k.kind === kind)?.label ?? kind;
   }
 
   protected setSide(change: Partial<GrowFrom>): void {

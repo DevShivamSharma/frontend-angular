@@ -1,4 +1,14 @@
-import { newHelper, notesProblem, readNotes, sameNotes, toNotesFields } from './hall-notes';
+import {
+  newHelper,
+  newLabel,
+  newLegend,
+  NO_NOTES,
+  notesProblem,
+  readNotes,
+  sameNotes,
+  toNotesFields,
+  toNotesPayload,
+} from './hall-notes';
 
 const ROW = {
   helper_text: [
@@ -80,5 +90,32 @@ describe('hall notes', () => {
     expect(notesProblem({ ...notes, labels: [{ ...notes.labels[0], text: ' ' }] })).toBe(
       'Give every text label its words.',
     );
+  });
+});
+
+describe('the notes of a hall being created', () => {
+  it('has no payload when there are no notes, so the hall is made as it always was', () => {
+    expect(toNotesPayload(NO_NOTES)).toBeUndefined();
+  });
+
+  it('sends each kind only when it has entries, trimmed, in metres', () => {
+    const notes = {
+      helpers: [{ ...newHelper('stairs', { x: 3, y: -2 }), label: ' Stairs ' }],
+      labels: [{ ...newLabel({ x: 1, y: 9.5 }), text: ' Gate A ' }],
+      legends: [{ ...newLegend(), label: ' Passage ', color: '#ff0000' }],
+    };
+    expect(toNotesPayload(notes)).toEqual({
+      helpers: [{ kind: 'stairs', label: 'Stairs', x: 3, y: -2 }],
+      labels: [{ text: 'Gate A', x: 1, y: 9.5 }],
+      legends: [{ label: 'Passage', color: '#ff0000', visible: true }],
+    });
+    expect(toNotesPayload({ ...NO_NOTES, labels: notes.labels })).toEqual({
+      labels: [{ text: 'Gate A', x: 1, y: 9.5 }],
+    });
+  });
+
+  it('leaves out a legend row that has no colour (a code explained)', () => {
+    const code = { label: 'GF: gate', color: null, visible: true, raw: {} };
+    expect(toNotesPayload({ ...NO_NOTES, legends: [code] })).toBeUndefined();
   });
 });

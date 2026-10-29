@@ -130,6 +130,41 @@ export function toNotesFields(notes: HallNotes): {
   };
 }
 
+/** The notes of a hall being created, as the create-hall call takes them. */
+export interface NotesPayload {
+  helpers?: { kind: string; label: string; x: number; y: number }[];
+  labels?: { text: string; x: number; y: number }[];
+  legends?: { label: string; color: string; visible: boolean }[];
+}
+
+/**
+ * The notes of a new hall for the create-hall call: each kind only when it has entries, and none
+ * at all (undefined) when the hall has no notes, so a hall without them is made as it always was.
+ */
+export function toNotesPayload(notes: HallNotes): NotesPayload | undefined {
+  const payload: NotesPayload = {};
+  if (notes.helpers.length) {
+    payload.helpers = notes.helpers.map((h) => ({
+      kind: h.kind,
+      label: h.label.trim(),
+      x: h.x,
+      y: h.y,
+    }));
+  }
+  if (notes.labels.length) {
+    payload.labels = notes.labels.map((l) => ({ text: l.text.trim(), x: l.x, y: l.y }));
+  }
+  const legends = notes.legends.filter((l) => l.color !== null);
+  if (legends.length) {
+    payload.legends = legends.map((l) => ({
+      label: l.label.trim(),
+      color: l.color as string,
+      visible: l.visible,
+    }));
+  }
+  return Object.keys(payload).length ? payload : undefined;
+}
+
 /** Why the notes cannot be saved, in words; null when they can. */
 export function notesProblem(notes: HallNotes): string | null {
   if (notes.helpers.some((h) => !h.label.trim())) return 'Give every helper a caption.';

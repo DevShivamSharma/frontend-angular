@@ -209,6 +209,26 @@
       </div>
     </section>
 
+    <section class="card create__notes" aria-labelledby="notes-title">
+      <h2 id="notes-title">Legends and helper text</h2>
+      <p class="text-muted images-intro">
+        Optional. Put toilets, stairs and exits on the hall, add text labels and say what each
+        colour on the plan means. They can be changed later from the hall's layout.
+      </p>
+      @if (outline().ring; as ring) {
+        <app-hall-notes-editor
+          [notes]="notes()"
+          (notesChange)="notes.set($event)"
+          [columns]="grid().columns"
+          [rows]="grid().rows"
+          [ring]="ring"
+          [hallName]="form.controls.name.value || 'the hall'"
+        />
+      } @else {
+        <p class="text-muted">Finish the hall's shape above to place them on it.</p>
+      }
+    </section>
+
     <section class="card create__images" aria-labelledby="images-title">
       <h2 id="images-title">Pictures</h2>
       <p class="text-muted images-intro">
@@ -223,6 +243,8 @@
         <span class="actionbar__message">
           @if (failure(); as message) {
             <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+          } @else if (notesProblem(); as message) {
+            <i class="pi pi-info-circle" aria-hidden="true"></i> {{ message }}
           } @else if (outlineMessage(); as message) {
             <i class="pi pi-info-circle" aria-hidden="true"></i> {{ message }}
           }

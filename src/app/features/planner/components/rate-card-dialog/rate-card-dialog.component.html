@@ -1,7 +1,6 @@
 <h2 class="dialog-title head"><app-icon name="payments" /> Rates for {{ data.hallName }}</h2>
-<div class="dialog-content stack">
-  <!-- Adding or removing a period is a change of a form array, which signals do not see. -->
-  @let _changes = version();
+<div class="dialog-content stack" [attr.data-version]="version()">
+  <!-- Adding or removing a period is a change of a form array, which signals do not see: the version, read on the container, re-renders it. -->
   <p class="muted small">
     The same rates SelfCare prices stall bookings from. Rupees before GST, per m²; a period is the
     days its rates apply (early-bird and late rates).

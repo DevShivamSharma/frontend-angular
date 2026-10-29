@@ -75,217 +75,18 @@
         </p>
       } @else if (tool() === 'notes') {
         <p class="hint text-muted">
-          Add a helper or a text label, then click the layout to put it there (or type where, in
-          metres from the top-left corner; a sign may stand outside the grid). The legend says what
-          each colour on the plan means. SelfCare and the booking portal show all three.
+          Add a helper or a text label, then drag it on the layout or use Place on layout and click
+          where it goes (a sign may stand outside the grid). The legend says what each colour on the
+          plan means. SelfCare and the booking portal show all three.
         </p>
-        <div class="notes">
-          <section class="notes__group" aria-labelledby="helpers-title">
-            <div class="notes__head">
-              <h3 id="helpers-title">Helpers</h3>
-              <span class="notes__add">
-                <p-select
-                  [options]="helperKinds"
-                  optionLabel="label"
-                  optionValue="kind"
-                  [ngModel]="helperKind()"
-                  (ngModelChange)="helperKind.set($event)"
-                  ariaLabel="Helper type"
-                  appendTo="body"
-                />
-                <p-button
-                  label="Add helper"
-                  icon="pi pi-plus"
-                  severity="secondary"
-                  [outlined]="true"
-                  [disabled]="notes().helpers.length >= maxNotes"
-                  (onClick)="addHelper()"
-                />
-              </span>
-            </div>
-            @for (helper of notes().helpers; track $index; let i = $index) {
-              <div class="note-row" [class.note-row--picked]="isPicked('helper', i)">
-                <span class="note-row__kind">{{ kindLabel(helper.kind) }}</span>
-                <input
-                  pInputText
-                  maxlength="80"
-                  [ngModel]="helper.label"
-                  (ngModelChange)="patchHelper(i, { label: $event })"
-                  [attr.aria-label]="'Caption of helper ' + (i + 1)"
-                />
-                <p-inputnumber
-                  [ngModel]="helper.x"
-                  (ngModelChange)="patchHelper(i, { x: $event ?? helper.x })"
-                  [step]="0.5"
-                  [minFractionDigits]="0"
-                  [maxFractionDigits]="1"
-                  [ariaLabel]="'Helper ' + (i + 1) + ' across (m)'"
-                  prefix="→ "
-                />
-                <p-inputnumber
-                  [ngModel]="helper.y"
-                  (ngModelChange)="patchHelper(i, { y: $event ?? helper.y })"
-                  [step]="0.5"
-                  [minFractionDigits]="0"
-                  [maxFractionDigits]="1"
-                  [ariaLabel]="'Helper ' + (i + 1) + ' down (m)'"
-                  prefix="↓ "
-                />
-                <p-button
-                  [label]="isPicked('helper', i) ? 'Click the layout' : 'Place'"
-                  icon="pi pi-map-marker"
-                  size="small"
-                  severity="secondary"
-                  [text]="!isPicked('helper', i)"
-                  [outlined]="isPicked('helper', i)"
-                  [attr.aria-pressed]="isPicked('helper', i)"
-                  (onClick)="pick('helper', i)"
-                />
-                <p-button
-                  icon="pi pi-trash"
-                  severity="secondary"
-                  [text]="true"
-                  [rounded]="true"
-                  styleClass="row-delete"
-                  [ariaLabel]="'Remove helper ' + (i + 1)"
-                  (onClick)="removeNote('helper', i)"
-                />
-              </div>
-            } @empty {
-              <p class="text-muted notes__empty">No helpers yet: toilets, stairs, exits and entries.</p>
-            }
-          </section>
-
-          <section class="notes__group" aria-labelledby="labels-title">
-            <div class="notes__head">
-              <h3 id="labels-title">Text labels</h3>
-              <p-button
-                label="Add text label"
-                icon="pi pi-plus"
-                severity="secondary"
-                [outlined]="true"
-                [disabled]="notes().labels.length >= maxNotes"
-                (onClick)="addLabel()"
-              />
-            </div>
-            @for (label of notes().labels; track $index; let i = $index) {
-              <div class="note-row" [class.note-row--picked]="isPicked('label', i)">
-                <input
-                  pInputText
-                  maxlength="80"
-                  class="note-row__wide"
-                  [ngModel]="label.text"
-                  (ngModelChange)="patchLabel(i, { text: $event })"
-                  [attr.aria-label]="'Words of label ' + (i + 1)"
-                />
-                <p-inputnumber
-                  [ngModel]="label.x"
-                  (ngModelChange)="patchLabel(i, { x: $event ?? label.x })"
-                  [step]="0.5"
-                  [minFractionDigits]="0"
-                  [maxFractionDigits]="1"
-                  [ariaLabel]="'Label ' + (i + 1) + ' across (m)'"
-                  prefix="→ "
-                />
-                <p-inputnumber
-                  [ngModel]="label.y"
-                  (ngModelChange)="patchLabel(i, { y: $event ?? label.y })"
-                  [step]="0.5"
-                  [minFractionDigits]="0"
-                  [maxFractionDigits]="1"
-                  [ariaLabel]="'Label ' + (i + 1) + ' down (m)'"
-                  prefix="↓ "
-                />
-                <p-button
-                  [label]="isPicked('label', i) ? 'Click the layout' : 'Place'"
-                  icon="pi pi-map-marker"
-                  size="small"
-                  severity="secondary"
-                  [text]="!isPicked('label', i)"
-                  [outlined]="isPicked('label', i)"
-                  [attr.aria-pressed]="isPicked('label', i)"
-                  (onClick)="pick('label', i)"
-                />
-                <p-button
-                  icon="pi pi-trash"
-                  severity="secondary"
-                  [text]="true"
-                  [rounded]="true"
-                  styleClass="row-delete"
-                  [ariaLabel]="'Remove label ' + (i + 1)"
-                  (onClick)="removeNote('label', i)"
-                />
-              </div>
-            } @empty {
-              <p class="text-muted notes__empty">No text labels yet: gate names, a hall's sides.</p>
-            }
-          </section>
-
-          <section class="notes__group" aria-labelledby="legend-title">
-            <div class="notes__head">
-              <h3 id="legend-title">Legend</h3>
-              <p-button
-                label="Add legend row"
-                icon="pi pi-plus"
-                severity="secondary"
-                [outlined]="true"
-                [disabled]="notes().legends.length >= maxNotes"
-                (onClick)="addLegend()"
-              />
-            </div>
-            @for (row of notes().legends; track $index; let i = $index) {
-              <div class="note-row">
-                @if (row.color !== null) {
-                  <input
-                    type="color"
-                    class="note-row__color"
-                    [ngModel]="row.color"
-                    (ngModelChange)="patchLegend(i, { color: $event })"
-                    [attr.aria-label]="'Colour of legend row ' + (i + 1)"
-                  />
-                } @else {
-                  <span class="note-row__code" title="A code explained, without a colour">
-                    {{ row.raw['htmlContent'] || 'Code' }}
-                  </span>
-                }
-                <input
-                  pInputText
-                  maxlength="200"
-                  class="note-row__wide"
-                  placeholder="What it means, e.g. Passage"
-                  [ngModel]="row.label"
-                  (ngModelChange)="patchLegend(i, { label: $event })"
-                  [attr.aria-label]="'Meaning of legend row ' + (i + 1)"
-                />
-                <span class="note-row__show">
-                  <p-toggleswitch
-                    [ngModel]="row.visible"
-                    (ngModelChange)="patchLegend(i, { visible: $event })"
-                    [ariaLabel]="'Show legend row ' + (i + 1) + ' on the plan'"
-                  />
-                  <span aria-hidden="true">Shown</span>
-                </span>
-                <p-button
-                  icon="pi pi-trash"
-                  severity="secondary"
-                  [text]="true"
-                  [rounded]="true"
-                  styleClass="row-delete"
-                  [ariaLabel]="'Remove legend row ' + (i + 1)"
-                  (onClick)="removeNote('legend', i)"
-                />
-              </div>
-            } @empty {
-              <p class="text-muted notes__empty">No legend yet: say what a colour on the plan means.</p>
-            }
-          </section>
-
-          @if (notesProblem(); as problem) {
-            <p class="form-error" role="alert">
-              <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ problem }}
-            </p>
-          }
-        </div>
+        <app-hall-notes-editor
+          [notes]="notes()"
+          (notesChange)="notes.set($event)"
+          [columns]="columns()"
+          [rows]="rows()"
+          [areas]="areas()"
+          [hallName]="hallName()"
+        />
       } @else {
         <p class="hint text-muted">
           Click a wall line to choose it, then move it with the arrows or the numbers, make it
@@ -435,18 +236,19 @@
       </fieldset>
     }
 
-    <app-layout-canvas
-      [columns]="shownColumns()"
-      [rows]="shownRows()"
-      [areas]="shownAreas()"
-      [editable]="editing()"
-      [pillarSize]="tool() === 'pillar' ? pillarSize() : tool() === 'notes' && picked() ? 1 : 0"
-      [selected]="selected()"
-      [notes]="shownNotes()"
-      [picked]="tool() === 'notes' ? picked() : null"
-      [label]="'Layout of ' + hallName()"
-      (cellClicked)="place($event)"
-    />
+    @if (!(editing() && tool() === 'notes')) {
+      <app-layout-canvas
+        [columns]="shownColumns()"
+        [rows]="shownRows()"
+        [areas]="shownAreas()"
+        [editable]="editing()"
+        [pillarSize]="tool() === 'pillar' ? pillarSize() : 0"
+        [selected]="selected()"
+        [notes]="shownNotes()"
+        [label]="'Layout of ' + hallName()"
+        (cellClicked)="place($event)"
+      />
+    }
 
     <ul class="legend" aria-label="Legend">
       <li><span class="swatch swatch--floor"></span> Floor</li>

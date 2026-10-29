@@ -1,6 +1,6 @@
 <svg
   class="canvas"
-  [class.canvas--editable]="editable()"
+  [class.canvas--editable]="editable() || placing()"
   [attr.viewBox]="viewBox()"
   preserveAspectRatio="xMidYMid meet"
   role="img"
@@ -52,6 +52,16 @@
       {{ measured.depth }} m
     </text>
   }
+
+  <svg:g
+    app-layout-notes
+    [notes]="notes()"
+    [size]="noteSize()"
+    [draggable]="notesEditable()"
+    [chosen]="chosenNote()"
+    (choose)="noteChosen.emit($event)"
+    (moved)="noteMoved.emit($event)"
+  />
 
   @for (corner of corners(); track $index) {
     <g class="canvas__corner">

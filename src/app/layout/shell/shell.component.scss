@@ -116,6 +116,8 @@
 
 .frame {
   display: grid;
+  // The pages sit on a light ground behind their white cards; the sidebar stays white.
+  background: var(--app-canvas);
   grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   min-height: calc(100vh - var(--app-topbar-height));
   transition: grid-template-columns 200ms ease;

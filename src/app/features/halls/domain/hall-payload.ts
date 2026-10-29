@@ -1,4 +1,5 @@
 import { HallImageKind } from '../data/halls.models';
+import { NotesPayload } from './hall-notes';
 import { Corner } from './hall-shape.model';
 import { extent } from './outline-geometry';
 
@@ -34,6 +35,7 @@ export interface CreateHallPayload {
   complementaryDays?: number;
   sortOrder?: number;
   images?: HallImagePayload[];
+  notes?: NotesPayload;
 }
 
 /**
@@ -46,6 +48,7 @@ export function buildHallPayload(
   ring: readonly Corner[],
   isNta: boolean,
   images: readonly HallImagePayload[] = [],
+  notes?: NotesPayload,
 ): CreateHallPayload {
   const { width, depth } = extent(ring);
   const payload: CreateHallPayload = { name: details.name.trim(), width, depth };
@@ -57,6 +60,7 @@ export function buildHallPayload(
   if (details.hallAreaCapacity !== null) payload.hallAreaCapacity = details.hallAreaCapacity;
   if (details.isPopular) payload.isPopular = true;
   if (images.length) payload.images = images.map((image) => ({ ...image }));
+  if (notes) payload.notes = notes;
 
   if (!isNta) {
     if (details.isVipLounge) payload.isVipLounge = true;

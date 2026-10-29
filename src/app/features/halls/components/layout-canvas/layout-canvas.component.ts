@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 
 import { isOutside, isPillar, LayoutArea } from '../../domain/hall-layout';
 import { HallNotes, NO_NOTES } from '../../domain/hall-notes';
+import { LayoutNotesComponent, NoteMove, NoteRef } from '../layout-notes/layout-notes.component';
 
 /** More cells than this and the metre grid is drawn every few metres, so it stays readable. */
 const FINE_GRID_LIMIT = 6000;
@@ -13,6 +14,7 @@ const FINE_GRID_LIMIT = 6000;
  */
 @Component({
   selector: 'app-layout-canvas',
+  imports: [LayoutNotesComponent],
   templateUrl: './layout-canvas.component.html',
   styleUrl: './layout-canvas.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,10 +31,17 @@ export class LayoutCanvasComponent {
   readonly label = input('Layout of the hall');
   /** The helpers and text labels to draw, where they stand (in metres; they may be outside the grid). */
   readonly notes = input<HallNotes>(NO_NOTES);
-  /** The helper or label about to be placed: drawn highlighted. */
-  readonly picked = input<{ type: 'helper' | 'label'; index: number } | null>(null);
+  /** The helper or label chosen to be placed or moved: drawn with a ring round it. */
+  readonly chosenNote = input<NoteRef | null>(null);
+  /** Helpers and labels can be pressed, dragged and moved with the arrow keys. */
+  readonly notesEditable = input(false);
+  /** The next click puts the chosen note there, anywhere in the picture, outside the grid too. */
+  readonly placing = input(false);
 
   readonly cellClicked = output<{ x: number; y: number }>();
+  readonly pointClicked = output<{ x: number; y: number }>();
+  readonly noteChosen = output<NoteRef>();
+  readonly noteMoved = output<NoteMove>();
 
   protected readonly hover = signal<{ x: number; y: number } | null>(null);
 
@@ -40,11 +49,11 @@ export class LayoutCanvasComponent {
   private readonly bounds = computed(() => {
     const { helpers, labels } = this.notes();
     const points = [...helpers, ...labels];
-    const pad = this.noteSize() * 2;
+    const pad = this.noteSize() * 3;
     const xs = points.map((p) => p.x);
     const ys = points.map((p) => p.y);
-    const left = Math.min(0, ...xs.map((x) => x - pad));
-    const top = Math.min(0, ...ys.map((y) => y - pad));
+    const left = Math.min(0, ...xs.map((x) => x - pad / 3));
+    const top = Math.min(0, ...ys.map((y) => y - pad / 3));
     const right = Math.max(this.columns(), ...xs.map((x) => x + pad));
     const bottom = Math.max(this.rows(), ...ys.map((y) => y + pad));
     return { left, top, width: right - left, height: bottom - top };
@@ -56,8 +65,10 @@ export class LayoutCanvasComponent {
   protected readonly ratio = computed(() => `${this.bounds().width} / ${this.bounds().height}`);
   /** Width over height, so the SVG can be no taller than the screen allows without being letterboxed. */
   protected readonly aspect = computed(() => this.bounds().width / this.bounds().height);
-  /** A helper's and a label's size, in metres: readable on a small hall and a big one alike. */
-  protected readonly noteSize = computed(() => Math.max(0.8, Math.max(this.columns(), this.rows()) / 50));
+  /** A helper's icon, in metres: ITPO's own are 2 m, more on a very big hall so it stays readable. */
+  protected readonly noteSize = computed(() =>
+    Math.max(2, Math.max(this.columns(), this.rows()) / 24),
+  );
   protected readonly gridStep = computed(() =>
     this.columns() * this.rows() <= FINE_GRID_LIMIT
       ? 1
@@ -83,10 +94,24 @@ export class LayoutCanvasComponent {
   }
 
   protected onClick(event: MouseEvent): void {
+    if (this.placing()) {
+      const point = this.pointAt(event);
+      if (point) this.pointClicked.emit(point);
+      return;
+    }
     const cell = this.cellAt(event);
     if (this.editable() && cell) {
       this.cellClicked.emit(cell);
     }
+  }
+
+  /** The point under the pointer, in metres from the grid's top-left, inside the grid or out. */
+  private pointAt(event: MouseEvent): { x: number; y: number } | null {
+    const svg = event.currentTarget as SVGSVGElement;
+    const matrix = svg.getScreenCTM();
+    if (!matrix) return null;
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+    return { x: point.x, y: point.y };
   }
 
   /** The cell under the pointer, found in the grid's own coordinates so it holds however the SVG is scaled. */
