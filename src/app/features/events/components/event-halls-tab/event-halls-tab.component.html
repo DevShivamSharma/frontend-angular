@@ -49,7 +49,8 @@
           <dl class="facts">
             <div>
               <dt>{{ hall.forStallFnb ? 'F&B stalls' : 'Stalls' }}</dt>
-              <dd>{{ hall.stallCount }}</dd>
+              <!-- ITPO's count includes stalls old plans left inactive; a planned hall shows its plan's count. -->
+              <dd>{{ statusOf(hall)?.stalls || hall.stallCount }}</dd>
             </div>
             <div>
               <dt>Plan</dt>

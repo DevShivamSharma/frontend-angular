@@ -4,37 +4,19 @@ $control: #8a8a94; // the redesign prototype's control border
   display: block;
 }
 
-// The bar between the header and the card: search on the left, the view switch on the right,
-// lined up with the card's edges. No rule under it; the card below is the edge.
-.toolbar {
-  position: sticky;
-  top: var(--app-topbar-height);
-  z-index: 2;
-  // On the page's own ground, so it does not show as a white band; opaque, so the cards scroll under it.
-  background: var(--app-canvas);
-  display: flex;
-  flex-wrap: wrap;
+// The header's actions, in one row with the title: search, the view switch, then Create event.
+:host ::ng-deep app-page-header .page-header__actions {
   align-items: center;
   gap: 12px;
-  margin-top: calc(-1 * var(--space-2));
-  padding: var(--space-2) 0;
 }
 
-// The view switch keeps to the right edge.
-.toolbar__field--view {
-  margin-left: auto;
-}
-
-// Keep the search and view controls aligned, wrapping only when the toolbar gets narrow.
 .toolbar__field {
   display: grid;
-  gap: 6px;
   min-width: 0;
 }
 
 .toolbar__field--grow {
-  flex: 1 1 18rem;
-  max-width: 24rem;
+  width: 16rem;
 }
 
 // A variation on the redesign: the search and the view switch as two pills of the same height,
