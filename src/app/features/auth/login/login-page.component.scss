@@ -13,16 +13,6 @@ $paper: #e4a0b4;
   overflow: hidden;
   background: color-mix(in srgb, $paper 7%, var(--app-surface));
   color: var(--app-text);
-
-  // The red line along the top edge.
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto;
-    z-index: 1;
-    height: 3px;
-    background: var(--app-brand);
-  }
 }
 
 .login__scene {
