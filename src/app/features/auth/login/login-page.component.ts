@@ -105,23 +105,41 @@ export class LoginPageComponent {
   }
 }
 
-/** A stall on the floor: depth and side of the camera in metres, its size, and red (an accent). */
-const BLOCKS = [
-  { d: 14, l: -9, w: 2, dp: 2, h: 1.4 },
-  { d: 18, l: -13, w: 3, dp: 2, h: 2.4 },
-  { d: 12, l: -13, w: 1, dp: 1, h: 0.9, a: true },
-  { d: 24, l: -17, w: 2, dp: 3, h: 1.6 },
-  { d: 22, l: -9, w: 2, dp: 2, h: 4.0 },
-  { d: 30, l: -24, w: 3, dp: 2, h: 1.2 },
-  { d: 14, l: 9, w: 2, dp: 3, h: 2.0 },
-  { d: 19, l: 14, w: 3, dp: 3, h: 1.2 },
-  { d: 12, l: 13, w: 1, dp: 1, h: 2.2, a: true },
-  { d: 25, l: 19, w: 2, dp: 2, h: 3.2 },
-  { d: 23, l: 9, w: 3, dp: 2, h: 0.8 },
-  { d: 32, l: 26, w: 2, dp: 2, h: 2.0, a: true },
+/**
+ * What a block is, which sets its colours: top, front and side faces. As the plan reference: grey
+ * for a free stall, green for a booked one, rose for a blocked one, and nothing else coloured.
+ */
+type Kind = 'free' | 'booked' | 'blocked' | 'wall' | 'floor';
+const PALETTE: Record<Kind, [string, string, string]> = {
+  free: ['#efeae8', '#e3dcd9', '#d8d0cc'],
+  booked: ['#3fcf6e', '#2fb85c', '#28a550'],
+  blocked: ['#e3697c', '#d6556a', '#c84a5e'],
+  wall: ['#f6f2f0', '#e6e0dd', '#dad3cf'],
+  floor: ['#fcfbfa', '#fcfbfa', '#fcfbfa'],
+};
+
+/** A stall on the floor: depth and side of the camera in metres, its size, height and state. */
+const BLOCKS: { d: number; l: number; w: number; dp: number; h: number; c: Kind }[] = [
+  { d: 14, l: -9, w: 2, dp: 2, h: 0.12, c: 'free' },
+  { d: 18, l: -13, w: 3, dp: 2, h: 0.12, c: 'free' },
+  { d: 12, l: -13, w: 2, dp: 2, h: 0.5, c: 'blocked' },
+  { d: 24, l: -17, w: 2, dp: 3, h: 0.12, c: 'free' },
+  { d: 22, l: -9, w: 2, dp: 2, h: 0.5, c: 'booked' },
+  { d: 30, l: -20, w: 3, dp: 2, h: 0.12, c: 'free' },
+  { d: 14, l: 9, w: 2, dp: 3, h: 0.12, c: 'free' },
+  { d: 19, l: 14, w: 4, dp: 4, h: 0.5, c: 'booked' },
+  { d: 12, l: 13, w: 2, dp: 2, h: 0.12, c: 'free' },
+  { d: 25, l: 19, w: 2, dp: 2, h: 0.5, c: 'booked' },
+  { d: 23, l: 8, w: 4, dp: 3, h: 0.12, c: 'free' },
+  { d: 29, l: 2, w: 2, dp: 2, h: 0.5, c: 'blocked' },
+  { d: 32, l: 22, w: 2, dp: 2, h: 0.12, c: 'free' },
+  { d: 27, l: -3, w: 2, dp: 2, h: 0.5, c: 'booked' },
+  { d: 16, l: 1, w: 2, dp: 2, h: 0.12, c: 'free' },
 ];
-const FACES = ['#ffffff', '#f4ecdd', '#ebdfc9'];
-const ACCENT = ['#e4003a', '#b8002f', '#cc0034'];
+/** What is painted first: the floor, then everything standing on it. */
+const LAYER: Partial<Record<Kind, number>> = { floor: 1 };
+/** The hall's walls hug the stalls this closely, in metres. */
+const MARGIN = 3;
 
 /**
  * The login design's background: a 1 m floor grid fading into the distance, with stalls standing
@@ -133,15 +151,34 @@ function drawHallScene(canvas: HTMLCanvasElement): () => void {
   // A phone: the card fills the screen, so the scene would cost battery for little.
   if (!ctx || matchMedia('(max-width: 40rem)').matches) return () => undefined;
   const D2R = Math.PI / 180;
-  const cam = { h: 6, pitch: 13, baseYaw: 28, swing: 8, f: 0.9, cy: 0.6, k: 11, e: 1.6 };
+  // Higher and tilted further down than before, so the hall is seen as the planner's 3D view shows it.
+  const cam = { h: 11, pitch: 26, baseYaw: 28, swing: 8, f: 0.9, cy: 0.55, k: 16, e: 1.6 };
   const near = 0.15;
   const buckets = 12;
   const by = cam.baseYaw * D2R;
   const boxes = BLOCKS.map((b) => {
     const x = Math.round(b.l * Math.cos(by) + b.d * Math.sin(by));
     const z = Math.round(-b.l * Math.sin(by) + b.d * Math.cos(by));
-    return { x0: x, z0: z, x1: x + b.w, z1: z + b.dp, h: b.h, a: !!b.a };
+    return { x0: x, z0: z, x1: x + b.w, z1: z + b.dp, h: b.h, c: b.c };
   });
+  // The hall around the stalls: a white floor and a ring of wall with an entry gap in the front,
+  // on the grid's own axes so the ring closes.
+  const X0 = Math.min(...boxes.map((b) => b.x0)) - MARGIN;
+  const X1 = Math.max(...boxes.map((b) => b.x1)) + MARGIN;
+  const Z0 = Math.min(...boxes.map((b) => b.z0)) - MARGIN;
+  const Z1 = Math.max(...boxes.map((b) => b.z1)) + MARGIN;
+  const box = (x0: number, z0: number, x1: number, z1: number, h: number, c: Kind) => ({ x0, z0, x1, z1, h, c });
+  const midX = Math.round((X0 + X1) / 2);
+  const midZ = Math.round((Z0 + Z1) / 2);
+  boxes.push(
+    box(X0 + 1, Z0 + 1, X1 - 1, Z1 - 1, 0.01, 'floor'),
+    // The front wall, in two parts either side of the entry.
+    box(X0, Z0, midX - 3, Z0 + 1, 0.8, 'wall'),
+    box(midX + 3, Z0, X1, Z0 + 1, 0.8, 'wall'),
+    box(X0, Z1 - 1, X1, Z1, 0.8, 'wall'),
+    box(X0, Z0, X0 + 1, Z1, 0.8, 'wall'),
+    box(X1 - 1, Z0, X1, Z1, 0.8, 'wall'),
+  );
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let w = 0,
     h = 0,
@@ -177,8 +214,9 @@ function drawHallScene(canvas: HTMLCanvasElement): () => void {
 
   const drawGrid = (): void => {
     const paths = Array.from({ length: buckets }, () => new Path2D());
+    const axes = new Path2D();
     const reach = 70;
-    const segment = (a: number[], b: number[]): void => {
+    const segment = (a: number[], b: number[], into?: Path2D): void => {
       let p = toCamera(a[0], 0, a[1]);
       let q = toCamera(b[0], 0, b[1]);
       if (p[2] < near && q[2] < near) return;
@@ -192,7 +230,7 @@ function drawHallScene(canvas: HTMLCanvasElement): () => void {
       }
       const alpha = fade((p[2] + q[2]) / 2);
       if (alpha < 0.06) return;
-      const path = paths[Math.min(buckets - 1, Math.floor(alpha * buckets))];
+      const path = into ?? paths[Math.min(buckets - 1, Math.floor(alpha * buckets))];
       const [px, py] = project(p);
       const [qx, qy] = project(q);
       path.moveTo(px, py);
@@ -206,16 +244,27 @@ function drawHallScene(canvas: HTMLCanvasElement): () => void {
     }
     ctx.lineWidth = 1;
     paths.forEach((path, b) => {
-      ctx.strokeStyle = `rgba(140,100,50,${((0.38 * (b + 0.5)) / buckets).toFixed(3)})`;
+      ctx.strokeStyle = `rgba(120,95,105,${((0.2 * (b + 0.5)) / buckets).toFixed(3)})`;
       ctx.stroke(path);
     });
+    // The two centre lines through the hall, as a modelling view's axes; drawn in 1 m pieces so
+    // the near end is clipped like the grid is.
+    for (let i = -reach; i < reach; i++) {
+      segment([midX + i, midZ], [midX + i + 1, midZ], axes);
+      segment([midX, midZ + i], [midX, midZ + i + 1], axes);
+    }
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(60,45,55,0.6)';
+    ctx.stroke(axes);
   };
 
-  const drawBlocks = (): void => {
-    const faces: { s: [number, number][]; z: number; fill: string }[] = [];
+  /** Draws the flat floor, or everything standing on it, so the grid can be painted between the two. */
+  const drawBlocks = (floor: boolean): void => {
+    const faces: { s: [number, number][]; z: number; layer: number; fill: string }[] = [];
     const eye = [0, cam.h, 0];
     for (const b of boxes) {
-      const fill = b.a ? ACCENT : FACES;
+      if ((b.c === 'floor') !== floor) continue;
+      const fill = PALETTE[b.c];
       const quads = [
         {
           pts: [
@@ -278,13 +327,19 @@ function drawHallScene(canvas: HTMLCanvasElement): () => void {
           continue;
         const pts = q.pts.map((p) => toCamera(p[0], p[1], p[2]));
         if (pts.some((p) => p[2] < near)) continue;
-        faces.push({ s: pts.map(project), z: toCamera(c[0], c[1], c[2])[2], fill: q.fill });
+        faces.push({
+          s: pts.map(project),
+          z: toCamera(c[0], c[1], c[2])[2],
+          layer: LAYER[b.c] ?? 0,
+          fill: q.fill,
+        });
       }
     }
-    faces.sort((a, b) => b.z - a.z);
-    ctx.lineWidth = 1.1;
+    // Flat things first, so a pad never hides under the floor or an aisle drawn later; then far to near.
+    faces.sort((a, b) => b.layer - a.layer || b.z - a.z);
+    ctx.lineWidth = 1;
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(110,80,40,0.55)';
+    ctx.strokeStyle = 'rgba(90,70,80,0.28)';
     for (const face of faces) {
       ctx.beginPath();
       face.s.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
@@ -306,8 +361,9 @@ function drawHallScene(canvas: HTMLCanvasElement): () => void {
     centreY = h * cam.cy;
     centreX = w / 2;
     ctx.clearRect(0, 0, w, h);
+    drawBlocks(true);
     drawGrid();
-    drawBlocks();
+    drawBlocks(false);
     if (!still) raf = requestAnimationFrame(frame);
   };
 

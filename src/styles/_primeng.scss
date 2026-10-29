@@ -201,6 +201,49 @@ p-datepicker {
   }
 }
 
+/* With − and + either side: one control, as the date field with its button. The field is square,
+   the buttons round the outer ends, borders overlap so there is one line between parts, and the
+   value is centred between the buttons. */
+.p-inputnumber-horizontal {
+  .p-inputnumber-input {
+    border-radius: 0;
+    text-align: center;
+  }
+
+  .p-inputnumber-button {
+    flex: none;
+    width: var(--control-height);
+    border: 1px solid var(--app-border-strong);
+    background: var(--app-surface-2);
+    color: var(--app-muted);
+    box-shadow: none;
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+
+    &:hover {
+      background: var(--app-surface-hover);
+      color: var(--app-text);
+    }
+  }
+
+  .p-inputnumber-decrement-button {
+    margin-inline-end: -1px;
+    border-radius: var(--app-radius-md) 0 0 var(--app-radius-md);
+  }
+
+  .p-inputnumber-increment-button {
+    margin-inline-start: -1px;
+    border-radius: 0 var(--app-radius-md) var(--app-radius-md) 0;
+  }
+
+  /* Focus: the field's border is drawn over the buttons' shared edges. */
+  .p-inputnumber-input:enabled:focus {
+    position: relative;
+    z-index: 1;
+  }
+}
+
 /* A control the user touched and left invalid. */
 .ng-invalid.ng-touched:not(form):not(.p-inputnumber):not(.p-datepicker):not(.p-password)
   > .p-select-label,

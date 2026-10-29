@@ -1,5 +1,5 @@
-// The login design's warm paper, mixed into the surface so dark mode stays dark.
-$paper: #c8a26a;
+// The login design's blush, as the plan reference's page, mixed into the surface so dark mode stays dark.
+$paper: #e4a0b4;
 
 :host {
   display: block;
@@ -36,7 +36,7 @@ $paper: #c8a26a;
     height: 100%;
   }
 
-  // A sand wash over the top, behind the header.
+  // A blush wash over the top, behind the header.
   &::after {
     content: '';
     position: absolute;
@@ -44,7 +44,7 @@ $paper: #c8a26a;
     height: 45%;
     background: linear-gradient(
       to bottom,
-      color-mix(in srgb, $paper 22%, var(--app-surface)),
+      color-mix(in srgb, $paper 18%, var(--app-surface)),
       transparent
     );
   }

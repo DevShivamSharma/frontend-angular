@@ -14,48 +14,55 @@
   }
 }
 
-// The bar between the header and the card, as on the events pages: search on the left, the view
-// switch on the right, lined up with the card's edges, with no rule under it.
-.toolbar {
-  position: sticky;
-  top: var(--app-topbar-height);
-  z-index: 2;
-  // On the page's own ground; opaque, so the cards scroll under it.
-  background: var(--app-canvas);
-  display: flex;
-  flex-wrap: wrap;
+// The header's actions, in one row with the title: search, the view switch, then Create hall.
+:host ::ng-deep app-page-header .page-header__actions {
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  margin-top: calc(-1 * var(--space-2));
-  padding: var(--space-2) 0;
 }
 
 .toolbar__search {
-  flex: 1 1 18rem;
-  max-width: 24rem;
+  width: 16rem;
 }
 
+// As the events pages: the search and the view switch as two pills of the same height, lifted a
+// little off the page, so the row reads as one set of controls.
 :host ::ng-deep .toolbar__search input {
   width: 100%;
-  min-height: 36px;
-  border-color: #8a8a94; // the redesign prototype's control border
-  border-radius: var(--app-radius-sm);
+  min-height: 40px;
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-pill);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
   font-size: var(--text-sm);
+  transition: border-color 140ms, box-shadow 140ms;
+
+  &:hover {
+    border-color: #8a8a94; // the redesign prototype's control border
+  }
+
+  &:focus {
+    border-color: var(--app-brand);
+    box-shadow: 0 0 0 3px var(--app-brand-soft);
+  }
+}
+
+:host ::ng-deep .view-seg.view-seg--quiet.p-selectbutton {
+  min-height: 40px;
+  padding: 3px;
+  border-radius: var(--app-radius-pill);
+  box-shadow: var(--app-shadow-sm);
+
+  .p-togglebutton {
+    min-height: 32px;
+    padding: 0 14px;
+    border-radius: var(--app-radius-pill);
+  }
 }
 
 .toolbar__view {
   display: grid;
-  gap: 6px;
-  margin-left: auto;
 }
 
-.toolbar__count {
-  display: flex;
-  align-items: center;
-  min-height: var(--control-height);
-  white-space: nowrap;
-}
 // The card's tint (warm ivory, as the event cards), mixed into the surface so it follows light and dark mode.
 $card-tint: #c8a26a;
 

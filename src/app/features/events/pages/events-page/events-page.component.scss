@@ -37,11 +37,38 @@ $control: #8a8a94; // the redesign prototype's control border
   max-width: 24rem;
 }
 
+// A variation on the redesign: the search and the view switch as two pills of the same height,
+// lifted a little off the page, so the row reads as one set of controls.
 :host ::ng-deep .toolbar__field--grow input {
-  min-height: 36px;
-  border-color: $control;
-  border-radius: var(--app-radius-sm);
+  min-height: 40px;
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-pill);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
   font-size: var(--text-sm);
+  transition: border-color 140ms, box-shadow 140ms;
+
+  &:hover {
+    border-color: $control;
+  }
+
+  &:focus {
+    border-color: var(--app-brand);
+    box-shadow: 0 0 0 3px var(--app-brand-soft);
+  }
+}
+
+:host ::ng-deep .view-seg.view-seg--quiet.p-selectbutton {
+  min-height: 40px;
+  padding: 3px;
+  border-radius: var(--app-radius-pill);
+  box-shadow: var(--app-shadow-sm);
+
+  .p-togglebutton {
+    min-height: 32px;
+    padding: 0 14px;
+    border-radius: var(--app-radius-pill);
+  }
 }
 
 .toolbar__label {

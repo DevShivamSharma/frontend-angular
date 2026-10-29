@@ -1,49 +1,42 @@
 <div class="page">
+  <!-- The search and the view switch sit in the title row, so the top of the page is one row. -->
   <app-page-header title="Halls" subtitle="The halls ITPO has, as listed in SelfCare.">
+    <!-- The search finds halls; the calendar shows events, so it has none. -->
+    @if (view() !== 'calendar') {
+      <p-iconfield actions class="toolbar__search">
+        <p-inputicon class="pi pi-search" />
+        <input
+          pInputText
+          type="search"
+          [formControl]="search"
+          placeholder="Search halls by name"
+          aria-label="Search halls by name"
+        />
+      </p-iconfield>
+    }
+    <div actions class="toolbar__view">
+      <span class="visually-hidden" id="halls-view-label">Halls display mode</span>
+      <p-selectbutton
+        class="view-seg view-seg--quiet"
+        [options]="viewOptions"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        [ngModel]="view()"
+        (ngModelChange)="chooseView($event)"
+        ariaLabelledBy="halls-view-label"
+      >
+        <ng-template #item let-option>
+          <i [class]="option.icon" aria-hidden="true"></i>
+          <span>{{ option.label }}</span>
+        </ng-template>
+      </p-selectbutton>
+    </div>
     <a actions class="p-button" routerLink="/halls/new">
       <i class="pi pi-plus" aria-hidden="true"></i>
       Create hall
     </a>
   </app-page-header>
-
-  <div class="toolbar">
-      <!-- The search finds halls; the calendar shows events, so it has none. -->
-      @if (view() !== 'calendar') {
-        <p-iconfield class="toolbar__search">
-          <p-inputicon class="pi pi-search" />
-          <input
-            pInputText
-            type="search"
-            [formControl]="search"
-            placeholder="Search halls by name"
-            aria-label="Search halls by name"
-          />
-        </p-iconfield>
-      }
-      <div class="toolbar__view">
-        <span class="visually-hidden" id="halls-view-label">Halls display mode</span>
-        <p-selectbutton
-          class="view-seg view-seg--quiet"
-          [options]="viewOptions"
-          optionLabel="label"
-          optionValue="value"
-          [allowEmpty]="false"
-          [ngModel]="view()"
-          (ngModelChange)="chooseView($event)"
-          ariaLabelledBy="halls-view-label"
-        >
-          <ng-template #item let-option>
-            <i [class]="option.icon" aria-hidden="true"></i>
-            <span>{{ option.label }}</span>
-          </ng-template>
-        </p-selectbutton>
-      </div>
-      <!-- <span class="text-muted toolbar__count" aria-live="polite">
-        @if (!loading() && !failed()) {
-          {{ total() }} {{ total() === 1 ? 'hall' : 'halls' }}
-        }
-      </span> -->
-  </div>
 
   <section class="card card--flush" aria-label="Halls">
 
