@@ -251,8 +251,9 @@ p-datepicker {
     background: var(--app-surface-2);
     border-color: var(--app-border);
     color: var(--app-muted);
-    font-size: var(--text-xs);
-    font-weight: 500;
+    /* The same as the .data-table headers: sentence case. */
+    font-size: var(--text-sm);
+    font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
     white-space: nowrap;

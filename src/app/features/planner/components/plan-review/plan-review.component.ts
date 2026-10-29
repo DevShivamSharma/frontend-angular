@@ -178,12 +178,12 @@ export class PlanReviewComponent {
     if (sent) await this.store.review('reject', sent.note, sent.files);
   }
 
-  /** ITPO takes an approved plan back to Draft, so the organiser can change it. */
+  /** ITPO reopens an approved plan, so the organiser can change it. */
   protected async reopen(): Promise<void> {
     const ok = await this.confirm.confirm({
       title: 'Reopen the plan?',
       message:
-        'The hall goes back to Draft. The organiser is told, can change the plan and must send it for approval again.',
+        'The plan is reopened. The organiser is told, can change the plan and must send it for approval again.',
       confirmLabel: 'Reopen',
     });
     if (ok) await this.store.review('reopen');

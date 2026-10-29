@@ -14,27 +14,34 @@
   }
 }
 
+// The bar between the header and the card, as on the events pages: search on the left, the view
+// switch on the right, lined up with the card's edges, with no rule under it.
 .toolbar {
   position: sticky;
   top: var(--app-topbar-height);
   z-index: 2;
+  // On the page's own ground; opaque, so the cards scroll under it.
+  background: var(--app-canvas);
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--app-border);
-  background: var(--app-surface);
+  gap: 12px;
+  margin-top: calc(-1 * var(--space-2));
+  padding: var(--space-2) 0;
 }
 
 .toolbar__search {
-  flex: 1 1 22rem;
-  max-width: 58rem;
+  flex: 1 1 18rem;
+  max-width: 24rem;
 }
 
 :host ::ng-deep .toolbar__search input {
   width: 100%;
+  min-height: 36px;
+  border-color: #8a8a94; // the redesign prototype's control border
+  border-radius: var(--app-radius-sm);
+  font-size: var(--text-sm);
 }
 
 .toolbar__view {

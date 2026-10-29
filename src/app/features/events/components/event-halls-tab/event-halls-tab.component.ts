@@ -159,11 +159,11 @@ export class EventHallsTabComponent {
       hall,
       {
         header: 'Withdraw from approval',
-        message: `Take ${hall.name} back? It returns to Draft and can be changed again.`,
+        message: `Take ${hall.name} back? It goes back in progress and can be changed again.`,
         acceptLabel: 'Withdraw',
       },
       () => firstValueFrom(this.plans.withdraw(eventId, hall.eventHallId)),
-      'Taken back to Draft',
+      'Taken back',
     );
   }
 
@@ -217,11 +217,11 @@ export class EventHallsTabComponent {
       hall,
       {
         header: 'Reopen the plan',
-        message: `Take ${hall.name} back to Draft? The organiser is told, can change the plan and must send it again.`,
+        message: `Reopen ${hall.name}? The organiser is told, can change the plan and must send it again.`,
         acceptLabel: 'Reopen',
       },
       () => firstValueFrom(this.plans.reopen(eventId, hall.eventHallId)),
-      'Reopened as Draft',
+      'Reopened',
     );
   }
 
@@ -393,7 +393,7 @@ export class EventHallsTabComponent {
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
   not_started: 'Not started',
-  draft: 'Draft',
+  draft: 'In progress',
   planned: 'Planned',
   pending: 'Pending approval',
   approved: 'Approved',

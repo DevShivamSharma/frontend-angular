@@ -43,10 +43,9 @@
     padding-block: var(--space-2);
     background: var(--app-surface-2);
     color: var(--app-muted);
-    font-size: var(--text-xs);
+    /* Sentence case, as the redesign's tables, and the same as the PrimeNG tables' headers. */
+    font-size: var(--text-sm);
     font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     white-space: nowrap;
   }
 

@@ -113,31 +113,6 @@ export class EventsPageComponent {
   protected readonly canCreate = computed(() => this.isStaff() && this.kind() === 'internal');
 
   protected readonly events = signal<EventSummary[]>([]);
-  /** The stage tab. shortcut: it filters and counts the loaded page only; needs a stage filter in the API to cover every page. */
-  protected readonly tab = signal('all');
-  /** The stages a list is split by: an internal event is drafted then published, an external one approved then published. */
-  private readonly stages = computed(() => {
-    const approval = (status: string) => (event: EventSummary) =>
-      event.approvalStatus?.toLowerCase() === status;
-    return this.kind() === 'internal'
-      ? [
-          { id: 'drafts', label: 'Drafts', has: (event: EventSummary) => !event.visible },
-          { id: 'published', label: 'Published', has: (event: EventSummary) => !!event.visible },
-        ]
-      : [
-          { id: 'pending', label: 'Pending approval', has: approval('pending') },
-          { id: 'approved', label: 'Approved', has: approval('approved') },
-          { id: 'published', label: 'Published', has: (event: EventSummary) => !!event.visible },
-        ];
-  });
-  protected readonly tabs = computed(() => [
-    { id: 'all', label: 'All', count: this.events().length },
-    ...this.stages().map((stage) => ({ ...stage, count: this.events().filter(stage.has).length })),
-  ]);
-  protected readonly shown = computed(() => {
-    const stage = this.stages().find((s) => s.id === this.tab());
-    return stage ? this.events().filter(stage.has) : this.events();
-  });
   protected readonly total = signal(0);
   protected readonly first = signal(0);
   protected readonly loading = signal(true);
@@ -157,7 +132,6 @@ export class EventsPageComponent {
     effect(() => {
       this.kind();
       untracked(() => {
-        this.tab.set('all');
         this.fetch(this.startAt);
         this.startAt = 0;
       });

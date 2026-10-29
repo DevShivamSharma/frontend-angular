@@ -6,8 +6,7 @@
     </a>
   </app-page-header>
 
-  <section class="card card--flush" aria-label="Halls">
-    <div class="toolbar">
+  <div class="toolbar">
       <!-- The search finds halls; the calendar shows events, so it has none. -->
       @if (view() !== 'calendar') {
         <p-iconfield class="toolbar__search">
@@ -24,7 +23,7 @@
       <div class="toolbar__view">
         <span class="visually-hidden" id="halls-view-label">Halls display mode</span>
         <p-selectbutton
-          class="view-seg"
+          class="view-seg view-seg--quiet"
           [options]="viewOptions"
           optionLabel="label"
           optionValue="value"
@@ -44,7 +43,9 @@
           {{ total() }} {{ total() === 1 ? 'hall' : 'halls' }}
         }
       </span> -->
-    </div>
+  </div>
+
+  <section class="card card--flush" aria-label="Halls">
 
     @if (view() === 'calendar') {
       @if (eventsFailed()) {

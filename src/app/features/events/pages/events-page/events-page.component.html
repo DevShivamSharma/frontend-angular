@@ -9,19 +9,6 @@
   </app-page-header>
 
   <div class="toolbar">
-        <div class="stage-tabs" role="tablist" aria-label="Events by stage">
-          @for (t of tabs(); track t.id) {
-            <button
-              type="button"
-              role="tab"
-              [attr.aria-selected]="tab() === t.id"
-              aria-controls="events-panel"
-              (click)="tab.set(t.id)"
-            >
-              {{ t.label }} <span class="stage-tabs__count">{{ loading() ? '' : t.count }}</span>
-            </button>
-          }
-        </div>
       <div class="toolbar__field toolbar__field--grow">
         <label class="visually-hidden" for="events-search">Search events</label>
         <p-iconfield>
@@ -75,7 +62,7 @@
       } @else if (events().length) {
         @if (view() === 'grid') {
           <ul class="card-grid">
-            @for (event of shown(); track event.id) {
+            @for (event of events(); track event.id) {
               <li class="item-card event-card">
                 <div class="event-card__body">
                   <!-- The start date at a glance; the full range is read out below. -->
@@ -121,12 +108,10 @@
                   </div>
                 </div>
               </li>
-            } @empty {
-              <li class="text-muted">No events in this tab on this page.</li>
             }
           </ul>
         } @else if (view() === 'calendar') {
-          <app-event-calendar [events]="shown()" />
+          <app-event-calendar [events]="events()" />
         } @else {
           <div class="data-table-wrap">
             <table class="data-table">
@@ -142,7 +127,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (event of shown(); track event.id) {
+                @for (event of events(); track event.id) {
                   <tr class="event-row" (click)="open(event)">
                     <th scope="row">
                       <div class="event-who">
@@ -180,10 +165,6 @@
                     <td class="cell-go">
                       <i class="pi pi-arrow-right" aria-hidden="true"></i>
                     </td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="4" class="text-muted">No events in this tab on this page.</td>
                   </tr>
                 }
               </tbody>

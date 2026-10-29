@@ -14,12 +14,10 @@ export function eventByline(event: EventSummary): string {
   return [who, type].filter(Boolean).join(' · ');
 }
 
-/** Where the event is: an internal one is a draft until it is published, an external one is its approval. */
+/** Where the event is: an internal one shows only once published, an external one is its approval. */
 export function eventStage(event: EventSummary): { label: string; severity: string } | null {
   if (event.kind === 'internal') {
-    return event.visible
-      ? { label: 'Published', severity: 'success' }
-      : { label: 'Draft', severity: 'info' };
+    return event.visible ? { label: 'Published', severity: 'success' } : null;
   }
   const status = event.approvalStatus ?? event.bookingStatus;
   return status ? { label: status, severity: statusSeverity(status) } : null;
