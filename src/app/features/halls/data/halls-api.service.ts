@@ -16,6 +16,11 @@ export class HallsApiService {
     return this.http.post<CreatedHall>(`${this.url}/halls`, payload);
   }
 
+  /** Changes a hall's details: only the fields sent change. */
+  update(hallId: number, changes: Record<string, unknown>): Observable<unknown> {
+    return this.http.patch(`${this.url}/halls/${hallId}`, changes);
+  }
+
   /** Adds a picture to a hall, by the URL it is kept at. */
   addImage(
     hallId: number,

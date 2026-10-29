@@ -15,134 +15,225 @@
       <p-skeleton height="12rem" />
     </div>
   } @else if (hall(); as hall) {
-    <app-page-header
-      [title]="hall.name"
-      [subtitle]="hall.hallCategory?.name"
-      backLink="/halls"
-      backLabel="Halls"
-    >
-      <p-button
-        actions
-        label="Add picture"
-        icon="pi pi-image"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="openAdd()"
-      />
-    </app-page-header>
-
-    <div class="chips" aria-label="Status">
-      <p-tag
-        [value]="hall.isActive ? 'Active' : 'Inactive'"
-        [severity]="hall.isActive ? 'success' : 'secondary'"
-        [rounded]="true"
-      />
-      @if (hall.isPopular) {
-        <p-tag value="Popular" severity="info" [rounded]="true" />
-      }
-      @if (hall.isVipLounge) {
-        <p-tag value="VIP lounge" severity="warn" [rounded]="true" />
-      }
-      @if (hall.isAvailableForFnB) {
-        <p-tag value="F&B" severity="secondary" [rounded]="true" />
-      }
-      @if (!hall.isAvailableForBooking) {
-        <p-tag value="Not open for booking" severity="danger" [rounded]="true" />
-      }
-    </div>
-
-    <div class="layout" [class.layout--single]="!hall.images.length">
-      @if (hall.images.length) {
-        <section class="card gallery" aria-label="Pictures">
-          <app-hall-gallery
-            [images]="hall.images"
-            [hallName]="hall.name"
-            [canRemove]="true"
-            (removed)="askRemove($event)"
+    <header class="head">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a routerLink="/halls">Halls</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{{ hall.name }}</span>
+      </nav>
+      <div class="head-title">
+        <h1>{{ hall.name }}</h1>
+        <div class="head-meta">
+          @if (hall.hallCode !== null) {
+            <span class="ref">{{ hall.hallCode }}</span>
+          }
+          @if (hall.hallCategory; as category) {
+            <span class="text-muted">{{ category.name }}</span>
+          }
+          <p-tag
+            [value]="hall.isAvailableForBooking ? 'Bookable' : 'Not bookable'"
+            [severity]="hall.isAvailableForBooking ? 'success' : 'secondary'"
+            [rounded]="true"
           />
-        </section>
-      }
+          @if (!hall.isActive) {
+            <p-tag value="Inactive" severity="secondary" [rounded]="true" />
+          }
+        </div>
+      </div>
+    </header>
 
-      <section class="card" aria-labelledby="facts-title">
-        <h2 id="facts-title">Details</h2>
-        <dl class="facts">
-          <div>
-            <dt>Category</dt>
-            <dd>{{ hall.hallCategory?.name ?? '—' }}</dd>
-          </div>
-          <div>
-            <dt>Area capacity</dt>
-            <dd>
-              {{ hall.hallAreaCapacity !== null ? (hall.hallAreaCapacity | number) + ' sqm' : '—' }}
-            </dd>
-          </div>
-          <div>
-            <dt>Complimentary days</dt>
-            <dd>{{ hall.complementaryDays ?? '—' }}</dd>
-          </div>
-          <div>
-            <dt>Display order</dt>
-            <dd>{{ hall.sortOrder ?? '—' }}</dd>
-          </div>
-          <div>
-            <dt>Hall code</dt>
-            <dd>{{ hall.hallCode ?? '—' }}</dd>
-          </div>
-          <div>
-            <dt>Hall in charge</dt>
-            <dd>{{ hall.hallIncharge ?? '—' }}</dd>
-          </div>
-          <div>
-            <dt>Finance officer</dt>
-            <dd>{{ hall.financeOfficer ?? '—' }}</dd>
-          </div>
-          <div>
-            <dt>Last updated</dt>
-            <dd>{{ hall.updatedAt ? (hall.updatedAt | date: 'd MMM y') : '—' }}</dd>
-          </div>
-        </dl>
-      </section>
-    </div>
+    <section class="sheet" [attr.aria-label]="hall.name">
+      <nav class="steps" [attr.aria-label]="hall.name + ' sections'">
+        @for (s of sections(); track s.id; let i = $index) {
+          <button
+            type="button"
+            class="step"
+            [class.active]="s.id === current().id"
+            [attr.aria-current]="s.id === current().id ? 'step' : null"
+            (click)="select(s.id)"
+          >
+            <span class="dot">{{ i + 1 }}</span>
+            <span class="step-text">
+              <span class="step-title">{{ s.title }}</span>
+              <span class="step-note">{{ s.note }}</span>
+            </span>
+          </button>
+        }
+      </nav>
 
-    <app-hall-layout-panel [hallId]="hall.id" [hallName]="hall.name" />
+      <div class="panel">
+        <header class="panel-head">
+          <div>
+            <h2>{{ current().title }}</h2>
+            <p class="subtitle">{{ current().gist }}</p>
+          </div>
+          @if (current().id === 'details' && !editing()) {
+            <p-button
+              label="Edit details"
+              icon="pi pi-pencil"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="startEdit()"
+            />
+          } @else if (current().id === 'photos') {
+            <p-button
+              label="Add picture"
+              icon="pi pi-image"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="openAdd()"
+            />
+          }
+        </header>
 
-    @if (description()) {
-      <section class="card" aria-labelledby="about-title">
-        <h2 id="about-title">About the hall</h2>
-        <p class="about">{{ description() }}</p>
-      </section>
-    }
+        @switch (current().id) {
+          @case ('details') {
+            @if (editing()) {
+              <app-hall-details-form
+                [hall]="hall"
+                [categories]="categories()"
+                [saving]="savingDetails()"
+                [failure]="detailsFailure()"
+                (saved)="saveDetails($event)"
+                (cancelled)="editing.set(false)"
+              />
+            } @else {
+              <dl class="facts">
+                <div>
+                  <dt>Category</dt>
+                  <dd>{{ hall.hallCategory?.name ?? '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Bookable area</dt>
+                  <dd class="num">
+                    {{
+                      hall.hallAreaCapacity !== null
+                        ? (hall.hallAreaCapacity | number) + ' m²'
+                        : '—'
+                    }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Hall in charge</dt>
+                  <dd>{{ hall.hallIncharge ?? '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Finance officer</dt>
+                  <dd>{{ hall.financeOfficer ?? '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Complimentary days</dt>
+                  <dd>
+                    @if (hall.complementaryDays) {
+                      {{ hall.complementaryDays }}
+                      {{ hall.complementaryDays === 1 ? 'day' : 'days' }}
+                    } @else {
+                      None
+                    }
+                  </dd>
+                </div>
+                <div>
+                  <dt>Available for F&amp;B</dt>
+                  <dd>{{ hall.isAvailableForFnB ? 'Yes' : 'No' }}</dd>
+                </div>
+                <div>
+                  <dt>VIP lounge</dt>
+                  <dd>{{ hall.isVipLounge ? 'Yes' : 'No' }}</dd>
+                </div>
+                <div>
+                  <dt>Shown as popular</dt>
+                  <dd>{{ hall.isPopular ? 'Yes' : 'No' }}</dd>
+                </div>
+                <div>
+                  <dt>Order in lists</dt>
+                  <dd>{{ hall.sortOrder ?? '—' }}</dd>
+                </div>
+              </dl>
 
-    @if (hall.resources.length) {
-      <section class="card" aria-labelledby="resources-title">
-        <h2 id="resources-title">Resources</h2>
-        <ul class="resources">
-          @for (resource of hall.resources; track resource.name) {
-            <li>
-              <strong>{{ resource.name }}</strong>
-              <span class="text-muted">{{ resource.type }}</span>
-              @if (resource.description) {
-                <span>{{ resource.description }}</span>
+              @if (description()) {
+                <div class="block">
+                  <h3>About the hall</h3>
+                  <p class="about">{{ description() }}</p>
+                </div>
               }
-            </li>
-          }
-        </ul>
-      </section>
-    }
 
-    @if (allFields().length) {
-      <details class="card more">
-        <summary>Everything ITPO keeps about this hall</summary>
-        <dl class="facts facts--wide">
-          @for (field of allFields(); track field.label) {
-            <div>
-              <dt>{{ field.label }}</dt>
-              <dd>{{ field.value }}</dd>
-            </div>
+              @if (hall.resources.length) {
+                <div class="block">
+                  <h3>Resources</h3>
+                  <ul class="resources">
+                    @for (resource of hall.resources; track resource.name) {
+                      <li>
+                        <strong>{{ resource.name }}</strong>
+                        <span class="text-muted">{{ resource.type }}</span>
+                        @if (resource.description) {
+                          <span>{{ resource.description }}</span>
+                        }
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+            }
           }
-        </dl>
-      </details>
-    }
+
+          @case ('photos') {
+            @if (hall.images.length) {
+              <app-hall-gallery
+                [images]="hall.images"
+                [hallName]="hall.name"
+                [canRemove]="true"
+                (removed)="askRemove($event)"
+              />
+            } @else {
+              <app-empty-state
+                icon="pi-image"
+                title="No photos yet"
+                message="Add one by the address it is kept at. One of them can be the cover."
+              />
+            }
+          }
+
+          @case ('floor') {
+            <app-hall-layout-panel class="flush" [hallId]="hall.id" [hallName]="hall.name" />
+          }
+
+          @case ('admin') {
+            <dl class="facts">
+              <div>
+                <dt>Hall id</dt>
+                <dd class="num">{{ hall.id }}</dd>
+              </div>
+              <div>
+                <dt>Hall code</dt>
+                <dd>{{ hall.hallCode ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt>Created</dt>
+                <dd>{{ hall.createdAt ? (hall.createdAt | date: 'd MMM y') : '—' }}</dd>
+              </div>
+              <div>
+                <dt>Last updated</dt>
+                <dd>{{ hall.updatedAt ? (hall.updatedAt | date: 'd MMM y') : '—' }}</dd>
+              </div>
+            </dl>
+
+            @if (allFields().length) {
+              <details class="more">
+                <summary>Everything ITPO keeps about this hall</summary>
+                <dl class="facts facts--wide">
+                  @for (field of allFields(); track field.label) {
+                    <div>
+                      <dt>{{ field.label }}</dt>
+                      <dd>{{ field.value }}</dd>
+                    </div>
+                  }
+                </dl>
+              </details>
+            }
+          }
+        }
+      </div>
+    </section>
 
     <app-add-image-dialog
       [saving]="saving()"

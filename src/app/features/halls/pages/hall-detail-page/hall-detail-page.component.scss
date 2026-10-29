@@ -1,12 +1,20 @@
+// Sizes are the redesign prototype's own (its .crumbs, .ph, section rail and .kv list).
+$control: #8a8a94; // the prototype's control border: darker than --app-border-strong
+
+// The page fills the screen under the top bar and does not scroll; the chosen section scrolls in
+// its own pane, so the rail and the title stay in view.
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--app-topbar-height));
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: calc(var(--space-2) * -1);
+.page {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-5);
+  gap: var(--space-3);
 }
 
 .skeleton {
@@ -15,29 +23,214 @@
   gap: var(--space-4);
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: var(--space-4);
-  align-items: start;
+// A compact title block: the crumbs, then the name with its category and status on the same line.
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.layout--single {
-  grid-template-columns: minmax(0, 1fr);
+.head-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
 }
 
-.gallery {
-  padding: var(--space-3);
-}
-
-h2 {
-  margin-bottom: var(--space-3);
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   color: var(--app-muted);
-  font-family: var(--app-font-body);
+  font-size: var(--text-sm);
+
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--app-text);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+}
+
+h1 {
+  font-size: var(--text-2xl);
+}
+
+.head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+}
+
+.ref {
+  font-family: var(--app-font-mono, ui-monospace, monospace);
+  font-size: var(--text-sm);
+  color: var(--app-muted);
+}
+
+// The card: a section rail on the left, the chosen section on the right.
+.sheet {
+  flex: 1 1 auto;
+  // Below this the page scrolls as a whole rather than squeezing the pane to nothing.
+  min-height: 24rem;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+  overflow: hidden;
+
+  @media (max-width: 48rem) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+}
+
+.steps {
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 12px 10px;
+  border-right: 1px solid var(--app-border);
+  background: var(--app-surface-2);
+
+  @media (max-width: 48rem) {
+    display: flex;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  background: none;
+  color: var(--app-muted);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--app-surface-hover);
+    color: var(--app-text);
+  }
+
+  &.active {
+    background: var(--app-brand-soft);
+    color: var(--app-brand);
+    font-weight: 600;
+  }
+
+  @media (max-width: 48rem) {
+    white-space: nowrap;
+  }
+}
+
+.dot {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid $control;
+  border-radius: 50%;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+
+  .active & {
+    border-color: var(--app-brand);
+    color: var(--app-brand);
+  }
+}
+
+.step-text {
+  display: grid;
+  min-width: 0;
+}
+
+.step-title {
+  color: var(--app-text);
+
+  .active & {
+    color: var(--app-brand);
+  }
+}
+
+.step-note {
+  color: var(--app-muted);
   font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 400;
+
+  @media (max-width: 48rem) {
+    display: none;
+  }
+}
+
+.panel {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 24px 24px;
+}
+
+// The scrolling parts: a thin bar in the theme's own colours, the brand red under the pointer.
+.panel,
+.steps {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border-strong) transparent;
+  scrollbar-gutter: stable;
+
+  &:hover {
+    scrollbar-color: color-mix(in srgb, var(--app-brand) 55%, var(--app-border-strong)) transparent;
+  }
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+
+  h2 {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 600;
+  }
+}
+
+// As on the event page's head: PrimeNG leaves no room between a button's icon and its label.
+:host ::ng-deep .panel-head .p-button {
+  flex: none;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  color: var(--app-muted);
+  font-size: var(--text-sm);
 }
 
 .facts {
@@ -49,7 +242,7 @@ h2 {
     display: flex;
     justify-content: space-between;
     gap: var(--space-4);
-    padding: var(--space-2) 0;
+    padding: 12px 0;
     border-bottom: 1px solid var(--app-border);
 
     &:last-child {
@@ -60,7 +253,6 @@ h2 {
   dt {
     flex: none;
     color: var(--app-muted);
-    font-size: var(--text-base);
   }
 
   dd {
@@ -72,10 +264,25 @@ h2 {
   }
 }
 
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
 .facts--wide {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
   column-gap: var(--space-6);
+}
+
+.block {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--app-border);
+
+  h3 {
+    font-size: var(--text-base);
+  }
 }
 
 .about {
@@ -111,8 +318,11 @@ h2 {
   margin-bottom: var(--space-3);
 }
 
-@media (max-width: 60rem) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
+// The layout panel is a card of its own elsewhere; inside the pane it takes the pane's chrome.
+:host ::ng-deep .flush > .card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
 }

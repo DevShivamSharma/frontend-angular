@@ -1,0 +1,124 @@
+<form class="details-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <div class="form-grid">
+    <app-form-field
+      class="form-grid__full"
+      label="Hall name"
+      inputId="edit-hall-name"
+      [control]="form.controls.name"
+      [required]="true"
+    >
+      <input
+        pInputText
+        id="edit-hall-name"
+        formControlName="name"
+        autocomplete="off"
+        maxlength="255"
+      />
+    </app-form-field>
+
+    <app-form-field
+      label="Category"
+      inputId="edit-hall-category"
+      [control]="form.controls.hallCategoryId"
+    >
+      <p-select
+        inputId="edit-hall-category"
+        formControlName="hallCategoryId"
+        [options]="categories()"
+        optionLabel="name"
+        optionValue="id"
+        [showClear]="true"
+        placeholder="Choose a category"
+        appendTo="body"
+      />
+    </app-form-field>
+
+    <app-form-field
+      label="Bookable area (sqm)"
+      inputId="edit-hall-capacity"
+      [control]="form.controls.hallAreaCapacity"
+    >
+      <p-inputnumber
+        inputId="edit-hall-capacity"
+        formControlName="hallAreaCapacity"
+        [min]="0"
+        [maxFractionDigits]="2"
+      />
+    </app-form-field>
+  </div>
+
+  @if (isNta()) {
+    <p-message severity="info" variant="outlined">
+      This is a Non-Tower Area hall: it has no VIP lounge, F&amp;B, complimentary days or order.
+    </p-message>
+  }
+
+  <div class="options">
+    <div class="toggle-row">
+      <p-toggleswitch inputId="edit-hall-popular" formControlName="isPopular" />
+      <label for="edit-hall-popular">Shown as popular</label>
+    </div>
+    <div class="toggle-row">
+      <p-toggleswitch inputId="edit-hall-vip" formControlName="isVipLounge" />
+      <label for="edit-hall-vip">VIP lounge</label>
+    </div>
+    <div class="toggle-row">
+      <p-toggleswitch inputId="edit-hall-fnb" formControlName="isAvailableForFnB" />
+      <label for="edit-hall-fnb">Available for F&amp;B</label>
+    </div>
+  </div>
+
+  <div class="form-grid">
+    <app-form-field
+      label="Complimentary days"
+      inputId="edit-hall-complimentary"
+      [control]="form.controls.complementaryDays"
+    >
+      <p-selectbutton
+        formControlName="complementaryDays"
+        [options]="complimentaryOptions"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        ariaLabelledBy="edit-hall-complimentary"
+      />
+    </app-form-field>
+    <app-form-field
+      label="Order in lists"
+      inputId="edit-hall-order"
+      [control]="form.controls.sortOrder"
+      hint="0 to 20. The lower the earlier."
+    >
+      <p-inputnumber
+        inputId="edit-hall-order"
+        formControlName="sortOrder"
+        [min]="0"
+        [max]="20"
+        [showButtons]="true"
+      />
+    </app-form-field>
+  </div>
+
+  @if (failure(); as message) {
+    <p class="problem" role="alert">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+    </p>
+  }
+
+  <div class="actions">
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="cancelled.emit()"
+    />
+    <p-button
+      type="submit"
+      label="Save details"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="saving()"
+    />
+  </div>
+</form>
