@@ -1,25 +1,27 @@
 <div class="page">
   <app-page-header
     title="Email recipients"
-    subtitle="Who each email goes to. The code that sends an email asks for a list by its slug, so you can change the people here without a release."
+    subtitle=""
   >
+    <!-- The search sits in the title row, as on the halls and events pages, so the top is one row. -->
+    <p-iconfield actions class="filters__search">
+      <p-inputicon class="pi pi-search" />
+      <input
+        pInputText
+        type="search"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+        placeholder="Search lists"
+        aria-label="Search lists"
+      />
+    </p-iconfield>
     <p-button actions label="New list" icon="pi pi-plus" (onClick)="openNew()" />
   </app-page-header>
 
   <section class="card card--flush list" aria-label="Email lists">
+    @if (!loading() && !failed() && (empty() > 0 || shown().length)) {
     <div class="filters sticky-filters">
-      <p-iconfield class="filters__search">
-        <p-inputicon class="pi pi-search" />
-        <input
-          pInputText
-          type="search"
-          [ngModel]="query()"
-          (ngModelChange)="query.set($event)"
-          placeholder="Search lists"
-          aria-label="Search lists"
-        />
-      </p-iconfield>
-      @if (!loading() && !failed() && empty() > 0) {
+      @if (empty() > 0) {
         <span class="alert" role="status">
           <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
           {{ empty() }} {{ empty() === 1 ? 'list has' : 'lists have' }} nobody, so its emails go
@@ -27,11 +29,10 @@
         </span>
       }
       <span class="text-muted filters__count" aria-live="polite">
-        @if (!loading() && !failed()) {
-          {{ shown().length }} {{ shown().length === 1 ? 'list' : 'lists' }}
-        }
+        {{ shown().length }} {{ shown().length === 1 ? 'list' : 'lists' }}
       </span>
     </div>
+    }
 
     @if (failed()) {
       <app-empty-state

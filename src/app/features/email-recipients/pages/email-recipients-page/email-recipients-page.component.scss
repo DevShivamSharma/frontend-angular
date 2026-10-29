@@ -12,8 +12,43 @@
   border-bottom: 1px solid var(--app-border);
 }
 
+// The header's actions, in one row with the title: the search, then New list. The subtitle is
+// long, so the text wraps within a column instead of pushing the actions under it.
+:host ::ng-deep app-page-header {
+  .page-header__text {
+    flex: 1 1 24rem;
+    max-width: 44rem;
+  }
+
+  .page-header__actions {
+    align-items: center;
+    gap: 12px;
+  }
+}
+
 .filters__search {
-  flex: 0 1 18rem;
+  width: 16rem;
+}
+
+// The search as a pill, as on the halls and events pages.
+:host ::ng-deep .filters__search input {
+  width: 100%;
+  min-height: 40px;
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-pill);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+  font-size: var(--text-sm);
+  transition: border-color 140ms, box-shadow 140ms;
+
+  &:hover {
+    border-color: #8a8a94; // the redesign prototype's control border
+  }
+
+  &:focus {
+    border-color: var(--app-brand);
+    box-shadow: 0 0 0 3px var(--app-brand-soft);
+  }
 }
 
 .filters__count {
@@ -38,7 +73,7 @@
 
 @media (max-width: 40rem) {
   .filters__search {
-    flex: 1 1 100%;
+    width: 100%;
   }
 
   .filters__count {
