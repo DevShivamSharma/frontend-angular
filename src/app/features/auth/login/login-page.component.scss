@@ -63,20 +63,16 @@ $paper: #e4a0b4;
   gap: 12px;
 }
 
-.login__logo {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 1px solid color-mix(in srgb, $paper 30%, var(--app-border));
-  border-radius: var(--app-radius-md);
-  background: var(--app-surface);
-  box-shadow: 0 1px 2px rgb(60 40 10 / 6%);
+// The official marks, a little larger than in the app's top bar, then the portal's name after a rule.
+.login__logos {
+  --brand-logos-height: 2.75rem;
 }
 
 .login__brand-text {
   display: grid;
   gap: 2px;
+  padding-left: 12px;
+  border-left: 1px solid var(--app-border-strong);
 
   b {
     font-size: 15px;

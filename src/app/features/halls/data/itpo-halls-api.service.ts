@@ -82,6 +82,7 @@ function toHall(raw: Record<string, unknown>): ItpoHall {
       : null,
     isVipLounge: raw['isVipLounge'] === true,
     isAvailableForFnB: raw['isAvailableForFnB'] === true,
+    isAvailableForFoyr: raw['isAvailableForFoyr'] === true,
     complementaryDays:
       raw['complementaryDays'] === null || raw['complementaryDays'] === undefined
         ? null

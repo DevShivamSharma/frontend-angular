@@ -15,7 +15,16 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { Subscription, debounceTime, distinctUntilChanged, forkJoin, map } from 'rxjs';
+import { DecimalPipe } from '@angular/common';
+import {
+  Subscription,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  forkJoin,
+  map,
+  of,
+} from 'rxjs';
 
 import { UrlState } from '../../../../core/navigation/url-state';
 import { NotifierService } from '../../../../core/notification/notifier.service';
@@ -30,6 +39,7 @@ import { EventListKind, EventSummary } from '../../../events/data/events.models'
 import { ItpoEventsApiService } from '../../../events/data/itpo-events-api.service';
 import { ItpoHall } from '../../data/halls.models';
 import { ItpoHallsApiService } from '../../data/itpo-halls-api.service';
+import { ItpoLayoutApiService } from '../../data/itpo-layout-api.service';
 
 const PAGE_SIZE = 10;
 
@@ -37,6 +47,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-halls-page',
   imports: [
+    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -60,6 +71,7 @@ const PAGE_SIZE = 10;
 export class HallsPageComponent {
   private readonly api = inject(ItpoHallsApiService);
   private readonly eventsApi = inject(ItpoEventsApiService);
+  private readonly layouts = inject(ItpoLayoutApiService);
   private readonly notifier = inject(NotifierService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -78,15 +90,16 @@ export class HallsPageComponent {
   protected readonly events = signal<EventSummary[] | null>(null);
   protected readonly eventsFailed = signal(false);
   protected readonly tableSkeleton = [
-    { width: '2rem' },
     { width: '35%' },
     { width: '20%', hideSmall: true },
-    { width: '8rem', hideSmall: true },
+    { width: '7rem', hideSmall: true },
     { width: '7rem' },
     { width: '10rem', hideSmall: true },
   ];
 
   protected readonly halls = signal<ItpoHall[]>([]);
+  /** Each listed hall's grid in metres, from its layout; a hall with no layout is left out. */
+  protected readonly sizes = signal<ReadonlyMap<number, { columns: number; rows: number }>>(new Map());
   protected readonly total = signal(0);
   protected readonly first = signal(0);
   protected readonly loading = signal(true);
@@ -95,6 +108,7 @@ export class HallsPageComponent {
   protected readonly isSearching = computed(() => this.search.value.trim().length > 0);
 
   private request: Subscription | null = null;
+  private sizeRequest: Subscription | null = null;
   private readonly url = new UrlState();
 
   constructor() {
@@ -147,6 +161,25 @@ export class HallsPageComponent {
     return (hall.images.find((image) => image.kind === 'cover') ?? hall.images[0])?.url ?? null;
   }
 
+  /**
+   * The floor size of each hall on the page, from its layout.
+   * shortcut: one layout request per row (the hall list has no size); move it into the list API if pages grow.
+   */
+  private fetchSizes(halls: ItpoHall[]): void {
+    this.sizes.set(new Map());
+    this.sizeRequest?.unsubscribe();
+    if (!halls.length) return;
+    this.sizeRequest = forkJoin(
+      halls.map((hall) => this.layouts.layout(hall.id).pipe(catchError(() => of(null)))),
+    ).subscribe((layouts) =>
+      this.sizes.set(
+        new Map(
+          layouts.flatMap((l) => (l ? [[l.hallId, { columns: l.columns, rows: l.rows }] as const] : [])),
+        ),
+      ),
+    );
+  }
+
   /** The page of halls that starts at row `first`, for the current search. Replaces a request still in flight. */
   private fetch(first: number): void {
     this.request?.unsubscribe();
@@ -166,6 +199,7 @@ export class HallsPageComponent {
           this.halls.set(page.items);
           this.total.set(page.total);
           this.loading.set(false);
+          this.fetchSizes(page.items);
         },
         error: (error: unknown) => {
           this.loading.set(false);

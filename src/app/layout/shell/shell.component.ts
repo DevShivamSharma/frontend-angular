@@ -20,12 +20,14 @@ import { LayoutService } from '../../core/layout/layout.service';
 import { PlansApiService } from '../../features/planner/data/plans-api.service';
 import { ConfirmService } from '../../core/confirm/confirm.service';
 import { ThemeMode, ThemeService } from '../../core/theme/theme.service';
+import { BrandLogosComponent } from '../../shared/ui/brand-logos/brand-logos.component';
 import { groupNav, NAV_ITEMS } from '../nav-items';
 
 /** The frame of every signed-in page: top bar, navigation (a drawer on small screens) and content. */
 @Component({
   selector: 'app-shell',
   imports: [
+    BrandLogosComponent,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,

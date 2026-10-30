@@ -1,5 +1,7 @@
 :host {
   display: block;
+  // No sticky filter bar above the table here (the search is in the header), so its header sticks under the top bar.
+  --table-filters-height: 0px;
 }
 
 // Match the primary action color used by Create event and the selected view.
@@ -136,13 +138,43 @@ $card-tint: #c8a26a;
   min-width: 14rem;
 }
 
+// A wide photo, as the redesign's hall list.
 .hall-table__thumbnail {
-  width: 3rem;
-  height: 3rem;
+  width: 5.5rem;
+  height: 3.75rem;
   flex: 0 0 auto;
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-xs);
+  border-radius: var(--app-radius-sm);
   object-fit: cover;
+}
+
+.hall-table__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hall-table__code {
+  color: var(--app-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.hall-table__chip {
+  padding: 2px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-pill);
+  background: var(--app-surface-2);
+  color: var(--app-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.hall-table__chip--off {
+  border-color: color-mix(in srgb, var(--app-danger) 25%, transparent);
+  background: color-mix(in srgb, var(--app-danger) 8%, transparent);
+  color: var(--app-danger);
 }
 
 .hall-table__status {
@@ -158,7 +190,7 @@ $card-tint: #c8a26a;
 .hall-table__features {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-2);
   color: var(--app-muted);
   font-size: var(--text-sm);
 }

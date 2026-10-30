@@ -2,6 +2,8 @@ $control: #8a8a94; // the redesign prototype's control border
 
 :host {
   display: block;
+  // No sticky filter bar above the table here (the search is in the header), so its header sticks under the top bar.
+  --table-filters-height: 0px;
 }
 
 // The header's actions, in one row with the title: search, the view switch, then Create event.

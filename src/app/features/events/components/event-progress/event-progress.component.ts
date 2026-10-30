@@ -8,7 +8,6 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { ButtonModule } from 'primeng/button';
 import { firstValueFrom } from 'rxjs';
 
 import { PlansApiService } from '../../../planner/data/plans-api.service';
@@ -18,8 +17,6 @@ import { EventConfigApiService } from '../../data/event-config-api.service';
 interface Step {
   id: string;
   label: string;
-  /** The button's words when this is the next step. */
-  cta: string;
   /** Where the step stands, in a few words, under its label. */
   note: string;
   tab: 'halls' | 'config' | 'details';
@@ -33,7 +30,7 @@ interface Step {
  */
 @Component({
   selector: 'app-event-progress',
-  imports: [ButtonModule],
+  imports: [],
   templateUrl: './event-progress.component.html',
   styleUrl: './event-progress.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,8 +39,6 @@ export class EventProgressComponent {
   readonly eventId = input.required<string>();
   readonly kind = input.required<'internal' | 'external'>();
   readonly halls = input.required<number>();
-  /** The person may do the steps (ITPO staff, for an internal event). */
-  readonly canAct = input(false);
   readonly go = input<(tab: string) => void>(() => undefined);
 
   private readonly plans = inject(PlansApiService);
@@ -70,7 +65,6 @@ export class EventProgressComponent {
         {
           id: 'halls',
           label: 'Halls added',
-          cta: 'Add the halls',
           note: hallsNote,
           tab: 'halls',
           done: halls > 0,
@@ -78,7 +72,6 @@ export class EventProgressComponent {
         {
           id: 'config',
           label: 'Booking setup',
-          cta: 'Finish the booking setup',
           note: configured === true ? 'Saved' : configured === false ? 'Not saved yet' : '',
           tab: 'config',
           done: configured === true,
@@ -86,7 +79,6 @@ export class EventProgressComponent {
         {
           id: 'plan',
           label: 'Hall plans',
-          cta: 'Plan the stalls',
           note: of(count(isPlanned), 'planned'),
           tab: 'halls',
           done: every(isPlanned),
@@ -94,7 +86,6 @@ export class EventProgressComponent {
         {
           id: 'publish',
           label: 'Published',
-          cta: 'Publish the plans',
           note: of(count(isPublished), 'published'),
           tab: 'halls',
           done: every(isPublished),
@@ -105,7 +96,6 @@ export class EventProgressComponent {
       {
         id: 'halls',
         label: 'Halls booked',
-        cta: 'View the halls',
         note: hallsNote,
         tab: 'halls',
         done: halls > 0,
@@ -113,7 +103,6 @@ export class EventProgressComponent {
       {
         id: 'plan',
         label: 'Organiser plans',
-        cta: 'View the plans',
         note: of(count(isSent), 'sent'),
         tab: 'halls',
         done: every(isSent),
@@ -121,7 +110,6 @@ export class EventProgressComponent {
       {
         id: 'approve',
         label: 'ITPO approves',
-        cta: 'Review the plans',
         note: of(count(isApproved), 'approved'),
         tab: 'halls',
         done: every(isApproved),
@@ -129,7 +117,6 @@ export class EventProgressComponent {
       {
         id: 'publish',
         label: 'Published',
-        cta: 'View the plans',
         note: of(count(isPublished), 'published'),
         tab: 'halls',
         done: every(isPublished),

@@ -49,6 +49,8 @@ export interface ItpoHall {
   hallCategory: HallCategory | null;
   isVipLounge: boolean;
   isAvailableForFnB: boolean;
+  /** Stalls may also be planned in the hall's foyer. */
+  isAvailableForFoyr: boolean;
   complementaryDays: number | null;
   sortOrder: number | null;
   isActive: boolean;

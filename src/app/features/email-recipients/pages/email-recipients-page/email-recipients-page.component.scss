@@ -1,15 +1,19 @@
 :host {
   display: block;
+  // No sticky filter bar above the table any more (the search is in the header), so its header sticks under the top bar.
+  --table-filters-height: 0px;
 }
 
 /* ---- the table of lists ---- */
+/* A slim line over the table: the empty-list warning and the count. */
 .filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3) var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-5);
   border-bottom: 1px solid var(--app-border);
+  font-size: var(--text-sm);
 }
 
 // The header's actions, in one row with the title: the search, then New list. The subtitle is

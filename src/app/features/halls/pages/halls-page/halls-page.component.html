@@ -130,18 +130,16 @@
               <caption class="visually-hidden">Halls</caption>
               <thead>
                 <tr>
-                  <th scope="col" class="cell-no">Sr. no.</th>
                   <th scope="col">Hall</th>
                   <th scope="col">Category</th>
-                  <th scope="col">Area</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Facilities</th>
+                  <th scope="col">Floor size</th>
+                  <th scope="col">Bookable area</th>
+                  <th scope="col">Differs from standard</th>
                 </tr>
               </thead>
               <tbody>
-                @for (hall of halls(); track hall.id; let i = $index) {
+                @for (hall of halls(); track hall.id) {
                   <tr>
-                    <td class="cell-no">{{ first() + i + 1 }}</td>
                     <th scope="row" class="cell-name">
                       <div class="hall-table__hall">
                         <img
@@ -151,32 +149,46 @@
                           loading="lazy"
                           appImageFallback
                         />
-                        <a class="cell-name__title" [routerLink]="['/halls', hall.id]">{{ hall.name }}</a>
+                        <span class="hall-table__text">
+                          <a class="cell-name__title" [routerLink]="['/halls', hall.id]">{{ hall.name }}</a>
+                          @if (hall.hallCode !== null) {
+                            <span class="hall-table__code">{{ hall.hallCode }}</span>
+                          }
+                        </span>
                       </div>
                     </th>
                     <td>{{ hall.hallCategory?.name || '—' }}</td>
                     <td class="nowrap">
+                      @if (sizes().get(hall.id); as size) {
+                        {{ size.columns }} × {{ size.rows }} m
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td class="nowrap">
                       @if (hall.hallAreaCapacity !== null && hall.hallAreaCapacity !== undefined) {
-                        {{ hall.hallAreaCapacity }} sqm
+                        {{ hall.hallAreaCapacity | number }} m²
                       } @else {
                         —
                       }
                     </td>
                     <td>
-                      <span [class.hall-table__status--active]="hall.isActive" class="hall-table__status">
-                        {{ hall.isActive ? 'Enabled' : 'Disabled' }}
-                      </span>
-                    </td>
-                    <td>
+                      <!-- What sets the hall apart; a plain hall is "Standard". -->
                       <div class="hall-table__features">
+                        @if (!hall.isActive) {
+                          <span class="hall-table__chip hall-table__chip--off">Disabled</span>
+                        }
+                        @if (hall.isAvailableForFoyr) {
+                          <span class="hall-table__chip">Foyer stalls</span>
+                        }
                         @if (hall.isVipLounge) {
-                          <span>VIP lounge</span>
+                          <span class="hall-table__chip">VIP lounge</span>
                         }
                         @if (hall.isAvailableForFnB) {
-                          <span>F&amp;B</span>
+                          <span class="hall-table__chip">F&amp;B</span>
                         }
-                        @if (!hall.isVipLounge && !hall.isAvailableForFnB) {
-                          <span class="text-muted">—</span>
+                        @if (hall.isActive && !hall.isAvailableForFoyr && !hall.isVipLounge && !hall.isAvailableForFnB) {
+                          <span class="text-muted">Standard</span>
                         }
                       </div>
                     </td>

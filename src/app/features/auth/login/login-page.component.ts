@@ -22,12 +22,14 @@ import { PasswordModule } from 'primeng/password';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ApiError } from '../../../core/http/api-error';
 import { FormFieldComponent } from '../../../shared/forms/form-field/form-field.component';
+import { BrandLogosComponent } from '../../../shared/ui/brand-logos/brand-logos.component';
 import { applyServerErrors } from '../../../shared/utils/form.util';
 
 /** The only way in: email and password. There is no sign-up and no password reset here. */
 @Component({
   selector: 'app-login-page',
   imports: [
+    BrandLogosComponent,
     ReactiveFormsModule,
     ButtonModule,
     IconFieldModule,

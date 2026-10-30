@@ -79,7 +79,6 @@
         [eventId]="eventId()"
         [kind]="event.kind"
         [halls]="store.halls().length"
-        [canAct]="store.canManage() || event.kind === 'external'"
         [go]="goToTab"
       />
       <p-tabs [value]="tab()" (valueChange)="onTab($event)">

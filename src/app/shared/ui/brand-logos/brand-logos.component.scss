@@ -1,0 +1,33 @@
+:host {
+  display: inline-flex;
+}
+
+// Each mark at the same height, with a thin rule between them, as on ITPO's own sites.
+.logos {
+  display: inline-flex;
+  align-items: center;
+  height: var(--brand-logos-height, 2.25rem);
+}
+
+.logos__item {
+  display: flex;
+  align-items: center;
+  height: 100%;
+
+  img {
+    display: block;
+    height: 100%;
+    width: auto;
+  }
+
+  & + & {
+    margin-left: 12px;
+    padding-left: 12px;
+    border-left: 1px solid var(--app-border-strong);
+  }
+}
+
+// Bharat Mandapam's mark is an app-style tile: rounded corners.
+.logos__tile {
+  border-radius: 22%;
+}

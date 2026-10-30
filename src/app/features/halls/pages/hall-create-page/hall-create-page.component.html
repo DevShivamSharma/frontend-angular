@@ -7,7 +7,36 @@
   />
 
   <form class="create" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <section class="card create__basics" aria-labelledby="basics-title">
+    <!-- As the hall page: the steps down the left, the open one on the right, in one sheet. -->
+    <section class="sheet" aria-label="Create the hall">
+    <nav class="steps" aria-label="Steps to create the hall">
+      @for (s of steps; track s.label; let i = $index) {
+        <button
+          type="button"
+          class="step"
+          [class.active]="i === step()"
+          [class.done]="i < step()"
+          [attr.aria-current]="i === step() ? 'step' : null"
+          (click)="goTo(i)"
+        >
+          <span class="dot" aria-hidden="true">
+            @if (i < step()) {
+              <i class="pi pi-check"></i>
+            } @else {
+              {{ i + 1 }}
+            }
+          </span>
+          <span class="step-text">
+            <span class="step-title">{{ s.label }}</span>
+            <span class="step-note">{{ s.note }}</span>
+          </span>
+        </button>
+      }
+    </nav>
+
+    <div class="panel">
+    @if (step() === 0) {
+    <section class="block" aria-labelledby="basics-title">
       <h2 id="basics-title">Basics</h2>
       <div class="form-grid">
         <app-form-field
@@ -73,8 +102,10 @@
         />
       }
     </section>
+    }
 
-    <section class="card create__shape" aria-labelledby="shape-title">
+    @if (step() === 1) {
+    <section class="block" aria-labelledby="shape-title">
       <h2 id="shape-title">Shape and size</h2>
       <p class="text-muted section-intro">
         Pick the shape, then enter its measurements in metres. A custom shape lets you place each
@@ -117,45 +148,10 @@
         </div>
       }
     </section>
+    }
 
-    <section class="card preview" aria-labelledby="preview-title">
-      <h2 id="preview-title">Preview</h2>
-      <app-hall-canvas
-        [ring]="outline().ring"
-        [corners]="isCustom() ? corners() : []"
-        [editable]="isCustom()"
-        (cornerAdded)="addCorner($event)"
-      />
-
-      @if (outlineMessage(); as message) {
-        <p-message severity="warn" variant="outlined" role="alert">{{ message }}</p-message>
-      } @else if (isCustom() && !corners().length) {
-        <p class="text-muted">Click on the grid to place the first corner.</p>
-      }
-
-      @if (stats(); as measured) {
-        <dl class="stats">
-          <div>
-            <dt>Width</dt>
-            <dd>{{ measured.width }} m</dd>
-          </div>
-          <div>
-            <dt>Depth</dt>
-            <dd>{{ measured.depth }} m</dd>
-          </div>
-          <div>
-            <dt>Footprint</dt>
-            <dd>{{ measured.footprint }} m²</dd>
-          </div>
-          <div>
-            <dt>Floor in outline</dt>
-            <dd>{{ measured.floor }} m²</dd>
-          </div>
-        </dl>
-      }
-    </section>
-
-    <section class="card create__options" aria-labelledby="options-title">
+    @if (step() === 2) {
+    <section class="block" aria-labelledby="options-title">
       <h2 id="options-title">Hall details</h2>
       @if (isNta()) {
         <p-message severity="info" variant="outlined">
@@ -208,8 +204,10 @@
         </app-form-field>
       </div>
     </section>
+    }
 
-    <section class="card create__notes" aria-labelledby="notes-title">
+    @if (step() === 3) {
+    <section class="block" aria-labelledby="notes-title">
       <h2 id="notes-title">Legends and helper text</h2>
       <p class="text-muted images-intro">
         Optional. Put toilets, stairs and exits on the hall, add text labels and say what each
@@ -225,17 +223,57 @@
           [hallName]="form.controls.name.value || 'the hall'"
         />
       } @else {
-        <p class="text-muted">Finish the hall's shape above to place them on it.</p>
+        <p class="text-muted">Finish the hall's shape first to place them on it.</p>
       }
     </section>
 
-    <section class="card create__images" aria-labelledby="images-title">
+    <section class="block" aria-labelledby="images-title">
       <h2 id="images-title">Pictures</h2>
       <p class="text-muted images-intro">
         Optional. Add each picture by the address it is kept at (for example on S3). One of them can
         be the cover.
       </p>
       <app-hall-images-editor [images]="form.controls.images" />
+    </section>
+    }
+    </div>
+    </section>
+
+    <section class="card preview" aria-labelledby="preview-title">
+      <h2 id="preview-title">Preview</h2>
+      <app-hall-canvas
+        [ring]="outline().ring"
+        [corners]="isCustom() ? corners() : []"
+        [editable]="isCustom()"
+        (cornerAdded)="addCorner($event)"
+      />
+
+      @if (outlineMessage(); as message) {
+        <p-message severity="warn" variant="outlined" role="alert">{{ message }}</p-message>
+      } @else if (isCustom() && !corners().length) {
+        <p class="text-muted">Click on the grid to place the first corner.</p>
+      }
+
+      @if (stats(); as measured) {
+        <dl class="stats">
+          <div>
+            <dt>Width</dt>
+            <dd>{{ measured.width }} m</dd>
+          </div>
+          <div>
+            <dt>Depth</dt>
+            <dd>{{ measured.depth }} m</dd>
+          </div>
+          <div>
+            <dt>Footprint</dt>
+            <dd>{{ measured.footprint }} m²</dd>
+          </div>
+          <div>
+            <dt>Floor in outline</dt>
+            <dd>{{ measured.floor }} m²</dd>
+          </div>
+        </dl>
+      }
     </section>
 
     <div class="actionbar" role="region" aria-label="Create the hall">
@@ -251,13 +289,31 @@
         </span>
         <span class="actionbar__buttons">
           <a class="p-button p-button-secondary p-button-text" routerLink="/halls">Cancel</a>
-          <p-button
-            type="submit"
-            label="Create hall"
-            icon="pi pi-check"
-            [loading]="submitting()"
-            [disabled]="submitting()"
-          />
+          @if (step() > 0) {
+            <p-button
+              label="Back"
+              icon="pi pi-arrow-left"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="goTo(step() - 1)"
+            />
+          }
+          @if (isLastStep()) {
+            <p-button
+              type="submit"
+              label="Create hall"
+              icon="pi pi-check"
+              [loading]="submitting()"
+              [disabled]="submitting()"
+            />
+          } @else {
+            <p-button
+              label="Next"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              (onClick)="goTo(step() + 1)"
+            />
+          }
         </span>
       </div>
     </div>

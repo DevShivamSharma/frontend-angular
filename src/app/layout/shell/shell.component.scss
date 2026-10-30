@@ -32,9 +32,10 @@
   letter-spacing: -0.02em;
   text-decoration: none;
 
-  img {
-    width: 1.75rem;
-    height: 1.75rem;
+  // The portal's name after the logos, set apart by the same thin rule as between them.
+  span {
+    padding-left: var(--space-3);
+    border-left: 1px solid var(--app-border-strong);
   }
 }
 

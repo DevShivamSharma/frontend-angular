@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
+  AbstractControl,
   FormArray,
   FormBuilder,
   FormsModule,
@@ -157,6 +158,16 @@ export class HallCreatePageComponent implements HasUnsavedChanges {
     isNtaCategory(this.categories().find((c) => c.id === this.categoryId())?.name),
   );
 
+  /** The page in steps, as the event page's progress: each shows its own section. */
+  protected readonly steps = [
+    { label: 'Basics', note: 'Name and category' },
+    { label: 'Shape and size', note: 'The outline in metres' },
+    { label: 'Hall details', note: 'Facilities and order' },
+    { label: 'Extras', note: 'Legends and pictures' },
+  ];
+  protected readonly step = signal(0);
+  protected readonly isLastStep = computed(() => this.step() === this.steps.length - 1);
+
   private submitted = false;
 
   constructor() {
@@ -202,8 +213,54 @@ export class HallCreatePageComponent implements HasUnsavedChanges {
     this.corners.update((corners) => [...corners, corner]);
   }
 
+  /**
+   * Opens step `target`. Going forward, every step passed must be complete: the first that is not
+   * is opened instead, with what is missing in the bar.
+   */
+  protected goTo(target: number): void {
+    for (let i = this.step(); i < target; i++) {
+      const problem = this.stepProblem(i);
+      if (problem) {
+        this.step.set(i);
+        this.failure.set(problem);
+        return;
+      }
+    }
+    this.failure.set(null);
+    this.step.set(target);
+  }
+
+  /** What step `i` still needs, marking its fields so their own messages show; null when complete. */
+  private stepProblem(i: number): string | null {
+    const { name, capacity, sortOrder, images } = this.form.controls;
+    const invalid = (...controls: AbstractControl[]) => {
+      controls.forEach((control) => control.markAllAsTouched());
+      return controls.some((control) => control.invalid);
+    };
+    switch (i) {
+      case 0:
+        return invalid(name, capacity) ? 'Fill in the hall name to go on.' : null;
+      case 1:
+        return this.outline().ring ? null : (this.outlineMessage() ?? "Finish the hall's shape.");
+      case 2:
+        return invalid(sortOrder) ? 'Check the order in lists.' : null;
+      default:
+        return this.notesProblem() ?? (invalid(images) ? 'Check the pictures.' : null);
+    }
+  }
+
   protected async submit(): Promise<void> {
-    this.form.markAllAsTouched();
+    // Enter in a field submits the form: before the last step, it goes to the next one.
+    if (!this.isLastStep()) {
+      this.goTo(this.step() + 1);
+      return;
+    }
+    // Every step is checked again; the first with something missing is opened.
+    this.step.set(0);
+    this.goTo(this.steps.length - 1);
+    if (this.failure()) {
+      return;
+    }
     const ring = this.outline().ring;
     if (this.form.invalid || !ring || this.notesProblem()) {
       return;

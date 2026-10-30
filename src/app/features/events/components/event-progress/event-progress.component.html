@@ -19,27 +19,18 @@
             <span class="label">
               <b>
                 {{ step.label }}
+                @if (next()?.index === i) {
+                  <span class="next-pill">Next</span>
+                }
                 <span class="visually-hidden">{{ step.done ? ' (done)' : '' }}</span>
               </b>
+              @if (step.note) {
+                <small>{{ step.note }}</small>
+              }
             </span>
           </button>
         </li>
       }
     </ol>
-    @if (next(); as n) {
-      @if (canAct()) {
-        <p-button
-          class="cta"
-          [label]="n.step.cta"
-          icon="pi pi-arrow-right"
-          iconPos="right"
-          (onClick)="go()(n.step.tab)"
-        />
-      }
-    } @else {
-      <p class="done-all">
-        <i class="pi pi-check-circle" aria-hidden="true"></i> Every step is done
-      </p>
-    }
   </section>
 }
