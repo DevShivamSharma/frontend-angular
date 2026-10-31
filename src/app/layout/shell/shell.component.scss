@@ -113,7 +113,9 @@
   top: calc(100% + 10px);
   right: -8px;
   width: min(22rem, calc(100vw - 1.5rem));
+  max-height: min(32rem, calc(100vh - var(--app-topbar-height) - 1rem));
   padding: 0.5rem;
+  overflow-y: auto;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
   background: var(--app-surface);
@@ -139,24 +141,35 @@
 }
 
 .notification-item {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+  padding: 0.55rem 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--app-border);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.notification-item__main {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  margin-top: 0.4rem;
-  padding: 0.7rem 0.65rem;
+  min-width: 0;
+  padding: 0.2rem;
   border-radius: var(--app-radius-sm);
   color: var(--app-text);
   text-decoration: none;
   transition: background-color 140ms;
 
-  &:hover,
-  &:focus-visible {
+  &:hover {
     background: var(--app-surface-hover);
   }
 
   &:focus-visible {
     outline: 2px solid var(--app-brand);
-    outline-offset: -2px;
+    outline-offset: 1px;
   }
 }
 
@@ -195,6 +208,62 @@
   font-size: var(--text-sm);
 }
 
+.notification-item__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  padding-right: 0.2rem;
+}
+
+.notification-action {
+  display: inline-flex;
+  min-height: 1.8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0 0.65rem;
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-pill);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 140ms,
+    border-color 140ms,
+    color 140ms;
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+  }
+}
+
+.notification-action--approve {
+  border-color: color-mix(in srgb, var(--app-success) 20%, transparent);
+  background: color-mix(in srgb, var(--app-success) 10%, transparent);
+  color: var(--app-success);
+
+  &:not(:disabled):hover {
+    background: color-mix(in srgb, var(--app-success) 17%, transparent);
+  }
+}
+
+.notification-action--reject {
+  border-color: color-mix(in srgb, var(--app-danger) 22%, transparent);
+  background: transparent;
+  color: var(--app-danger);
+
+  &:not(:disabled):hover {
+    background: color-mix(in srgb, var(--app-danger) 8%, transparent);
+  }
+}
+
 .notifications__empty {
   display: grid;
   justify-items: center;
@@ -215,6 +284,27 @@
   span {
     color: var(--app-muted);
     font-size: var(--text-xs);
+  }
+}
+
+.notification-retry {
+  margin-top: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  color: var(--app-brand);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--app-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
   }
 }
 

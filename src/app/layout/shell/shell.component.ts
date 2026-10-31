@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgTemplateOutlet } from '@angular/common';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
@@ -15,9 +16,19 @@ import { MenuModule } from 'primeng/menu';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { TooltipModule } from 'primeng/tooltip';
+import { AppDialog } from '../../core/dialog/app-dialog.service';
+import { NotifierService } from '../../core/notification/notifier.service';
 
 import { LayoutService } from '../../core/layout/layout.service';
-import { PlansApiService } from '../../features/planner/data/plans-api.service';
+import {
+  PlansApiService,
+  type PendingPlanReview,
+} from '../../features/planner/data/plans-api.service';
+import { RejectDialogComponent } from '../../features/planner/components/reject-dialog/reject-dialog.component';
+import type {
+  RejectDialogData,
+  RejectDialogResult,
+} from '../../features/planner/components/reject-dialog/reject-dialog.component';
 import { ConfirmService } from '../../core/confirm/confirm.service';
 import { ThemeMode, ThemeService } from '../../core/theme/theme.service';
 import { BrandLogosComponent } from '../../shared/ui/brand-logos/brand-logos.component';
@@ -46,12 +57,27 @@ export class ShellComponent {
 
   private readonly theme = inject(ThemeService);
   private readonly confirm = inject(ConfirmService);
+  private readonly dialogs = inject(AppDialog);
+  private readonly notify = inject(NotifierService);
 
   private readonly plans = inject(PlansApiService);
   private readonly router = inject(Router);
 
-  /** Hall plans waiting for ITPO's answer (ITPO staff). */
-  protected readonly pending = signal(0);
+  /** Submitted external hall plans that ITPO staff can review from the event page. */
+  protected readonly pendingReviews = signal<PendingPlanReview[]>([]);
+  private readonly pendingCountFallback = signal<number | null>(null);
+  protected readonly pending = computed(
+    () => this.pendingReviews().length || this.pendingCountFallback() || 0,
+  );
+  protected readonly notificationLoadFailed = signal(false);
+  protected readonly canReviewPlans = computed(() => {
+    const roles = this.auth.user()?.roles ?? [];
+    return roles.includes('itpo_admin') || roles.includes('super_admin');
+  });
+  protected readonly reviewing = signal<{
+    eventHallId: string;
+    action: 'approve' | 'reject';
+  } | null>(null);
 
   protected readonly user = this.auth.user;
   protected readonly displayName = this.auth.displayName;
@@ -90,11 +116,92 @@ export class ShellComponent {
     }
   }
 
-  private refreshPending(): void {
-    this.plans.pendingCount().subscribe({
-      next: (count) => this.pending.set(count),
-      error: () => undefined,
+  protected refreshPending(): void {
+    this.plans.pendingReviews().subscribe({
+      next: (reviews) => {
+        this.pendingReviews.set(reviews);
+        this.pendingCountFallback.set(null);
+        this.notificationLoadFailed.set(false);
+      },
+      error: () => {
+        // Older deployed EMS versions expose only the count endpoint. Keep the badge useful there.
+        this.plans.pendingCount().subscribe({
+          next: (count) => {
+            this.pendingCountFallback.set(count);
+            this.notificationLoadFailed.set(false);
+          },
+          error: () => this.notificationLoadFailed.set(true),
+        });
+      },
     });
+  }
+
+  protected async approvePending(review: PendingPlanReview): Promise<void> {
+    if (!this.canReviewPlans() || this.reviewing()) return;
+    const approved = await this.confirm.ask({
+      header: 'Approve the plan',
+      message: `Approve the stall plan for ${review.eventName} · ${review.hallName}? The organiser will be notified and can publish it.`,
+      acceptLabel: 'Approve',
+    });
+    if (approved) await this.submitPendingReview(review, 'approve');
+  }
+
+  protected async rejectPending(review: PendingPlanReview): Promise<void> {
+    if (!this.canReviewPlans() || this.reviewing()) return;
+    const sent = await firstValueFrom(
+      this.dialogs.open<RejectDialogResult, RejectDialogData>(RejectDialogComponent, {
+        data: { hallName: review.hallName } satisfies RejectDialogData,
+        width: 'min(560px, 96vw)',
+      }),
+      { defaultValue: undefined },
+    );
+    if (sent) await this.submitPendingReview(review, 'reject', sent);
+  }
+
+  private async submitPendingReview(
+    review: PendingPlanReview,
+    action: 'approve' | 'reject',
+    rejection?: RejectDialogResult,
+  ): Promise<void> {
+    if (this.reviewing()) return;
+    this.reviewing.set({ eventHallId: review.eventHallId, action });
+    try {
+      const statuses = await firstValueFrom(this.plans.planStatuses(review.eventId));
+      const hall = statuses.find((status) => status.eventHallId === review.eventHallId);
+      if (!hall?.canApprove || hall.status !== 'pending' || !hall.review) {
+        throw new Error('This plan is no longer waiting for approval. Refresh notifications and try again.');
+      }
+
+      if (action === 'approve') {
+        await firstValueFrom(
+          this.plans.approve(review.eventId, review.eventHallId, hall.review.revision),
+        );
+        this.notify.success('Plan approved', review.hallName);
+      } else {
+        if (!rejection) return;
+        await firstValueFrom(
+          this.plans.reject(
+            review.eventId,
+            review.eventHallId,
+            hall.review.revision,
+            rejection.note,
+            rejection.files,
+          ),
+        );
+        this.notify.success('Sent back to the organiser', review.hallName);
+      }
+
+      this.pendingReviews.update((items) =>
+        items.filter((item) => item.eventHallId !== review.eventHallId),
+      );
+      this.pendingCountFallback.set(null);
+      this.refreshPending();
+    } catch (error) {
+      this.notify.fromError(error, action === 'approve' ? 'The plan could not be approved' : 'The plan could not be rejected');
+      this.refreshPending();
+    } finally {
+      this.reviewing.set(null);
+    }
   }
 
   protected closeNotifications(menu: HTMLDetailsElement, event: Event): void {

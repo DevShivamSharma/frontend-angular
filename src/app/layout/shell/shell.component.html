@@ -24,7 +24,7 @@
       >
         <summary
           class="notification-toggle"
-          [attr.aria-label]="pending() + ' external plans waiting for approval. Notifications'"
+          [attr.aria-label]="notificationLoadFailed() ? 'Could not load notifications' : pending() + ' external plans waiting for approval. Notifications'"
           title="Notifications"
         >
           <i class="pi pi-bell" aria-hidden="true"></i>
@@ -40,18 +40,81 @@
             }
           </header>
           @if (pending() > 0) {
-            <a
-              class="notification-item"
-              routerLink="/external-events"
-              (click)="notificationMenu.open = false"
-            >
-              <span class="notification-item__icon"><i class="pi pi-calendar-plus" aria-hidden="true"></i></span>
-              <span class="notification-item__text">
-                <strong>{{ pending() }} external stall plan{{ pending() === 1 ? '' : 's' }} waiting for review</strong>
-                <span>Open External events to review the submissions.</span>
-              </span>
-              <i class="pi pi-arrow-right notification-item__arrow" aria-hidden="true"></i>
-            </a>
+            @if (pendingReviews().length > 0) {
+              @for (review of pendingReviews(); track review.eventHallId) {
+                <article class="notification-item">
+                  <a
+                    class="notification-item__main"
+                    [routerLink]="['/external-events', review.eventId]"
+                    [queryParams]="{ tab: 'halls' }"
+                    (click)="notificationMenu.open = false"
+                  >
+                    <span class="notification-item__icon"><i class="pi pi-calendar-plus" aria-hidden="true"></i></span>
+                    <span class="notification-item__text">
+                      <strong>{{ review.eventName }}</strong>
+                      <span>{{ review.hallName }} · Stall plan waiting for review</span>
+                    </span>
+                    <i class="pi pi-arrow-right notification-item__arrow" aria-hidden="true"></i>
+                  </a>
+                  @if (canReviewPlans()) {
+                    <div class="notification-item__actions">
+                      <button
+                        class="notification-action notification-action--approve"
+                        type="button"
+                        [disabled]="reviewing() !== null"
+                        [attr.aria-label]="'Approve ' + review.hallName + ' plan'"
+                        (click)="approvePending(review)"
+                      >
+                        @if (reviewing()?.eventHallId === review.eventHallId && reviewing()?.action === 'approve') {
+                          <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
+                          <span>Approving</span>
+                        } @else {
+                          <i class="pi pi-check" aria-hidden="true"></i>
+                          <span>Approve</span>
+                        }
+                      </button>
+                      <button
+                        class="notification-action notification-action--reject"
+                        type="button"
+                        [disabled]="reviewing() !== null"
+                        [attr.aria-label]="'Reject ' + review.hallName + ' plan'"
+                        (click)="rejectPending(review)"
+                      >
+                        @if (reviewing()?.eventHallId === review.eventHallId && reviewing()?.action === 'reject') {
+                          <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
+                          <span>Sending back</span>
+                        } @else {
+                          <i class="pi pi-times" aria-hidden="true"></i>
+                          <span>Reject</span>
+                        }
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+            } @else {
+              <div class="notification-item">
+                <a
+                  class="notification-item__main"
+                  routerLink="/external-events"
+                  (click)="notificationMenu.open = false"
+                >
+                  <span class="notification-item__icon"><i class="pi pi-calendar-plus" aria-hidden="true"></i></span>
+                  <span class="notification-item__text">
+                    <strong>{{ pending() }} external stall plan{{ pending() === 1 ? '' : 's' }} waiting for review</strong>
+                    <span>Open External events to review the submissions.</span>
+                  </span>
+                  <i class="pi pi-arrow-right notification-item__arrow" aria-hidden="true"></i>
+                </a>
+              </div>
+            }
+          } @else if (notificationLoadFailed()) {
+            <div class="notifications__empty">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              <strong>Notifications couldn’t load</strong>
+              <span>Check your connection and try again.</span>
+              <button class="notification-retry" type="button" (click)="refreshPending()">Try again</button>
+            </div>
           } @else {
             <div class="notifications__empty">
               <i class="pi pi-check-circle" aria-hidden="true"></i>

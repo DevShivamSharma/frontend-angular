@@ -27,6 +27,14 @@ interface RawPlan extends PlanContent {
   review: Omit<PlanReview, 'submittedBy' | 'reviewedBy'> | null;
 }
 
+/** One submitted external stall plan awaiting ITPO review. */
+export interface PendingPlanReview {
+  eventId: string;
+  eventName: string;
+  eventHallId: string;
+  hallName: string;
+}
+
 /** What the EMS API opens the planner with. */
 interface RawPlannerView {
   canEdit: boolean;
@@ -212,6 +220,11 @@ export class PlansApiService {
     return this.http
       .get<{ count: number }>(`${this.ems}/plan-reviews/pending-count`)
       .pipe(map((r) => r.count));
+  }
+
+  /** Submitted external plans, with event and hall IDs for direct approval links. */
+  pendingReviews(): Observable<PendingPlanReview[]> {
+    return this.http.get<PendingPlanReview[]>(`${this.ems}/plan-reviews/pending`);
   }
 
   /** A proof file of a rejection. */
