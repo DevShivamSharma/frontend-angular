@@ -17,6 +17,7 @@ import {
 import { MessageService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { providePrimeNG } from 'primeng/config';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
@@ -53,5 +54,9 @@ export const appConfig: ApplicationConfig = {
     { provide: TokenStorage, useClass: BrowserTokenStorage },
     // The saved session is picked up before the first navigation, so the guards can read it.
     provideAppInitializer(() => inject(AuthService).restore()),
+    // Initialize Vercel Speed Insights
+    provideAppInitializer(() => {
+      injectSpeedInsights({ framework: 'angular' });
+    }),
   ],
 };
