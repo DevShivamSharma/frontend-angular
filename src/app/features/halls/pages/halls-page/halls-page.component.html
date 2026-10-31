@@ -71,56 +71,56 @@
         }
       } @else if (halls().length) {
         @if (view() === 'grid') {
-          <ul class="card-grid">
-            @for (hall of halls(); track hall.id) {
-              <li class="item-card hall-card">
-                <div class="hall-card__head">
+          <ul class="hall-grid">
+            @for (hall of halls(); track hall.id; let i = $index) {
+              <li class="hall-card" [style.--i]="i" (click)="open(hall)">
+                <div class="hall-card__frame">
                   <img
-                    class="hall-card__thumbnail"
+                    class="hall-card__photo"
                     [src]="thumbnail(hall) ?? placeholder"
                     alt=""
                     loading="lazy"
                     appImageFallback
                   />
-                  <div class="hall-card__text">
-                    <h2 class="item-card__title">
-                      <a [routerLink]="['/halls', hall.id]">{{ hall.name }}</a>
-                    </h2>
-                    <p class="item-card__meta">{{ hall.hallCategory?.name || 'No category' }}</p>
-                  </div>
                 </div>
-                <dl class="hall-card__stats">
-                  <div>
-                    <dt>Area</dt>
-                    <dd>
-                      @if (hall.hallAreaCapacity !== null && hall.hallAreaCapacity !== undefined) {
-                        {{ hall.hallAreaCapacity }} sqm
-                      } @else {
-                        —
-                      }
-                    </dd>
+                <div class="hall-card__body">
+                  <div class="hall-card__head">
+                    <a class="hall-card__name" [routerLink]="['/halls', hall.id]" (click)="$event.stopPropagation()">{{
+                      hall.name
+                    }}</a>
                   </div>
-                  <div>
-                    <dt>Status</dt>
-                    <dd class="hall-table__status" [class.hall-table__status--active]="hall.isActive">
-                      {{ hall.isActive ? 'Enabled' : 'Disabled' }}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Facilities</dt>
-                    <dd>
-                      @if (hall.isVipLounge && hall.isAvailableForFnB) {
-                        VIP lounge, F&amp;B
-                      } @else if (hall.isVipLounge) {
-                        VIP lounge
-                      } @else if (hall.isAvailableForFnB) {
-                        F&amp;B
-                      } @else {
-                        —
-                      }
-                    </dd>
-                  </div>
-                </dl>
+                  <p class="hall-card__meta">{{ hall.hallCategory?.name || 'No category' }}</p>
+                  <dl class="hall-card__facts">
+                    <div>
+                      <dt>Area</dt>
+                      <dd>
+                        @if (hall.hallAreaCapacity !== null && hall.hallAreaCapacity !== undefined) {
+                          {{ hall.hallAreaCapacity }} sqm
+                        } @else {
+                          —
+                        }
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{{ hall.isActive ? 'Enabled' : 'Disabled' }}</dd>
+                    </div>
+                    <div>
+                      <dt>Facilities</dt>
+                      <dd>
+                        @if (hall.isVipLounge && hall.isAvailableForFnB) {
+                          VIP lounge, F&amp;B
+                        } @else if (hall.isVipLounge) {
+                          VIP lounge
+                        } @else if (hall.isAvailableForFnB) {
+                          F&amp;B
+                        } @else {
+                          —
+                        }
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
               </li>
             }
           </ul>

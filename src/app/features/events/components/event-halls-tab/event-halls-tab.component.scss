@@ -1,194 +1,500 @@
+// The halls of an event, as the redesign draws them: a bar of tools, then a grid of photo cards
+// or a table. Sizes are the prototype's own.
+:host {
+  display: block;
+}
+
 .bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-h2 {
+.bar__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 18px;
+  font-weight: 700;
 }
 
-.halls {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0 var(--space-4) var(--space-4);
-  list-style: none;
+.bar__stalls {
+  color: var(--app-muted);
+  font-size: 14px;
+  font-weight: 500;
 }
 
-// The card's warm tint, as the Halls page cards, mixed into the surface so dark mode stays dark.
-$card-tint: #c8a26a;
-
-/* A hall card (as the Halls page): thumbnail and name, a strip of stalls, plan and prices, the planner link. */
-.hall {
+.bar__tools {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius);
-  background: color-mix(in srgb, $card-tint 4%, var(--app-surface));
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  flex: auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
 
-  &:hover {
-    border-color: var(--app-border-strong);
-    box-shadow: var(--app-shadow-sm);
+  > * {
+    flex: none;
   }
 }
 
-.head {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: var(--space-4) var(--space-3) var(--space-4) var(--space-4);
+// The search: the magnifier sits inside the field, as the prototype's.
+.tool-search {
+  position: relative;
+  flex: 0 240px;
+  min-width: 120px;
+
+  .pi {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    color: var(--app-muted);
+    font-size: 14px;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
 }
 
-.thumb {
-  flex: none;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: var(--app-radius-md);
-  background: var(--app-surface-2);
-  object-fit: cover;
+.input {
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 10px 0 32px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  background-color: var(--app-surface);
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  transition:
+    border-color 140ms,
+    color 140ms;
+
+  &:hover {
+    border-color: var(--app-control);
+  }
+
+  &:focus {
+    color: var(--app-text);
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+  }
 }
 
-.titles {
+// The sort: an icon button with the real select laid invisibly over it.
+.tool-sort {
+  position: relative;
   display: grid;
-  flex: 1;
-  gap: 2px;
-  min-width: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  color: var(--app-muted);
+  cursor: pointer;
+  place-items: center;
+  transition:
+    background-color 140ms,
+    color 140ms;
 
-  h2 {
-    margin: 0;
-    overflow: hidden;
-    font-size: var(--text-lg);
-    font-weight: 600;
-    line-height: 1.3;
-    text-overflow: ellipsis;
+  &:hover {
+    background: var(--app-surface-hover);
+    color: var(--app-text);
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+  }
+
+  select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+.view-switch {
+  display: inline-flex;
+  gap: 2px;
+  height: 36px;
+  min-height: 36px;
+  padding: 2px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  background-color: var(--app-surface);
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--app-radius-xs);
+    background: none;
+    color: var(--app-muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--app-text);
+    }
+
+    &[aria-pressed='true'] {
+      background: var(--app-surface-hover);
+      box-shadow: inset 0 0 0 1px var(--app-border-strong);
+      color: var(--app-text);
+      font-weight: 500;
+    }
+  }
+}
+
+@media (max-width: 62.4375rem) {
+  .bar__tools {
+    flex-basis: 100%;
+  }
+}
+
+@media (min-width: 62.5rem) {
+  .bar {
+    flex-wrap: nowrap;
+  }
+
+  .bar__head {
+    flex: none;
     white-space: nowrap;
   }
 }
 
-.meta {
-  margin: 0;
-  color: var(--app-muted);
-  font-size: var(--text-sm);
+.no-halls {
+  display: grid;
+  gap: 4px;
+  padding: 40px 18px;
+  text-align: center;
 }
 
-/* Stalls, plan and prices side by side, each a label over its state in words. */
-.facts {
+// A grid of hall cards: the same card the Halls page uses, with a View button on its foot.
+.hall-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hall-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+  transition:
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 200ms,
+    border-color 140ms;
+
+  // The menu of an open card must sit over its neighbours.
+  &:hover,
+  &:focus-within {
+    z-index: 5;
+  }
+
+  &:hover {
+    border-color: var(--app-border-strong);
+    box-shadow: var(--app-shadow);
+    transform: translateY(-3px);
+  }
+
+  &:hover .hall-card__photo {
+    transform: scale(1.05);
+  }
+
+  &:hover .hall-card__body {
+    background-size: 100% 100%;
+  }
+
+  // The photo and the body are the card's first and last rows, so they take its corners.
+  > :first-child {
+    border-radius: calc(var(--app-radius-md) - 1px) calc(var(--app-radius-md) - 1px) 0 0;
+  }
+
+  > :last-child {
+    border-radius: 0 0 calc(var(--app-radius-md) - 1px) calc(var(--app-radius-md) - 1px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hall-card {
+    animation: hall-card-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+  }
+}
+
+@keyframes hall-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hall-card,
+  .hall-card:hover,
+  .hall-card:hover .hall-card__photo {
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+}
+
+.hall-card__frame {
+  overflow: hidden;
+}
+
+.hall-card__photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--app-surface-2);
+  object-fit: cover;
+  transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hall-card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  // The brand tint wipes up the body on hover.
+  background: linear-gradient(160deg, var(--app-brand-soft), var(--app-surface) 55%) no-repeat 0 0 /
+    100% 0%;
+  transition: background-size 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hall-card__nameRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hall-card__name {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.hall-card__meta {
+  margin: 2px 0 0;
+  color: var(--app-muted);
+  font-size: 13px;
+}
+
+.hall-card__flags {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin: -4px -6px 0 0;
+}
+
+.hall-card__facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 0;
+  gap: 8px;
+  margin: auto 0 0;
+  padding-top: 10px;
   border-top: 1px solid var(--app-border);
-  background: color-mix(in srgb, $card-tint 8%, var(--app-surface));
-
-  > div {
-    display: grid;
-    align-content: start;
-    gap: 2px;
-    min-width: 0;
-    padding: 10px var(--space-4);
-  }
-
-  > div + div {
-    border-left: 1px solid var(--app-border);
-  }
 
   dt {
     color: var(--app-muted);
-    font-size: var(--text-xs);
+    font-size: 12px;
   }
 
   dd {
     margin: 0;
     overflow: hidden;
-    font-size: var(--text-sm);
+    font-size: 13px;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
-
-    &[data-tone='success'] {
-      color: var(--app-success);
-    }
-
-    &[data-tone='warn'] {
-      color: var(--app-warning);
-    }
-
-    &[data-tone='danger'] {
-      color: var(--app-danger);
-    }
-
-    &[data-tone='info'] {
-      color: var(--app-brand);
-    }
-
-    &[data-tone='secondary'] {
-      color: var(--app-muted);
-    }
   }
+}
+
+// Only a state that needs attention is tinted; a settled one reads as plain text.
+[data-tone='warn'] {
+  color: var(--app-warning);
+}
+
+[data-tone='danger'] {
+  color: var(--app-danger);
+}
+
+// The kebab: a quiet square that fills when pointed at.
+.row-menu {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  background: none;
+  color: var(--app-muted);
+  cursor: pointer;
+  place-items: center;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--app-surface-hover);
+    color: var(--app-text);
+  }
+}
+
+// The prototype's plain button, and its small size.
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  color: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 140ms,
+    border-color 140ms,
+    color 140ms;
+
+  &:hover {
+    border-color: var(--app-control);
+    background: var(--app-surface-hover);
+  }
+}
+
+.btn--sm {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+// The planner, as the card's last row: the same place and width on every card.
+.view-btn {
+  width: 100%;
+}
+
+.hall-card:hover .view-btn {
+  background: var(--app-surface-hover);
+}
+
+// A hall with no plan yet asks to be planned, so its button carries the brand.
+.view-btn--plan {
+  border-color: var(--app-brand);
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
+  font-weight: 600;
+}
+
+.hall-card:hover .view-btn--plan,
+.view-btn--plan:hover {
+  border-color: var(--app-brand);
+  background: var(--app-brand);
+  color: #fff;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.hall-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--app-border);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    color: var(--app-muted);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  tbody tr:hover {
+    background: var(--app-surface-hover);
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  td {
+    font-size: 13px;
+  }
+
+  .act {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+}
+
+.hall-table__thumb {
+  display: block;
+  width: 56px;
+  height: 40px;
+  border-radius: var(--app-radius-xs);
+  background: var(--app-surface-hover);
+  object-fit: cover;
+}
+
+.t-main {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.t-sub {
+  color: var(--app-muted);
+  font-size: 12px;
 }
 
 .actions {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding-top: 10px;
   border-top: 1px solid var(--app-border);
-}
-
-/* The planner, as the card's last row: the same place on every card. */
-.cta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: auto;
-  padding: 12px var(--space-4);
-  border-top: 1px solid var(--app-border);
-  color: var(--app-brand);
-  font-size: var(--text-base);
-  font-weight: 600;
-  text-decoration: none;
-
-  span {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      background: var(--app-brand-soft);
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--app-brand);
-    outline-offset: -2px;
-  }
-}
-
-.summary {
-  margin-left: var(--space-2);
-  padding: 2px 10px;
-  border-radius: var(--app-radius-pill);
-  background: var(--app-brand-soft);
-  color: var(--app-brand);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
 }
 
 .banner {

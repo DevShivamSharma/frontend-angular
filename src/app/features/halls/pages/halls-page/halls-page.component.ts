@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -74,6 +74,7 @@ export class HallsPageComponent {
   private readonly layouts = inject(ItpoLayoutApiService);
   private readonly notifier = inject(NotifierService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   protected readonly placeholder = PLACEHOLDER_IMAGE;
   protected readonly pageSize = PAGE_SIZE;
@@ -159,6 +160,11 @@ export class HallsPageComponent {
 
   protected thumbnail(hall: ItpoHall): string | null {
     return (hall.images.find((image) => image.kind === 'cover') ?? hall.images[0])?.url ?? null;
+  }
+
+  /** The whole card opens the hall; the name stays a real link for keyboard and new-tab use. */
+  protected open(hall: ItpoHall): void {
+    void this.router.navigate(['/halls', hall.id]);
   }
 
   /**

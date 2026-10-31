@@ -59,51 +59,59 @@
         }
       } @else if (events().length) {
         @if (view() === 'grid') {
-          <ul class="card-grid">
-            @for (event of events(); track event.id) {
-              <li class="item-card event-card">
-                <div class="event-card__body">
+          <ul class="event-grid">
+            @for (event of events(); track event.id; let i = $index) {
+              <li class="event-card" [style.--i]="i" (click)="open(event)">
+                <div class="event-card__head">
                   <!-- The start date at a glance; the full range is read out below. -->
                   <span class="event-card__date" aria-hidden="true">
-                    <span class="event-card__month">{{ event.startDate ? (event.startDate | date: 'MMM') : '—' }}</span>
-                    <span class="event-card__day">{{ event.startDate ? (event.startDate | date: 'd') : '' }}</span>
+                    @if (event.startDate) {
+                      <small>{{ event.startDate | date: 'MMM' }}</small>
+                      <b>{{ event.startDate | date: 'd' }}</b>
+                    } @else {
+                      <small>—</small>
+                    }
                   </span>
-                  <div class="event-card__text">
-                    <h2 class="item-card__title">
-                      <a [routerLink]="[base(), event.id]" [title]="event.name | titlecase">{{ event.name | titlecase }}</a>
-                    </h2>
-                    <p class="item-card__meta">
+                  <div class="event-card__title">
+                    <a
+                      class="event-card__name"
+                      [routerLink]="[base(), event.id]"
+                      [title]="event.name | titlecase"
+                      (click)="$event.stopPropagation()"
+                      >{{ event.name | titlecase }}</a
+                    >
+                    <div class="event-card__sub">
                       {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
                       {{ event.endDate ? (event.endDate | date: 'd MMM y') : '—' }}
-                    </p>
+                    </div>
                     @if (event.bookingId) {
-                      <p class="item-card__meta event-card__id">{{ event.bookingId }}</p>
+                      <div class="event-card__ref"><span>Booking ID</span> {{ event.bookingId }}</div>
                     }
                     @if (isStaff() && event.organisation) {
-                      <p class="item-card__meta event-card__org" [title]="event.organisation">
-                        <i class="pi pi-building" aria-hidden="true"></i>
-                        <span>{{ event.organisation }}</span>
-                      </p>
+                      <div class="event-card__sub" [title]="event.organisation">{{ event.organisation }}</div>
                     }
                   </div>
-                </div>
-                <div class="event-status-grid">
-                  <div class="event-status-grid__item">
-                    <span class="event-status-grid__label">Booking</span>
-                    @if (event.bookingStatus) {
-                      <span class="event-status" [attr.data-severity]="severity(event.bookingStatus)">{{ event.bookingStatus }}</span>
-                    } @else {
-                      <span class="event-status-grid__empty">—</span>
-                    }
-                  </div>
-                  <div class="event-status-grid__item">
-                    <span class="event-status-grid__label">Approval</span>
-                    @if (event.approvalStatus) {
-                      <span class="event-status" [attr.data-severity]="severity(event.approvalStatus)">{{ event.approvalStatus }}</span>
-                    } @else {
-                      <span class="event-status-grid__empty">—</span>
-                    }
-                  </div>
+                  <i class="pi pi-arrow-right event-card__go" aria-hidden="true"></i>
+                  @if (event.bookingStatus || event.approvalStatus) {
+                    <div class="event-card__flags">
+                      @if (event.bookingStatus) {
+                        <span class="event-card__flag">
+                          Booking
+                          <span class="event-chip" [attr.data-tone]="severity(event.bookingStatus)">{{
+                            event.bookingStatus
+                          }}</span>
+                        </span>
+                      }
+                      @if (event.approvalStatus) {
+                        <span class="event-card__flag">
+                          Approval
+                          <span class="event-chip" [attr.data-tone]="severity(event.approvalStatus)">{{
+                            event.approvalStatus
+                          }}</span>
+                        </span>
+                      }
+                    </div>
+                  }
                 </div>
               </li>
             }

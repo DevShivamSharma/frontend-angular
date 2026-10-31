@@ -78,6 +78,49 @@ export class EventHallsTabComponent {
   /** Where each hall's plan stands, by the hall's id in the event. */
   protected readonly statuses = signal<ReadonlyMap<string, HallPlanStatus>>(new Map());
   protected readonly working = signal<string | null>(null);
+
+  /** The halls bar's tools: what is searched for, how the halls are ordered, and how they look. */
+  protected readonly search = signal('');
+  protected readonly sort = signal<HallSort>('default');
+  protected readonly view = signal<'grid' | 'list'>('grid');
+  protected readonly sortOptions: ReadonlyArray<{ value: HallSort; label: string }> = [
+    { value: 'default', label: 'Default order' },
+    { value: 'name', label: 'Name, A to Z' },
+    { value: 'nameDesc', label: 'Name, Z to A' },
+    { value: 'stalls', label: 'Most stalls first' },
+    { value: 'stallsAsc', label: 'Fewest stalls first' },
+  ];
+
+  /** The stalls of the whole event, beside the count in the bar. */
+  protected readonly stalls = computed(() =>
+    this.store()
+      .halls()
+      .reduce((total, hall) => total + (this.statusOf(hall)?.stalls || hall.stallCount), 0),
+  );
+
+  /** The halls the search and the sort leave. */
+  protected readonly shown = computed(() => {
+    const needle = this.search().trim().toLowerCase();
+    const halls = needle
+      ? this.store()
+          .halls()
+          .filter((hall) => hall.name.toLowerCase().includes(needle))
+      : [...this.store().halls()];
+    const stalls = (hall: ItpoEventHall) => this.statusOf(hall)?.stalls || hall.stallCount;
+    switch (this.sort()) {
+      case 'name':
+        return halls.sort((a, b) => a.name.localeCompare(b.name));
+      case 'nameDesc':
+        return halls.sort((a, b) => b.name.localeCompare(a.name));
+      case 'stalls':
+        return halls.sort((a, b) => stalls(b) - stalls(a));
+      case 'stallsAsc':
+        return halls.sort((a, b) => stalls(a) - stalls(b));
+      default:
+        return halls;
+    }
+  });
+
   /** "2 of 3 halls approved", for an external event. */
   protected readonly approvedSummary = computed(() => {
     if (this.store().summary()?.kind !== 'external') return null;
@@ -390,6 +433,9 @@ export class EventHallsTabComponent {
       });
   }
 }
+
+/** How the halls of an event can be ordered in its Halls tab. */
+type HallSort = 'default' | 'name' | 'nameDesc' | 'stalls' | 'stallsAsc';
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
   not_started: 'Not started',

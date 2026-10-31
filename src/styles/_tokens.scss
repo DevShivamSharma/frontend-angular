@@ -29,6 +29,8 @@
   --app-surface-hover: #f4f4f5;
   --app-border: #e8e8ec;
   --app-border-strong: #d4d4da;
+  // The border a control takes when pointed at, a step stronger than --app-border-strong.
+  --app-control: #8a8a94;
   --app-text: #18181b;
   --app-muted: #6b6b76;
   --app-brand: #c8283f;
@@ -37,6 +39,16 @@
   --app-danger: #d92d20;
   --app-success: #16803c;
   --app-warning: #b45309;
+
+  // Soft status fills and the ink that reads on them, as the redesign draws its chips.
+  --app-success-soft: #dcfce7;
+  --app-on-success-soft: #14532d;
+  --app-warning-soft: #fef3c7;
+  --app-on-warning-soft: #78350f;
+  --app-danger-soft: #fee2e2;
+  --app-on-danger-soft: #7f1d1d;
+  --app-info-soft: #e0f2fe;
+  --app-on-info-soft: #0c4a6e;
 
   --app-radius: 14px;
   --app-radius-2xs: 4px;
@@ -84,6 +96,7 @@
   --app-surface-hover: #1c1c20;
   --app-border: #26262b;
   --app-border-strong: #3a3a42;
+  --app-control: #74747f;
   --app-text: #f4f4f5;
   --app-muted: #a1a1aa;
   --app-brand: #f0647a;
@@ -92,6 +105,14 @@
   --app-danger: #f87168;
   --app-success: #4ade80;
   --app-warning: #fbbf24;
+  --app-success-soft: #1f3a2b;
+  --app-on-success-soft: #bfe3cc;
+  --app-warning-soft: #3a2d1a;
+  --app-on-warning-soft: #ecd59f;
+  --app-danger-soft: #3f2323;
+  --app-on-danger-soft: #f0c2bd;
+  --app-info-soft: #1c3242;
+  --app-on-info-soft: #b8d8ec;
   --app-shadow: none;
   --app-shadow-lg: 0 16px 40px -8px rgb(0 0 0 / 70%), 0 0 0 1px rgb(255 255 255 / 4%);
 }

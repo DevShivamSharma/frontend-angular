@@ -1,52 +1,120 @@
-<section class="card card--flush" aria-label="Halls of the event">
-  <div class="bar">
-    <h2>
-      Halls <span class="text-muted">({{ store().halls().length }})</span>
-      @if (approvedSummary(); as summary) {
-        <span class="summary">{{ summary }}</span>
-      }
-    </h2>
-    @if (!readonly()) {
-      <p-button label="Add halls" icon="pi pi-plus" (onClick)="openAdd()" />
+<!-- The halls bar, as the redesign draws it: the count and stalls on the left, the tools on the right. -->
+<div class="bar">
+  <h2 class="bar__head">
+    Halls ({{ store().halls().length }})
+    @if (stalls(); as total) {
+      <small class="bar__stalls">{{ total }} stalls</small>
     }
-  </div>
+    @if (approvedSummary(); as summary) {
+      <small class="bar__stalls">{{ summary }}</small>
+    }
+  </h2>
+  @if (store().halls().length || search().length) {
+    <div class="bar__tools">
+      <label class="tool-search">
+        <span class="visually-hidden">Search halls</span>
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <input
+          class="input"
+          type="search"
+          placeholder="Search halls"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+      </label>
+      <label class="tool-sort" title="Sort halls">
+        <i class="pi pi-sort-alt" aria-hidden="true"></i>
+        <span class="visually-hidden">Sort halls by</span>
+        <select [value]="sort()" (change)="sort.set($any($event.target).value)">
+          @for (option of sortOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+      <span class="view-switch" role="group" aria-label="Halls view">
+        <button type="button" [attr.aria-pressed]="view() === 'grid'" (click)="view.set('grid')">
+          <i class="pi pi-th-large" aria-hidden="true"></i>Grid
+        </button>
+        <button type="button" [attr.aria-pressed]="view() === 'list'" (click)="view.set('list')">
+          <i class="pi pi-list" aria-hidden="true"></i>List
+        </button>
+      </span>
+      @if (!readonly()) {
+        <p-button label="Add halls" icon="pi pi-plus" size="small" (onClick)="openAdd()" />
+      }
+    </div>
+  }
+</div>
 
-  @if (store().hallsFailed()) {
+@if (store().hallsFailed()) {
+  <section class="card" aria-label="Halls">
     <app-empty-state
       icon="pi-exclamation-triangle"
       title="The halls could not be loaded"
       message="ITPO could not be reached."
       [reload]="true"
     />
-  } @else if (store().halls().length) {
-    <ul class="halls">
-      @for (hall of store().halls(); track hall.eventHallId) {
-        <!-- A hall: thumbnail beside the name, its stalls, plan and prices in a strip, then the planner. -->
-        <li class="hall">
-          <div class="head">
-            <img
-              class="thumb"
-              [src]="hall.coverImage ?? placeholder"
-              alt=""
-              loading="lazy"
-              appImageFallback
-            />
-            <div class="titles">
-              <h2>{{ hall.name }}</h2>
-              <p class="meta">{{ hall.forStallFnb ? 'Food and beverage hall' : 'Exhibition hall' }}</p>
+  </section>
+} @else if (!store().halls().length) {
+  <section class="card" aria-label="Halls">
+    <app-empty-state
+      icon="pi-building"
+      title="No halls yet"
+      [message]="
+        readonly()
+          ? 'No halls have been added to this event.'
+          : 'Add the halls this event uses to start planning its stalls.'
+      "
+    >
+      @if (!readonly()) {
+        <p-button label="Add halls" icon="pi pi-plus" (onClick)="openAdd()" />
+      }
+    </app-empty-state>
+  </section>
+} @else if (!shown().length) {
+  <section class="card" aria-label="Halls">
+    <div class="no-halls">
+      <b>No hall matches “{{ search() }}”</b>
+      <p class="text-muted">Try a shorter name, or clear the search.</p>
+    </div>
+  </section>
+} @else if (view() === 'grid') {
+  <ul class="hall-grid">
+    @for (hall of shown(); track hall.eventHallId; let i = $index) {
+      <!-- A hall: its photo, its name, its stalls, plan and prices, then the planner. -->
+      <li class="hall-card" [style.--i]="i">
+        <div class="hall-card__frame">
+          <img
+            class="hall-card__photo"
+            [src]="hall.coverImage ?? placeholder"
+            alt=""
+            loading="lazy"
+            appImageFallback
+          />
+        </div>
+        <div class="hall-card__body">
+          <div class="hall-card__nameRow">
+            <div>
+              <h3 class="hall-card__name">{{ hall.name }}</h3>
+              <p class="hall-card__meta">
+                {{ hall.forStallFnb ? 'Food and beverage hall' : 'Exhibition hall' }}
+              </p>
             </div>
             @if (!readonly()) {
-              <p-button
-                icon="pi pi-ellipsis-v"
-                [text]="true"
-                [rounded]="true"
-                severity="secondary"
-                [ariaLabel]="'More for ' + hall.name"
-                (onClick)="menuHall.set(hall); menu.toggle($event)"
-              />
+              <span class="hall-card__flags">
+                <button
+                  type="button"
+                  class="row-menu"
+                  [attr.aria-label]="'More for ' + hall.name"
+                  aria-haspopup="menu"
+                  (click)="menuHall.set(hall); menu.toggle($event)"
+                >
+                  <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+                </button>
+              </span>
             }
           </div>
-          <dl class="facts">
+          <dl class="hall-card__facts">
             <div>
               <dt>{{ hall.forStallFnb ? 'F&B stalls' : 'Stalls' }}</dt>
               <!-- ITPO's count includes stalls old plans left inactive; a planned hall shows its plan's count. -->
@@ -55,9 +123,11 @@
             <div>
               <dt>Plan</dt>
               @if (statusOf(hall); as plan) {
-                <dd [attr.data-tone]="statusSeverity(plan.status)">{{ statusLabel(plan.status) }}</dd>
+                <dd [attr.data-tone]="statusSeverity(plan.status)">
+                  {{ statusLabel(plan.status) }}
+                </dd>
               } @else {
-                <dd data-tone="secondary">Not started</dd>
+                <dd>Not started</dd>
               }
             </div>
             <div>
@@ -144,33 +214,98 @@
           }
           @if (plannerBase(); as base) {
             <a
-              class="cta"
+              class="btn btn--sm view-btn"
+              [class.view-btn--plan]="!statusOf(hall)"
               [routerLink]="[base, store().summary()?.id, 'halls', hall.eventHallId, 'planner']"
             >
-              <span><i class="pi pi-th-large" aria-hidden="true"></i> {{ plannerLabel() }}</span>
+              <i class="pi pi-eye" aria-hidden="true"></i>
+              {{ plannerLabel() }}
               <i class="pi pi-arrow-right" aria-hidden="true"></i>
             </a>
           }
-        </li>
-      }
-    </ul>
-    <p-menu #menu [model]="menuItems()" [popup]="true" appendTo="body" styleClass="hall-menu" />
-  } @else {
-    <app-empty-state
-      icon="pi-building"
-      title="No halls yet"
-      [message]="
-        readonly()
-          ? 'No halls have been added to this event.'
-          : 'Add the halls this event uses to start planning its stalls.'
-      "
-    >
-      @if (!readonly()) {
-        <p-button label="Add halls" icon="pi pi-plus" (onClick)="openAdd()" />
-      }
-    </app-empty-state>
-  }
-</section>
+        </div>
+      </li>
+    }
+  </ul>
+} @else {
+  <section class="card card--flush" aria-label="Halls">
+    <div class="table-wrap">
+      <table class="hall-table">
+        <thead>
+          <tr>
+            <th scope="col"><span class="visually-hidden">Photo</span></th>
+            <th scope="col">Hall</th>
+            <th scope="col" class="num">Stalls</th>
+            <th scope="col">Plan</th>
+            <th scope="col">Prices</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (hall of shown(); track hall.eventHallId) {
+            <tr>
+              <td>
+                <img
+                  class="hall-table__thumb"
+                  [src]="hall.coverImage ?? placeholder"
+                  alt=""
+                  loading="lazy"
+                  appImageFallback
+                />
+              </td>
+              <td>
+                <span class="t-main">{{ hall.name }}</span>
+                <div class="t-sub">
+                  {{ hall.forStallFnb ? 'Food and beverage hall' : 'Exhibition hall' }}
+                </div>
+              </td>
+              <td class="num">{{ statusOf(hall)?.stalls || hall.stallCount }}</td>
+              <td>
+                @if (statusOf(hall); as plan) {
+                  <span [attr.data-tone]="statusSeverity(plan.status)">{{
+                    statusLabel(plan.status)
+                  }}</span>
+                } @else {
+                  Not started
+                }
+              </td>
+              <td>
+                <span [attr.data-tone]="hall.isPriceAdded ? 'success' : 'warn'">{{
+                  hall.isPriceAdded ? 'Added' : 'Not added'
+                }}</span>
+              </td>
+              <td class="act">
+                @if (plannerBase(); as base) {
+                  <a
+                    class="btn btn--sm"
+                    [routerLink]="[base, store().summary()?.id, 'halls', hall.eventHallId, 'planner']"
+                  >
+                    <i class="pi pi-eye" aria-hidden="true"></i>
+                    {{ plannerLabel() }}
+                    <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                  </a>
+                }
+                @if (!readonly()) {
+                  <button
+                    type="button"
+                    class="row-menu"
+                    [attr.aria-label]="'More for ' + hall.name"
+                    aria-haspopup="menu"
+                    (click)="menuHall.set(hall); menu.toggle($event)"
+                  >
+                    <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}
+
+<p-menu #menu [model]="menuItems()" [popup]="true" appendTo="body" styleClass="hall-menu" />
 
 @if (!readonly()) {
   <app-add-halls-dialog [saving]="saving()" [taken]="takenIds()" (added)="add($event)" />

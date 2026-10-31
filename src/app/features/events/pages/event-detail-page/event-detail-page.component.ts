@@ -15,14 +15,12 @@ import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TabsModule } from 'primeng/tabs';
-import { TagModule } from 'primeng/tag';
 
 import { AuthService } from '../../../../core/auth/auth.service';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { EventDetailsCardComponent } from '../../components/event-details-card/event-details-card.component';
 import { EventHallsTabComponent } from '../../components/event-halls-tab/event-halls-tab.component';
-import { EventProgressComponent } from '../../components/event-progress/event-progress.component';
 import { EventActivityTabComponent } from '../../components/event-activity-tab/event-activity-tab.component';
 import { EventConfigTabComponent } from '../../components/event-config-tab/event-config-tab.component';
 import { EventRulesTabComponent } from '../../components/event-rules-tab/event-rules-tab.component';
@@ -37,14 +35,12 @@ import { EventDetailStore } from '../../state/event-detail.store';
     ButtonModule,
     SkeletonModule,
     TabsModule,
-    TagModule,
     EmptyStateComponent,
     PageHeaderComponent,
     EventDetailsCardComponent,
     EventHallsTabComponent,
     EventActivityTabComponent,
     EventConfigTabComponent,
-    EventProgressComponent,
     EventRulesTabComponent,
   ],
   providers: [EventDetailStore],
@@ -88,10 +84,7 @@ export class EventDetailPageComponent implements OnInit {
     return [organiser, event.bookingId, dates, event.eventType].filter(Boolean).join(' · ');
   });
 
-  /** The stats beside the title: what the app knows about the event's halls. */
-  protected readonly stalls = computed(() =>
-    this.store.halls().reduce((total, hall) => total + hall.stallCount, 0),
-  );
+  /** The rules tab reads its rules the first time it is shown. */
   private readonly rulesTab = viewChild(EventRulesTabComponent);
 
   constructor() {
@@ -107,9 +100,7 @@ export class EventDetailPageComponent implements OnInit {
     this.store.load(this.eventId());
   }
 
-  /** The progress strip's button: the tab that does the next step. */
-  protected readonly goToTab = (tab: string): void => this.onTab(tab);
-
+  /** Shows a tab, keeping it in the address so a reload or a shared link opens the same one. */
   protected onTab(value: string | number | undefined): void {
     if (typeof value === 'string') {
       void this.router.navigate([], {
