@@ -35,6 +35,7 @@
     "@angular/router": "^20.3.33",
     "@material/material-color-utilities": "^0.4.0",
     "@primeuix/themes": "^1.2.5",
+    "@vercel/analytics": "^2.0.1",
     "primeicons": "^7.0.0",
     "primeng": "^20.4.0",
     "rxjs": "~7.8.0",
