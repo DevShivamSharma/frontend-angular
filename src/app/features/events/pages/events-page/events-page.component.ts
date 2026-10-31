@@ -1,4 +1,4 @@
-import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -48,7 +48,6 @@ const PAGE_SIZE = 15;
     ReactiveFormsModule,
     RouterLink,
     DatePipe,
-    TitleCasePipe,
     ButtonModule,
     IconFieldModule,
     InputIconModule,
@@ -75,14 +74,20 @@ export class EventsPageComponent {
 
   protected readonly pageSize = PAGE_SIZE;
   protected readonly search = new FormControl('', { nonNullable: true });
+  protected readonly sort = signal('');
+  protected readonly sortOptions = [
+    { label: 'Default order', value: '' },
+    { label: 'Tenancy: earliest first', value: 'tenancy_period_start_date:ASC' },
+    { label: 'Tenancy: latest first', value: 'tenancy_period_start_date:DESC' },
+  ];
 
   protected readonly isStaff = this.auth.isStaff;
   protected readonly viewOptions = [
-    { label: 'List', value: 'table', icon: 'pi pi-list' },
     { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
+    { label: 'List', value: 'table', icon: 'pi pi-list' },
     { label: 'Calendar', value: 'calendar', icon: 'pi pi-calendar' },
   ];
-  protected readonly view = signal<'grid' | 'table' | 'calendar'>('table');
+  protected readonly view = signal<'grid' | 'table' | 'calendar'>('grid');
   /** Placeholder columns while the list loads as a table, matching the visible table columns. */
   protected readonly tableSkeleton = [
     { width: '60%' },
@@ -125,6 +130,7 @@ export class EventsPageComponent {
 
   constructor() {
     this.search.setValue(this.url.text('q'), { emitEvent: false });
+    this.sort.set(this.url.text('sort'));
     this.search.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.fetch(0));
@@ -147,6 +153,28 @@ export class EventsPageComponent {
     this.fetch(this.first());
   }
 
+  protected onSortChange(value: string): void {
+    this.sort.set(value);
+    this.fetch(0);
+  }
+
+  protected selectSortOption(value: string, menu: HTMLDetailsElement): void {
+    menu.open = false;
+    this.onSortChange(value);
+  }
+
+  protected closeSortMenu(menu: HTMLDetailsElement, event: Event): void {
+    event.preventDefault();
+    menu.open = false;
+    menu.querySelector('summary')?.focus();
+  }
+
+  protected closeSortMenuOnOutside(menu: HTMLDetailsElement, event: Event): void {
+    if (event.target instanceof Node && !menu.contains(event.target)) {
+      menu.open = false;
+    }
+  }
+
   protected readonly severity = statusSeverity;
 
   protected readonly byline = eventByline;
@@ -160,7 +188,11 @@ export class EventsPageComponent {
   private fetch(first: number): void {
     this.request?.unsubscribe();
     this.first.set(first);
-    this.url.write({ q: this.search.value.trim(), page: Math.floor(first / PAGE_SIZE) + 1 });
+    this.url.write({
+      q: this.search.value.trim(),
+      page: Math.floor(first / PAGE_SIZE) + 1,
+      sort: this.sort(),
+    });
     this.loading.set(true);
     this.failed.set(false);
     this.request = this.api
@@ -169,6 +201,7 @@ export class EventsPageComponent {
         page: Math.floor(first / PAGE_SIZE) + 1,
         size: PAGE_SIZE,
         keyword: this.search.value.trim() || undefined,
+        sort: this.sort() || undefined,
       })
       .subscribe({
         next: (page) => {

@@ -325,7 +325,6 @@ export class PlannerStore {
       const done = await firstValueFrom(this.api.publish(eventId, hallId, this.revision()));
       this.published.set(done.published);
       await this.refreshFlags();
-      this.notifier.success(`Stall plan published (version ${done.revision}).`);
       return true;
     } catch (error) {
       // A 409 is a refusal to read, not a failure: a booked stall would change, or the plan was

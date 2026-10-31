@@ -1,5 +1,5 @@
 <div class="page">
-  <!-- The search and the view switch sit in the title row, so the top of the page is one row. -->
+  <!-- Search, sorting, and the view switch share the title row. -->
   <app-page-header [title]="title()" [subtitle]="subtitle()">
     <div actions class="toolbar__field toolbar__field--grow">
       <label class="visually-hidden" for="events-search">Search events</label>
@@ -14,6 +14,47 @@
         />
       </p-iconfield>
     </div>
+    <details
+      actions
+      class="toolbar__field toolbar__field--sort"
+      #sortMenu
+      (keydown.escape)="closeSortMenu(sortMenu, $event)"
+      (document:click)="closeSortMenuOnOutside(sortMenu, $event)"
+    >
+      <summary class="sort-toggle" aria-label="Sort events" title="Sort events by tenancy date">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m21 16-4 4-4-4"></path>
+          <path d="M17 20V4"></path>
+          <path d="m3 8 4-4 4 4"></path>
+          <path d="M7 4v16"></path>
+        </svg>
+      </summary>
+      <div class="sort-menu" role="group" aria-label="Sort events by tenancy date">
+        @for (option of sortOptions; track option.value) {
+          <button
+            type="button"
+            class="sort-menu__option"
+            [attr.aria-pressed]="sort() === option.value"
+            (click)="selectSortOption(option.value, sortMenu)"
+          >
+            <span>{{ option.label }}</span>
+            @if (sort() === option.value) {
+              <i class="pi pi-check" aria-hidden="true"></i>
+            }
+          </button>
+        }
+      </div>
+    </details>
     <div actions class="toolbar__field toolbar__field--view">
       <span class="visually-hidden" id="events-view-label">Events display mode</span>
       <p-selectbutton
@@ -76,9 +117,9 @@
                     <a
                       class="event-card__name"
                       [routerLink]="[base(), event.id]"
-                      [title]="event.name | titlecase"
+                      [title]="event.name"
                       (click)="$event.stopPropagation()"
-                      >{{ event.name | titlecase }}</a
+                      >{{ event.name }}</a
                     >
                     <div class="event-card__sub">
                       {{ event.startDate ? (event.startDate | date: 'd MMM y') : '—' }} –
@@ -87,8 +128,10 @@
                     @if (event.bookingId) {
                       <div class="event-card__ref"><span>Booking ID</span> {{ event.bookingId }}</div>
                     }
-                    @if (isStaff() && event.organisation) {
-                      <div class="event-card__sub" [title]="event.organisation">{{ event.organisation }}</div>
+                    @if (event.organisation || kind() === 'internal') {
+                      <div class="event-card__sub" [title]="event.organisation || 'ITPO event'">
+                        {{ event.organisation || 'ITPO event' }}
+                      </div>
                     }
                   </div>
                   <i class="pi pi-arrow-right event-card__go" aria-hidden="true"></i>
@@ -148,9 +191,13 @@
                         </span>
                         <div class="event-who__text">
                           <a class="cell-name__title" [routerLink]="[base(), event.id]" (click)="$event.stopPropagation()">{{
-                            event.name | titlecase
+                            event.name
                           }}</a>
-                          <span class="cell-name__note">{{ byline(event) || event.bookingId }}</span>
+                          <span class="cell-name__note">{{
+                            kind() === 'internal'
+                              ? event.organisation || 'ITPO event'
+                              : byline(event) || event.bookingId
+                          }}</span>
                         </div>
                       </div>
                     </th>

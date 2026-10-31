@@ -29,13 +29,17 @@
           <p class="title">
             <strong>{{ actionLabel(entry.action) }}</strong>
             @if (entry.hall.name) {
-              · {{ entry.hall.name }}
+              &nbsp;&middot;&nbsp;{{ entry.hall.name }}
+            }
+            @if (entry.detail) {
+              &nbsp;<span class="detail">{{ entry.detail }}</span>
             }
           </p>
-          @if (entry.detail) {
-            <p class="detail">{{ entry.detail }}</p>
-          }
-          <p class="meta">{{ entry.actor.name ?? '—' }} · {{ entry.at | date: 'd MMM y, HH:mm' }}</p>
+          <p class="meta">
+            <span>{{ entry.actor.name ?? '—' }}</span>
+            <span aria-hidden="true">&middot;</span>
+            <time [attr.datetime]="entry.at">{{ entry.at | date: 'd MMM y, HH:mm' }}</time>
+          </p>
         </li>
       }
     </ul>

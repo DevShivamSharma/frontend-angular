@@ -155,6 +155,7 @@ export interface EventListQuery {
   page: number;
   size: number;
   keyword?: string;
+  sort?: string;
 }
 
 /** A category as ITPO lists it for an event or one of its halls. */

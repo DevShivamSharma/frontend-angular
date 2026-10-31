@@ -46,6 +46,9 @@ export class ItpoEventsApiService {
     if (query.keyword) {
       params = params.set('keyword', query.keyword);
     }
+    if (query.sort) {
+      params = params.set('sort', query.sort);
+    }
     return this.http.get<RawEventPage>(`${this.url}/hall/bookings`, { params }).pipe(
       map((raw) => ({
         items: raw.data.map(toSummary).filter((event) => event.kind === query.kind),

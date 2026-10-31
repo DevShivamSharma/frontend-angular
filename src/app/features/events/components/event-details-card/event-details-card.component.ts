@@ -1,12 +1,12 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 
 import { plainText } from '../../../../shared/utils/text.util';
 import { EventDetails } from '../../data/events.models';
 
 /**
- * The details of an event, in three groups (who and what, when, how many) and the longer texts its
- * organiser wrote. The name, booking id and statuses are in the page header, so not repeated here.
+ * The event's details, split into the sections used by the event overview. The name, booking id and
+ * statuses are in the page header, so not repeated here.
  */
 @Component({
   selector: 'app-event-details-card',
@@ -17,6 +17,15 @@ import { EventDetails } from '../../data/events.models';
 })
 export class EventDetailsCardComponent {
   readonly event = input.required<EventDetails>();
+
+  protected readonly sections = [
+    { id: 'about', label: 'About' },
+    { id: 'when', label: 'When' },
+    { id: 'expected', label: 'Expected' },
+    { id: 'organiser', label: 'From the organiser' },
+  ] as const;
+  protected readonly activeSection = signal<'about' | 'when' | 'expected' | 'organiser'>('about');
+  protected readonly missing = '—';
 
   protected readonly notes = computed(() => {
     const event = this.event();

@@ -1,90 +1,118 @@
-<div class="groups">
-  <section class="card" aria-labelledby="group-about">
-    <h2 id="group-about">About</h2>
-    <dl class="facts">
-      <div>
-        <dt>Organisation</dt>
-        <dd>{{ event().organisation ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>Event type</dt>
-        <dd>{{ event().eventType ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>Co-organiser</dt>
-        <dd>{{ event().coOrganizer ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>File number</dt>
-        <dd>{{ event().fileNumber ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>Booked on</dt>
-        <dd>{{ event().bookingDate ? (event().bookingDate | date: 'd MMM y, h:mm a') : '—' }}</dd>
-      </div>
-      <div>
-        <dt>Approved / rejected by</dt>
-        <dd>{{ event().decidedBy ?? '—' }}</dd>
-      </div>
-    </dl>
-  </section>
+<div class="details-layout">
+  <nav class="section-nav" aria-label="Event detail sections">
+    @for (section of sections; let i = $index; track section.id) {
+      <button
+        type="button"
+        class="section-nav__item"
+        [class.section-nav__item--active]="activeSection() === section.id"
+        [attr.aria-current]="activeSection() === section.id ? 'step' : null"
+        (click)="activeSection.set(section.id)"
+      >
+        <span class="section-nav__number" aria-hidden="true">{{ i + 1 }}</span>
+        <span>{{ section.label }}</span>
+      </button>
+    }
+  </nav>
 
-  <section class="card" aria-labelledby="group-when">
-    <h2 id="group-when">When</h2>
-    <dl class="facts">
-      <div>
-        <dt>Tenancy</dt>
-        <dd>
-          {{ event().startDate ? (event().startDate | date: 'd MMM y') : '—' }} –
-          {{ event().endDate ? (event().endDate | date: 'd MMM y') : '—' }}
-        </dd>
-      </div>
-      <div>
-        <dt>Event days</dt>
-        <dd>
-          {{ event().exhibitionStartDate ? (event().exhibitionStartDate | date: 'd MMM y') : '—' }}
-          –
-          {{ event().exhibitionEndDate ? (event().exhibitionEndDate | date: 'd MMM y') : '—' }}
-        </dd>
-      </div>
-      <div>
-        <dt>Open daily</dt>
-        <dd>{{ hours() ?? '—' }}</dd>
-      </div>
-    </dl>
-  </section>
-
-  <section class="card" aria-labelledby="group-numbers">
-    <h2 id="group-numbers">Expected</h2>
-    <dl class="facts">
-      <div>
-        <dt>Visitors</dt>
-        <dd>{{ event().expectedVisitors !== null ? (event().expectedVisitors | number) : '—' }}</dd>
-      </div>
-      <div>
-        <dt>Exhibitors</dt>
-        <dd>
-          {{ event().expectedExhibitors !== null ? (event().expectedExhibitors | number) : '—' }}
-        </dd>
-      </div>
-      <div>
-        <dt>Business generated</dt>
-        <dd>
-          {{ event().businessGenerated !== null ? (event().businessGenerated | number) : '—' }}
-        </dd>
-      </div>
-    </dl>
-  </section>
-</div>
-
-@if (notes().length) {
-  <section class="card notes" aria-labelledby="group-notes">
-    <h2 id="group-notes">From the organiser</h2>
-    @for (note of notes(); track note.label) {
-      <div class="note">
-        <h3>{{ note.label }}</h3>
-        <p>{{ note.text }}</p>
-      </div>
+  <section
+    class="details-panel"
+    [attr.aria-labelledby]="activeSection() + '-title'"
+  >
+    @switch (activeSection()) {
+      @case ('about') {
+        <h2 id="about-title">About</h2>
+        <p class="intro">Who runs the event, and how it was booked.</p>
+        <dl class="facts">
+          <div>
+            <dt>Organisation</dt>
+            <dd>{{ event().organisation ?? missing }}</dd>
+          </div>
+          <div>
+            <dt>Event type</dt>
+            <dd>{{ event().eventType ?? missing }}</dd>
+          </div>
+          <div>
+            <dt>Co-organiser</dt>
+            <dd>{{ event().coOrganizer ?? missing }}</dd>
+          </div>
+          <div>
+            <dt>File number</dt>
+            <dd>{{ event().fileNumber ?? missing }}</dd>
+          </div>
+          <div>
+            <dt>Booked on</dt>
+            <dd>{{ event().bookingDate ? (event().bookingDate | date: 'd MMM y, h:mm a') : missing }}</dd>
+          </div>
+          <div>
+            <dt>Approved / rejected by</dt>
+            <dd>{{ event().decidedBy ?? missing }}</dd>
+          </div>
+        </dl>
+      }
+      @case ('when') {
+        <h2 id="when-title">When</h2>
+        <p class="intro">Tenancy dates, exhibition days and opening hours.</p>
+        <dl class="facts">
+          <div>
+            <dt>Tenancy</dt>
+            <dd>
+              {{ event().startDate ? (event().startDate | date: 'd MMM y') : missing }}
+              &ndash;
+              {{ event().endDate ? (event().endDate | date: 'd MMM y') : missing }}
+            </dd>
+          </div>
+          <div>
+            <dt>Event days</dt>
+            <dd>
+              {{ event().exhibitionStartDate ? (event().exhibitionStartDate | date: 'd MMM y') : missing }}
+              &ndash;
+              {{ event().exhibitionEndDate ? (event().exhibitionEndDate | date: 'd MMM y') : missing }}
+            </dd>
+          </div>
+          <div>
+            <dt>Open daily</dt>
+            <dd>{{ hours() ?? missing }}</dd>
+          </div>
+        </dl>
+      }
+      @case ('expected') {
+        <h2 id="expected-title">Expected</h2>
+        <p class="intro">Expected audience, exhibitors and business generated.</p>
+        <dl class="facts">
+          <div>
+            <dt>Visitors</dt>
+            <dd>{{ event().expectedVisitors !== null ? (event().expectedVisitors | number) : missing }}</dd>
+          </div>
+          <div>
+            <dt>Exhibitors</dt>
+            <dd>
+              {{ event().expectedExhibitors !== null ? (event().expectedExhibitors | number) : missing }}
+            </dd>
+          </div>
+          <div>
+            <dt>Business generated</dt>
+            <dd>
+              {{ event().businessGenerated !== null ? (event().businessGenerated | number) : missing }}
+            </dd>
+          </div>
+        </dl>
+      }
+      @case ('organiser') {
+        <h2 id="organiser-title">From the organiser</h2>
+        <p class="intro">Notes and requests shared with ITPO for this event.</p>
+        @if (notes().length) {
+          <dl class="facts notes">
+            @for (note of notes(); track note.label) {
+              <div>
+                <dt>{{ note.label }}</dt>
+                <dd>{{ note.text }}</dd>
+              </div>
+            }
+          </dl>
+        } @else {
+          <p class="no-notes">No additional notes were provided by the organiser.</p>
+        }
+      }
     }
   </section>
-}
+</div>

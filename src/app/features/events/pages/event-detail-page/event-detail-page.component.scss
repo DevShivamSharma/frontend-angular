@@ -30,7 +30,7 @@
   flex-wrap: nowrap;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .ph__text {
@@ -172,7 +172,7 @@ h1 {
   }
 
   .p-tabs {
-    margin: 16px 0 0;
+    margin: 0;
   }
 
   .p-tablist-tab-list {
@@ -188,7 +188,7 @@ h1 {
 
   .p-tab {
     gap: 6px;
-    min-height: 44px;
+    min-height: 36px;
     margin-bottom: -1px;
     padding: 0 14px;
     border: 0;

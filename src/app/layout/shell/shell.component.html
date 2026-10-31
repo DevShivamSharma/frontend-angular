@@ -15,6 +15,53 @@
   </a>
 
   <div class="topbar__tools">
+    @if (isStaff()) {
+      <details
+        class="notifications"
+        #notificationMenu
+        (keydown.escape)="closeNotifications(notificationMenu, $event)"
+        (document:click)="closeNotificationsOnOutside(notificationMenu, $event)"
+      >
+        <summary
+          class="notification-toggle"
+          [attr.aria-label]="pending() + ' external plans waiting for approval. Notifications'"
+          title="Notifications"
+        >
+          <i class="pi pi-bell" aria-hidden="true"></i>
+          @if (pending() > 0) {
+            <span class="notification-badge" aria-hidden="true">{{ pending() }}</span>
+          }
+        </summary>
+        <section class="notifications__panel" aria-label="Notifications">
+          <header class="notifications__header">
+            <strong>Notifications</strong>
+            @if (pending() > 0) {
+              <span>{{ pending() }} pending</span>
+            }
+          </header>
+          @if (pending() > 0) {
+            <a
+              class="notification-item"
+              routerLink="/external-events"
+              (click)="notificationMenu.open = false"
+            >
+              <span class="notification-item__icon"><i class="pi pi-calendar-plus" aria-hidden="true"></i></span>
+              <span class="notification-item__text">
+                <strong>{{ pending() }} external stall plan{{ pending() === 1 ? '' : 's' }} waiting for review</strong>
+                <span>Open External events to review the submissions.</span>
+              </span>
+              <i class="pi pi-arrow-right notification-item__arrow" aria-hidden="true"></i>
+            </a>
+          } @else {
+            <div class="notifications__empty">
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+              <strong>You're all caught up</strong>
+              <span>No external plans are waiting for review.</span>
+            </div>
+          }
+        </section>
+      </details>
+    }
     <p-button
       [icon]="'pi ' + themeIcon()"
       [text]="true"

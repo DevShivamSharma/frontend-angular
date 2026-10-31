@@ -55,6 +55,7 @@ export class ShellComponent {
 
   protected readonly user = this.auth.user;
   protected readonly displayName = this.auth.displayName;
+  protected readonly isStaff = this.auth.isStaff;
   protected readonly drawerOpen = signal(false);
 
   protected readonly navGroups = computed(() =>
@@ -94,6 +95,18 @@ export class ShellComponent {
       next: (count) => this.pending.set(count),
       error: () => undefined,
     });
+  }
+
+  protected closeNotifications(menu: HTMLDetailsElement, event: Event): void {
+    event.preventDefault();
+    menu.open = false;
+    menu.querySelector('summary')?.focus();
+  }
+
+  protected closeNotificationsOnOutside(menu: HTMLDetailsElement, event: Event): void {
+    if (event.target instanceof Node && !menu.contains(event.target)) {
+      menu.open = false;
+    }
   }
 
   protected readonly initials = computed(() => {

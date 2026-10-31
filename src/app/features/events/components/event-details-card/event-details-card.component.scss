@@ -1,28 +1,101 @@
 :host {
+  display: block;
+}
+
+.details-layout {
+  display: grid;
+  grid-template-columns: minmax(15rem, 16.5rem) minmax(0, 1fr);
+  min-height: 20rem;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-surface);
+  box-shadow: 0 2px 5px rgb(16 16 24 / 5%);
+}
+
+.section-nav {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 0.375rem;
+  padding: 1rem;
+  border-right: 1px solid var(--app-border);
+  background: var(--app-surface-2);
 }
 
-.groups {
+.section-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.875rem;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--app-muted);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+
+  &:hover {
+    background: var(--app-surface-hover);
+    color: var(--app-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+  }
+
+  &--active {
+    background: color-mix(in srgb, var(--app-brand) 10%, var(--app-surface));
+    color: var(--app-brand);
+    font-weight: 600;
+
+    &:hover {
+      background: color-mix(in srgb, var(--app-brand) 14%, var(--app-surface));
+      color: var(--app-brand);
+    }
+  }
+}
+
+.section-nav__number {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
-  gap: var(--space-4);
-  align-items: start;
+  flex: 0 0 1.75rem;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
 }
 
-.card {
-  padding: var(--space-4) var(--space-5);
+.details-panel {
+  min-width: 0;
+  padding: 1.5rem 1.625rem;
+  background: var(--app-surface);
 }
 
 h2 {
-  margin-bottom: var(--space-3);
-  color: var(--app-muted);
+  margin: 0;
+  color: var(--app-text);
   font-family: var(--app-font-body);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.intro {
+  margin: 0.25rem 0 1.25rem;
+  color: var(--app-muted);
+  font-size: 1.0625rem;
+  line-height: 1.45;
 }
 
 .facts {
@@ -30,11 +103,12 @@ h2 {
   flex-direction: column;
   margin: 0;
 
-  div {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-2) 0;
+  > div {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.9fr) minmax(0, 1.1fr);
+    align-items: start;
+    gap: 1rem;
+    padding: 0.8rem 0;
     border-bottom: 1px solid var(--app-border);
 
     &:last-child {
@@ -43,38 +117,56 @@ h2 {
   }
 
   dt {
-    flex: none;
     color: var(--app-muted);
-    font-size: var(--text-base);
+    font-size: 1rem;
+    line-height: 1.45;
   }
 
   dd {
-    margin: 0;
     min-width: 0;
+    margin: 0;
+    color: var(--app-text);
+    font-size: 1rem;
     font-weight: 500;
-    text-align: right;
+    line-height: 1.45;
     overflow-wrap: anywhere;
   }
 }
 
-.note {
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--app-border);
+.notes dd {
+  white-space: pre-line;
+}
 
-  &:first-of-type {
-    border-top: 0;
-    padding-top: 0;
+.no-notes {
+  margin: 1.5rem 0 0;
+  color: var(--app-muted);
+  font-size: 0.9375rem;
+}
+
+@media (max-width: 48rem) {
+  .details-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  h3 {
-    margin: 0 0 var(--space-1);
-    font-size: var(--text-base);
+  .section-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+}
+
+@media (max-width: 30rem) {
+  .section-nav {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  p {
-    white-space: pre-line;
-    line-height: 1.6;
-    max-width: 75ch;
-    overflow-wrap: anywhere;
+  .details-panel {
+    padding: 1.125rem;
+  }
+
+  .facts > div {
+    grid-template-columns: minmax(7.5rem, 0.9fr) minmax(0, 1.1fr);
+    gap: 0.75rem;
   }
 }

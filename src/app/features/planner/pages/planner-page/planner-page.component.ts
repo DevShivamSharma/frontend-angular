@@ -1665,7 +1665,20 @@ export class PlannerPageComponent implements HasUnsavedChanges {
         : `Version ${this.store.revision()} becomes the published plan of this hall: its stalls are written to ITPO. You can keep drawing and publish again later.`,
       confirmLabel: 'Publish',
     });
-    if (ok) await this.store.publish();
+    if (!ok || !(await this.store.publish())) return;
+
+    const hallName = this.store.view()?.hall.hall.name ?? 'The hall';
+    try {
+      await this.confirm.showSuccess({
+        header: 'Plan published',
+        message: `${hallName} is now open for public booking.`,
+        acceptLabel: 'Done',
+      });
+    } catch (error) {
+      this.notifier.fromError(error, 'The plan was published, but the success popup could not open');
+    }
+
+    await this.router.navigate(this.backLink());
   }
 
   protected readonly submitTip = computed(() => {
