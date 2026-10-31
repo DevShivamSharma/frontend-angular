@@ -35,6 +35,13 @@ export interface PendingPlanReview {
   hallName: string;
 }
 
+/** ITPO's answer on one of the organiser's own hall plans. */
+export interface MyPlanReview extends PendingPlanReview {
+  status: 'approved' | 'rejected';
+  note: string | null;
+  reviewedAt: string;
+}
+
 /** What the EMS API opens the planner with. */
 interface RawPlannerView {
   canEdit: boolean;
@@ -225,6 +232,11 @@ export class PlansApiService {
   /** Submitted external plans, with event and hall IDs for direct approval links. */
   pendingReviews(): Observable<PendingPlanReview[]> {
     return this.http.get<PendingPlanReview[]>(`${this.ems}/plan-reviews/pending`);
+  }
+
+  /** ITPO's approvals and rejections of the last 30 days on the organiser's halls. */
+  myReviews(): Observable<MyPlanReview[]> {
+    return this.http.get<MyPlanReview[]>(`${this.ems}/plan-reviews/mine`);
   }
 
   /** A proof file of a rejection. */

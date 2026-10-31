@@ -184,6 +184,16 @@
   color: var(--app-brand);
 }
 
+.notification-item__icon--approved {
+  background: color-mix(in srgb, var(--app-success) 12%, transparent);
+  color: var(--app-success);
+}
+
+.notification-item__icon--rejected {
+  background: color-mix(in srgb, var(--app-danger) 10%, transparent);
+  color: var(--app-danger);
+}
+
 .notification-item__text {
   display: grid;
   flex: 1;

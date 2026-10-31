@@ -22,6 +22,7 @@ import { NotifierService } from '../../core/notification/notifier.service';
 import { LayoutService } from '../../core/layout/layout.service';
 import {
   PlansApiService,
+  type MyPlanReview,
   type PendingPlanReview,
 } from '../../features/planner/data/plans-api.service';
 import { RejectDialogComponent } from '../../features/planner/components/reject-dialog/reject-dialog.component';
@@ -79,6 +80,14 @@ export class ShellComponent {
     action: 'approve' | 'reject';
   } | null>(null);
 
+  /** ITPO's answers on the organiser's own hall plans. */
+  protected readonly myReviews = signal<MyPlanReview[]>([]);
+  /** When the organiser last opened the bell; answers after it count as new. */
+  private readonly reviewsSeenAt = signal(readSeenAt());
+  protected readonly unseenReviews = computed(
+    () => this.myReviews().filter((r) => Date.parse(r.reviewedAt) > this.reviewsSeenAt()).length,
+  );
+
   protected readonly user = this.auth.user;
   protected readonly displayName = this.auth.displayName;
   protected readonly isStaff = this.auth.isStaff;
@@ -102,17 +111,38 @@ export class ShellComponent {
   protected readonly compact = computed(() => this.collapsed() || this.layout.focus());
 
   constructor() {
-    if (this.auth.isStaff()) {
-      this.refreshPending();
-      // After each page change, and every minute: an organiser may have sent a hall meanwhile.
-      const sub = this.router.events.subscribe((e) => {
-        if (e instanceof NavigationEnd) this.refreshPending();
-      });
-      const timer = setInterval(() => this.refreshPending(), 60_000);
-      inject(DestroyRef).onDestroy(() => {
-        sub.unsubscribe();
-        clearInterval(timer);
-      });
+    const refresh = this.auth.isStaff() ? () => this.refreshPending() : () => this.refreshMine();
+    refresh();
+    // After each page change, and every minute: the other side may have acted meanwhile.
+    const sub = this.router.events.subscribe((e) => {
+      if (e instanceof NavigationEnd) refresh();
+    });
+    const timer = setInterval(refresh, 60_000);
+    inject(DestroyRef).onDestroy(() => {
+      sub.unsubscribe();
+      clearInterval(timer);
+    });
+  }
+
+  protected refreshMine(): void {
+    this.plans.myReviews().subscribe({
+      next: (reviews) => {
+        this.myReviews.set(reviews);
+        this.notificationLoadFailed.set(false);
+      },
+      error: () => this.notificationLoadFailed.set(true),
+    });
+  }
+
+  /** Opening the bell marks every answer shown as seen. */
+  protected markReviewsSeen(menu: HTMLDetailsElement): void {
+    if (!menu.open) return;
+    const now = Date.now();
+    this.reviewsSeenAt.set(now);
+    try {
+      localStorage.setItem(REVIEWS_SEEN_KEY, String(now));
+    } catch {
+      // Storage may be blocked; the badge clears for this visit only.
     }
   }
 
@@ -283,6 +313,16 @@ function readCollapsed(): boolean {
     return localStorage.getItem(COLLAPSED_KEY) === '1';
   } catch {
     return false;
+  }
+}
+
+const REVIEWS_SEEN_KEY = 'ems.reviews-seen-at';
+
+function readSeenAt(): number {
+  try {
+    return Number(localStorage.getItem(REVIEWS_SEEN_KEY)) || 0;
+  } catch {
+    return 0;
   }
 }
 

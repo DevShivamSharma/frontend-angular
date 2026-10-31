@@ -124,6 +124,73 @@
           }
         </section>
       </details>
+    } @else {
+      <details
+        class="notifications"
+        #myMenu
+        (toggle)="markReviewsSeen(myMenu)"
+        (keydown.escape)="closeNotifications(myMenu, $event)"
+        (document:click)="closeNotificationsOnOutside(myMenu, $event)"
+      >
+        <summary
+          class="notification-toggle"
+          [attr.aria-label]="notificationLoadFailed() ? 'Could not load notifications' : unseenReviews() + ' new plan decisions. Notifications'"
+          title="Notifications"
+        >
+          <i class="pi pi-bell" aria-hidden="true"></i>
+          @if (unseenReviews() > 0) {
+            <span class="notification-badge" aria-hidden="true">{{ unseenReviews() }}</span>
+          }
+        </summary>
+        <section class="notifications__panel" aria-label="Notifications">
+          <header class="notifications__header">
+            <strong>Notifications</strong>
+            @if (unseenReviews() > 0) {
+              <span>{{ unseenReviews() }} new</span>
+            }
+          </header>
+          @if (myReviews().length > 0) {
+            @for (review of myReviews(); track review.eventHallId) {
+              <article class="notification-item">
+                <a
+                  class="notification-item__main"
+                  [routerLink]="['/external-events', review.eventId]"
+                  [queryParams]="{ tab: 'halls' }"
+                  (click)="myMenu.open = false"
+                >
+                  <span class="notification-item__icon notification-item__icon--{{ review.status }}">
+                    <i class="pi" [class.pi-check]="review.status === 'approved'" [class.pi-times]="review.status === 'rejected'" aria-hidden="true"></i>
+                  </span>
+                  <span class="notification-item__text">
+                    <strong>{{ review.eventName }}</strong>
+                    <span>
+                      {{ review.hallName }} ·
+                      {{ review.status === 'approved' ? 'Plan approved — you can publish it' : 'Plan rejected' }}
+                    </span>
+                    @if (review.status === 'rejected' && review.note) {
+                      <span>Reason: {{ review.note }}</span>
+                    }
+                  </span>
+                  <i class="pi pi-arrow-right notification-item__arrow" aria-hidden="true"></i>
+                </a>
+              </article>
+            }
+          } @else if (notificationLoadFailed()) {
+            <div class="notifications__empty">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              <strong>Notifications couldn’t load</strong>
+              <span>Check your connection and try again.</span>
+              <button class="notification-retry" type="button" (click)="refreshMine()">Try again</button>
+            </div>
+          } @else {
+            <div class="notifications__empty">
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+              <strong>No updates yet</strong>
+              <span>You'll see here when ITPO approves or rejects a stall plan.</span>
+            </div>
+          }
+        </section>
+      </details>
     }
     <p-button
       [icon]="'pi ' + themeIcon()"
