@@ -11,6 +11,8 @@ export interface ConfirmDialogData {
   icon: string;
   /** For what cannot be undone: the icon and the button are red. */
   danger: boolean;
+  /** Replaces the question icon with the animated completion mark. */
+  success?: boolean;
 }
 
 /** The question every confirmation asks. Closes with `true` to go ahead, `false` (or nothing) otherwise. */

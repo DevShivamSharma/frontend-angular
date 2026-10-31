@@ -126,6 +126,9 @@
                 <dd [attr.data-tone]="statusSeverity(plan.status)">
                   {{ statusLabel(plan.status) }}
                 </dd>
+                @if (plan.published && plan.published.revision !== plan.revision) {
+                  <dd class="text-muted">Published version {{ plan.published.revision }} remains live</dd>
+                }
               } @else {
                 <dd>Not started</dd>
               }
@@ -140,6 +143,7 @@
           @if (statusOf(hall); as plan) {
             @if (
               (plan.status === 'rejected' && plan.review) ||
+              plan.canPublish ||
               plan.canSubmit ||
               plan.canWithdraw ||
               plan.canApprove ||
@@ -156,8 +160,23 @@
                     }
                   </div>
                 }
-                @if (plan.canSubmit || plan.canWithdraw || plan.canApprove || plan.canReopen) {
+                @if (
+                  plan.canPublish || plan.canSubmit || plan.canWithdraw || plan.canApprove || plan.canReopen
+                ) {
                   <div class="workflow">
+                    @if (plan.canPublish) {
+                      <p-button
+                        label="Publish"
+                        size="small"
+                        [disabled]="plan.violations > 0 || working() === hall.eventHallId"
+                        [title]="
+                          plan.violations > 0
+                            ? plan.violations + ' rule(s) are broken: fix them in the planner first'
+                            : ''
+                        "
+                        (onClick)="publish(hall, plan)"
+                      />
+                    }
                     @if (plan.canSubmit) {
                       <p-button
                         label="Send for approval"
@@ -262,9 +281,32 @@
               <td class="num">{{ statusOf(hall)?.stalls || hall.stallCount }}</td>
               <td>
                 @if (statusOf(hall); as plan) {
-                  <span [attr.data-tone]="statusSeverity(plan.status)">{{
-                    statusLabel(plan.status)
-                  }}</span>
+                  <span [attr.data-tone]="statusSeverity(plan.status)">{{ statusLabel(plan.status) }}</span>
+                  @if (plan.published && plan.published.revision !== plan.revision) {
+                    <div class="text-muted">Published version {{ plan.published.revision }} remains live</div>
+                  }
+                  @if (plan.canPublish || plan.canWithdraw) {
+                    <div class="workflow">
+                      @if (plan.canPublish) {
+                        <p-button
+                          label="Publish"
+                          size="small"
+                          [disabled]="plan.violations > 0 || working() === hall.eventHallId"
+                          (onClick)="publish(hall, plan)"
+                        />
+                      }
+                      @if (plan.canWithdraw) {
+                        <p-button
+                          label="Withdraw"
+                          size="small"
+                          severity="secondary"
+                          [outlined]="true"
+                          [disabled]="working() === hall.eventHallId"
+                          (onClick)="withdraw(hall)"
+                        />
+                      }
+                    </div>
+                  }
                 } @else {
                   Not started
                 }

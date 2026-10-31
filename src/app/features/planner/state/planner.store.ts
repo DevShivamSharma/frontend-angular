@@ -351,7 +351,6 @@ export class PlannerStore {
    * the hall is kept as it is so the canvas does not refit. Internal events' flags do not move.
    */
   private async refreshFlags(): Promise<void> {
-    if (!this.view()?.needsApproval) return;
     const { eventId, hallId } = this.target;
     try {
       const fresh = await firstValueFrom(this.api.get(eventId, hallId));
@@ -370,7 +369,7 @@ export class PlannerStore {
       );
       this.published.set(fresh.plan.published);
     } catch {
-      // The save or publish went through; the page reload brings the flags right.
+      // The save or publish went through; keep the last known flags if this read fails.
     }
   }
 

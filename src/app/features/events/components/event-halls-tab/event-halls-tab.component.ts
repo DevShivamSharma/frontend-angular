@@ -9,8 +9,9 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { filter, firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import type { MenuItem } from 'primeng/api';
@@ -74,10 +75,12 @@ export class EventHallsTabComponent {
   private readonly auth = inject(AuthService);
   private readonly dialogs = inject(AppDialog);
   private readonly plans = inject(PlansApiService);
+  private readonly router = inject(Router);
 
   /** Where each hall's plan stands, by the hall's id in the event. */
   protected readonly statuses = signal<ReadonlyMap<string, HallPlanStatus>>(new Map());
   protected readonly working = signal<string | null>(null);
+  private statusRequest = 0;
 
   /** The halls bar's tools: what is searched for, how the halls are ordered, and how they look. */
   protected readonly search = signal('');
@@ -126,7 +129,8 @@ export class EventHallsTabComponent {
     if (this.store().summary()?.kind !== 'external') return null;
     const all = [...this.statuses().values()];
     if (!all.length) return null;
-    return `${all.filter((s) => s.status === 'approved').length} of ${all.length} halls approved`;
+    const ready = all.filter((s) => s.status === 'approved' || s.status === 'published').length;
+    return `${ready} of ${all.length} halls approved or published`;
   });
 
   constructor() {
@@ -135,6 +139,18 @@ export class EventHallsTabComponent {
       this.store().halls();
       if (id) untracked(() => void this.loadStatuses(id));
     });
+
+    // The event page can stay mounted while the planner route is open. Refresh its hall actions
+    // when navigation returns so a newly saved plan can be published without a browser reload.
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        const id = this.store().summary()?.id;
+        if (id) void this.loadStatuses(id);
+      });
   }
 
   protected statusOf(hall: ItpoEventHall): HallPlanStatus | null {
@@ -152,8 +168,10 @@ export class EventHallsTabComponent {
   }
 
   private async loadStatuses(eventId: string): Promise<void> {
+    const request = ++this.statusRequest;
     try {
       const list = await firstValueFrom(this.plans.planStatuses(eventId));
+      if (request !== this.statusRequest) return;
       this.statuses.set(new Map(list.map((s) => [s.eventHallId, s] as const)));
     } catch {
       // The statuses are an extra: the halls still show.
@@ -166,6 +184,7 @@ export class EventHallsTabComponent {
     ask: { header: string; message: string; acceptLabel: string; danger?: boolean } | null,
     run: () => Promise<unknown>,
     done: string,
+    afterSuccess?: () => void,
   ): Promise<void> {
     const eventId = this.store().summary()?.id;
     if (!eventId) return;
@@ -173,8 +192,9 @@ export class EventHallsTabComponent {
     this.working.set(hall.eventHallId);
     try {
       await run();
-      this.notify.success(done, hall.name);
       await this.loadStatuses(eventId);
+      if (afterSuccess) afterSuccess();
+      else this.notify.success(done, hall.name);
     } catch (error) {
       this.notify.fromError(error, 'The step could not be done');
     } finally {
@@ -193,6 +213,30 @@ export class EventHallsTabComponent {
       },
       () => firstValueFrom(this.plans.submit(eventId, hall.eventHallId, s.revision)),
       'Sent to ITPO for approval',
+    );
+  }
+
+  protected publish(hall: ItpoEventHall, s: HallPlanStatus): Promise<void> {
+    const eventId = this.store().summary()!.id;
+    return this.step(
+      hall,
+      {
+        header: 'Publish stall plan',
+        message: `Publish the approved plan of ${hall.name}? Its stalls will be available for booking.`,
+        acceptLabel: 'Publish',
+      },
+      () => firstValueFrom(this.plans.publish(eventId, hall.eventHallId, s.revision)),
+      'Plan published',
+      () =>
+        void this.confirm
+          .showSuccess({
+            header: 'Plan published',
+            message: `${hall.name} is now open for public booking.`,
+            acceptLabel: 'Done',
+          })
+          .catch((error) =>
+            this.notify.fromError(error, 'The plan was published, but the success popup could not open'),
+          ),
     );
   }
 
@@ -443,6 +487,7 @@ const STATUS_LABEL: Record<PlanStatus, string> = {
   planned: 'Planned',
   pending: 'Pending approval',
   approved: 'Approved',
+  published: 'Published',
   rejected: 'Rejected',
 };
 
@@ -452,5 +497,6 @@ const STATUS_SEVERITY: Record<PlanStatus, 'success' | 'info' | 'warn' | 'danger'
   planned: 'success',
   pending: 'warn',
   approved: 'success',
+  published: 'success',
   rejected: 'danger',
 };

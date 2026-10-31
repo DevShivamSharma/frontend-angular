@@ -109,7 +109,14 @@ export interface PlanAttachment {
   size: number;
 }
 
-export type PlanStatus = 'not_started' | 'draft' | 'planned' | 'pending' | 'approved' | 'rejected';
+export type PlanStatus =
+  | 'not_started'
+  | 'draft'
+  | 'planned'
+  | 'pending'
+  | 'approved'
+  | 'published'
+  | 'rejected';
 
 /** One hall of an event: where its plan stands, and what this user may do with it next. */
 export interface HallPlanStatus {
@@ -123,6 +130,7 @@ export interface HallPlanStatus {
   published: { revision: number; at: string } | null;
   /** Rules the saved plan breaks; Send for approval waits until there are none. */
   violations: number;
+  canPublish: boolean;
   canSubmit: boolean;
   canWithdraw: boolean;
   canApprove: boolean;

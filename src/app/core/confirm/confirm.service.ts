@@ -17,6 +17,12 @@ export interface ConfirmOptions {
   icon?: string;
 }
 
+export interface ConfirmSuccessOptions {
+  header: string;
+  message: string;
+  acceptLabel?: string;
+}
+
 /**
  * Asks the user to confirm before an action is sent. One question, one place: the dialog is the
  * app's own component, opened through {@link AppDialog}, so every confirmation looks and behaves the same.
@@ -44,6 +50,25 @@ export class ConfirmService {
       { defaultValue: undefined },
     );
     return answer === true;
+  }
+
+  /** Shows the animated completion card for a successfully published plan. */
+  async showSuccess(options: ConfirmSuccessOptions): Promise<void> {
+    await firstValueFrom(
+      this.dialog.open<boolean, ConfirmDialogData>(ConfirmDialogComponent, {
+        data: {
+          header: options.header,
+          message: options.message,
+          acceptLabel: options.acceptLabel ?? 'Done',
+          rejectLabel: '',
+          icon: 'pi pi-check',
+          danger: false,
+          success: true,
+        },
+        width: 'min(31.25rem, 94vw)',
+      }),
+      { defaultValue: undefined },
+    );
   }
 
   /** The same question in the words the stall planner was written with (title, confirm label). */

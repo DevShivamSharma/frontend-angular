@@ -14,6 +14,28 @@
     --confirm-tint: color-mix(in srgb, var(--app-danger) 12%, transparent);
   }
 
+  &--success {
+    padding: 2.5rem 2rem 1.75rem;
+
+    .confirm__title {
+      margin-top: 1.5rem;
+      font-size: 1.5rem;
+      animation: confirm-success-rise 360ms ease-out 180ms both;
+    }
+
+    .confirm__message {
+      max-width: 34ch;
+      margin-bottom: 1.5rem;
+      text-wrap: balance;
+      font-size: 1.125rem;
+      animation: confirm-success-rise 360ms ease-out 260ms both;
+    }
+
+    .confirm__actions {
+      animation: confirm-success-rise 360ms ease-out 340ms both;
+    }
+  }
+
   &__icon {
     display: grid;
     place-items: center;
@@ -24,6 +46,75 @@
     background: var(--confirm-tint, var(--app-brand-soft));
     color: var(--confirm-accent, var(--app-brand));
     font-size: var(--text-2xl);
+  }
+
+  &__success-mark {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 6rem;
+    height: 6rem;
+    border-radius: 50%;
+    background: var(--app-success-soft);
+    color: var(--app-success);
+    animation: confirm-success-pop 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+
+    &::before {
+      position: absolute;
+      inset: -0.5rem;
+      border: 1px solid color-mix(in srgb, var(--app-success) 28%, transparent);
+      border-radius: 50%;
+      content: '';
+      opacity: 0.28;
+      animation: confirm-success-ring 900ms ease-out 100ms both;
+    }
+
+    &::after {
+      position: absolute;
+      width: 4rem;
+      height: 4rem;
+      border: 4px solid currentColor;
+      border-radius: 50%;
+      content: '';
+    }
+  }
+
+  &__success-check {
+    z-index: 1;
+    width: 2.75rem;
+    height: 2.75rem;
+    overflow: visible;
+
+    path {
+      stroke: currentColor;
+      stroke-width: 2.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 28;
+      stroke-dashoffset: 28;
+      animation: confirm-success-draw 360ms ease-out 180ms forwards;
+    }
+  }
+
+  &__success-burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    span {
+      position: absolute;
+      top: calc(50% - 3px);
+      left: calc(50% - 2px);
+      width: 4px;
+      height: 7px;
+      border-radius: 2px;
+      background: var(--app-brand);
+      animation: confirm-success-burst 640ms ease-out 80ms both;
+
+      &:nth-child(2n) {
+        background: var(--app-success);
+      }
+    }
   }
 
   &__title {
@@ -44,6 +135,10 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
     width: 100%;
+
+    &--single {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   &__button {
@@ -67,7 +162,9 @@
     }
 
     &--accept {
+      min-height: 3.25rem;
       border-color: transparent;
+      border-radius: 0.75rem;
       background: var(--confirm-accent, var(--app-brand));
       color: var(--palette-white);
 
@@ -78,6 +175,83 @@
           var(--palette-black)
         );
       }
+
+      &:focus-visible {
+        outline: 2px solid var(--palette-white);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--confirm-accent, var(--app-brand));
+      }
+    }
+  }
+}
+
+@keyframes confirm-success-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.86) translateY(0.625rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes confirm-success-ring {
+  from {
+    opacity: 0.65;
+    transform: scale(0.88);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}
+
+@keyframes confirm-success-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes confirm-success-burst {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--burst-angle)) translateY(-2.125rem) scale(0.4);
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(var(--burst-angle)) translateY(-3.625rem) scale(1);
+  }
+}
+
+@keyframes confirm-success-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm--success {
+    .confirm__success-mark,
+    .confirm__success-mark::before,
+    .confirm__success-burst span,
+    .confirm__title,
+    .confirm__message,
+    .confirm__actions {
+      animation: none;
+    }
+
+    .confirm__success-check path {
+      stroke-dashoffset: 0;
+      animation: none;
     }
   }
 }

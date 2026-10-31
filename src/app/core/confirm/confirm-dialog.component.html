@@ -1,17 +1,36 @@
 <div
   class="confirm"
   [class.confirm--danger]="data.danger"
+  [class.confirm--success]="data.success"
   role="alertdialog"
   aria-labelledby="confirm-title"
   aria-describedby="confirm-message"
 >
-  <span class="confirm__icon" aria-hidden="true"><i [class]="data.icon"></i></span>
+  @if (data.success) {
+    <span class="confirm__success-mark" aria-hidden="true">
+      <span class="confirm__success-burst">
+        <span style="--burst-angle: 0deg"></span>
+        <span style="--burst-angle: 60deg"></span>
+        <span style="--burst-angle: 120deg"></span>
+        <span style="--burst-angle: 180deg"></span>
+        <span style="--burst-angle: 240deg"></span>
+        <span style="--burst-angle: 300deg"></span>
+      </span>
+      <svg class="confirm__success-check" viewBox="0 0 32 32" fill="none">
+        <path d="m8 16.5 5.2 5.2L24 10.8" />
+      </svg>
+    </span>
+  } @else {
+    <span class="confirm__icon" aria-hidden="true"><i [class]="data.icon"></i></span>
+  }
   <h2 class="confirm__title" id="confirm-title">{{ data.header }}</h2>
   <p class="confirm__message" id="confirm-message">{{ data.message }}</p>
-  <div class="confirm__actions">
-    <button type="button" class="confirm__button" (click)="ref.close(false)">
-      {{ data.rejectLabel }}
-    </button>
+  <div class="confirm__actions" [class.confirm__actions--single]="data.success">
+    @if (!data.success) {
+      <button type="button" class="confirm__button" (click)="ref.close(false)">
+        {{ data.rejectLabel }}
+      </button>
+    }
     <button
       type="button"
       class="confirm__button confirm__button--accept"
