@@ -54,7 +54,7 @@ $paper: #e4a0b4;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px clamp(16px, 4vw, 48px);
+  padding: 16px clamp(16px, 4vw, 48px);
 }
 
 .login__brand {
@@ -63,9 +63,9 @@ $paper: #e4a0b4;
   gap: 12px;
 }
 
-// The official marks, a little larger than in the app's top bar, then the portal's name after a rule.
+// The official marks, the same size as in the app's top bar, then the portal's name after a rule.
 .login__logos {
-  --brand-logos-height: 2.75rem;
+  --brand-logos-height: 2rem;
 }
 
 .login__brand-text {
@@ -75,7 +75,7 @@ $paper: #e4a0b4;
   border-left: 1px solid var(--app-border-strong);
 
   b {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: -0.01em;
   }
