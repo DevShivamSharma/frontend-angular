@@ -15,7 +15,6 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { DecimalPipe } from '@angular/common';
 import {
   Subscription,
   catchError,
@@ -47,7 +46,6 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-halls-page',
   imports: [
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -80,7 +78,7 @@ export class HallsPageComponent {
   protected readonly pageSize = PAGE_SIZE;
   protected readonly search = new FormControl('', { nonNullable: true });
   /** List or grid; kept between visits, as the sidebar's width is. */
-  protected readonly view = signal<HallsView>(readView());
+  protected readonly view = signal<HallsView>('grid');
   protected readonly viewOptions = [
     { label: 'List', value: 'list', icon: 'pi pi-list' },
     { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
@@ -91,11 +89,12 @@ export class HallsPageComponent {
   protected readonly events = signal<EventSummary[] | null>(null);
   protected readonly eventsFailed = signal(false);
   protected readonly tableSkeleton = [
-    { width: '35%' },
-    { width: '20%', hideSmall: true },
-    { width: '7rem', hideSmall: true },
-    { width: '7rem' },
-    { width: '10rem', hideSmall: true },
+    { width: '5.5rem' },
+    { width: '30%' },
+    { width: '6rem', hideSmall: true },
+    { width: '6rem' },
+    { width: '8rem', hideSmall: true },
+    { width: '2rem' },
   ];
 
   protected readonly halls = signal<ItpoHall[]>([]);
@@ -133,11 +132,6 @@ export class HallsPageComponent {
   /** The cover picture (else the first) as a small image for the row; none when the hall has no pictures. */
   protected chooseView(view: HallsView): void {
     this.view.set(view);
-    try {
-      localStorage.setItem(VIEW_KEY, view);
-    } catch {
-      // Storage may be blocked; the view still changes for this visit.
-    }
     if (view === 'calendar' && this.events() === null) this.fetchEvents();
   }
 
@@ -219,14 +213,5 @@ export class HallsPageComponent {
 
 type HallsView = 'list' | 'grid' | 'calendar';
 
-const VIEW_KEY = 'ems.halls-view';
 const EVENTS_SIZE = 100;
 
-function readView(): HallsView {
-  try {
-    const view = localStorage.getItem(VIEW_KEY);
-    return view === 'list' || view === 'calendar' ? view : 'grid';
-  } catch {
-    return 'grid';
-  }
-}

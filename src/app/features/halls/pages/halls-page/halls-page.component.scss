@@ -211,18 +211,36 @@
   }
 }
 
-.hall-table__hall {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 14rem;
+// The hall list: a row is one hall, the whole row opens it, and the arrow nudges on hover.
+.hall-row {
+  cursor: pointer;
+  transition: background-color 140ms;
+
+  &:hover {
+    background: var(--app-surface-hover);
+  }
+
+  &:hover .hall-table__go {
+    border-color: var(--app-border-strong);
+    color: var(--app-text);
+    transform: translateX(2px);
+  }
+}
+
+.hall-table__photo-col {
+  width: 7.5rem;
+}
+
+.hall-table__go-col {
+  width: 4rem;
+  text-align: right;
 }
 
 // A wide photo, as the redesign's hall list.
 .hall-table__thumbnail {
+  display: block;
   width: 5.5rem;
   height: 3.75rem;
-  flex: 0 0 auto;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
   object-fit: cover;
@@ -234,35 +252,24 @@
   min-width: 0;
 }
 
-.hall-table__code {
-  color: var(--app-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-
-.hall-table__chip {
-  padding: 2px 10px;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-pill);
-  background: var(--app-surface-2);
-  color: var(--app-muted);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.hall-table__chip--off {
-  border-color: color-mix(in srgb, var(--app-danger) 25%, transparent);
-  background: color-mix(in srgb, var(--app-danger) 8%, transparent);
-  color: var(--app-danger);
-}
-
-.hall-table__features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+.hall-table__category {
   color: var(--app-muted);
   font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.hall-table__go {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--app-muted);
+  place-items: center;
+  transition:
+    border-color 140ms,
+    color 140ms,
+    transform 140ms;
 }
 
 @media (max-width: 40rem) {
