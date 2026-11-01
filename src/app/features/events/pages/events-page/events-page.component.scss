@@ -588,3 +588,16 @@ $control: #8a8a94; // the redesign prototype's control border
     color: var(--palette-blue-600);
   }
 }
+
+// On a wide screen the toolbar sits on the title's line, at the right; narrower, it wraps below as before.
+@media (min-width: 75rem) {
+  :host ::ng-deep .page-header {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+  }
+
+  :host ::ng-deep .page-header__actions {
+    flex: none;
+    flex-wrap: nowrap;
+  }
+}
