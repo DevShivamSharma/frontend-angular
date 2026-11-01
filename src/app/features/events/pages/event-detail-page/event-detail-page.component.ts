@@ -3,7 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   LOCALE_ID,
-  OnInit,
+  untracked,
   computed,
   effect,
   inject,
@@ -48,7 +48,7 @@ import { EventDetailStore } from '../../state/event-detail.store';
   styleUrl: './event-detail-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EventDetailPageComponent implements OnInit {
+export class EventDetailPageComponent {
   /** From the route. */
   readonly eventId = input.required<string>();
   /** The tab shown, from the address so a reload or a shared link opens the same one. */
@@ -94,10 +94,11 @@ export class EventDetailPageComponent implements OnInit {
         this.rulesTab()?.ensureLoaded();
       }
     });
-  }
-
-  ngOnInit(): void {
-    this.store.load(this.eventId());
+    // The page is reused when a notification opens another event, so reload on every id change.
+    effect(() => {
+      const id = this.eventId();
+      untracked(() => this.store.load(id));
+    });
   }
 
   /** Shows a tab, keeping it in the address so a reload or a shared link opens the same one. */

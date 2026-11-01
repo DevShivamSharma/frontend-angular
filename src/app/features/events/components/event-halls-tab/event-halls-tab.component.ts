@@ -101,6 +101,13 @@ export class EventHallsTabComponent {
       .reduce((total, hall) => total + (this.statusOf(hall)?.stalls || hall.stallCount), 0),
   );
 
+  /** A click anywhere outside the open sort menu closes it. */
+  protected closeSortOnOutside(menu: HTMLDetailsElement, event: Event): void {
+    if (event.target instanceof Node && !menu.contains(event.target)) {
+      menu.open = false;
+    }
+  }
+
   /** The halls the search and the sort leave. */
   protected readonly shown = computed(() => {
     const needle = this.search().trim().toLowerCase();

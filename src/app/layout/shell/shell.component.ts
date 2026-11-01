@@ -67,13 +67,15 @@ export class ShellComponent {
   /** Submitted external hall plans that ITPO staff can review from the event page. */
   protected readonly pendingReviews = signal<PendingPlanReview[]>([]);
   private readonly pendingCountFallback = signal<number | null>(null);
+  /** Halls approved or rejected from the bell, hidden from it until the server stops listing them. */
+  private readonly decided = new Set<string>();
   protected readonly pending = computed(
     () => this.pendingReviews().length || this.pendingCountFallback() || 0,
   );
   protected readonly notificationLoadFailed = signal(false);
   protected readonly canReviewPlans = computed(() => {
     const roles = this.auth.user()?.roles ?? [];
-    return roles.includes('itpo_admin') || roles.includes('super_admin');
+    return roles.includes('itpo_admin') || roles.includes('super_admin') || roles.includes('system_admin');
   });
   protected readonly reviewing = signal<{
     eventHallId: string;
@@ -149,7 +151,10 @@ export class ShellComponent {
   protected refreshPending(): void {
     this.plans.pendingReviews().subscribe({
       next: (reviews) => {
-        this.pendingReviews.set(reviews);
+        // A plan decided a moment ago can still be listed by a lagging server: keep it hidden until it is gone.
+        const listed = new Set(reviews.map((r) => r.eventHallId));
+        for (const id of this.decided) if (!listed.has(id)) this.decided.delete(id);
+        this.pendingReviews.set(reviews.filter((r) => !this.decided.has(r.eventHallId)));
         this.pendingCountFallback.set(null);
         this.notificationLoadFailed.set(false);
       },
@@ -221,6 +226,7 @@ export class ShellComponent {
         this.notify.success('Sent back to the organiser', review.hallName);
       }
 
+      this.decided.add(review.eventHallId);
       this.pendingReviews.update((items) =>
         items.filter((item) => item.eventHallId !== review.eventHallId),
       );

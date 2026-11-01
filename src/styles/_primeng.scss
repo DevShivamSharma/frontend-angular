@@ -536,6 +536,9 @@ p-datepicker {
   --p-toggleswitch-checked-background: var(--app-success);
   --p-toggleswitch-checked-hover-background: color-mix(in srgb, var(--app-success) 88%, black);
   --p-toggleswitch-checked-border-color: var(--app-success);
+  // A white knob, so it stands out on the green track.
+  --p-toggleswitch-handle-checked-background: #fff;
+  --p-toggleswitch-handle-checked-hover-background: #fff;
 }
 
 /* A drawer for working on one thing beside a list: wide enough for a small table. It is placed

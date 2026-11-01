@@ -22,15 +22,31 @@
           (input)="search.set($any($event.target).value)"
         />
       </label>
-      <label class="tool-sort" title="Sort halls">
-        <i class="pi pi-sort-alt" aria-hidden="true"></i>
-        <span class="visually-hidden">Sort halls by</span>
-        <select [value]="sort()" (change)="sort.set($any($event.target).value)">
+      <details
+        class="tool-sort"
+        #sortMenu
+        (keydown.escape)="sortMenu.open = false"
+        (document:click)="closeSortOnOutside(sortMenu, $event)"
+      >
+        <summary title="Sort halls" aria-label="Sort halls">
+          <i class="pi pi-sort-alt" aria-hidden="true"></i>
+        </summary>
+        <div class="sort-menu" role="listbox" aria-label="Sort halls by">
           @for (option of sortOptions; track option.value) {
-            <option [value]="option.value">{{ option.label }}</option>
+            <button
+              type="button"
+              role="option"
+              [attr.aria-selected]="sort() === option.value"
+              (click)="sort.set(option.value); sortMenu.open = false"
+            >
+              {{ option.label }}
+              @if (sort() === option.value) {
+                <i class="pi pi-check" aria-hidden="true"></i>
+              }
+            </button>
           }
-        </select>
-      </label>
+        </div>
+      </details>
       <span class="view-switch" role="group" aria-label="Halls view">
         <button type="button" [attr.aria-pressed]="view() === 'grid'" (click)="view.set('grid')">
           <i class="pi pi-th-large" aria-hidden="true"></i>Grid
@@ -167,6 +183,7 @@
                     @if (plan.canPublish) {
                       <p-button
                         label="Publish"
+                        icon="pi pi-globe"
                         size="small"
                         [disabled]="plan.violations > 0 || working() === hall.eventHallId"
                         [title]="
