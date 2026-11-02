@@ -1,0 +1,94 @@
+<div class="dialog-title head">
+  <span class="head__icon" aria-hidden="true"><i class="pi pi-replay"></i></span>
+  <div>
+    <h2>Sent back by ITPO</h2>
+    <p class="head__sub">
+      {{ data.hallName }}
+      @if (data.reviewedAt) {
+        · {{ data.reviewedAt | date: 'd MMM y, h:mm a' }}
+      }
+    </p>
+  </div>
+  <button
+    pButton
+    type="button"
+    class="head__close"
+    icon="pi pi-times"
+    [text]="true"
+    [rounded]="true"
+    severity="secondary"
+    aria-label="Close"
+    (click)="ref.close()"
+  ></button>
+</div>
+
+<div class="dialog-content body">
+  <section class="reason">
+    <span class="label">Reason</span>
+    <p>{{ data.note || 'ITPO gave no reason.' }}</p>
+  </section>
+
+  @if (images.length) {
+    <section class="gallery">
+      <span class="label">Photos ({{ images.length }})</span>
+      @if (selected(); as file) {
+        <figure class="stage">
+          @if (urls().get(file.id); as src) {
+            <img [src]="src" [alt]="file.name" />
+          } @else if (failed().has(file.id)) {
+            <span class="stage__empty"><i class="pi pi-image" aria-hidden="true"></i>Could not load</span>
+          } @else {
+            <span class="stage__empty stage__empty--wait"></span>
+          }
+          @if (images.length > 1) {
+            <button type="button" class="stage__nav stage__nav--prev" aria-label="Previous photo" (click)="step(-1)">
+              <i class="pi pi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="stage__nav stage__nav--next" aria-label="Next photo" (click)="step(1)">
+              <i class="pi pi-chevron-right" aria-hidden="true"></i>
+            </button>
+          }
+          <figcaption>
+            <span>{{ file.name }}</span>
+            <button type="button" class="stage__save" (click)="download(file)">
+              <i class="pi pi-download" aria-hidden="true"></i>Download
+            </button>
+          </figcaption>
+        </figure>
+      }
+      @if (images.length > 1) {
+        <div class="strip" role="listbox" aria-label="Photos">
+          @for (file of images; track file.id) {
+            <button
+              type="button"
+              role="option"
+              class="strip__item"
+              [attr.aria-selected]="file.id === selectedId()"
+              [title]="file.name"
+              (click)="selectedId.set(file.id)"
+            >
+              @if (urls().get(file.id); as src) {
+                <img [src]="src" alt="" />
+              } @else {
+                <i class="pi pi-image" aria-hidden="true"></i>
+              }
+            </button>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  @if (others.length) {
+    <section class="files">
+      <span class="label">Files ({{ others.length }})</span>
+      @for (file of others; track file.id) {
+        <button type="button" class="file" (click)="download(file)">
+          <i class="pi pi-file" aria-hidden="true"></i>
+          <span>{{ file.name }}</span>
+          <i class="pi pi-download" aria-hidden="true"></i>
+        </button>
+      }
+    </section>
+  }
+</div>

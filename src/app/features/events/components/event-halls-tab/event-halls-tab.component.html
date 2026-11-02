@@ -167,14 +167,18 @@
             ) {
               <div class="actions">
                 @if (plan.status === 'rejected' && plan.review) {
-                  <div class="banner" role="note">
-                    <b>Sent back:</b> {{ plan.review.note }}
-                    @for (file of plan.review.attachments ?? []; track file.id) {
-                      <button type="button" class="link" (click)="download(hall, file)">
-                        {{ file.name }}
-                      </button>
-                    }
-                  </div>
+                  <button type="button" class="banner" (click)="openReviewNote(hall, plan)">
+                    <span class="banner__icon" aria-hidden="true"><i class="pi pi-replay"></i></span>
+                    <b class="banner__title">Sent back by ITPO</b>
+                    <span class="banner__go">
+                      View message
+                      @if (plan.review.attachments?.length) {
+                        · {{ plan.review.attachments?.length }}
+                        <i class="pi pi-image" aria-hidden="true"></i>
+                      }
+                      <i class="pi pi-chevron-right" aria-hidden="true"></i>
+                    </span>
+                  </button>
                 }
                 @if (
                   plan.canPublish || plan.canSubmit || plan.canWithdraw || plan.canApprove || plan.canReopen
@@ -364,9 +368,7 @@
   </section>
 }
 
-<p-menu #menu [model]="menuItems()" [popup]="true" appendTo="body" styleClass="hall-menu" />
-
-@if (!readonly()) {
+<p-menu #menu [model]="menuItems()" [popup]="true" appendTo="body" styleClass="hall-menu" />@if (!readonly()) {
   <app-add-halls-dialog [saving]="saving()" [taken]="takenIds()" (added)="add($event)" />
   <app-hall-categories-dialog
     [eventId]="store().summary()?.id ?? ''"

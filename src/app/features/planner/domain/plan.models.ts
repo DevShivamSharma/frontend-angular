@@ -109,6 +109,8 @@ export interface PlanAttachment {
   name: string;
   mimeType: string;
   size: number;
+  /** The file's CDN link on S3; null for an older file the server keeps itself. */
+  url?: string | null;
 }
 
 export type PlanStatus =

@@ -47,6 +47,10 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-sta
 import { ItpoEventHall } from '../../data/events.models';
 import { EventDetailStore } from '../../state/event-detail.store';
 import { AddHallsDialogComponent } from '../add-halls-dialog/add-halls-dialog.component';
+import {
+  ReviewNoteDialogComponent,
+  ReviewNoteDialogData,
+} from '../review-note-dialog/review-note-dialog.component';
 
 /** The halls of an event: add and remove. */
 @Component({
@@ -331,6 +335,24 @@ export class EventHallsTabComponent {
       this.notify.fromError(error, 'The file could not be downloaded');
     }
   }
+  /** ITPO's reason for sending the plan back, with its photos, in a dialog. */
+  protected openReviewNote(hall: ItpoEventHall, plan: HallPlanStatus): void {
+    const eventId = this.store().summary()?.id;
+    if (!eventId || !plan.review) return;
+    this.dialogs.open(ReviewNoteDialogComponent, {
+      data: {
+        eventId,
+        eventHallId: hall.eventHallId,
+        hallName: hall.name,
+        note: plan.review.note,
+        reviewedAt: plan.review.reviewedAt,
+        attachments: plan.review.attachments ?? [],
+      } satisfies ReviewNoteDialogData,
+      width: 'min(640px, 96vw)',
+      dismissable: true,
+    });
+  }
+
   private readonly addDialog = viewChild.required(AddHallsDialogComponent);
   private readonly categoriesDialog = viewChild.required(HallCategoriesDialogComponent);
 
