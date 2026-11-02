@@ -43,6 +43,8 @@ export interface PlanStall {
   isRestrictedForOverseas: boolean;
   isActive: boolean;
   location: string | null;
+  /** The company the stall is for: ITPO's stall name, shown by SelfCare as the company name. */
+  companyName?: string | null;
   description: string | null;
 }
 

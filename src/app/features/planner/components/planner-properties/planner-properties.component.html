@@ -192,6 +192,17 @@
     </label>
     <p class="muted small">Set on this stall, it is used instead of the rate card's price.</p>
     <label
+      >Company name (optional)
+      <input
+        pInputText
+        [ngModel]="s.companyName ?? ''"
+        (change)="text('companyName', $event, true)"
+        maxlength="200"
+        placeholder="Shown as the company name in SelfCare"
+        [disabled]="ro"
+      />
+    </label>
+    <label
       >Location
       <input
         pInputText

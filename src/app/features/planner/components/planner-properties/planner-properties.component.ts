@@ -163,7 +163,7 @@ export class PlannerPropertiesComponent {
   }
 
   protected text(
-    key: 'islandNumber' | 'stallNumber' | 'location' | 'description',
+    key: 'islandNumber' | 'stallNumber' | 'location' | 'companyName' | 'description',
     event: Event,
     optional: boolean,
   ): void {
