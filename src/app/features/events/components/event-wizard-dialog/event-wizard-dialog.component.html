@@ -11,9 +11,9 @@
   <ng-template #header>
     <div class="wizard-header">
       <div class="wizard-header__text">
-        <h2 class="wizard-header__title">
-          {{ form.controls.name.value || 'New internal event' }}
-        </h2>
+        <!-- The event name does not follow what is typed here: only the edit popup shows it live.
+          {{ form.controls.name.value || 'New internal event' }} -->
+        <h2 class="wizard-header__title">New internal event</h2>
         <div class="wizard-header__badges">
           <span class="wizard-header__kind">Internal event</span>
         </div>

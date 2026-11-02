@@ -270,40 +270,7 @@ export class EventWizardDialogComponent {
     this.form.reset();
     this.chosenHalls.set([]);
     this.stepIndex.set(0);
-    this.fillSample();
     this.visible.set(true);
-  }
-
-  /** Prototype only: every step opens filled in, so the whole wizard can be seen. Remove with its call in open(). */
-  private fillSample(): void {
-    this.form.patchValue({
-      organisationId: this.organisations()[0]?.id ?? null,
-      name: 'India International Leather Fair 2027',
-      startDate: new Date(2027, 2, 8),
-      endDate: new Date(2027, 2, 16),
-      eventType: 'B2B',
-      eventFormat: 'Exhibition and conference',
-      coOrganizerName: 'Council for Leather Exports',
-      productCategory: this.categoryGroups()[0]?.slug ?? '',
-      description: 'Annual trade fair for leather, footwear and accessories.',
-      productProfile: 'Leather goods, footwear, garments and accessories',
-      specificProductProfile: 'Finished leather, saddlery, tanning machinery',
-      specialRequest: 'Loading access for heavy machinery on move-in day.',
-      remarks: 'Sample data for the prototype.',
-      fileNumber: 'ITPO/EVT/2027/0142',
-      exhibitionStartDate: new Date(2027, 2, 10),
-      exhibitionEndDate: new Date(2027, 2, 14),
-      startTimeOfEvent: '10:00',
-      endTimeOfEvent: '18:00',
-      expectedNumberOfVisitor: 25000,
-      expectedNumberOfExhibitors: 400,
-      noOfStalls: 350,
-      noOfFnbStalls: 12,
-      maxCategoriesForRegistration: 3,
-      allowOverseasUser: true,
-      visibility: 'show',
-    });
-    this.chosenHalls.set(this.halls().slice(0, 2).map((hall) => hall.id));
   }
 
   hasUnsavedChanges(): boolean {

@@ -45,12 +45,12 @@
   text-transform: uppercase;
 }
 
+/* No box: the words themselves, large enough to read, under their label. */
 .reason p {
   margin: 0;
-  padding: var(--space-3);
-  border-left: 3px solid var(--app-danger);
-  border-radius: var(--app-radius-sm);
-  background: color-mix(in srgb, var(--app-danger) 6%, transparent);
+  color: var(--app-text);
+  font-size: var(--text-base, 1rem);
+  line-height: 1.55;
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
