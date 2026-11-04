@@ -72,22 +72,6 @@ a {
   border: 0;
 }
 
-.skip-link {
-  position: absolute;
-  left: var(--space-3);
-  top: -4rem;
-  z-index: 2000;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--app-radius-sm);
-  background: var(--app-brand);
-  color: #fff;
-  text-decoration: none;
-
-  &:focus {
-    top: var(--space-3);
-  }
-}
-
 /* Layout helpers used across the pages. */
 .page {
   width: 100%;
