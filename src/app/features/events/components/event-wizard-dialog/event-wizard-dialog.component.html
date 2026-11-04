@@ -11,9 +11,14 @@
   <ng-template #header>
     <div class="wizard-header">
       <div class="wizard-header__text">
-        <!-- The event name does not follow what is typed here: only the edit popup shows it live.
-          {{ form.controls.name.value || 'New internal event' }} -->
-        <h2 class="wizard-header__title">New internal event</h2>
+        <!-- Only the edit popup shows the event's name as it is typed; a new event keeps its title. -->
+        <h2 class="wizard-header__title">
+          @if (editing()) {
+            {{ form.controls.name.value || 'Edit event' }}
+          } @else {
+            New internal event
+          }
+        </h2>
         <div class="wizard-header__badges">
           <span class="wizard-header__kind">Internal event</span>
         </div>
@@ -34,7 +39,7 @@
   <div class="wizard-body">
     <div class="wizard-nav-col">
       <nav class="wizard-nav">
-        @for (step of steps; track step.id; let i = $index) {
+        @for (step of steps(); track step.id; let i = $index) {
           <button
             type="button"
             class="wizard-nav__item"
@@ -67,13 +72,14 @@
 
     <div class="wizard-step">
       <header class="wizard-step__head">
-        <h3 class="wizard-step__title">{{ steps[stepIndex()].label }}</h3>
-        @if (subtitles[steps[stepIndex()].id]; as subtitle) {
+        <h3 class="wizard-step__title">{{ steps()[stepIndex()].label }}</h3>
+        @if (subtitles[stepId()]; as subtitle) {
           <p class="wizard-step__subtitle">{{ subtitle }}</p>
         }
       </header>
       @if (stepIndex() === 0) {
         <form [formGroup]="form" class="form-grid" novalidate>
+          @if (!editing()) {
           <app-form-field
             class="form-grid__full"
             label="Organisation"
@@ -110,6 +116,7 @@
                 (onClick)="retryOrganisations.emit()"
               />
             </p>
+          }
           }
 
           <app-form-field
@@ -467,7 +474,7 @@
         </form>
       }
 
-      @if (stepIndex() === 6) {
+      @if (stepId() === 'halls') {
         <div class="halls-step">
           <p class="halls-step__note">
             @if (form.controls.startDate.value && form.controls.endDate.value) {
@@ -538,15 +545,17 @@
       }
 
       <!-- Booking setup: the event page's own form, kept alive across steps so nothing typed is lost. -->
-      <div class="booking-step" [hidden]="stepIndex() !== 7">
-        <app-event-config-tab
-          eventId=""
-          [draft]="true"
-          (incompleteChange)="bookingIncomplete.set($event)"
-        />
-      </div>
+      @if (!editing()) {
+        <div class="booking-step" [hidden]="stepId() !== 'booking'">
+          <app-event-config-tab
+            eventId=""
+            [draft]="true"
+            (incompleteChange)="bookingIncomplete.set($event)"
+          />
+        </div>
+      }
 
-      @if (stepIndex() === 8) {
+      @if (stepId() === 'review') {
         @if (reviewProblems(); as problems) {
           <p class="review-note" data-tone="bad">
             <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
@@ -609,16 +618,16 @@
         [disabled]="stepIndex() === 0 || submitting()"
         (onClick)="back()"
       />
-      @if (stepIndex() < steps.length - 1) {
+      @if (stepIndex() < steps().length - 1) {
         <p-button
-          [label]="'Next: ' + steps[stepIndex() + 1].label"
+          [label]="'Next: ' + steps()[stepIndex() + 1].label"
           icon="pi pi-arrow-right"
           iconPos="right"
           (onClick)="next()"
         />
       } @else {
         <p-button
-          label="Create event"
+          [label]="editing() ? 'Save changes' : 'Create event'"
           icon="pi pi-check"
           [loading]="submitting()"
           [disabled]="submitting()"

@@ -17,14 +17,11 @@
     >
       <p-button label="Try again" icon="pi pi-refresh" (onClick)="load()" />
     </app-empty-state>
-  } @else {
-    <app-event-form
-      mode="edit"
-      [known]="known()"
-      [submitting]="submitting()"
-      [failure]="failure()"
-      (edited)="save($event)"
-      (cancelled)="back()"
-    />
   }
+  <app-event-wizard-dialog
+    [submitting]="submitting()"
+    [failure]="failure()"
+    (edited)="save($event)"
+    (cancelled)="back()"
+  />
 </div>

@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
@@ -36,8 +36,19 @@ import { categoryGroups as onlyCategoryGroups } from '../../../categories/domain
 import { ItpoHall } from '../../../halls/data/halls.models';
 import { ItpoHallsApiService } from '../../../halls/data/itpo-halls-api.service';
 import { EventConfigBody } from '../../data/event-config-api.service';
-import { CreateEventPayload, EVENT_KINDS, Organisation } from '../../data/events.models';
-import { createEventForm, toCreatePayload } from '../../domain/event.form';
+import {
+  CreateEventPayload,
+  EVENT_KINDS,
+  Organisation,
+  UpdateEventPayload,
+} from '../../data/events.models';
+import {
+  createEventForm,
+  KnownEvent,
+  patchKnownFields,
+  toCreatePayload,
+  toUpdatePayload,
+} from '../../domain/event.form';
 import { EventConfigTabComponent } from '../event-config-tab/event-config-tab.component';
 import {
   WizardStepId,
@@ -47,7 +58,7 @@ import {
   wizardStepStatus,
 } from '../../domain/event-wizard-steps';
 
-/** Step-by-step dialog for creating an internal event. */
+/** Step-by-step dialog for creating an internal event, or (opened with `openForEdit`) changing one. */
 @Component({
   selector: 'app-event-wizard-dialog',
   imports: [
@@ -83,12 +94,21 @@ export class EventWizardDialogComponent {
   readonly submitting = input(false);
   readonly failure = input<string | null>(null);
   readonly created = output<CreateEventPayload>();
+  /** Editing: only what the user changed. */
+  readonly edited = output<UpdateEventPayload>();
   readonly cancelled = output<void>();
 
   private readonly fb = inject(FormBuilder);
   protected readonly form = createEventForm(this.fb, 'create');
-  protected readonly steps = WIZARD_STEPS;
+  /** Opened for an existing event: no organisation, halls or booking steps, and it saves changes. */
+  protected readonly editing = signal(false);
+  protected readonly steps = computed(() =>
+    this.editing()
+      ? WIZARD_STEPS.filter((step) => step.id !== 'halls' && step.id !== 'booking')
+      : WIZARD_STEPS,
+  );
   protected readonly stepIndex = signal(0);
+  protected readonly stepId = computed(() => this.steps()[this.stepIndex()].id);
   protected readonly kinds = EVENT_KINDS.map((kind) => ({ label: kind, value: kind }));
   /** The groups of categories an event can take its product category from. */
   protected readonly categoryGroups = toSignal(
@@ -138,13 +158,13 @@ export class EventWizardDialogComponent {
     return controls.every((name) => this.form.get(name)?.valid ?? true);
   };
   protected readonly completed = computed(() =>
-    wizardCompletedCount(this.steps, this.stepIndex(), this.isValid),
+    wizardCompletedCount(this.steps(), this.stepIndex(), this.isValid),
   );
   protected status(index: number) {
-    return wizardStepStatus(this.steps[index], index, this.stepIndex(), this.isValid);
+    return wizardStepStatus(this.steps()[index], index, this.stepIndex(), this.isValid);
   }
   protected readonly eventStepValid = computed(() =>
-    this.isValid(this.steps[0].requiredControls ?? []),
+    this.isValid(this.steps()[0].requiredControls ?? []),
   );
 
   /** The chosen organisation's name, for the Review step; an em dash if none is chosen yet. */
@@ -155,7 +175,7 @@ export class EventWizardDialogComponent {
   /** The required fields still empty or wrong, across the steps. */
   protected readonly reviewProblems = computed(() => {
     this.formEvents();
-    return this.steps.reduce((n, step) => n + this.invalidCount(step.requiredControls ?? []), 0);
+    return this.steps().reduce((n, step) => n + this.invalidCount(step.requiredControls ?? []), 0);
   });
 
   /** Each section once, with what it holds, for the Review step. */
@@ -197,7 +217,7 @@ export class EventWizardDialogComponent {
         ? `${this.bookingIncomplete()} incomplete; can be completed after the event is created`
         : 'Complete',
     };
-    return this.steps
+    return this.steps()
       .map((step, index) => ({ step, index }))
       .filter(({ step }) => step.id !== 'review')
       .map(({ step, index }) => {
@@ -267,7 +287,24 @@ export class EventWizardDialogComponent {
 
   /** Opens the dialog for a fresh event: empty form, back at the first step. */
   open(): void {
+    this.editing.set(false);
+    this.form.controls.organisationId.setValidators([Validators.required]);
     this.form.reset();
+    this.chosenHalls.set([]);
+    this.stepIndex.set(0);
+    this.visible.set(true);
+  }
+
+  /**
+   * Opens the dialog for an event that exists, filled with it as ITPO has it. Its organisation is
+   * not asked for nor changed, and only what the user changes is saved.
+   */
+  openForEdit(known: KnownEvent): void {
+    this.editing.set(true);
+    this.form.controls.organisationId.clearValidators();
+    this.form.reset();
+    patchKnownFields(this.form, known);
+    this.form.markAsPristine();
     this.chosenHalls.set([]);
     this.stepIndex.set(0);
     this.visible.set(true);
@@ -287,7 +324,7 @@ export class EventWizardDialogComponent {
   /** Moves to the first step that shows an error (not gated: the error is the reason to go there). */
   private showFirstInvalidStep(): void {
     const index = firstInvalidStepIndex(
-      this.steps,
+      this.steps(),
       (name) => this.form.get(name)?.invalid ?? false,
       (key) => !!this.form.errors?.[key],
     );
@@ -306,12 +343,12 @@ export class EventWizardDialogComponent {
 
   protected next(): void {
     if (this.stepIndex() === 0 && !this.eventStepValid()) {
-      for (const name of this.steps[0].requiredControls ?? []) {
+      for (const name of this.steps()[0].requiredControls ?? []) {
         this.form.get(name)?.markAsTouched();
       }
       return;
     }
-    this.stepIndex.update((i) => Math.min(this.steps.length - 1, i + 1));
+    this.stepIndex.update((i) => Math.min(this.steps().length - 1, i + 1));
   }
 
   /** Only asks to leave; the page decides, so the dialog stays if the user chooses to stay. */
@@ -331,6 +368,7 @@ export class EventWizardDialogComponent {
       this.showFirstInvalidStep();
       return;
     }
-    this.created.emit(toCreatePayload(this.form));
+    if (this.editing()) this.edited.emit(toUpdatePayload(this.form));
+    else this.created.emit(toCreatePayload(this.form));
   }
 }

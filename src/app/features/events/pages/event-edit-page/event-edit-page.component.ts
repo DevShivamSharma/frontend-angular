@@ -16,16 +16,16 @@ import { NotifierService } from '../../../../core/notification/notifier.service'
 import { HasUnsavedChanges } from '../../../../shared/guards/unsaved-changes.guard';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
-import { EventFormComponent } from '../../components/event-form/event-form.component';
+import { EventWizardDialogComponent } from '../../components/event-wizard-dialog/event-wizard-dialog.component';
 import { EventsApiService } from '../../data/events-api.service';
 import { ItpoEventsApiService } from '../../data/itpo-events-api.service';
 import { UpdateEventPayload } from '../../data/events.models';
 import { KnownEvent } from '../../domain/event.form';
 
-/** Changes an event: only what the user changes is sent. */
+/** Changes an event in the same dialog that creates one: only what the user changes is sent. */
 @Component({
   selector: 'app-event-edit-page',
-  imports: [PageHeaderComponent, EventFormComponent, EmptyStateComponent, ButtonModule],
+  imports: [PageHeaderComponent, EventWizardDialogComponent, EmptyStateComponent, ButtonModule],
   templateUrl: './event-edit-page.component.html',
   styleUrl: './event-edit-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,7 +39,7 @@ export class EventEditPageComponent implements OnInit, HasUnsavedChanges {
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
   private readonly notifier = inject(NotifierService);
-  private readonly form = viewChild(EventFormComponent);
+  private readonly wizard = viewChild.required(EventWizardDialogComponent);
 
   protected readonly known = signal<KnownEvent | null>(null);
   protected readonly loading = signal(true);
@@ -60,6 +60,7 @@ export class EventEditPageComponent implements OnInit, HasUnsavedChanges {
       next: (event) => {
         this.known.set(event);
         this.loading.set(false);
+        this.wizard().openForEdit(event);
       },
       error: (error: unknown) => {
         this.loading.set(false);
@@ -70,7 +71,7 @@ export class EventEditPageComponent implements OnInit, HasUnsavedChanges {
   }
 
   hasUnsavedChanges(): boolean {
-    return !this.saved && (this.form()?.hasUnsavedChanges() ?? false);
+    return !this.saved && this.wizard().hasUnsavedChanges();
   }
 
   protected async save(changes: UpdateEventPayload): Promise<void> {
@@ -96,8 +97,7 @@ export class EventEditPageComponent implements OnInit, HasUnsavedChanges {
       },
       error: (error: unknown) => {
         this.submitting.set(false);
-        const form = this.form();
-        if (!(error instanceof ApiError && form?.applyError(error))) {
+        if (!(error instanceof ApiError && this.wizard().applyError(error))) {
           this.failure.set(
             error instanceof ApiError ? error.message : 'The event could not be saved.',
           );

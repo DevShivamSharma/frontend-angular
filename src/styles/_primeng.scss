@@ -539,6 +539,8 @@ p-datepicker {
   // A white knob, so it stands out on the green track.
   --p-toggleswitch-handle-checked-background: #fff;
   --p-toggleswitch-handle-checked-hover-background: #fff;
+  // A switch that cannot be changed keeps the white knob too; it only dims, so on still reads as on.
+  --p-toggleswitch-handle-disabled-background: #fff;
 }
 
 /* A drawer for working on one thing beside a list: wide enough for a small table. It is placed
